@@ -155,6 +155,14 @@ vite.config.ts               base './'、PWA 清单与预缓存（静态页不�
 3. `styles/themes.css` 已给 `[data-theme="chinese"]` / `english` 各一套配色，按需微调。
 4. `npm run audio` 生成新增片段的音频；`npm run seo`、`npm run og` 同上。
 
+## 同一作者的其它学习应用
+
+- [AI加词](https://jiaci.app)：背单词，FSRS 间隔重复、AI 填充的词条资料、真人级发音。
+- [拼音学习机](https://pinyin.jiaci.app)：给学拼音的孩子的点读 / 拼读 / 跟读 / 测验键盘，真人录音。
+- [识字卡片](https://kapian.jiaci.app)：2–4 岁看图听音认知卡片，中英文、离线。
+
+首页底部和每张知识点静态页的页脚都有这三个链接。
+
 ## 许可
 
 MIT，见 [LICENSE](LICENSE)。朗读音频由 Microsoft Edge 神经语音合成，仅供学习使用（`public/audio/CREDITS.md`）；拼音字体 Andika 为 SIL Open Font License（`public/fonts/OFL.txt`）。

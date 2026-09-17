@@ -13,6 +13,7 @@ import { createRng, getGenerator } from '@/engine'
 import { SUBJECTS, kpsOfUnit, liveCourses as catalogCourses } from '@/engine/catalog'
 import { translate } from '@/engine/i18n'
 import { answerLabel } from '@/engine/answer'
+import { SISTER_SITES } from '@/engine/sites'
 
 export const SITE_NAME = '同步练'
 export const SITE_TAGLINE = '人教版小学同步练习'
@@ -195,6 +196,14 @@ function absoluteTags(siteUrl: string, path: string): string {
   ].join('\n    ')
 }
 
+/** 页脚 / 入口页的「更多应用」一行：同一作者的另外三个站（engine/sites.ts），中文文案 */
+function sisterLinks(): string {
+  const links = SISTER_SITES.map(
+    (site) => `<a href="${site.url}">${esc(zh({ k: `sites.${site.id}` }))}</a>（${esc(zh({ k: `sites.${site.id}.desc` }))}）`,
+  )
+  return `${esc(zh({ k: 'sites.more' }))}：${links.join('、')}`
+}
+
 function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string): string {
   const fullTitle = `${meta.title} · ${SITE_NAME}`
   const crumbHtml = crumbs
@@ -244,6 +253,7 @@ ${body}
     <footer>
       <p>${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，每个汉字标拼音、每道题自动朗读；免费、无广告、不用注册，添加到主屏幕后没有网也能用。</p>
       <p><a href="${ROOT}">打开${SITE_NAME}</a></p>
+      <p>${sisterLinks()}</p>
     </footer>
   </body>
 </html>
@@ -529,6 +539,7 @@ export function homeBody(): string {
         </p>
 ${sections}
         <p>其它年级和${esc(soon.join('、'))}陆续补充。</p>
+        <p>${sisterLinks()}</p>
       </main>`
 }
 

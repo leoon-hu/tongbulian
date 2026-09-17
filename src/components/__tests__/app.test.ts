@@ -7,6 +7,7 @@ import App from '@/App.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
 import { setLang } from '@/engine/i18n'
 import { liveCourses } from '@/engine/catalog'
+import { SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
 import { useInstallStore } from '@/stores/install'
 
@@ -48,14 +49,18 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('首页：品牌名是唯一的 <h1>，底部有各上线课程的知识点清单链接（静态页地址）；子页标题跟随页面', async () => {
+  it('首页：品牌名是唯一的 <h1>，底部有各上线课程的知识点清单链接（静态页地址）与另外三个站的链接；子页标题跟随页面', async () => {
     const w = await mountAt('/')
     expect(w.findAll('h1')).toHaveLength(1)
     expect(w.find('h1').text()).toBe('同步练')
     expect(w.find('main').exists()).toBe(true)
-    const links = w.findAll('footer.about a')
+    const links = w.findAll('footer.about .about-links a')
     expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
+    const sites = w.findAll('footer.about .about-sites a')
+    expect(sites.map((a) => a.attributes('href'))).toEqual(SISTER_SITES.map((s) => s.url))
+    expect(sites.map((a) => a.attributes('target'))).toEqual(['_blank', '_blank', '_blank'])
+    expect(sites.map((a) => a.text())).toEqual(['AI加词背单词', '拼音学习机拼音点读、拼读、测验', '识字卡片2–4 岁看图听音认知卡片'])
     w.unmount()
 
     const map = await mountAt(MAP)

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { getGenerator } from '@/engine'
 import { allCourses, liveCourses as catalogCourses } from '@/engine/catalog'
+import { SISTER_SITES } from '@/engine/sites'
 import {
   SAMPLES_PER_TIER,
   applyHome,
@@ -64,6 +65,8 @@ describe('SEO 静态页', () => {
       const ld = p.html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)![1]!
       const data = JSON.parse(ld) as { '@type': string }[]
       expect(data[0]!['@type']).toBe('BreadcrumbList')
+      // 页脚「更多应用」链到另外三个站
+      for (const site of SISTER_SITES) expect(p.html).toContain(`<a href="${site.url}">`)
     }
   })
 

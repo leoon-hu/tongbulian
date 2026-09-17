@@ -32,6 +32,14 @@ export const SHELL_ZH: Dict = {
   // 首页底部给家长的一句说明 + 各年级知识点清单（静态页）的链接
   'home.about': '按人教版教材单元随机出题；汉字标拼音、题目自动朗读；免费、无广告、离线可用。',
   'home.topics': '{name}知识点清单',
+  // 首页底部「更多应用」：同一作者另外三个站（名单在 engine/sites.ts），静态页页脚也用
+  'sites.more': '更多应用',
+  'sites.aiword': 'AI加词',
+  'sites.aiword.desc': '背单词',
+  'sites.pinyin': '拼音学习机',
+  'sites.pinyin.desc': '拼音点读、拼读、测验',
+  'sites.kapian': '识字卡片',
+  'sites.kapian.desc': '2–4 岁看图听音认知卡片',
   // 进度 / 知识点地图
   'home.lit': '已完成 {n} 个知识点',
   'home.soon': '敬请期待',
@@ -112,6 +120,13 @@ export const SHELL_EN: Dict = {
   'sem.2': 'Term 2',
   'home.about': 'Random questions by PEP textbook unit; pinyin on every character, every question read aloud; free, no ads, works offline.',
   'home.topics': '{name} topic list',
+  'sites.more': 'More apps',
+  'sites.aiword': 'Jiaci',
+  'sites.aiword.desc': 'English vocabulary trainer',
+  'sites.pinyin': 'Pinyin Keyboard',
+  'sites.pinyin.desc': 'Tap, spell, echo and quiz Pinyin',
+  'sites.kapian': 'Picture Cards',
+  'sites.kapian.desc': 'Look-and-listen cards for ages 2–4',
   'home.lit': '{n} topics completed',
   'home.soon': 'Coming soon',
   'status.done': '✅ Done',
