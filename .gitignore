@@ -1,0 +1,17 @@
+node_modules
+dist
+*.local
+.DS_Store
+.idea
+.env
+
+# 构建前由 scripts/seo.mjs 生成（含站点地址，随环境变）
+/public/robots.txt
+/public/sitemap.xml
+/public/math/
+/public/chinese/
+/public/english/
+
+# 只留在本机，不进仓库
+docs/
+deploy/

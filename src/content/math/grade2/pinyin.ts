@@ -1,0 +1,175 @@
+// 二年级数学内容包的拼音：键与 i18n.ts 的中文词条一致，每条与模板里的汉字逐字对齐
+// （占位符、数字、标点、emoji 不占位）。一 / 不 按实际读音标变调，个 / 什么 / 早上等按课本习惯标轻声。
+// 有测试保证每个中文词条都有拼音、音节数与汉字数相等。
+import { registerPinyin } from '@/engine/i18n'
+import type { ShapeKind } from '@/types/models'
+import { SHAPE_PINYIN } from '@/content/math/shared/labels'
+import { KNOWLEDGE_POINTS } from './curriculum'
+
+export const PINYIN: Record<string, string> = {
+  // 分类与整理
+  'q.countCategory': 'shǔ yi shǔ yǒu jǐ gè',
+  'q.oddOne': 'nǎ ge hé qí tā bú shì yí lèi',
+  'cat.fruit': 'shuǐ guǒ',
+  'cat.animal': 'xiǎo dòng wù',
+  'cat.vehicle': 'jiāo tōng gōng jù',
+  // 表内乘法
+  'q.mul.arrayTotal': 'měi pái yǒu gè yǒu pái yí gòng yǒu duō shao gè',
+  'q.mul.groups': 'kàn tú yí gòng yǒu jǐ gè',
+  'q.mul.rewrite': 'gè xiāng jiā xiě chéng chéng fǎ suàn shì shì',
+  'q.mul.kOfN': 'gè shì duō shao',
+  'q.mul.arrayPlus': 'kàn tú yí gòng yǒu duō shao gè',
+  'q.mul.price': 'yí gè yuán mǎi gè yào duō shao yuán',
+  'q.mul.rows': 'yǒu pái měi pái gè yí gòng yǒu duō shao gè',
+  'q.mul.each': 'gè xiǎo péng yǒu měi rén yǒu gè yí gòng yǒu duō shao gè',
+  'q.mul.wheels': 'yí liàng yǒu gè lún zi liàng yí gòng yǒu jǐ gè lún zi',
+  // 表内除法
+  'q.div.fromMul': 'yīn wèi suǒ yǐ jǐ',
+  'q.div.shareEach': 'bǎ gè píng jūn fēn chéng fèn měi fèn jǐ gè',
+  'q.div.shareGroups': 'gè měi gè yí fèn kě yǐ fēn chéng jǐ fèn',
+  'q.div.shareKids': 'bǎ gè píng jūn fēn gěi gè xiǎo péng yǒu měi rén fēn jǐ gè',
+  'q.div.writeEq': 'bǎ gè píng jūn fēn chéng fèn měi fèn gè xiě chéng chú fǎ suàn shì shì',
+  'q.div.part.dividend': 'bèi chú shù shì jǐ',
+  'q.div.part.divisor': 'chú shù shì jǐ',
+  'q.div.part.quotient': 'shāng shì jǐ',
+  'q.div.perPerson': 'gè píng jūn fēn gěi gè xiǎo péng yǒu měi rén jǐ gè',
+  'q.div.bags': 'gè měi gè zhuāng yí dài kě yǐ zhuāng jǐ dài',
+  'q.div.priceEach': 'yuán mǎi le gè měi gè jǐ yuán',
+  'q.div.canBuy': 'yí gè yuán yuán kě yǐ mǎi jǐ gè',
+  // 连续两问
+  'q.two.rowsLeft': 'yǒu pái měi pái gè sòng zǒu gè hòu hái shèng jǐ gè',
+  'q.two.buyShare': 'yǒu gè yòu mǎi le gè píng jūn fēn gěi gè xiǎo péng yǒu měi rén jǐ gè',
+  'q.two.change': 'yí gè yuán mǎi gè fù le yuán yīng zhǎo huí jǐ yuán',
+  'q.two.bagsLeft': 'gè měi gè zhuāng yí dài zhuāng le dài hòu hái shèng jǐ gè',
+  // 东南西北
+  'q.dir.sunrise': 'zǎo shang tài yáng cóng nǎ ge fāng xiàng shēng qǐ',
+  'q.dir.sunset': 'bàng wǎn tài yáng cóng nǎ ge fāng xiàng luò xià',
+  'q.dir.opposite': 'de duì miàn shì nǎ ge fāng xiàng',
+  'q.dir.map': 'dì tú shàng shì shàng běi xià nán zuǒ xī yòu dōng dì tú de shì nǎ ge fāng xiàng',
+  'q.dir.facing': 'miàn xiàng zhàn zhe nǐ de shì nǎ ge fāng xiàng',
+  'opt.east': 'dōng',
+  'opt.south': 'nán',
+  'opt.west': 'xī',
+  'opt.north': 'běi',
+  'side.up': 'shàng miàn',
+  'side.down': 'xià miàn',
+  'side.left': 'zuǒ biān',
+  'side.right': 'yòu biān',
+  'side.back': 'hòu miàn',
+  // 厘米和米
+  'q.len.unit': 'de dù dà yuē shì dān wèi shì lí mǐ hái shi mǐ',
+  'q.len.m2cm': 'mǐ jǐ lí mǐ',
+  'q.len.cm2m': 'lí mǐ jǐ mǐ',
+  'q.len.compound': 'mǐ lí mǐ jǐ lí mǐ',
+  'q.len.cmpFill': 'bǐ yi bǐ tián huò',
+  'q.len.cmpMcm': 'mǐ lí mǐ',
+  'q.len.cmpCmM': 'lí mǐ mǐ',
+  'q.len.measure': 'zhè tiáo xiàn duàn yǒu jǐ lí mǐ',
+  'opt.long': 'cháng',
+  'opt.tall': 'gāo',
+  'opt.cm': 'lí mǐ',
+  'opt.m': 'mǐ',
+  // 时间在哪里
+  'q.whatTime': 'xiàn zài shì jǐ shí',
+  'q.time.minuteHand': 'fēn zhēn cóng zǒu dào zǒu le jǐ fēn',
+  'q.time.read': 'zhōng miàn shàng shì jǐ shí jǐ fēn',
+  'q.time.bigTick': 'fēn zhēn zǒu yí dà gé shì jǐ fēn',
+  'q.time.smallTick': 'fēn zhēn zǒu yì xiǎo gé shì jǐ fēn',
+  'q.time.round': 'fēn zhēn zǒu yì quān shì jǐ fēn',
+  'q.time.hourTick': 'shí zhēn zǒu yí dà gé shì jǐ shí',
+  'q.time.hourToMin': 'shí jǐ fēn',
+  'q.time.minToHour': 'fēn jǐ shí',
+  'q.time.after': 'xiàn zài shì zài guò fēn shì jǐ shí jǐ fēn',
+  'q.time.elapsed': 'cóng dào jīng guò le jǐ fēn',
+  // 有余数的除法
+  'q.rem.groups': 'gè měi gè yí fèn kě yǐ fēn chéng jǐ fèn',
+  'q.rem.left': 'gè měi gè yí fèn fēn wán hòu hái shèng jǐ gè',
+  'q.rem.eachKid': 'bǎ gè píng jūn fēn gěi gè xiǎo péng yǒu měi rén zuì duō fēn jǐ gè',
+  'q.rem.kidLeft': 'bǎ gè píng jūn fēn gěi gè xiǎo péng yǒu hái shèng jǐ gè',
+  'q.rem.maxRem': 'chú shù shì yú shù zuì dà shì jǐ',
+  'q.rem.dividend': 'yí gè shù chú yǐ shāng shì yú shù shì zhè ge shù shì jǐ',
+  'q.rem.quotient': 'shāng shì jǐ',
+  'q.rem.remainder': 'yú shù shì jǐ',
+  // 数量间的乘除关系
+  'q.times.howMany': 'yǒu gè yǒu gè de gè shù shì de jǐ bèi',
+  'q.times.timesOf': 'yǒu gè de gè shù shì gè shù de bèi yǒu jǐ gè',
+  'q.times.base': 'yǒu gè shì gè shù de bèi yǒu jǐ gè',
+  'q.rel.total': 'měi hé yǒu gè hé yí gòng yǒu duō shao gè',
+  'q.rel.perBox': 'gè píng jūn zhuāng zài gè hé zi lǐ měi hé jǐ gè',
+  'q.rel.boxes': 'gè měi hé zhuāng gè xū yào jǐ gè hé zi',
+  'q.rel.twoStep': 'hé yí gòng gè měi hé yí yàng duō hé yǒu jǐ gè',
+  // 万以内数的认识
+  'num.unit.k': 'gè qiān',
+  'num.unit.h': 'gè bǎi',
+  'num.unit.t': 'gè shí',
+  'num.unit.o': 'gè yī',
+  'q.num.compose2': 'hé zǔ chéng de shù shì jǐ',
+  'q.num.compose3': 'hé zǔ chéng de shù shì jǐ',
+  'q.num.compose4': 'hé zǔ chéng de shù shì jǐ',
+  'q.num.after': 'hòu miàn de yí gè shù shì jǐ',
+  'q.num.before': 'qián miàn de yí gè shù shì jǐ',
+  'q.num.seq': 'zhǎo guī lǜ wèn hào chù tián jǐ',
+  'q.num.place.k': 'de qiān wèi shàng shì jǐ',
+  'q.num.place.h': 'de bǎi wèi shàng shì jǐ',
+  'q.num.place.t': 'de shí wèi shàng shì jǐ',
+  'q.num.place.o': 'de gè wèi shàng shì jǐ',
+  'q.num.howManyHundreds': 'lǐ miàn yǒu jǐ gè bǎi',
+  'q.num.howManyThousands': 'lǐ miàn yǒu jǐ gè qiān',
+  'q.num.tenTens': 'gè shí shì jǐ',
+  'q.num.tenHundreds': 'gè yì bǎi shì jǐ',
+  'q.num.tenThousands': 'gè yì qiān shì jǐ',
+  'q.num.largest': 'xià miàn nǎ ge shù zuì dà',
+  'q.num.smallest': 'xià miàn nǎ ge shù zuì xiǎo',
+  'q.num.cmpFill': 'bǐ yi bǐ tián huò',
+  // 加减法各部分间的关系
+  'q.chk.add': 'kě yǐ yòng nǎ ge suàn shì yàn suàn',
+  'q.chk.sub': 'kě yǐ yòng nǎ ge suàn shì yàn suàn',
+  // 图形名（各年级共用一张表）
+  ...Object.fromEntries((Object.keys(SHAPE_PINYIN) as ShapeKind[]).map((s) => [`shape.${s}`, SHAPE_PINYIN[s]])),
+  // 知识点标题（练习页页头）
+  'kp.m2s1-01-sorting': 'fēn lèi yǔ zhěng lǐ',
+  'kp.m2s1-02-mult-intro': 'chéng fǎ de chū bù rèn shi',
+  'kp.m2s1-02-table-6': 'de chéng fǎ kǒu jué',
+  'kp.m2s1-02-mult-addsub': 'chéng jiā chéng jiǎn',
+  'kp.m2s1-02-mult-solve': 'yòng chéng fǎ jiě jué wèn tí',
+  'kp.m2s1-03-share': 'píng jūn fēn',
+  'kp.m2s1-03-div-parts': 'rèn shi chú fǎ suàn shì',
+  'kp.m2s1-03-div-6': 'yòng de chéng fǎ kǒu jué qiú shāng',
+  'kp.m2s1-03-div-solve': 'yòng chú fǎ jiě jué wèn tí',
+  'kp.m2s1-04-directions': 'rèn shi dōng nán xī běi',
+  'kp.m2s1-05-cm-m': 'rèn shi lí mǐ hé mǐ',
+  'kp.m2s1-05-measure': 'liáng yi liáng',
+  'kp.m2s1-06-table-9': 'de chéng fǎ kǒu jué',
+  'kp.m2s1-06-div-9': 'yòng de chéng fǎ kǒu jué qiú shāng',
+  'kp.m2s1-06-two-questions': 'lián xù liǎng wèn',
+  'kp.m2s2-01-clock-hour': 'rèn shi zhěng shí hé bàn shí',
+  'kp.m2s2-01-time-read': 'rèn shi jǐ shí jǐ fēn',
+  'kp.m2s2-01-time-calc': 'shí yǔ fēn',
+  'kp.m2s2-02-remainder': 'rèn shi yú shù',
+  'kp.m2s2-02-rem-calc': 'yǒu yú shù chú fǎ de jì suàn',
+  'kp.m2s2-03-times': 'bèi de rèn shi',
+  'kp.m2s2-03-mul-div-solve': 'chéng chú fǎ jiě jué wèn tí',
+  'kp.m2s2-04-num-1000': 'yǐ nèi shù de rèn shi',
+  'kp.m2s2-04-num-10000': 'yǐ nèi shù de rèn shi',
+  'kp.m2s2-04-compare': 'wàn yǐ nèi shù de dà xiǎo bǐ jiào',
+  'kp.m2s2-04-round-addsub': 'zhěng bǎi zhěng qiān shù jiā jiǎn fǎ',
+  'kp.m2s2-05-add': 'sān wèi shù jiā fǎ',
+  'kp.m2s2-05-sub': 'sān wèi shù jiǎn fǎ',
+  'kp.m2s2-05-relations': 'jiā jiǎn fǎ gè bù fen jiān de guān xi',
+}
+
+/** 时刻是按数值算出来的（如「3时半」「7时35分」），这几个字逐字兜底；米 / 厘也放进来，字面量里出现时能注音。 */
+export const CHAR_PINYIN: Record<string, string> = {
+  时: 'shí',
+  分: 'fēn',
+  半: 'bàn',
+  米: 'mǐ',
+  厘: 'lí',
+}
+
+// 每个知识点标题都应有拼音（测试也会查），这里在开发期就把漏掉的暴露出来
+for (const kp of KNOWLEDGE_POINTS) {
+  if (!PINYIN[`kp.${kp.id}`]) throw new Error(`knowledge point ${kp.id} has no pinyin for its title`)
+}
+
+registerPinyin(PINYIN, CHAR_PINYIN)

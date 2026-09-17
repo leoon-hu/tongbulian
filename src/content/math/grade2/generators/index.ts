@@ -1,0 +1,12 @@
+// 生成器通过副作用导入完成注册；新增生成器文件后在此追加一行。
+import './sorting'
+import './multiply'
+import './divide'
+import './directions'
+import './length'
+import './clock'
+import './time'
+import './remainder'
+import './times'
+import './numbers'
+import './addsub1000'

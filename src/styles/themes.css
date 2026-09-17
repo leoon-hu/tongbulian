@@ -1,0 +1,31 @@
+/*
+ * 学科主题皮肤：App.vue 按当前学科在 <html data-theme="..."> 上切换。
+ * 基础调色板（默认 / 首页 / 数学）在 tokens.css 的 :root。这里只覆盖各学科差异。
+ * 新增学科：在 engine/catalog 给它一个 theme 名，然后在此加一段 [data-theme='名'] 覆盖即可。
+ */
+
+/* 数学：暖橙小岛（与基础调色板一致，显式写出便于日后微调） */
+[data-theme='math'] {
+  --c-bg: #fdf6ec;
+  --c-primary: #ff8a3d;
+  --c-primary-dark: #f2691d;
+  --grad-node: linear-gradient(145deg, #ffd9a8, #ffb469);
+}
+
+/* 语文：朱砂与墨 */
+[data-theme='chinese'] {
+  --c-bg: #fbf3ee;
+  --c-primary: #e0604a;
+  --c-primary-dark: #c23f2c;
+  --c-line: #f0e0d8;
+  --grad-node: linear-gradient(145deg, #f6c6b0, #e58a6b);
+}
+
+/* 英语：清爽海蓝 */
+[data-theme='english'] {
+  --c-bg: #eef4ff;
+  --c-primary: #4aa3ff;
+  --c-primary-dark: #2f7fd6;
+  --c-line: #e0e8f5;
+  --grad-node: linear-gradient(145deg, #bcd8ff, #7fb0ff);
+}

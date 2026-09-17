@@ -1,0 +1,9 @@
+// 生成器通过副作用导入完成注册；新增生成器文件后在此追加一行。
+import './arithmetic'
+import './addsub100'
+import './relations'
+import './comparison'
+import './counting'
+import './position'
+import './shapes'
+import './money'

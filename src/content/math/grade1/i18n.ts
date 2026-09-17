@@ -1,0 +1,232 @@
+// 一年级数学内容包的词条：题目/选项/教具文案 + 知识点/单元英文名（2022 版课标教材的单元结构）。
+// 通过副作用注册进引擎 i18n（被 pack index 导入即生效）。
+import type { Dict } from '@/engine/i18n'
+import { registerDict, registerTitles } from '@/engine/i18n'
+import { SHAPE_NAMES, SYMBOL_WORDS, formatMoney } from '@/content/math/shared/labels'
+import { EMOJI_EN, EMOJI_ZH } from '@/content/math/shared/emoji'
+import { KNOWLEDGE_POINTS, UNITS } from './curriculum'
+
+// ── 英文金额的格式化（中文版复用 labels.ts 里的 formatMoney）──
+
+/** 「分」→ ¥ 金额（只有元、角，最多一位小数）：650 → ¥6.5、500 → ¥5、50 → ¥0.5 */
+export function formatMoneyEn(fen: number): string {
+  const yuan = fen / 100
+  return `¥${Number.isInteger(yuan) ? String(yuan) : yuan.toFixed(1)}`
+}
+
+const ZH: Dict = {
+  // 题干
+  'q.countDots': '一共有多少个点子？',
+  'q.countPicAll': '看图算一算，一共有多少个？',
+  'q.decompose': '{total} 可以分成 {part} 和几？',
+  'q.breakTenHint': '十格阵满 10，外面还有几个，一起减一减：',
+  'q.whichMore': '哪个多呢？',
+  'q.fillCompare': '比一比，填 >、< 或 =',
+  'q.countAll': '数一数，一共有几个？',
+  'q.composeTensOnes': '{tens} 个十和 {ones} 个一，合起来是几？',
+  'q.after': '{n} 后面的一个数是几？',
+  'q.before': '{n} 前面的一个数是几？',
+  'q.more': '比 {n} 多 1 的数是几？',
+  'q.less': '比 {n} 少 1 的数是几？',
+  'q.posWhich': '{item} 从{from}数排第几个？',
+  'q.posFrom': '从{from}数第 {k} 个是谁？',
+  'q.posEndmost': '谁在最{side}？',
+  'q.posNeighbor': '{item} 的{rel}是谁？',
+  'q.countShape': '数一数，有几个{shape}？',
+  'q.whatShape': '这是什么图形？',
+  'q.tilesCount': '这个图形是用几个小正方形拼成的？',
+  'q.tilesName': '用小正方形拼成的这个图形是什么？',
+  'q.totalMoney': '一共有多少钱？',
+  'q.moneyChange': '买东西用了 {price}，付了 {pay}，应找回多少？',
+  'q.moneyY2J': '{yuan} 元 = 几角？',
+  'q.moneyJ2Y': '{jiao} 角 = 几元？',
+  // 100 以内加减法 / 数量间的加减关系（一下）
+  'q.usedTwice': '有 {n} 个{item}，先用了 {a} 个，又用了 {b} 个，还剩几个？',
+  'q.diffPic': '{a} 比 {b} 多几个？',
+  'q.diffMore': '{a1} 有 {n} 个{item}，{a2} 有 {m} 个，{a1} 比 {a2} 多几个？',
+  'q.diffLess': '{a1} 有 {n} 个{item}，{a2} 有 {m} 个，{a2} 比 {a1} 少几个？',
+  'q.moreThan': '{a1} 有 {n} 个{item}，{a2} 比 {a1} 多 {k} 个，{a2} 有几个？',
+  'q.lessThan': '{a1} 有 {n} 个{item}，{a2} 比 {a1} 少 {k} 个，{a2} 有几个？',
+  'q.moreThanTotal': '{a1} 有 {n} 个{item}，{a2} 比 {a1} 多 {k} 个，两人一共有几个？',
+  // 选项 / 方位
+  'opt.same': '一样多',
+  'dir.left': '左',
+  'dir.right': '右',
+  'dir.up': '上',
+  'dir.down': '下',
+  'dir.front': '前',
+  'dir.back': '后',
+  'side.left': '左边',
+  'side.right': '右边',
+  'side.up': '上面',
+  'side.down': '下面',
+  'side.front': '前面',
+  'side.back': '后面',
+  'rel.left': '左边',
+  'rel.right': '右边',
+  'rel.up': '上面',
+  'rel.down': '下面',
+  'rel.front': '前面',
+  'rel.back': '后面',
+  // 图形名（复用 labels.ts，避免与教具显示走样）
+  'shape.cube': SHAPE_NAMES.cube,
+  'shape.cuboid': SHAPE_NAMES.cuboid,
+  'shape.cylinder': SHAPE_NAMES.cylinder,
+  'shape.sphere': SHAPE_NAMES.sphere,
+  'shape.square': SHAPE_NAMES.square,
+  'shape.rectangle': SHAPE_NAMES.rectangle,
+  'shape.triangle': SHAPE_NAMES.triangle,
+  'shape.circle': SHAPE_NAMES.circle,
+  'shape.parallelogram': SHAPE_NAMES.parallelogram,
+  // 金额（按数值算）
+  'money.amount': (p) => formatMoney(Number(p.fen)),
+  // 教具文案（排队方位 / 十格阵凑十破十）
+  'lineup.left': '👈 左',
+  'lineup.right': '右 👉',
+  'lineup.up': '👆 上',
+  'lineup.down': '👇 下',
+  'lineup.front': '🚶 前',
+  'lineup.back': '后',
+  'tf.add.need': '格子还差 {n} 个就满 10 啦',
+  'tf.add.split': '{a} + {need} = 10，把 {b} 分成 {need} 和 {rest}',
+  'tf.add.result': '10 + {rest} = {sum}，所以 {a} + {b} = {sum}',
+  'tf.sub.take': '个位不够减，先从 10 里拿走 {take} 个',
+  'tf.sub.result': '{left} + {loose} = {answer}，所以 {minuend} - {remove} = {answer}',
+  // 朗读用：算式符号的读法与 emoji 的名字（各年级共用，见 shared/labels.ts、shared/emoji.ts）
+  ...SYMBOL_WORDS.zh,
+  ...EMOJI_ZH,
+}
+
+const EN: Dict = {
+  // Stems
+  'q.countDots': 'How many dots in all?',
+  'q.countPicAll': 'Look and count — how many in all?',
+  'q.decompose': 'Split {total} into {part} and what?',
+  'q.breakTenHint': 'The ten-frame holds 10 with some more outside — subtract together:',
+  'q.whichMore': 'Which is more?',
+  'q.fillCompare': 'Compare and fill in >, <, or =',
+  'q.countAll': 'Count — how many in all?',
+  'q.composeTensOnes': '{tens} tens and {ones} ones make what?',
+  'q.after': 'What number comes after {n}?',
+  'q.before': 'What number comes before {n}?',
+  'q.more': 'What is 1 more than {n}?',
+  'q.less': 'What is 1 less than {n}?',
+  'q.posWhich': 'Counting from the {from}, what place is {item}?',
+  'q.posFrom': 'Counting from the {from}, who is number {k}?',
+  'q.posEndmost': 'Who is at the very {side}?',
+  'q.posNeighbor': 'Who is {rel} {item}?',
+  'q.countShape': 'Count — how many {shape} do you see?',
+  'q.whatShape': 'What shape is this?',
+  'q.tilesCount': 'How many small squares make up this shape?',
+  'q.tilesName': 'What shape do these small squares make?',
+  'q.totalMoney': 'How much money in all?',
+  'q.moneyChange': 'It costs {price}. You pay {pay}. How much change?',
+  'q.moneyY2J': '{yuan} yuan = how many jiao?',
+  'q.moneyJ2Y': '{jiao} jiao = how many yuan?',
+  'q.usedTwice': 'There were {n} {item}. {a} were used, then {b} more. How many are left?',
+  'q.diffPic': 'How many more {a} than {b}?',
+  'q.diffMore': '{a1} has {n} {item} and {a2} has {m}. How many more does {a1} have than {a2}?',
+  'q.diffLess': '{a1} has {n} {item} and {a2} has {m}. How many fewer does {a2} have than {a1}?',
+  'q.moreThan': '{a1} has {n} {item}. {a2} has {k} more than {a1}. How many does {a2} have?',
+  'q.lessThan': '{a1} has {n} {item}. {a2} has {k} fewer than {a1}. How many does {a2} have?',
+  'q.moreThanTotal': '{a1} has {n} {item}. {a2} has {k} more than {a1}. How many do they have together?',
+  // Options / directions
+  'opt.same': 'Same',
+  'dir.left': 'left',
+  'dir.right': 'right',
+  'dir.up': 'top',
+  'dir.down': 'bottom',
+  'dir.front': 'front',
+  'dir.back': 'back',
+  'side.left': 'left',
+  'side.right': 'right',
+  'side.up': 'top',
+  'side.down': 'bottom',
+  'side.front': 'front',
+  'side.back': 'back',
+  'rel.left': 'to the left of',
+  'rel.right': 'to the right of',
+  'rel.up': 'above',
+  'rel.down': 'below',
+  'rel.front': 'in front of',
+  'rel.back': 'behind',
+  // Shapes
+  'shape.cube': 'Cube',
+  'shape.cuboid': 'Cuboid',
+  'shape.cylinder': 'Cylinder',
+  'shape.sphere': 'Sphere',
+  'shape.square': 'Square',
+  'shape.rectangle': 'Rectangle',
+  'shape.triangle': 'Triangle',
+  'shape.circle': 'Circle',
+  'shape.parallelogram': 'Parallelogram',
+  // Money
+  'money.amount': (p) => formatMoneyEn(Number(p.fen)),
+  // Manipulative captions
+  'lineup.left': '👈 Left',
+  'lineup.right': 'Right 👉',
+  'lineup.up': '👆 Top',
+  'lineup.down': '👇 Bottom',
+  'lineup.front': '🚶 Front',
+  'lineup.back': 'Back',
+  'tf.add.need': 'The frame needs {n} more to make 10',
+  'tf.add.split': '{a} + {need} = 10, split {b} into {need} and {rest}',
+  'tf.add.result': '10 + {rest} = {sum}, so {a} + {b} = {sum}',
+  'tf.sub.take': 'Not enough ones — take {take} from the 10 first',
+  'tf.sub.result': '{left} + {loose} = {answer}, so {minuend} - {remove} = {answer}',
+  // Speech: symbol words and emoji names (shared across grades)
+  ...SYMBOL_WORDS.en,
+  ...EMOJI_EN,
+}
+
+// 知识点 / 单元英文名（中文标题在 curriculum.ts 作单一事实源）。
+const KP_TITLE_EN: Record<string, string> = {
+  's1-00-count': 'Count',
+  's1-00-compare': 'Compare Amounts',
+  's1-00-position': 'Positions',
+  's1-01-num-5': 'Numbers 1–5',
+  's1-01-compose-5': 'Make & Break to 5',
+  's1-01-addsub-5': 'Add & Subtract to 5',
+  's1-02-num-10': 'Numbers 6–10',
+  's1-02-compose-10': 'Make 6–10',
+  's1-02-addsub-10': 'Add & Subtract to 10',
+  's1-02-mixed': 'Add & Subtract in a Row',
+  's1-03-solid-shapes': 'Solid Shapes',
+  's1-04-num-20': 'Numbers 11–20',
+  's1-04-simple-addsub': 'Ten Plus Ones',
+  's1-05-carry-add': 'Make-Ten Addition',
+  's2-01-flat-shapes': 'Flat Shapes',
+  's2-02-borrow-sub': 'Break-Ten Subtraction',
+  's2-03-num-100': 'Numbers to 100',
+  's2-03-compare-100': 'Compare Numbers',
+  's2-03-tens-addsub': 'Adding & Subtracting Tens',
+  's2-04-oral-add': 'Mental Addition',
+  's2-04-oral-sub': 'Mental Subtraction',
+  's2-05-written-add': 'Column Addition',
+  's2-05-written-sub': 'Column Subtraction',
+  's2-06-diff': 'How Many More',
+  's2-06-more-less': 'More or Fewer Than',
+  's2-07-money': 'Money (RMB)',
+}
+
+const UNIT_TITLE_EN: Record<string, string> = {
+  s1u0: 'Math Games',
+  s1u1: 'Numbers to 5 & Arithmetic',
+  s1u2: 'Numbers 6–10 & Arithmetic',
+  s1u3: 'Solid Shapes',
+  s1u4: 'Numbers 11–20',
+  s1u5: 'Addition with Carrying (to 20)',
+  s2u1: 'Flat Shapes',
+  s2u2: 'Subtraction with Borrowing (to 20)',
+  s2u3: 'Numbers to 100',
+  s2u4: 'Mental Addition & Subtraction to 100',
+  s2u5: 'Column Addition & Subtraction to 100',
+  s2u6: 'Comparing Quantities',
+  s2u7: 'Shopping Street',
+}
+
+registerDict({ zh: ZH, en: EN })
+registerTitles(
+  { zh: Object.fromEntries(KNOWLEDGE_POINTS.map((kp) => [kp.id, kp.title])), en: KP_TITLE_EN },
+  { zh: Object.fromEntries(UNITS.map((u) => [u.id, u.title])), en: UNIT_TITLE_EN },
+)

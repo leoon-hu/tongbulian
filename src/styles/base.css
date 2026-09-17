@@ -1,0 +1,65 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-main);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+#app {
+  min-height: 100%;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 拼音注音：汉字上方一行小字，用初学者字体；行高由使用处放大以容纳注音 */
+ruby {
+  ruby-align: center;
+}
+rt {
+  font-family: var(--font-pinyin);
+  font-size: 0.55em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  /* 相邻两字的拼音之间留一点空，不然 yīngzhǎo 会连成一串 */
+  padding-inline: 0.15em;
+  color: var(--c-text);
+  opacity: 0.72;
+  user-select: none;
+}
