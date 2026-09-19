@@ -70,12 +70,14 @@ describe('竞技场隔离（B34a ⑦）', () => {
 
   it('给皮肤挂上 canvas 版游戏后，盒子里是宿主、盒子之外与 CSS 版一模一样', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    // 拿一个上方横条的皮肤，先关掉它的 canvas 版截一份（CSS 版），再挂上 canvas 版截一份，两份盒子之外必须一样
     const skin = SKINS.find((s) => s.slot === 'top')!
-    const css = await snapshot(skin)
-    expect(css.host).toBe(false)
     const saved = skin.game
-    skin.game = () => Promise.resolve(createFallbackGame)
     try {
+      skin.game = undefined
+      const css = await snapshot(skin)
+      expect(css.host).toBe(false)
+      skin.game = () => Promise.resolve(createFallbackGame)
       const canvas = await snapshot(skin)
       expect(canvas.host).toBe(true)
       expect(canvas.outside).toBe(css.outside)

@@ -30,7 +30,14 @@ export interface SkinMeta {
 export const RANDOM_SKIN = 'random'
 
 export const SKINS: readonly SkinMeta[] = [
-  { id: 'race', icon: '🐢', slot: 'top', kind: 'race', load: () => import('./RaceSkin.vue').then((m) => m.default) },
+  {
+    id: 'race',
+    icon: '🐢',
+    slot: 'top',
+    kind: 'race',
+    load: () => import('./RaceSkin.vue').then((m) => m.default),
+    game: () => import('../games/race').then((m) => m.createRaceGame),
+  },
   { id: 'rocket', icon: '🚀', slot: 'center', kind: 'race', load: () => import('./RocketSkin.vue').then((m) => m.default) },
   { id: 'tower', icon: '🧱', slot: 'center', kind: 'grow', load: () => import('./TowerSkin.vue').then((m) => m.default) },
   { id: 'tug', icon: '🪢', slot: 'top', kind: 'tug', load: () => import('./TugSkin.vue').then((m) => m.default) },

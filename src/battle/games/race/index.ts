@@ -1,0 +1,98 @@
+/**
+ * 龟兔赛跑（需求 B36a）：把模型与渲染组装成 GameModule。
+ * 背景层缓存到离屏 canvas（尺寸变了才重画），每帧只画会动的部分；降级 3 级时像素比降到 1。
+ */
+import { createRng } from '@/engine'
+import type { GameHostInfo, GameModule, GameState } from '@/battle/game/contract'
+import { fitCanvas } from '@/battle/game/engine/canvas'
+import { RaceModel } from './model'
+import { renderBackground, renderDynamic } from './render'
+
+export function createRaceGame(): GameModule {
+  let canvas: HTMLCanvasElement | null = null
+  let ctx: CanvasRenderingContext2D | null = null
+  let bg: HTMLCanvasElement | null = null
+  let width = 1
+  let height = 1
+  let dpr = 1
+  let compact = false
+  let quality = 0
+  let bgTarget = 0
+  let model: RaceModel | null = null
+
+  function makeBackground(): void {
+    bg = null
+    if (!model || typeof document === 'undefined') return
+    try {
+      const off = document.createElement('canvas')
+      const octx = fitCanvas(off, width, height, effectiveDpr())
+      if (!octx) return
+      renderBackground(octx, model.geo, model.target)
+      bg = off
+      bgTarget = model.target
+    } catch {
+      bg = null
+    }
+  }
+
+  function effectiveDpr(): number {
+    return quality >= 3 ? 1 : dpr
+  }
+
+  function relayout(): void {
+    if (!canvas || !model) return
+    ctx = fitCanvas(canvas, width, height, effectiveDpr())
+    model.layout(width, height, compact)
+    makeBackground()
+  }
+
+  return {
+    meta: { id: 'race', renderer: '2d' },
+    mount(host: GameHostInfo) {
+      canvas = host.canvas
+      width = host.width
+      height = host.height
+      dpr = host.dpr
+      compact = host.compact
+      model = new RaceModel(createRng(), { reducedMotion: host.reducedMotion })
+      relayout()
+    },
+    setState(s: GameState) {
+      if (!model) return
+      model.setState(s)
+      if (bg && bgTarget !== model.target) makeBackground()
+    },
+    onEvent(e) {
+      model?.onEvent(e)
+    },
+    resize(w, h, d) {
+      width = w
+      height = h
+      dpr = d
+      compact = h < 80
+      relayout()
+    },
+    tick(dt) {
+      if (!model) return
+      model.step(dt)
+      if (!ctx) return
+      ctx.clearRect(0, 0, width, height)
+      if (bg) ctx.drawImage(bg, 0, 0, width, height)
+      else renderBackground(ctx, model.geo, model.target)
+      renderDynamic(ctx, model)
+    },
+    pause() {},
+    resume() {},
+    degrade(level) {
+      quality = level
+      model?.degrade(level)
+      if (level >= 3) relayout()
+    },
+    destroy() {
+      ctx = null
+      canvas = null
+      bg = null
+      model = null
+    },
+  }
+}

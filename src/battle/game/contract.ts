@@ -44,6 +44,8 @@ export interface GameModule {
   pause(): void
   resume(): void
   destroy(): void
+  /** 宿主的循环连续掉帧时调用（1 → 3 逐级加重）：游戏据此停视差 / 停粒子 / 降像素比 */
+  degrade?(level: number): void
 }
 
 /** 每次挂载新建一个实例（同一皮肤再来一局、换皮肤都干净） */

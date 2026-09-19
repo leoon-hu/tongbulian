@@ -42,6 +42,7 @@ const loop = new Loop({
   },
   degrade: (lv) => {
     level.value = lv
+    if (mod?.degrade) guard(() => mod!.degrade!(lv))
   },
 })
 
