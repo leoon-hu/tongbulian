@@ -112,6 +112,7 @@ onBeforeUnmount(() => {
       <span v-if="player.difficulty > 1" class="diff"><RubyText :text="{ k: 'battle.diffBadge', p: { n: player.difficulty } }" /></span>
       <span class="stats">{{ ui('battle.stats', { n: player.index, m: player.correct }) }}</span>
       <span v-if="player.streak >= 2" :key="player.streak" class="streak" :title="ui('battle.streakBadge')">🔥 ×{{ player.streak }}</span>
+      <span v-if="!player.online" class="off">📶 <RubyText :text="{ k: 'room.offline' }" /></span>
     </div>
     <div v-if="question" class="row-body">
       <div
@@ -162,6 +163,18 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 多设备里掉线的人（B23）：行头标一下，行变淡；比赛不暂停 */
+.row.offline {
+  opacity: 0.7;
+}
+.off {
+  margin-left: auto;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: var(--fs-sm);
+  color: var(--c-text-light);
+}
 /* 行是竖向 flex：题干可以被压缩、内部滚动，作答面板不压缩——键盘永远在视野里，不用滚下去找 */
 .row {
   display: flex;

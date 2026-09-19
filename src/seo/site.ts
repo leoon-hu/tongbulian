@@ -428,7 +428,7 @@ function helpPage(siteUrl: string): string {
   const sections = helpSections('zh')
   const games = helpGames('zh')
   const title = `${HELP_TITLE.zh}：学习内容、对战玩法、规则、技巧与常见问题`
-  const description = `${SITE_NAME}${HELP_LEAD.zh}对战模式：同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢；打机器人或两人一台，${games.length} 种游戏画面。`
+  const description = `${SITE_NAME}${HELP_LEAD.zh}对战模式：同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢；打机器人、两人一台，或者各用各的设备进同一个房间，${games.length} 种游戏画面。`
   const render = (b: ReturnType<typeof helpSections>[number]['blocks'][number]): string => {
     switch (b.kind) {
       case 'p':
@@ -536,7 +536,7 @@ export function homeMeta(): { title: string; description: string; ogDescription:
   const list = lcs.map((lc) => `${lc.name} ${liveKps(lc.course).length} 个知识点`).join('、')
   return {
     title: `${SITE_NAME} · 人教版小学${subjects}同步练习（${grades}，带拼音和朗读）`,
-    description: `${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，${list}可练；每个汉字标拼音、每道题自动朗读，答错有教具演示；还有对战模式，打机器人或两人一台比谁先答对 8 题；免费、无广告、不用注册、可离线使用。`,
+    description: `${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，${list}可练；每个汉字标拼音、每道题自动朗读，答错有教具演示；还有对战模式，打机器人、两人一台或各用各的设备比谁先答对 8 题；免费、无广告、不用注册、可离线使用。`,
     ogDescription: `按人教版教材单元随机出题，${list}；汉字标拼音、题目自动朗读，还能对战；免费、可离线。`,
     keywords: [
       SITE_NAME,
@@ -575,7 +575,7 @@ export function homeHead(): string {
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
     audience: { '@type': 'EducationalAudience', educationalRole: 'student' },
-    featureList: `人教版${m.grades}数学 ${m.kpCount} 个知识点随机出题；汉字标拼音；题目自动朗读；答错教具演示；对战模式（打机器人 / 两人一台，${SKINS.length} 种实时绘图的游戏画面）；中英文切换；离线可用；可添加到主屏幕`,
+    featureList: `人教版${m.grades}数学 ${m.kpCount} 个知识点随机出题；汉字标拼音；题目自动朗读；答错教具演示；对战模式（打机器人 / 两人一台 / 多设备房间，${SKINS.length} 种实时绘图的游戏画面）；中英文切换；离线可用；可添加到主屏幕`,
     description: m.ogDescription,
   }
   // JSON-LD 一行一个键：没配置 SITE_URL 时构建插件会把含 __SITE_URL__ 的那一行整行删掉，其余仍是合法 JSON
@@ -616,7 +616,7 @@ export function homeBody(): string {
 ${sections}
         <p>其它年级和${esc(soon.join('、'))}陆续补充。</p>
         <h2>对战模式</h2>
-        <p>同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），也可以两个人一台平板左右分屏；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。</p>
+        <p>同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），可以两个人一台平板左右分屏，也可以每人一台设备扫码进同一个房间（两队各最多 6 人，还能观战）；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。</p>
         <p><a href="./${HELP_PATH}">帮助与说明：学习内容、对战玩法、规则、技巧、常见问题 →</a></p>
         <p>${sisterLinks()}</p>
       </main>`

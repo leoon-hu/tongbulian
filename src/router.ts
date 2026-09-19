@@ -32,6 +32,12 @@ const router = createRouter({
       name: 'battle-local',
       component: () => import('@/views/battle/BattleArenaView.vue'),
     },
+    // 多设备房间（B19–B21）：大厅 → 竞技场 → 结果，同一视图分阶段；房间号 6 位，去掉 0 O 1 I L
+    {
+      path: '/battle/:code([A-HJ-NP-Z2-9]{6})',
+      name: 'battle-room',
+      component: () => import('@/views/battle/BattleRoomView.vue'),
+    },
     // 帮助页（需求 F17）：学习内容 / 题目、对战玩法、规则、技巧、常见问题
     { path: '/help', name: 'help', component: () => import('@/views/HelpView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },

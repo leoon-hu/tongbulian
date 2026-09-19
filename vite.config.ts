@@ -78,7 +78,8 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2,json,mp3}'],
           // 子目录里的 html 是给搜索引擎的静态页（<学科>/<年级>/…），og.png 是分享图，three-*.js 是 3D 试点按需拉的
           // Three.js（约 650 KB，拉不到时那个皮肤自动退回 2D 版）：都不进离线包
-          globIgnores: ['*/**/*.html', 'og.png', '**/three-*.js'],
+          // qrcode-*.js 是大厅页的二维码库：多设备本来就要联网，不进离线包
+          globIgnores: ['*/**/*.html', 'og.png', '**/three-*.js', '**/qrcode-*.js'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           navigateFallback: 'index.html',
           // 带目录的地址是静态页，不能被回退成入口页（hash 路由的应用本身只有根地址一个导航目标）
@@ -89,7 +90,10 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         // Three.js 只有 3D 试点用，固定切成 three-*.js，方便离线包排除
-        output: { manualChunks: (id: string) => (id.includes('/node_modules/three/') ? 'three' : undefined) },
+        output: {
+          manualChunks: (id: string) =>
+            id.includes('/node_modules/three/') ? 'three' : id.includes('/node_modules/qrcode/') || id.includes('/node_modules/dijkstrajs/') || id.includes('/node_modules/encode-utf8/') ? 'qrcode' : undefined,
+        },
       },
     },
     resolve: {

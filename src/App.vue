@@ -8,20 +8,26 @@ import { useRoute } from 'vue-router'
 import AppHeader from '@/components/ui/AppHeader.vue'
 import { courseOfKp, findKp, getCourse, getGrade, getSubject } from '@/engine/catalog'
 import { kpTitle, lang, t, ui } from '@/engine/i18n'
+import { useRoomStore } from '@/stores/room'
 
 const route = useRoute()
+const room = useRoomStore()
 
 /** 对战页的地址只带 kpId：学科 / 年级 / 知识点由目录反查 */
 const isBattle = computed(() => route.path.startsWith('/battle/'))
-/** 竞技场（B28）不放全局顶栏，省高度 */
-const isArena = computed(() => route.name === 'battle-local')
+/** 竞技场（B28）不放全局顶栏，省高度；房间页在比赛进行中也是竞技场 */
+const isArena = computed(() => route.name === 'battle-local' || (route.name === 'battle-room' && room.inMatch))
 function battleInfo() {
-  return isBattle.value && typeof route.params.kpId === 'string' ? courseOfKp(route.params.kpId) : undefined
+  const kpId = isBattle.value ? (typeof route.params.kpId === 'string' ? route.params.kpId : room.snapshot?.kpId) : undefined
+  return kpId ? courseOfKp(kpId) : undefined
 }
 
 const BASE_TITLE = document.title
 function pageTitle(): string {
   if (route.name === 'help') return `${HELP_TITLE[lang.value]} · ${ui('brand.title')}`
+  if (route.name === 'battle-room' && typeof route.params.code === 'string') {
+    return [`${ui('room.title')} ${route.params.code}`, ui('battle.title'), ui('brand.title')].join(' · ')
+  }
   const battle = battleInfo()
   if (battle) {
     return [
@@ -48,7 +54,7 @@ function pageTitle(): string {
 }
 watch([() => route.fullPath, lang], () => (document.title = pageTitle()), { immediate: true })
 watch(
-  () => route.path,
+  [() => route.path, () => room.snapshot?.kpId],
   () => {
     const sid = route.params.subjectId
     const subject = typeof sid === 'string' ? getSubject(sid) : battleInfo()?.subject

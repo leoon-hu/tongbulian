@@ -12,9 +12,14 @@ import { SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
 import { useInstallStore } from '@/stores/install'
 import { useBattleStore } from '@/stores/battle'
-// 对战的两个视图是按需加载的：先静态导入一次，路由里的 import() 就不用在用例中途等模块转换
+import { useRoomStore } from '@/stores/room'
+import { COUNTDOWN_MS } from '@/battle/match'
+import { FakeWs } from '@/battle/__tests__/fake-socket'
+import { apply, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
+// 对战的三个视图是按需加载的：先静态导入一次，路由里的 import() 就不用在用例中途等模块转换
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
+import '@/views/battle/BattleRoomView.vue'
 
 // 语言是模块级单例 + 本地存储持久化——每个用例后复位，保证相互独立。
 afterEach(() => {
@@ -575,6 +580,179 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     const w2 = await mountAt(`/battle/local/${KP}?mode=duo`)
     await until(pathIs(`/battle/new/${KP}`))
     w2.unmount()
+  })
+})
+
+describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
+  const BATTLE_KEY = 'tongbulian:battle'
+  const KP = 's1-05-carry-add'
+  const CODE = 'ABC234'
+  let seedN = 0
+  const seeds = (): number => ++seedN
+
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 5; i++) await flushPromises()
+  }
+  async function until(pred: () => boolean): Promise<void> {
+    for (let i = 0; i < 200 && !pred(); i++) await flushPromises()
+    expect(pred()).toBe(true)
+    await settle()
+  }
+  const pathIs = (path: string) => () => router.currentRoute.value.path === path
+
+  afterEach(() => {
+    vi.useRealTimers()
+    FakeWs.reset()
+  })
+
+  it('设置页「各用各的」→ 建房间 → 大厅（房间号、三个链接、选队、准备、主持人开始）→ 服务器倒数开打 → 只有自己那行可操作 → 答题发给服务器 → 到 8 分出结果页；主持权换人后只能等；退出回地图', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' }, skin: 'race' }))
+    const w = await mountAt(`/battle/new/${KP}`)
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    room.useFactory((url) => new FakeWs(url))
+    const me = battle.prefs.clientId
+    const online = w.findAll('.mode')[2]!
+    expect(online.attributes('disabled')).toBeUndefined()
+    await online.trigger('click')
+    expect(shown(w.find('.start-btn'))).toContain('建房间')
+    expect(w.find('.join').exists()).toBe(true)
+    expect(w.find('.more-toggle').exists()).toBe(false) // 让子在大厅里各选各的
+    await w.find('.start-btn').trigger('click')
+    const ws = FakeWs.last()
+    ws.open()
+    expect(ws.msgs.map((m) => m.type)).toEqual(['hello', 'create'])
+    expect(ws.msgs[1]).toMatchObject({ type: 'create', kpId: KP, skin: 'race' })
+
+    let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
+    const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me })
+    const applyAndPush = (from: string, msg: Parameters<typeof apply>[2], now: number): void => {
+      const res = apply(r, from, msg, now, seeds)
+      r = res.room
+      for (const e of res.effects) if (e.type === 'event') ws.receive({ type: 'event', e: e.e })
+      push()
+    }
+    push()
+    await until(pathIs(`/battle/${CODE}`))
+    expect(shown(w)).toContain(CODE)
+    expect(document.title).toContain(CODE)
+    expect(w.find('.app-header').exists()).toBe(true)
+    expect(w.findAll('.link')).toHaveLength(3)
+    expect(w.findAll('.join-team')).toHaveLength(2) // 主持人还没选队
+    expect(w.find('.start-btn').attributes('disabled')).toBeDefined()
+    expect(shown(w)).toContain('对战开始啦') // 规则句在大厅里看
+
+    ws.sent.length = 0
+    await w.find('.col.red .join-team').trigger('click')
+    expect(ws.msgs).toEqual([{ type: 'team', role: 'red' }])
+    applyAndPush(me, { type: 'team', role: 'red' }, 2000)
+    await settle()
+    expect(w.find('.col.red .member.me').exists()).toBe(true)
+    expect(shown(w.find('.col.red .member.me'))).toContain('主持人')
+    expect(w.findAll('.join-team')).toHaveLength(1)
+
+    r = join(r, { clientId: 'bbbbbb', name: '小虎', t: 'blue', version: 'v1' }, 2500).room
+    applyAndPush('bbbbbb', { type: 'ready', ready: true }, 2600)
+    await settle()
+    expect(shown(w.find('.col.blue'))).toContain('小虎')
+    expect(w.find('.col.blue .ready-mark.on').exists()).toBe(true)
+    expect(w.find('.start-btn').attributes('disabled')).toBeDefined()
+
+    ws.sent.length = 0
+    await w.find('.ready-btn').trigger('click')
+    expect(ws.msgs).toEqual([{ type: 'ready', ready: true }])
+    applyAndPush(me, { type: 'ready', ready: true }, 2700)
+    await settle()
+    expect(w.find('.ready-btn.on').exists()).toBe(true)
+    expect(w.find('.start-btn').attributes('disabled')).toBeUndefined()
+    ws.sent.length = 0
+    await w.find('.start-btn').trigger('click')
+    expect(ws.msgs).toEqual([{ type: 'start' }])
+    applyAndPush(me, { type: 'start' }, 3000)
+    await settle()
+    expect(w.find('.app-header').exists()).toBe(false)
+    expect(w.find('.arena').exists()).toBe(true)
+    expect(w.find('.countdown').exists()).toBe(true)
+
+    r = tick(r, 3000 + COUNTDOWN_MS).room
+    ws.receive({ type: 'event', e: { type: 'go' } })
+    push()
+    await settle()
+    expect(w.find('.countdown').exists()).toBe(false)
+    expect(w.findAll('.row.operable')).toHaveLength(1)
+    expect(w.find('.team.red .row.operable').exists()).toBe(true)
+    expect(w.find('.team.blue .watch').exists()).toBe(true)
+    expect(w.find('.team.red .team-name').text()).toBe('小兔')
+    expect(w.find('.team.blue .team-name').text()).toBe('小虎')
+
+    // 从界面上答第一题：只发消息，分要等服务器
+    const meP = battle.state!.players.find((p) => p.id === me)!
+    const q = battle.questionOf(meP)
+    const ans = q.answer
+    ws.sent.length = 0
+    const redRow = w.find('.team.red .row.operable')
+    if (ans.kind === 'number') {
+      for (const d of String(ans.value)) await redRow.findAll('.key').find((k) => k.text() === d)!.trigger('click')
+      await redRow.find('.key.ok').trigger('click')
+    } else {
+      const i = q.choices!.findIndex((c) => c.id === ans.choiceId)
+      await redRow.findAll('.cards .card')[i]!.trigger('click')
+    }
+    await flushPromises()
+    const given = ans.kind === 'number' ? String(ans.value) : ans.choiceId
+    expect(ws.msgs.find((m) => m.type === 'answer')).toEqual({ type: 'answer', index: 0, given, correct: true })
+    expect(w.find('.team.red .feedback.right').exists()).toBe(true)
+    expect(w.find('.team.red .score').text()).toBe('0')
+    applyAndPush(me, { type: 'answer', index: 0, given, correct: true }, 8000)
+    vi.advanceTimersByTime(700)
+    await settle()
+    expect(w.find('.team.red .score').text()).toBe('1')
+    expect(w.find('.team.red .feedback').exists()).toBe(false)
+
+    for (let i = 1; i < 8; i++) applyAndPush(me, { type: 'answer', index: i, given: '7', correct: true }, 8000 + i)
+    await settle()
+    expect(battle.state!.phase).toBe('ended')
+    vi.advanceTimersByTime(2100)
+    await settle()
+    expect(w.find('.result').exists()).toBe(true)
+    expect(shown(w)).toContain('红队获胜')
+    expect(shown(w.find('.result'))).toContain('再来一局') // 主持人才有
+
+    r = { ...r, hostId: 'bbbbbb' } // 主持权换人
+    push()
+    await settle()
+    expect(shown(w.find('.result'))).toContain('等主持人')
+    expect(w.findAll('.result .big-btn')).toHaveLength(1) // 只剩「退出」
+
+    ws.sent.length = 0
+    await w.find('.result .big-btn').trigger('click') // 只剩「退出」
+    await until(pathIs(MAP))
+    expect(ws.msgs.map((m) => m.type)).toContain('leave')
+    expect(ws.closed).toBe(true)
+    expect(battle.state).toBeNull()
+    expect(w.find('.app-header').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('打开蓝队链接：没有名字先问，选好名字后带房间号与身份 hello；房间不存在时给提示并能回去', async () => {
+    const w = await mountAt(`/battle/${CODE}?t=blue`)
+    const room = useRoomStore()
+    room.useFactory((url) => new FakeWs(url))
+    expect(shown(w)).toContain('你叫什么')
+    await w.find('.sheet .chip').trigger('click')
+    await w.find('form.sheet').trigger('submit')
+    await settle()
+    const ws = FakeWs.last()
+    ws.open()
+    expect(ws.msgs[0]).toMatchObject({ type: 'hello', code: CODE, t: 'blue' })
+    expect(shown(w)).toContain('正在连接')
+    ws.receive({ type: 'error', error: 'noRoom' })
+    await settle()
+    expect(shown(w)).toContain('没有这个房间')
+    await w.find('.room-msg .big-btn').trigger('click')
+    await until(pathIs('/'))
+    w.unmount()
   })
 })
 

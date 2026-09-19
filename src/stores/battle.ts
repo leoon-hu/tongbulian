@@ -11,7 +11,7 @@ import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
 import { answerSpeech, phraseSpeech, questionSpeech } from '@/engine/speech'
 import { warmUp } from '@/engine/voice'
-import type { ArenaEvent, MatchEvent, MatchState, Player, SeqEvent, Team } from '@/battle/protocol'
+import type { ArenaEvent, ClientMsg, MatchEvent, MatchState, Player, RoomSnapshot, SeqEvent, Team } from '@/battle/protocol'
 import {
   answer as applyAnswer,
   beginPlay as applyBegin,
@@ -28,6 +28,13 @@ import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { RANDOM_SKIN, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
 export type LocalMode = 'ai' | 'duo'
+/** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
+export type BattleMode = LocalMode | 'online'
+
+/** 线上模式往服务器发消息的口子（stores/room 注入；测试可注入假的） */
+export interface OnlineTransport {
+  send(msg: ClientMsg): void
+}
 /** 答对 / 答错后停留多久再出下一题（B5）；弹出提示时答对的停留延长，让话说完（B5a） */
 export const FEEDBACK_RIGHT_MS = 600
 export const FEEDBACK_WRONG_MS = 1200
@@ -142,7 +149,14 @@ export const useBattleStore = defineStore('battle', () => {
   const mapMode = ref(false)
 
   const state = ref<MatchState | null>(null)
-  const mode = ref<LocalMode | null>(null)
+  const mode = ref<BattleMode | null>(null)
+  /** 线上模式：我是谁、主持人是谁（结果页只有主持人能「再来一局」） */
+  const online = ref<{ you: string; hostId: string } | null>(null)
+  let transport: OnlineTransport | null = null
+  let inputTimer: ReturnType<typeof setTimeout> | null = null
+  let inputPending: string | null = null
+  /** 线上模式：答完一题后，反馈窗口时间到了 + 服务器快照里题号已推进 → 才关反馈（两个条件各记一份） */
+  const awaiting = new Map<string, { index: number; elapsed: boolean }>()
   /** 本机可以操作的玩家 id */
   const operable = ref<string[]>([])
   const pending = ref<Record<string, Feedback>>({})
@@ -208,13 +222,115 @@ export const useBattleStore = defineStore('battle', () => {
     warmUp(tokens, lang.value)
   }
 
-  function reset(): void {
+  function reset(keepEvents = false): void {
     clearAll(timers)
     clearAll(aiTimers)
     pending.value = {}
-    lastEvent.value = null
-    events.value = []
+    if (!keepEvents) {
+      lastEvent.value = null
+      events.value = []
+    }
     callout.value = null
+    if (inputTimer) clearTimeout(inputTimer)
+    inputTimer = null
+    inputPending = null
+    awaiting.clear()
+  }
+
+  function clearPending(playerId: string): void {
+    const rest = { ...pending.value }
+    delete rest[playerId]
+    pending.value = rest
+  }
+
+  /** 线上模式：反馈窗口时间到了、快照也推进了才关 */
+  function settleOnline(playerId: string): void {
+    const a = awaiting.get(playerId)
+    if (!a || !a.elapsed) return
+    const p = state.value ? findPlayer(state.value, playerId) : undefined
+    if (p && p.index < a.index && state.value?.phase === 'playing') return
+    awaiting.delete(playerId)
+    clearPending(playerId)
+  }
+
+  /** 收到比赛事件后的反应（两种模式共用）：入队、音效、弹提示；返回这次弹了什么（答对的反馈窗口要延长） */
+  function react(evts: MatchEvent[], skin: string): MatchEvent | null {
+    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 反超 > 还差一分 > 连对 > 到一半
+    let toCall: MatchEvent | null = null
+    const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1, half: 0.5 }
+    const sounds = skinSfx(skin, skinById(skin)?.kind)
+    for (const e of evts) {
+      lastEvent.value = e
+      pushEvent(e)
+      if (e.type === 'point') {
+        playSfx('ding', streakPitch(e.streak))
+        for (const x of sounds.score) playSfx(x)
+      }
+      if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
+      if (e.type === 'lead' || e.type === 'nearWin') playSfx(calloutSfx(e.type))
+      if (e.type === 'finished') {
+        clearAll(aiTimers)
+        later(timers, () => playSfx('fanfare'), 300)
+        sounds.win.forEach((x, i) => later(timers, () => playSfx(x), 500 + i * 250))
+      }
+      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
+        toCall = e
+      }
+    }
+    if (toCall) {
+      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' }>
+      if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
+      else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
+      else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
+    }
+    return toCall
+  }
+
+  // ── 多设备（B41）：状态来自服务器的整份快照，操作发给服务器 ──
+
+  /** 进房前调用：之后的比赛状态都由 syncOnline 喂 */
+  function startOnline(t: OnlineTransport): void {
+    reset()
+    mode.value = 'online'
+    transport = t
+    online.value = null
+    state.value = null
+    operable.value = []
+    // 规则句在大厅里已经看过 / 读过，倒数不再讲（B6）
+    intro.value = false
+  }
+
+  /**
+   * 收到房间快照：比赛部分替换进来；新开一局（开始时刻变了）时清掉上一局的反馈、计时与提示。
+   * 事件队列留着：服务器的 event 立刻发、快照按 100 ms 节流，新一局的 countdown 事件会先于快照到。
+   */
+  function syncOnline(room: RoomSnapshot, me: string): void {
+    mode.value = 'online'
+    online.value = { you: me, hostId: room.hostId }
+    const match = room.match
+    if (!match) {
+      if (state.value) reset()
+      state.value = null
+      operable.value = []
+      return
+    }
+    const prev = state.value
+    const fresh = !prev || prev.startedAt !== match.startedAt
+    if (fresh) reset(true)
+    state.value = match
+    operable.value = match.players.some((p) => p.id === me) ? [me] : []
+    if (fresh) prepareVoice()
+    for (const id of [...awaiting.keys()]) settleOnline(id)
+  }
+
+  /** 服务器发来的瞬时事件（倒数 / 开打 / 答题的那几条）：与本地一样入队、放音效、弹提示 */
+  function onRemoteEvent(e: ArenaEvent): void {
+    if (e.type === 'countdown' || e.type === 'go') {
+      pushEvent(e)
+      return
+    }
+    const s = state.value
+    react([e], s?.skin ?? '')
   }
 
   /** 开一局单设备的比赛（进入倒数）。names 缺的用「我」的名字补，设置页会保证名字都有 */
@@ -258,9 +374,9 @@ export const useBattleStore = defineStore('battle', () => {
     return questionAt(s.kpId, p.seed, p.difficulty, p.index)
   }
 
-  /** 倒数结束：开打，机器人开始动 */
+  /** 倒数结束：开打，机器人开始动（线上模式由服务器定时刻，这里不动） */
   function beginPlay(now = Date.now()): void {
-    if (!state.value) return
+    if (!state.value || mode.value === 'online') return
     const before = state.value.phase
     state.value = applyBegin(state.value, now)
     if (before === 'countdown' && state.value.phase === 'playing') pushEvent({ type: 'go' })
@@ -268,6 +384,18 @@ export const useBattleStore = defineStore('battle', () => {
   }
 
   function setInput(playerId: string, input: string): void {
+    if (mode.value === 'online') {
+      // 正在按的内容发给服务器（节流 100 ms，B42）；自己的显示框由键盘组件管
+      inputPending = input
+      if (!inputTimer) {
+        inputTimer = setTimeout(() => {
+          inputTimer = null
+          if (inputPending !== null) transport?.send({ type: 'input', input: inputPending })
+          inputPending = null
+        }, 100)
+      }
+      return
+    }
     if (state.value) state.value = applyInput(state.value, playerId, input)
   }
 
@@ -292,44 +420,28 @@ export const useBattleStore = defineStore('battle', () => {
     if (!p) return
     const q = questionOf(p)
     const ok = checkAnswer(q, given)
-    const res = applyAnswer(s, playerId, p.index, ok, String(given), now)
-    state.value = res.state
     pending.value = { ...pending.value, [playerId]: { question: q, correct: ok, given: String(given) } }
-    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 反超 > 还差一分 > 连对 > 到一半
     let toCall: MatchEvent | null = null
-    const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1, half: 0.5 }
-    const sounds = skinSfx(res.state.skin, skinById(res.state.skin)?.kind)
-    for (const e of res.events) {
-      lastEvent.value = e
-      pushEvent(e)
-      if (e.type === 'point') {
-        playSfx('ding', streakPitch(e.streak))
-        for (const x of sounds.score) playSfx(x)
-      }
-      if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
-      if (e.type === 'lead' || e.type === 'nearWin') playSfx(calloutSfx(e.type))
-      if (e.type === 'finished') {
-        clearAll(aiTimers)
-        later(timers, () => playSfx('fanfare'), 300)
-        sounds.win.forEach((x, i) => later(timers, () => playSfx(x), 500 + i * 250))
-      }
-      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
-        toCall = e
-      }
-    }
-    if (toCall) {
-      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' }>
-      if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
-      else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
-      else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
+    if (mode.value === 'online') {
+      // 题目在本机判分，结果报给服务器（B41）；比分与事件等服务器的快照 / 事件回来
+      awaiting.set(playerId, { index: p.index + 1, elapsed: false })
+      transport?.send({ type: 'answer', index: p.index, given: String(given), correct: ok })
+    } else {
+      const res = applyAnswer(s, playerId, p.index, ok, String(given), now)
+      state.value = res.state
+      toCall = react(res.events, res.state.skin)
     }
     if (!ok) playSfx('dong')
     later(
       timers,
       () => {
-        const rest = { ...pending.value }
-        delete rest[playerId]
-        pending.value = rest
+        const a = awaiting.get(playerId)
+        if (a) {
+          a.elapsed = true
+          settleOnline(playerId)
+          return
+        }
+        clearPending(playerId)
         if (p.kind === 'ai') aiStep()
       },
       ok ? (toCall ? FEEDBACK_CALLOUT_MS : FEEDBACK_RIGHT_MS) : FEEDBACK_WRONG_MS,
@@ -360,10 +472,14 @@ export const useBattleStore = defineStore('battle', () => {
     )
   }
 
-  /** 再来一局：同样的人、知识点、皮肤，新 seed */
+  /** 再来一局：同样的人、知识点、皮肤，新 seed（线上由主持人发给服务器） */
   function rematch(seeds?: Record<string, number>, now = Date.now()): void {
     const s = state.value
     if (!s) return
+    if (mode.value === 'online') {
+      transport?.send({ type: 'rematch' })
+      return
+    }
     reset()
     state.value = startMatch(s, seedsFor(s.players, seeds), now)
     intro.value = false
@@ -376,6 +492,8 @@ export const useBattleStore = defineStore('battle', () => {
     state.value = null
     mode.value = null
     operable.value = []
+    online.value = null
+    transport = null
   }
 
   return {
@@ -389,8 +507,12 @@ export const useBattleStore = defineStore('battle', () => {
     events,
     callout,
     intro,
+    online,
     setName,
     startLocal,
+    startOnline,
+    syncOnline,
+    onRemoteEvent,
     questionOf,
     beginPlay,
     setInput,

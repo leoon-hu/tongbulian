@@ -1,13 +1,16 @@
 <script setup lang="ts">
-// 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）、机器人快慢、选游戏、名字 → 开始
-import { computed, onMounted, ref } from 'vue'
+// 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）、机器人快慢、选游戏、名字 → 开始；
+// 「各用各的」（B19 / B20）：建房间 → 进大厅；或输入房间号加入别人的房间
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { hasGenerator } from '@/engine'
+import { createRng, hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
 import type { Difficulty } from '@/types/models'
 import { AI_LEVELS, type AiLevel } from '@/battle/ai'
-import { useBattleStore, type DiffSlot, type LocalMode } from '@/stores/battle'
+import { resolveSkin } from '@/battle/skins'
+import { useBattleStore, type BattleMode, type DiffSlot, type LocalMode } from '@/stores/battle'
+import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import BigButton from '@/components/ui/BigButton.vue'
@@ -18,6 +21,7 @@ import ModeIcon from '@/components/battle/ModeIcon.vue'
 const route = useRoute()
 const router = useRouter()
 const store = useBattleStore()
+const room = useRoomStore()
 
 const kpId = String(route.params.kpId)
 const info = courseOfKp(kpId)
@@ -25,7 +29,9 @@ const ready = info !== undefined && hasGenerator(kpId)
 if (!ready) router.replace('/')
 const mapPath = info ? `/s/${info.subject.id}/g/${info.grade.id}` : '/'
 
-const mode = ref<LocalMode>('ai')
+const mode = ref<BattleMode>('ai')
+/** 多设备（B46）：这个地址有没有对战服务（file:// 打开就没有） */
+const online = computed(() => room.available)
 const AI_ICONS: Record<AiLevel, string> = { slow: '🐢', mid: '🐰', fast: '🚀' }
 /** 正在改谁的名字（NameSheet 打开时） */
 const asking = ref<'me' | 'left' | 'right' | null>(null)
@@ -63,16 +69,49 @@ function saveName(name: string): void {
   asking.value = null
 }
 
+// ── 多设备：建房间 / 输房间号加入 ──
+const creating = ref(false)
+const joinCode = ref('')
+const joinOk = computed(() => /^[A-HJ-NP-Z2-9]{6}$/.test(joinCode.value))
+const roomError = computed(() => (creating.value && room.error && FATAL_ERRORS.includes(room.error) ? room.error : null))
+watch(
+  () => room.code,
+  (c) => {
+    if (creating.value && c && room.snapshot) {
+      creating.value = false
+      router.push(`/battle/${c}`)
+    }
+  },
+)
+watch(roomError, (e) => {
+  if (e) creating.value = false
+})
+function join(): void {
+  const c = joinCode.value.trim().toUpperCase()
+  if (!/^[A-HJ-NP-Z2-9]{6}$/.test(c)) return
+  router.push(`/battle/${c}`)
+}
+onBeforeUnmount(() => {
+  // 建房还没回来就离开了：断掉，别留一个没人的房间
+  if (creating.value) room.leave()
+})
+
 function start(): void {
   if (!names.value.me) {
     asking.value = 'me'
+    return
+  }
+  if (mode.value === 'online') {
+    if (creating.value) return
+    creating.value = true
+    room.create(kpId, resolveSkin(store.prefs.skin, createRng()))
     return
   }
   if (mode.value === 'duo' && !names.value.right) {
     asking.value = 'right'
     return
   }
-  store.startLocal({ kpId, mode: mode.value })
+  store.startLocal({ kpId, mode: mode.value as LocalMode })
   // 在这个手势里试着全屏（iPad / Android / 电脑；iPhone 不支持就算了），全屏了再试横屏锁（B30，只有 Android 装到桌面 / 全屏时可用）
   try {
     document.documentElement
@@ -110,10 +149,10 @@ function start(): void {
           <ModeIcon mode="duo" />
           <RubyText :text="{ k: 'battle.mode.duo' }" />
         </button>
-        <button type="button" class="mode soon" disabled>
+        <button type="button" class="mode" :class="{ on: mode === 'online', soon: !online }" :disabled="!online" @click="mode = 'online'">
           <ModeIcon mode="online" />
           <RubyText :text="{ k: 'battle.mode.online' }" />
-          <small>{{ ui('chooser.soon') }}</small>
+          <small v-if="!online">{{ ui('room.unavailable') }}</small>
         </button>
       </div>
     </section>
@@ -145,7 +184,7 @@ function start(): void {
     <section class="block">
       <h2 class="label"><RubyText :text="{ k: 'battle.names' }" /></h2>
       <div class="names">
-        <button v-if="mode === 'ai'" type="button" class="name-chip red" @click="asking = 'me'">
+        <button v-if="mode !== 'duo'" type="button" class="name-chip red" @click="asking = 'me'">
           <span class="who">🔴</span>
           <span class="nm">{{ names.me || '…' }}</span>
           <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
@@ -169,7 +208,7 @@ function start(): void {
       </div>
     </section>
 
-    <section class="block">
+    <section v-if="mode !== 'online'" class="block">
       <button type="button" class="more-toggle" :aria-expanded="more" @click="more = !more">
         <span class="more-icon" aria-hidden="true">⚙️</span>
         <RubyText :text="{ k: 'battle.more' }" />
@@ -200,8 +239,30 @@ function start(): void {
     </section>
 
     <div class="start">
-      <BigButton color="green" class="start-btn" @click="start"><RubyText :text="{ k: 'battle.start' }" /></BigButton>
+      <BigButton color="green" class="start-btn" :disabled="creating" @click="start">
+        <RubyText :text="{ k: mode === 'online' ? (creating ? 'room.connecting' : 'room.create') : 'battle.start' }" />
+      </BigButton>
+      <p v-if="roomError" class="room-error" role="alert"><RubyText :text="{ k: `room.error.${roomError}` }" /></p>
     </div>
+
+    <form v-if="mode === 'online'" class="join" @submit.prevent="join">
+      <label class="join-label" for="join-code"><RubyText :text="{ k: 'room.join' }" /></label>
+      <div class="join-row">
+        <input
+          id="join-code"
+          v-model="joinCode"
+          class="join-input"
+          type="text"
+          inputmode="text"
+          autocapitalize="characters"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="6"
+          :placeholder="ui('room.join.hint')"
+        />
+        <BigButton color="blue" :disabled="!joinOk" @click="join"><RubyText :text="{ k: 'room.join.go' }" /></BigButton>
+      </div>
+    </form>
 
     <NameSheet
       v-if="asking"
@@ -214,6 +275,50 @@ function start(): void {
 </template>
 
 <style scoped>
+.room-error {
+  flex-basis: 100%;
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--c-primary-dark);
+  font-weight: 700;
+}
+.join {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.join-label {
+  font-weight: 800;
+  color: var(--c-text-light);
+}
+.join-row {
+  display: flex;
+  gap: 10px;
+}
+.join-input {
+  width: 160px;
+  min-height: var(--tap-min);
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 3px solid var(--c-line);
+  background: var(--c-card);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--c-text);
+}
+.join-input:focus {
+  outline: none;
+  border-color: var(--c-primary);
+}
+.start {
+  flex-wrap: wrap;
+}
 .more-toggle {
   display: inline-flex;
   align-items: center;
