@@ -9,7 +9,7 @@ import type { Difficulty, LParam, Question } from '@/types/models'
 import { createRng, type RNG } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
-import { answerSpeech, questionSpeech } from '@/engine/speech'
+import { answerSpeech, phraseSpeech, questionSpeech } from '@/engine/speech'
 import { warmUp } from '@/engine/voice'
 import type { ArenaEvent, MatchEvent, MatchState, Player, SeqEvent, Team } from '@/battle/protocol'
 import {
@@ -24,8 +24,8 @@ import {
 import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, isAiLevel, planAnswer, type AiLevel } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
-import { playSfx, streakPitch, type Sfx } from '@/battle/sfx'
-import { RANDOM_SKIN, resolveSkin, skinById, type SkinKind } from '@/battle/skins'
+import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
+import { RANDOM_SKIN, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
 export type LocalMode = 'ai' | 'duo'
 /** 答对 / 答错后停留多久再出下一题（B5）；弹出提示时答对的停留延长，让话说完（B5a） */
@@ -64,7 +64,6 @@ export interface Callout {
 }
 
 /** 皮肤类型对应的得分音效（跑 / 拉 = 呼啸，盖 = 咚，化 = 咔嚓） */
-const KIND_SFX: Record<SkinKind, Sfx> = { race: 'whoosh', tug: 'whoosh', grow: 'thud', consume: 'crack' }
 
 function randomId(): string {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6)
@@ -131,6 +130,8 @@ export const useBattleStore = defineStore('battle', () => {
   let eventSeq = 0
   const callout = ref<Callout | null>(null)
   let calloutSeq = 0
+  /** 这局开场要不要先讲规则（B6）：新开一局讲，再来一局不讲 */
+  const intro = ref(false)
 
   function pushEvent(e: ArenaEvent): void {
     events.value = [...events.value.slice(-(EVENT_LOG - 1)), { seq: ++eventSeq, e }]
@@ -173,6 +174,9 @@ export const useBattleStore = defineStore('battle', () => {
           ...answerSpeech(q, lang.value),
         ]),
       )
+    for (const key of [ruleKey(s.skin), finishKey(s.skin), 'battle.half.red', 'battle.half.blue', 'battle.win.red', 'battle.win.blue']) {
+      tokens.push(...phraseSpeech({ k: key }, lang.value))
+    }
     warmUp(tokens, lang.value)
   }
 
@@ -214,6 +218,7 @@ export const useBattleStore = defineStore('battle', () => {
           ]
     operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
     state.value = startMatch(createMatch({ kpId: opts.kpId, skin, players }), seedsFor(players, opts.seeds), opts.now ?? Date.now())
+    intro.value = true
     pushEvent({ type: 'countdown' })
     prepareVoice()
   }
@@ -261,29 +266,32 @@ export const useBattleStore = defineStore('battle', () => {
     const res = applyAnswer(s, playerId, p.index, ok, String(given), now)
     state.value = res.state
     pending.value = { ...pending.value, [playerId]: { question: q, correct: ok, given: String(given) } }
-    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 反超 > 还差一分 > 连对
+    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 反超 > 还差一分 > 连对 > 到一半
     let toCall: MatchEvent | null = null
-    const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1 }
+    const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1, half: 0.5 }
+    const sounds = skinSfx(res.state.skin, skinById(res.state.skin)?.kind)
     for (const e of res.events) {
       lastEvent.value = e
       pushEvent(e)
       if (e.type === 'point') {
         playSfx('ding', streakPitch(e.streak))
-        const kind = skinById(res.state.skin)?.kind
-        if (kind) playSfx(KIND_SFX[kind])
+        for (const x of sounds.score) playSfx(x)
       }
+      if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
+      if (e.type === 'lead' || e.type === 'nearWin') playSfx(calloutSfx(e.type))
       if (e.type === 'finished') {
         clearAll(aiTimers)
         later(timers, () => playSfx('fanfare'), 300)
-        later(timers, () => playSfx('cheer'), 500)
+        sounds.win.forEach((x, i) => later(timers, () => playSfx(x), 500 + i * 250))
       }
-      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
+      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
         toCall = e
       }
     }
     if (toCall) {
-      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' }>
+      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' }>
       if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
+      else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
     }
     if (!ok) playSfx('dong')
@@ -329,6 +337,7 @@ export const useBattleStore = defineStore('battle', () => {
     if (!s) return
     reset()
     state.value = startMatch(s, seedsFor(s.players, seeds), now)
+    intro.value = false
     pushEvent({ type: 'countdown' })
     prepareVoice()
   }
@@ -350,6 +359,7 @@ export const useBattleStore = defineStore('battle', () => {
     lastEvent,
     events,
     callout,
+    intro,
     setName,
     startLocal,
     questionOf,

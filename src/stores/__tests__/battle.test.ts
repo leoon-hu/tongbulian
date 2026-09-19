@@ -89,6 +89,7 @@ describe('两人同屏（B12）', () => {
       const score = i + 1
       if (score === 3 || score === 5) expect(s.callout).toMatchObject({ key: 'battle.streak', team: 'red', p: { n: score } })
       else if (score === 7) expect(s.callout).toMatchObject({ key: 'battle.nearWin', team: 'red' })
+      else if (score === 4) expect(s.callout).toMatchObject({ key: 'battle.half.red', team: 'red' })
       vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
       if (s.pending.left) vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS - FEEDBACK_RIGHT_MS)
       expect(s.pending.left).toBeUndefined()

@@ -4,6 +4,7 @@
  */
 import { audioContext } from '@/engine/audio'
 import { isVoiceEnabled } from '@/engine/voice'
+import type { SkinKind } from './skins'
 
 export type Sfx =
   | 'ding' // 得分
@@ -18,6 +19,16 @@ export type Sfx =
   | 'thud' // 盖：砖落地
   | 'crack' // 化：冰裂
   | 'splash' // 掉进水里
+  | 'patter' // 赛跑：哒哒哒的脚步
+  | 'vroom' // 赛车：发动机轰一下
+  | 'nitro' // 赛车连对：氮气
+  | 'launch' // 火箭：点火升空的轰鸣
+  | 'fireworks' // 烟花：三声啪
+  | 'burner' // 热气球：烧嘴呼的一下
+  | 'heave' // 拔河：嘿哟一使劲
+  | 'drip' // 融冰：水滴
+  | 'sting' // 反超：上行三音
+  | 'alert' // 还差一分：嘀嘀 — 嘀
 
 interface Note {
   /** 频率（Hz） */
@@ -71,6 +82,96 @@ const PATTERNS: Record<Sfx, Pattern> = {
   thud: { notes: [{ f: 140, at: 0, d: 0.18, type: 'triangle', gain: 0.9, to: 60 }], noise: [{ at: 0, d: 0.08, gain: 0.3, f: 600, q: 1 }] },
   crack: { noise: [{ at: 0, d: 0.06, gain: 0.7, f: 3200, q: 2 }, { at: 0.07, d: 0.1, gain: 0.5, f: 2200, q: 1.5 }] },
   splash: { noise: [{ at: 0, d: 0.4, gain: 0.5, f: 2400, q: 0.7 }], notes: [{ f: 320, at: 0, d: 0.25, type: 'sine', gain: 0.4, to: 90 }] },
+  patter: {
+    noise: [
+      { at: 0, d: 0.05, gain: 0.5, f: 1200, q: 1.5 },
+      { at: 0.11, d: 0.05, gain: 0.45, f: 1000, q: 1.5 },
+      { at: 0.22, d: 0.05, gain: 0.4, f: 1200, q: 1.5 },
+    ],
+  },
+  vroom: { notes: [{ f: 110, at: 0, d: 0.4, type: 'sawtooth', gain: 0.5, to: 330 }], noise: [{ at: 0, d: 0.3, gain: 0.15, f: 500, q: 0.8 }] },
+  nitro: { notes: [{ f: 220, at: 0, d: 0.35, type: 'sawtooth', gain: 0.5, to: 880 }], noise: [{ at: 0, d: 0.4, gain: 0.4, f: 2600, q: 0.9 }] },
+  launch: {
+    notes: [{ f: 70, at: 0, d: 0.6, type: 'triangle', gain: 0.8, to: 160 }],
+    noise: [
+      { at: 0, d: 0.6, gain: 0.45, f: 400, q: 0.5 },
+      { at: 0.1, d: 0.5, gain: 0.3, f: 1600, q: 0.8 },
+    ],
+  },
+  fireworks: {
+    noise: [
+      { at: 0, d: 0.12, gain: 0.7, f: 1500, q: 0.7 },
+      { at: 0.35, d: 0.12, gain: 0.6, f: 1200, q: 0.7 },
+      { at: 0.7, d: 0.14, gain: 0.7, f: 1800, q: 0.7 },
+    ],
+    notes: [
+      { f: 1600, at: 0.02, d: 0.25, gain: 0.3, to: 400 },
+      { f: 1900, at: 0.37, d: 0.25, gain: 0.3, to: 500 },
+      { f: 1500, at: 0.72, d: 0.3, gain: 0.3, to: 350 },
+    ],
+  },
+  burner: {
+    noise: [
+      { at: 0, d: 0.45, gain: 0.5, f: 700, q: 0.6 },
+      { at: 0.05, d: 0.35, gain: 0.25, f: 2200, q: 1 },
+    ],
+  },
+  heave: { notes: [{ f: 160, at: 0, d: 0.3, type: 'triangle', gain: 0.7, to: 110 }], noise: [{ at: 0.05, d: 0.25, gain: 0.3, f: 900, q: 1 }] },
+  drip: {
+    notes: [
+      { f: 1400, at: 0, d: 0.12, type: 'sine', gain: 0.5, to: 700 },
+      { f: 1800, at: 0.16, d: 0.14, type: 'sine', gain: 0.4, to: 800 },
+    ],
+  },
+  sting: {
+    notes: [
+      { f: 660, at: 0, d: 0.12, type: 'triangle', gain: 0.5 },
+      { f: 880, at: 0.12, d: 0.12, type: 'triangle', gain: 0.5 },
+      { f: 1320, at: 0.24, d: 0.3, type: 'triangle', gain: 0.5 },
+    ],
+  },
+  alert: {
+    notes: [
+      { f: 1046, at: 0, d: 0.1, type: 'square', gain: 0.4 },
+      { f: 1046, at: 0.18, d: 0.1, type: 'square', gain: 0.4 },
+      { f: 1318, at: 0.36, d: 0.2, type: 'square', gain: 0.4 },
+    ],
+  },
+}
+
+/** 一种皮肤的音效：得分、连对、胜利各放哪几声（B38，按游戏各不一样） */
+export interface SkinSounds {
+  score: Sfx[]
+  streak: Sfx[]
+  win: Sfx[]
+}
+
+const KIND_SOUNDS: Record<SkinKind, SkinSounds> = {
+  race: { score: ['whoosh'], streak: ['whoosh'], win: ['cheer'] },
+  tug: { score: ['heave'], streak: ['heave', 'whoosh'], win: ['splash', 'cheer'] },
+  consume: { score: ['crack'], streak: ['crack'], win: ['splash', 'cheer'] },
+  grow: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
+}
+
+const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
+  race: { score: ['patter'], streak: ['patter', 'whoosh'] },
+  car: { score: ['vroom'], streak: ['nitro'] },
+  rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
+  rocket3d: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
+  balloon: { score: ['burner'], streak: ['burner'] },
+  tower: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
+  tug: { score: ['heave'], streak: ['heave', 'whoosh'] },
+  ice: { score: ['crack', 'drip'], streak: ['crack', 'drip'], win: ['splash', 'cheer'] },
+}
+
+/** 某种皮肤的音效表：先按类别给一套，再按皮肤覆盖 */
+export function skinSfx(skinId: string, kind: SkinKind = 'race'): SkinSounds {
+  return { ...KIND_SOUNDS[kind], ...(SKIN_SOUNDS[skinId] ?? {}) }
+}
+
+/** 弹出提示配的一声：反超上行三音、还差一分嘀嘀嘀、其它「啵」 */
+export function calloutSfx(type: 'lead' | 'nearWin' | 'streak' | 'half'): Sfx {
+  return type === 'lead' ? 'sting' : type === 'nearWin' ? 'alert' : 'pop'
 }
 
 let noiseBuffer: AudioBuffer | null = null

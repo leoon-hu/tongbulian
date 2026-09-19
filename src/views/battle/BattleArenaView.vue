@@ -11,7 +11,7 @@ import { phraseSpeech } from '@/engine/speech'
 import { hush, say } from '@/engine/voice'
 import type { Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
-import { skinById } from '@/battle/skins'
+import { finishKey, ruleKey, skinById } from '@/battle/skins'
 import { useBattleStore, type LocalMode } from '@/stores/battle'
 import { useSettingsStore } from '@/stores/settings'
 import type { RowData } from '@/components/battle/rows'
@@ -108,7 +108,13 @@ watch(
     showResult.value = false
     const winner = state.value?.winner
     if (p === 'ended' && winner) {
-      endTimers.push(setTimeout(() => say(phraseSpeech({ k: `battle.win.${winner}` }, lang.value), lang.value), 900))
+      const id = state.value?.skin ?? ''
+      endTimers.push(
+        setTimeout(
+          () => say([...phraseSpeech({ k: `battle.win.${winner}` }, lang.value), ...phraseSpeech({ k: finishKey(id) }, lang.value)], lang.value),
+          900,
+        ),
+      )
       endTimers.push(setTimeout(() => (showResult.value = true), RESULT_DELAY_MS))
     }
   },
@@ -204,7 +210,7 @@ onBeforeUnmount(() => {
     </div>
 
     <Callout :callout="store.callout" />
-    <Countdown v-if="phase === 'countdown'" @done="store.beginPlay()" />
+    <Countdown v-if="phase === 'countdown'" :rule="store.intro && state ? ruleKey(state.skin) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
     <ResultPanel v-if="showResult" :state="state" @rematch="store.rematch()" @change-skin="changeSkin" @exit="exit" />
 

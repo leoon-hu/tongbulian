@@ -51,7 +51,7 @@ export interface MatchState {
 
 /**
  * 一次答题产生的事件（顺序：answered → point → streak / lead / nearWin → finished）。
- * streak：连对到 3 / 5 题；lead：从落后变成领先；nearWin：到目标分只差 1。结束那一题不再发这三种。
+ * streak：连对到 3 / 5 题；lead：从落后变成领先；nearWin：到目标分只差 1；half：到目标分的一半。结束那一题不再发这几种。
  */
 export type MatchEvent =
   | { type: 'answered'; playerId: string; index: number; correct: boolean; given: string }
@@ -59,6 +59,7 @@ export type MatchEvent =
   | { type: 'streak'; playerId: string; team: Team; n: number }
   | { type: 'lead'; team: Team }
   | { type: 'nearWin'; team: Team }
+  | { type: 'half'; team: Team }
   | { type: 'finished'; winner: Team }
 
 /** 竞技场事件 = 比赛事件 + 倒数开始 / 开打：给游戏画面用（多设备时也由服务器发） */

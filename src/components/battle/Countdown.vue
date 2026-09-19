@@ -1,5 +1,13 @@
+<script lang="ts">
+/** 规则那句至少停这么久（静音时也让人看一眼） */
+export const RULE_MIN_MS = 1800
+/** 最多停这么久（音频出问题也不卡住倒数） */
+export const RULE_MAX_MS = 9000
+</script>
+
 <script setup lang="ts">
-// 开局倒数（B6）：「预备…」→ 3、2、1（朗读数字 + 嘀）→「开始！」（朗读 + 嘟）→ done。总时长 = match.ts 的 COUNTDOWN_MS
+// 开局倒数（B6）：新开一局先讲一句规则（rule 词条，朗读 + 显示，说完再倒数）→「预备…」→ 3、2、1（朗读数字 + 嘀）→「开始！」（朗读 + 嘟）→ done。
+// 再来一局不讲（rule 传 null）。
 import { onBeforeUnmount, ref } from 'vue'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
@@ -7,13 +15,30 @@ import { say } from '@/engine/voice'
 import { playSfx } from '@/battle/sfx'
 import RubyText from '@/components/ui/RubyText.vue'
 
+const props = defineProps<{ rule?: string | null }>()
 const emit = defineEmits<{ done: [] }>()
-/** 4 = 「预备…」，3 / 2 / 1，0 = 「开始！」 */
-const n = ref(4)
+
+/** 5 = 讲规则，4 = 「预备…」，3 / 2 / 1，0 = 「开始！」 */
+const n = ref(props.rule ? 5 : 4)
 const timers: ReturnType<typeof setTimeout>[] = []
+let alive = true
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    timers.push(setTimeout(resolve, ms))
+  })
+}
 
 function step(): void {
-  if (n.value === 4) {
+  if (!alive) return
+  if (n.value === 5) {
+    const spoken = say(phraseSpeech({ k: props.rule! }, lang.value), lang.value).catch(() => {})
+    Promise.race([Promise.all([spoken, wait(RULE_MIN_MS)]), wait(RULE_MAX_MS)]).then(() => {
+      if (!alive) return
+      n.value = 4
+      step()
+    })
+  } else if (n.value === 4) {
     say(phraseSpeech({ k: 'battle.getReady' }, lang.value), lang.value)
     timers.push(
       setTimeout(() => {
@@ -37,12 +62,16 @@ function step(): void {
   }
 }
 step()
-onBeforeUnmount(() => timers.forEach(clearTimeout))
+onBeforeUnmount(() => {
+  alive = false
+  timers.forEach(clearTimeout)
+})
 </script>
 
 <template>
   <div class="countdown" role="status">
-    <span v-if="n === 4" class="ready"><RubyText :text="{ k: 'battle.getReady' }" /></span>
+    <p v-if="n === 5 && rule" class="rule"><RubyText :text="{ k: rule }" /></p>
+    <span v-else-if="n === 4" class="ready"><RubyText :text="{ k: 'battle.getReady' }" /></span>
     <span v-else-if="n > 0" :key="n" class="num">{{ n }}</span>
     <span v-else class="go"><RubyText :text="{ k: 'battle.go' }" /></span>
   </div>
@@ -55,6 +84,7 @@ onBeforeUnmount(() => timers.forEach(clearTimeout))
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 24px;
   background: rgba(253, 246, 236, 0.75);
   z-index: 20;
 }
@@ -64,6 +94,19 @@ onBeforeUnmount(() => timers.forEach(clearTimeout))
   font-weight: 900;
   color: var(--c-primary-dark);
   line-height: 1;
+}
+.rule {
+  max-width: 720px;
+  padding: 18px 28px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--c-text);
+  animation: zoom 0.5s ease-out;
 }
 .num {
   font-size: 140px;
@@ -79,20 +122,20 @@ onBeforeUnmount(() => timers.forEach(clearTimeout))
 }
 @keyframes zoom {
   from {
-    transform: scale(1.8);
+    transform: scale(1.6);
     opacity: 0;
   }
-  30% {
+  to {
     transform: scale(1);
     opacity: 1;
   }
 }
 @keyframes breathe {
   from {
-    transform: scale(0.95);
+    transform: scale(1);
   }
   to {
-    transform: scale(1.05);
+    transform: scale(1.08);
   }
 }
 </style>

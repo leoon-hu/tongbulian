@@ -25,6 +25,24 @@ export interface SkinMeta {
   pilot?: boolean
 }
 
+/** 有专属开场规则句 / 结束语的皮肤（B39）；3D 火箭用火箭的，没有的用 default */
+const PHRASED = new Set(['race', 'car', 'rocket', 'balloon', 'tower', 'tug', 'ice'])
+
+export function phraseSkin(id: string): string {
+  if (id === 'rocket3d') return 'rocket'
+  return PHRASED.has(id) ? id : 'default'
+}
+
+/** 开场那句话（「对战开始啦！答对一题……看谁先……谁就赢了哦！」）的词条键 */
+export function ruleKey(id: string): string {
+  return `battle.rule.${phraseSkin(id)}`
+}
+
+/** 胜负播报后接的一句游戏话（「火箭飞到星星啦！」）的词条键 */
+export function finishKey(id: string): string {
+  return `battle.finish.${phraseSkin(id)}`
+}
+
 /** 「随机」：每局开始时从注册表里挑一个 */
 export const RANDOM_SKIN = 'random'
 

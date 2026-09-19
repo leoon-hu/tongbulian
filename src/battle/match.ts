@@ -130,6 +130,7 @@ export function answer(
       if (STREAK_MILESTONES.includes(streak)) events.push({ type: 'streak', playerId, team, n: streak })
       if (ahead === team && state.leading !== null && state.leading !== team) events.push({ type: 'lead', team })
       if (score[team] === state.target - 1) events.push({ type: 'nearWin', team })
+      if (score[team] === Math.floor(state.target / 2)) events.push({ type: 'half', team })
     }
   }
   return { state: next, events }

@@ -49,7 +49,7 @@ describe('比赛状态机（B1–B9）', () => {
     expect(r.events).toEqual([{ type: 'answered', playerId: 'a', index: 0, correct: false, given: '3' }])
     m = r.state
     // 连对 3 / 5 题弹提示，到 7 分弹「还差一分」；0 : 0 平局起步不算「反超」
-    const extra: Record<number, string[]> = { 3: ['streak'], 5: ['streak'], 7: ['nearWin'] }
+    const extra: Record<number, string[]> = { 3: ['streak'], 4: ['half'], 5: ['streak'], 7: ['nearWin'] }
     for (let i = 1; i <= 7; i++) {
       r = answer(m, 'a', i, true, 'x', 2000 + i)
       m = r.state

@@ -28,6 +28,10 @@ const FIXED_KEYS = [
   'battle.streak',
   'battle.lead',
   'battle.nearWin',
+  'battle.half.red',
+  'battle.half.blue',
+  // 开场规则句与结束语（B39）：每种有专属话的皮肤一条 + default
+  ...['default', 'race', 'car', 'rocket', 'balloon', 'tower', 'tug', 'ice'].flatMap((id) => [`battle.rule.${id}`, `battle.finish.${id}`]),
 ]
 
 export function collectCorpus(): Record<Lang, string[]> {
