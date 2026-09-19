@@ -46,7 +46,14 @@ export const SKINS: readonly SkinMeta[] = [
     load: () => import('./RocketSkin.vue').then((m) => m.default),
     game: () => import('../games/rocket').then((m) => m.createRocketGame),
   },
-  { id: 'tower', icon: '🧱', slot: 'center', kind: 'grow', load: () => import('./TowerSkin.vue').then((m) => m.default) },
+  {
+    id: 'tower',
+    icon: '🧱',
+    slot: 'center',
+    kind: 'grow',
+    load: () => import('./TowerSkin.vue').then((m) => m.default),
+    game: () => import('../games/tower').then((m) => m.createTowerGame),
+  },
   { id: 'tug', icon: '🪢', slot: 'top', kind: 'tug', load: () => import('./TugSkin.vue').then((m) => m.default) },
   { id: 'ice', icon: '🧊', slot: 'center', kind: 'consume', load: () => import('./IceSkin.vue').then((m) => m.default) },
 ]
