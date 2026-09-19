@@ -66,7 +66,7 @@ export function createFallbackGame(): GameModule {
   }
 
   return {
-    meta: { id: 'fallback', renderer: '2d' },
+    meta: { id: 'fallback' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

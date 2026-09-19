@@ -77,7 +77,6 @@ describe('开局倒数（B6）：先讲规则再倒数', () => {
         expect(en.has(key), `${s.id} 缺 ${key}（en）`).toBe(true)
       }
     }
-    expect(ruleKey('rocket3d')).toBe('battle.rule.rocket')
     expect(ruleKey('bogus')).toBe('battle.rule.default')
   })
 })

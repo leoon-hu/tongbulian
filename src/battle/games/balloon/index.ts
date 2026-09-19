@@ -45,7 +45,7 @@ export function createBalloonGame(): GameModule {
   }
 
   return {
-    meta: { id: 'balloon', renderer: '2d' },
+    meta: { id: 'balloon' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

@@ -45,7 +45,7 @@ export function createIceGame(): GameModule {
   }
 
   return {
-    meta: { id: 'ice', renderer: '2d' },
+    meta: { id: 'ice' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

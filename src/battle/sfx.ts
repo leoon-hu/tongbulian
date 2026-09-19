@@ -157,7 +157,6 @@ const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
   race: { score: ['patter'], streak: ['patter', 'whoosh'] },
   car: { score: ['vroom'], streak: ['nitro'] },
   rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
-  rocket3d: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
   balloon: { score: ['burner'], streak: ['burner'] },
   tower: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
   tug: { score: ['heave'], streak: ['heave', 'whoosh'] },

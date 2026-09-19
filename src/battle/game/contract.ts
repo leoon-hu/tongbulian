@@ -30,7 +30,7 @@ export interface GameHostInfo {
 }
 
 export interface GameModule {
-  meta: { id: string; renderer: '2d' | 'webgl' }
+  meta: { id: string }
   /** 拿到 canvas，建上下文、布局场景。之后 setState 至少会调一次 */
   mount(host: GameHostInfo): void
   /** 快照变了（比分、阶段、胜方）就调 */

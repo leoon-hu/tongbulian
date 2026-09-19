@@ -45,7 +45,7 @@ export function createTowerGame(): GameModule {
   }
 
   return {
-    meta: { id: 'tower', renderer: '2d' },
+    meta: { id: 'tower' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

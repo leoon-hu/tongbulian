@@ -45,7 +45,7 @@ export function createTugGame(): GameModule {
   }
 
   return {
-    meta: { id: 'tug', renderer: '2d' },
+    meta: { id: 'tug' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

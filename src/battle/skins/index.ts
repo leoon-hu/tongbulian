@@ -22,15 +22,12 @@ export interface SkinMeta {
   kind: SkinKind
   /** 实时绘图的游戏（B34） */
   game: GameLoader
-  /** 试点（B36f）：列表里能选，「随机」不会挑到它 */
-  pilot?: boolean
 }
 
-/** 有专属开场规则句 / 结束语的皮肤（B39）；3D 火箭用火箭的，没有的用 default */
+/** 有专属开场规则句 / 结束语的皮肤（B39）；没有的用 default */
 const PHRASED = new Set(['race', 'car', 'rocket', 'balloon', 'tower', 'tug', 'ice'])
 
 export function phraseSkin(id: string): string {
-  if (id === 'rocket3d') return 'rocket'
   return PHRASED.has(id) ? id : 'default'
 }
 
@@ -72,14 +69,6 @@ export const SKINS: readonly SkinMeta[] = [
     game: () => import('../games/rocket').then((m) => m.createRocketGame),
   },
   {
-    id: 'rocket3d',
-    icon: '🚀',
-    slot: 'center',
-    kind: 'race',
-    pilot: true,
-    game: () => import('../games/rocket3d').then((m) => m.load()),
-  },
-  {
     id: 'balloon',
     icon: '🎈',
     slot: 'center',
@@ -113,17 +102,13 @@ export function skinById(id: string): SkinMeta | undefined {
   return SKINS.find((s) => s.id === id)
 }
 
-/** 可以自动挑到的游戏（试点不算） */
-function pickable(): SkinMeta[] {
-  return SKINS.filter((s) => !s.pilot)
-}
 
 /**
  * 「按章节」：这个知识点在它那一册里排第几（目录顺序，含 ☆ 单元），第 i 个用第 i 个游戏，排完从头再排；
  * 下一册重新从第一个游戏排起。不在目录里的知识点用第一个游戏。
  */
 export function chapterSkin(kpId: string): string {
-  const games = pickable()
+  const games = SKINS
   const info = courseOfKp(kpId)
   if (!info) return games[0]!.id
   const semesterOf = (unitId: string): number | undefined => info.course.units.find((u) => u.id === unitId)?.semester
@@ -136,7 +121,7 @@ export function chapterSkin(kpId: string): string {
 /** 把设置里的皮肤 id 落实成一个真实皮肤：auto 按章节（要给 kpId），random 或不认识的 id 随机挑 */
 export function resolveSkin(id: string, rng: RNG, kpId?: string): string {
   if (id === AUTO_SKIN && kpId) return chapterSkin(kpId)
-  return skinById(id)?.id ?? rng.pick(pickable()).id
+  return skinById(id)?.id ?? rng.pick(SKINS).id
 }
 
 /** 比分占目标分的比例 0…1 */

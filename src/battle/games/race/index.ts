@@ -47,7 +47,7 @@ export function createRaceGame(): GameModule {
   }
 
   return {
-    meta: { id: 'race', renderer: '2d' },
+    meta: { id: 'race' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

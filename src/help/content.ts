@@ -51,7 +51,7 @@ function coverage(lang: Lang): string {
     .join(lang === 'zh' ? '、' : ', ')
 }
 
-/** 每种游戏的名字、开场规则句与结束语（3D 试点用火箭的话） */
+/** 每种游戏的名字、开场规则句与结束语 */
 export function helpGames(lang: Lang): HelpGame[] {
   return SKINS.map((s) => ({
     id: s.id,
@@ -172,7 +172,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'The battle does not fit on my phone?', a: 'The battle needs landscape. Held upright, the page asks you to turn the phone; sideways it switches to a compact layout.' },
               {
                 q: 'How do I install it on a tablet or phone for offline use?',
-                a: 'Use the install bar at the top of the home page ("Install" or "How"). On iPhone and iPad open it in Safari, tap Share → Add to Home Screen. Once installed, practice and battles work without internet (except the 3D rocket).',
+                a: 'Use the install bar at the top of the home page ("Install" or "How"). On iPhone and iPad open it in Safari, tap Share → Add to Home Screen. Once installed, practice and battles work without internet.',
               },
               {
                 q: 'Can\'t connect or join a room on own devices?',
@@ -180,7 +180,6 @@ export function helpSections(lang: Lang): HelpSection[] {
               },
               { q: 'Where is progress stored? Can it be lost?', a: 'Only in this device\'s browser; nothing is uploaded and devices do not sync. Clearing browser data clears it.' },
               { q: 'Do questions repeat?', a: 'They are generated randomly, so almost never. An unfinished round continues with the same questions; a finished one gets new ones.' },
-              { q: 'What is "Rocket 3D"?', a: 'A pilot: a 3D rocket drawn with WebGL, downloaded on first use. Devices without WebGL or without internet fall back to the 2D version automatically; 🎲 random never picks it.' },
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
               { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the battle setup page; the right-hand name for two-on-one-device is there too.' },
               { q: 'Why no Chinese / English / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
@@ -298,7 +297,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '手机上进不了对战，或者画面挤？', a: '对战需要横屏，竖着拿会提示「请把手机横过来」；横过来会自动用紧凑版布局。' },
             {
               q: '怎么装到平板 / 手机上离线用？',
-              a: '首页顶部的安装提示条点「安装」或「怎么做」；iPhone / iPad 用 Safari 打开，点分享 → 添加到主屏幕。装好后没有网也能练和对战（3D 火箭除外）。',
+              a: '首页顶部的安装提示条点「安装」或「怎么做」；iPhone / iPad 用 Safari 打开，点分享 → 添加到主屏幕。装好后没有网也能练和对战。',
             },
             {
               q: '「各用各的」连不上、进不去房间？',
@@ -306,7 +305,6 @@ export function helpSections(lang: Lang): HelpSection[] {
             },
             { q: '进度存在哪里？会不会丢？', a: '只存在这台设备的浏览器里，不上传，换设备不同步；清了浏览器数据就没了。' },
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },
-            { q: '「火箭升空 3D」是什么？', a: '一个试点，用 WebGL 画的 3D 火箭，第一次要联网下载；设备不支持或没网时自动用 2D 版，「随机」不会挑到它。' },
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
             { q: '想改名字？', a: '在对战设置页页头的「⚙️ 配置」里改，两人一台的右边名字也在那里。' },
             { q: '为什么还没有语文 / 英语 / 三年级？', a: '内容按年级逐个做，陆续补充。' },

@@ -45,7 +45,7 @@ export function createCarGame(): GameModule {
   }
 
   return {
-    meta: { id: 'car', renderer: '2d' },
+    meta: { id: 'car' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width

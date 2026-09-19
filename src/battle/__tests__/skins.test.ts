@@ -27,7 +27,7 @@ describe('皮肤注册表（B34–B36）', () => {
     it(`${meta.id}：加载器出一个游戏模块，0…8 × 0…8 每个比分喂进去都不抛错，含胜利状态`, async () => {
       const factory = await meta.game()
       const mod = factory()
-      expect(['2d', 'webgl']).toContain(mod.meta.renderer)
+      expect(mod.meta.id).toBe(meta.id)
       mod.mount({ canvas: stubCanvas(stubCtx()), width: meta.slot === 'top' ? 1000 : 150, height: meta.slot === 'top' ? 120 : 700, dpr: 1, compact: false, reducedMotion: false })
       for (let red = 0; red <= 8; red++) {
         for (let blue = 0; blue <= 8; blue++) {
@@ -44,8 +44,8 @@ describe('皮肤注册表（B34–B36）', () => {
 })
 
 describe('按章节的游戏（B36）', () => {
-  it('每册的知识点按目录顺序轮流对应一个游戏，排完从头再排，下一册重新排起；试点不算；resolveSkin 认 auto', () => {
-    const games = SKINS.filter((s) => !s.pilot).map((s) => s.id)
+  it('每册的知识点按目录顺序轮流对应一个游戏，排完从头再排，下一册重新排起；resolveSkin 认 auto', () => {
+    const games = SKINS.map((s) => s.id)
     const course = getCourse('math', 'g1')!
     const sem = (kp: { unitId: string }) => course.units.find((u) => u.id === kp.unitId)!.semester
     const first = course.knowledgePoints.filter((kp) => sem(kp) === 1)

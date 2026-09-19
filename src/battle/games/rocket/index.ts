@@ -45,7 +45,7 @@ export function createRocketGame(): GameModule {
   }
 
   return {
-    meta: { id: 'rocket', renderer: '2d' },
+    meta: { id: 'rocket' },
     mount(host: GameHostInfo) {
       canvas = host.canvas
       width = host.width
