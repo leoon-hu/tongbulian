@@ -5,7 +5,7 @@ import '@/content/math/grade1'
 import type { Player } from '@/battle/protocol'
 import { AI_ID } from '@/battle/ai'
 import type { Question } from '@/types/models'
-import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, useBattleStore } from '../battle'
+import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, INTRO_AGAIN_MS, useBattleStore } from '../battle'
 
 const KP = 's1-05-carry-add'
 
@@ -53,6 +53,29 @@ describe('对战偏好（B50）', () => {
 })
 
 describe('两人同屏（B12）', () => {
+  it('开场规则句：本设备第一次进这个游戏才讲，同一个游戏一天内不重复，换游戏再讲，再来一局不讲；记在偏好里重开还在', () => {
+    const t0 = 1_700_000_000_000
+    const s = useBattleStore()
+    s.prefs.names.me = '小兔'
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', now: t0 })
+    expect(s.intro).toBe(true)
+    expect(s.prefs.intros.race).toBe(t0)
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', now: t0 + 60 * 60 * 1000 })
+    expect(s.intro).toBe(false)
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'tower', now: t0 + 60 * 60 * 1000 })
+    expect(s.intro).toBe(true)
+    s.rematch(undefined, t0 + 2 * 60 * 60 * 1000)
+    expect(s.intro).toBe(false)
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', now: t0 + INTRO_AGAIN_MS + 1 })
+    expect(s.intro).toBe(true)
+    expect(s.prefs.intros.race).toBe(t0 + INTRO_AGAIN_MS + 1)
+    setActivePinia(createPinia())
+    const again = useBattleStore()
+    expect(again.prefs.intros.race).toBe(t0 + INTRO_AGAIN_MS + 1)
+    again.startLocal({ kpId: KP, mode: 'ai', skin: 'race', now: t0 + INTRO_AGAIN_MS + 2 })
+    expect(again.intro).toBe(false)
+  })
+
   it('倒数 → 开打 → 左边连对 8 题 → 红队赢；反馈窗口按对错停留后清掉', () => {
     const s = useBattleStore()
     s.setName('me', '小兔')

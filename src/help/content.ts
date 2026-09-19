@@ -109,7 +109,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" is coming.',
               `Pick a game: ${games} game scenes, or 🎲 random for a new one every match.`,
               'The first time you are asked for a name; pick a ready-made one. It is not asked again.',
-              'Start: the game explains its rule in one sentence, then "Ready… 3, 2, 1, go!" and both sides get their first question.',
+              'Start: the first time this device plays a game, it explains the rule in one sentence (not repeated within a day), then "Ready… 3, 2, 1, go!" and both sides get their first question.',
             ],
           },
           {
@@ -230,7 +230,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备）敬请期待。',
             `选游戏：${games} 种游戏画面，也可以「🎲 随机」，每局换一种。`,
             '第一次会问名字，点一个现成的就行，以后不再问。',
-            '开始：先讲一句这个游戏的规则，「预备…3、2、1，开始！」，两边同时拿到第一题。',
+            '开始：这台设备第一次玩这个游戏会先讲一句规则（一天内不重复），然后「预备…3、2、1，开始！」，两边同时拿到第一题。',
           ],
         },
         {

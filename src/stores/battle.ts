@@ -46,7 +46,12 @@ export interface BattlePrefs {
   skin: string
   aiLevel: AiLevel
   difficulty: Difficulty
+  /** 每种游戏上次讲开场规则句的时间（ms）：本设备第一次进这个游戏才讲，一天内不重复（B6） */
+  intros: Record<string, number>
 }
+
+/** 同一个游戏隔多久再讲一次开场规则句 */
+export const INTRO_AGAIN_MS = 24 * 60 * 60 * 1000
 
 /** 答完一题后的反馈窗口：这段时间行里仍显示这道题与对错 */
 export interface Feedback {
@@ -63,8 +68,6 @@ export interface Callout {
   team: Team
 }
 
-/** 皮肤类型对应的得分音效（跑 / 拉 = 呼啸，盖 = 咚，化 = 咔嚓） */
-
 function randomId(): string {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6)
 }
@@ -80,6 +83,7 @@ function loadPrefs(): BattlePrefs {
     skin: RANDOM_SKIN,
     aiLevel: 'mid',
     difficulty: 1,
+    intros: {},
   }
   try {
     const raw = localStorage.getItem(KEY)
@@ -93,6 +97,11 @@ function loadPrefs(): BattlePrefs {
       skin: typeof p.skin === 'string' && (p.skin === RANDOM_SKIN || skinById(p.skin)) ? p.skin : base.skin,
       aiLevel: isAiLevel(p.aiLevel) ? p.aiLevel : base.aiLevel,
       difficulty: isDifficulty(p.difficulty) ? p.difficulty : base.difficulty,
+      intros: Object.fromEntries(
+        Object.entries(typeof p.intros === 'object' && p.intros !== null ? (p.intros as Record<string, unknown>) : {}).filter(
+          (kv): kv is [string, number] => typeof kv[1] === 'number' && Number.isFinite(kv[1]),
+        ),
+      ),
     }
   } catch {
     return base
@@ -130,8 +139,14 @@ export const useBattleStore = defineStore('battle', () => {
   let eventSeq = 0
   const callout = ref<Callout | null>(null)
   let calloutSeq = 0
-  /** 这局开场要不要先讲规则（B6）：新开一局讲，再来一局不讲 */
+  /** 这局开场要不要先讲规则（B6）：本设备第一次进这个游戏讲，同一个游戏一天内不重复；再来一局不讲 */
   const intro = ref(false)
+
+  function planIntro(skin: string, now: number): void {
+    const last = prefs.value.intros[skin]
+    intro.value = !(typeof last === 'number' && now - last < INTRO_AGAIN_MS)
+    if (intro.value) prefs.value.intros = { ...prefs.value.intros, [skin]: now }
+  }
 
   function pushEvent(e: ArenaEvent): void {
     events.value = [...events.value.slice(-(EVENT_LOG - 1)), { seq: ++eventSeq, e }]
@@ -217,8 +232,9 @@ export const useBattleStore = defineStore('battle', () => {
             { id: 'right', name: prefs.value.names.right, team: 'blue', difficulty },
           ]
     operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
-    state.value = startMatch(createMatch({ kpId: opts.kpId, skin, players }), seedsFor(players, opts.seeds), opts.now ?? Date.now())
-    intro.value = true
+    const now = opts.now ?? Date.now()
+    state.value = startMatch(createMatch({ kpId: opts.kpId, skin, players }), seedsFor(players, opts.seeds), now)
+    planIntro(skin, now)
     pushEvent({ type: 'countdown' })
     prepareVoice()
   }
