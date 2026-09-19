@@ -62,7 +62,14 @@ export const SKINS: readonly SkinMeta[] = [
     load: () => import('./TugSkin.vue').then((m) => m.default),
     game: () => import('../games/tug').then((m) => m.createTugGame),
   },
-  { id: 'ice', icon: '🧊', slot: 'center', kind: 'consume', load: () => import('./IceSkin.vue').then((m) => m.default) },
+  {
+    id: 'ice',
+    icon: '🧊',
+    slot: 'center',
+    kind: 'consume',
+    load: () => import('./IceSkin.vue').then((m) => m.default),
+    game: () => import('../games/ice').then((m) => m.createIceGame),
+  },
 ]
 
 export function skinById(id: string): SkinMeta | undefined {
