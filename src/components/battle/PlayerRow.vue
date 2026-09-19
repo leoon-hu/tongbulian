@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 队区里的一行 = 一个人：名字 + 答 n · 对 m（连对 2 题起有 🔥 ×n），题干（注音 + 🔊），
 // 自己可操作的行是作答面板；别人的行是「作答显示」（WatchInput，机器人带表情）；答完一题先显示对错（反馈窗口）再换下一题。
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Question } from '@/types/models'
 import type { Player } from '@/battle/protocol'
 import type { Feedback } from '@/stores/battle'
@@ -48,6 +48,50 @@ function read(): void {
   if (props.question) say(questionSpeech(props.question, lang.value), lang.value)
 }
 
+// ── 题干按栏自动缩放：十格阵、排队这些教具有固定尺寸，栏太窄（手机半栏）或太矮（iPad 上方横条占了高度）
+//    放不下就整体缩小（zoom 影响布局，宽高一起缩），最大 0.85（紧凑版）/ 1，最小 0.5（再小看不清，宁可滚动）；
+//    别让它横向溢出被居中裁掉两边、也别让十格阵藏在要滚动才看得到的地方
+const qEl = ref<HTMLElement | null>(null)
+const qZoom = ref(1)
+const MIN_ZOOM = 0.5
+function fitQuestion(): void {
+  const q = qEl.value
+  const stem = q?.querySelector<HTMLElement>('.stem')
+  const body = q?.parentElement
+  if (!q || !stem || !body) return
+  const max = props.compact ? 0.85 : 1
+  // offsetWidth / offsetHeight 是元素自己坐标系里的尺寸，不受 zoom 影响，就是原始大小
+  let naturalW = 0
+  for (const c of Array.from(stem.children) as HTMLElement[]) naturalW = Math.max(naturalW, c.offsetWidth, c.scrollWidth)
+  const naturalH = stem.offsetHeight
+  const availW = q.clientWidth
+  // 紧凑版题干与作答面板左右并排，高度就是整行；否则要给下面的作答面板留出位置
+  const a = body.querySelector<HTMLElement>(':scope > .a')
+  const typed = q.querySelector<HTMLElement>(':scope > .typed')
+  // 各留几像素余量，免得四舍五入后最后一行被裁掉一条边
+  const availH = body.clientHeight - (props.compact ? 0 : (a?.offsetHeight ?? 0) + 10) - (typed?.offsetHeight ?? 0) - 6
+  let z = max
+  if (naturalW > 0 && availW > 0) z = Math.min(z, (availW - 4) / naturalW)
+  if (naturalH > 0 && availH > 0) z = Math.min(z, availH / naturalH)
+  qZoom.value = Math.max(MIN_ZOOM, Math.floor(z * 100) / 100)
+}
+let ro: ResizeObserver | null = null
+onMounted(() => {
+  fitQuestion()
+  if (typeof ResizeObserver !== 'undefined' && qEl.value) {
+    ro = new ResizeObserver(() => fitQuestion())
+    ro.observe(qEl.value)
+  }
+})
+watch(
+  () => [props.question?.id, props.player.index, props.compact] as const,
+  () => {
+    qZoom.value = props.compact ? 0.85 : 1
+    nextTick(fitQuestion)
+  },
+)
+onBeforeUnmount(() => ro?.disconnect())
+
 watch(
   () => [props.question?.id, props.feedback === null, props.player.index] as const,
   ([id, free]) => {
@@ -70,7 +114,9 @@ onBeforeUnmount(() => {
     </div>
     <div v-if="question" class="row-body">
       <div
+        ref="qEl"
         class="q"
+        :style="{ '--qzoom': qZoom }"
         role="button"
         tabindex="0"
         :aria-label="ui('practice.replay')"
@@ -165,7 +211,7 @@ onBeforeUnmount(() => {
 .q {
   flex: 0 1 auto;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden auto;
   cursor: pointer;
   border-radius: var(--radius-md);
   width: 100%;
@@ -254,9 +300,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
 }
-/* 紧凑版：题干缩一档免得十格阵横着被裁掉；显示框贴在这一栏底部，题干再高也看得见 */
-.compact .q :deep(.stem) {
-  zoom: 0.85;
+/* 题干按栏宽缩放（--qzoom 由 fitQuestion 算）；显示框贴在这一栏底部，题干再高也看得见 */
+.q :deep(.stem) {
+  zoom: var(--qzoom, 1);
 }
 .typed {
   position: sticky;
