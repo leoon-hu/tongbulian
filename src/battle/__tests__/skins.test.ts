@@ -1,7 +1,6 @@
-// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
 import { createRng } from '@/engine'
+import { stubCanvas, stubCtx } from '../game/__tests__/stub'
 import type { Phase, Team } from '../protocol'
 import { RANDOM_SKIN, SKINS, ratio, resolveSkin, skinById } from '../skins'
 
@@ -23,19 +22,21 @@ describe('皮肤注册表（B34–B36）', () => {
   })
 
   for (const meta of SKINS) {
-    it(`${meta.id}：0…8 × 0…8 每个比分都能渲染，含胜利状态`, async () => {
-      const C = await meta.load()
+    it(`${meta.id}：加载器出一个游戏模块，0…8 × 0…8 每个比分喂进去都不抛错，含胜利状态`, async () => {
+      const factory = await meta.game()
+      const mod = factory()
+      expect(['2d', 'webgl']).toContain(mod.meta.renderer)
+      mod.mount({ canvas: stubCanvas(stubCtx()), width: meta.slot === 'top' ? 1000 : 150, height: meta.slot === 'top' ? 120 : 700, dpr: 1, compact: false, reducedMotion: false })
       for (let red = 0; red <= 8; red++) {
         for (let blue = 0; blue <= 8; blue++) {
           const winner: Team | null = red >= 8 ? 'red' : blue >= 8 ? 'blue' : null
           const phase: Phase = winner ? 'ended' : 'playing'
-          const w = mount(C, {
-            props: { red, blue, target: 8, phase, winner, lastPoint: red > blue ? 'red' : blue > 0 ? 'blue' : null },
-          })
-          expect(w.html().length).toBeGreaterThan(20)
-          w.unmount()
+          mod.setState({ red, blue, target: 8, phase, winner, lastPoint: red > blue ? 'red' : blue > 0 ? 'blue' : null })
+          if (winner) mod.onEvent({ type: 'finished', winner })
+          for (let i = 0; i < 3; i++) mod.tick(1 / 60)
         }
       }
+      mod.destroy()
     })
   }
 })

@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
 import type { SeqEvent } from '@/battle/protocol'
 import type { GameFactory, GameModule, GameState } from '../contract'
 import GameHost from '../host/GameHost.vue'
@@ -147,24 +146,20 @@ describe('GameHost（B34a：宿主）', () => {
 
 describe('GameSlot（盒子里放什么）', () => {
   const base = { id: 'x', icon: '🎮', slot: 'top' as const, kind: 'race' as const }
-  const CssSkin = defineComponent({ props: ['red', 'blue'], render: () => h('div', { class: 'css-skin' }) })
 
-  it('注册了 game 的皮肤放 GameHost，没有的放 CSS 组件', async () => {
+  it('盒子里放 GameHost 跑注册表里的游戏；换皮肤 id 重建宿主', async () => {
     const spy = spyGame()
-    const w = mount(GameSlot, {
-      props: { meta: { ...base, load: () => Promise.resolve(CssSkin), game: spy.load }, state: state(), events: [] },
-    })
+    const w = mount(GameSlot, { props: { meta: { ...base, game: spy.load }, state: state(), events: [] } })
     await flushPromises()
     await flushPromises()
     expect(w.find('.game-host canvas').exists()).toBe(true)
-    expect(w.find('.css-skin').exists()).toBe(false)
+    expect(spy.calls).toContain('mount')
+    const other = spyGame()
+    await w.setProps({ meta: { ...base, id: 'y', game: other.load } })
+    await flushPromises()
+    await flushPromises()
+    expect(spy.calls).toContain('destroy')
+    expect(other.calls).toContain('mount')
     w.unmount()
-
-    const w2 = mount(GameSlot, { props: { meta: { ...base, load: () => Promise.resolve(CssSkin) }, state: state(), events: [] } })
-    await flushPromises()
-    await flushPromises()
-    expect(w2.find('.css-skin').exists()).toBe(true)
-    expect(w2.find('.game-host').exists()).toBe(false)
-    w2.unmount()
   })
 })

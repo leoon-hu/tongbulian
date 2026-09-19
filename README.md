@@ -155,7 +155,7 @@ src/
 │   ├── ui/                  通用控件：顶部栏、页头、大按钮、数字键盘、选择卡、撒花、注音文字 RubyText、安装提示条 InstallBar
 │   ├── practice/            练习流程：题干渲染 QuestionRenderer、作答面板、结算页
 │   ├── battle/              对战：队区 TeamPanel（进度点、+1、闪光）、成员行 PlayerRow（可操作 / 观看两种，🔥 连对）、作答显示 WatchInput（机器人表情）、
-│   │                        GameSlot（游戏盒子里放宿主还是 CSS 皮肤）、弹出提示 Callout、胜利彩纸 VictoryOverlay、倒数、结果页、横屏提示、昵称面板、选皮肤
+│   │                        GameSlot（游戏盒子，放宿主 GameHost）、弹出提示 Callout、胜利彩纸 VictoryOverlay、倒数、结果页、横屏提示、昵称面板、选皮肤
 │   └── math/                数学教具：十格阵、钟面（含分钟刻度）、人民币、图形、数轴、序列、排队、尺子、角、竖式…
 ├── views/                   选学科 → 选年级 → 知识点地图 → 练习；battle/ 对战设置页与竞技场
 ├── stores/                  progress（按知识点记已完成、当前这一轮的 seed 与对错数）、settings（语言 / 声音）、install（安装提示：事件、静默期）、

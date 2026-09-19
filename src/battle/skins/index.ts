@@ -1,10 +1,9 @@
 /**
  * 皮肤注册表（需求 B34–B36）：皮肤只看比分，不认识题目。
  * slot：top = 竞技场上方横条（跑道、拔河这类横向的）；center = 左右两区之间的竖条（火箭、盖楼这类竖向的）。
- * 登记了 game（实时绘图的游戏模块，独立 chunk）的皮肤，竞技场在盒子里放 GameHost；没有的放 load 的 CSS 组件。
- * 新游戏 = games/<id>/ 一个目录 + 这里加一行。
+ * 每种皮肤就是一个实时绘图的游戏模块（独立 chunk），竞技场在盒子里放 GameHost 跑它。
+ * 新游戏 = games/<id>/ 一个目录 + 这里加一行 + 词条 skin.<id>。
  */
-import type { Component } from 'vue'
 import type { RNG } from '@/engine'
 import type { GameLoader, GameState } from '../game/contract'
 
@@ -20,10 +19,8 @@ export interface SkinMeta {
   icon: string
   slot: SkinSlot
   kind: SkinKind
-  /** 旧的 emoji + CSS 皮肤组件（对应游戏上线一版后删） */
-  load: () => Promise<Component>
-  /** 实时绘图的游戏（B34）：有它就用 canvas 版 */
-  game?: GameLoader
+  /** 实时绘图的游戏（B34） */
+  game: GameLoader
   /** 试点（B36f）：列表里能选，「随机」不会挑到它 */
   pilot?: boolean
 }
@@ -37,7 +34,6 @@ export const SKINS: readonly SkinMeta[] = [
     icon: '🐢',
     slot: 'top',
     kind: 'race',
-    load: () => import('./RaceSkin.vue').then((m) => m.default),
     game: () => import('../games/race').then((m) => m.createRaceGame),
   },
   {
@@ -45,7 +41,6 @@ export const SKINS: readonly SkinMeta[] = [
     icon: '🚀',
     slot: 'center',
     kind: 'race',
-    load: () => import('./RocketSkin.vue').then((m) => m.default),
     game: () => import('../games/rocket').then((m) => m.createRocketGame),
   },
   {
@@ -54,7 +49,6 @@ export const SKINS: readonly SkinMeta[] = [
     slot: 'center',
     kind: 'race',
     pilot: true,
-    load: () => import('./RocketSkin.vue').then((m) => m.default),
     game: () => import('../games/rocket3d').then((m) => m.load()),
   },
   {
@@ -62,7 +56,6 @@ export const SKINS: readonly SkinMeta[] = [
     icon: '🧱',
     slot: 'center',
     kind: 'grow',
-    load: () => import('./TowerSkin.vue').then((m) => m.default),
     game: () => import('../games/tower').then((m) => m.createTowerGame),
   },
   {
@@ -70,7 +63,6 @@ export const SKINS: readonly SkinMeta[] = [
     icon: '🪢',
     slot: 'top',
     kind: 'tug',
-    load: () => import('./TugSkin.vue').then((m) => m.default),
     game: () => import('../games/tug').then((m) => m.createTugGame),
   },
   {
@@ -78,7 +70,6 @@ export const SKINS: readonly SkinMeta[] = [
     icon: '🧊',
     slot: 'center',
     kind: 'consume',
-    load: () => import('./IceSkin.vue').then((m) => m.default),
     game: () => import('../games/ice').then((m) => m.createIceGame),
   },
 ]
