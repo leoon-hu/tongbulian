@@ -48,6 +48,17 @@ export function findKp(course: Course, kpId: string): KnowledgePoint | undefined
   return course.knowledgePoints.find((kp) => kp.id === kpId)
 }
 
+/** 按知识点 id 反查它在哪个上线课程里（对战页的地址只带 kpId）：没有 = 不存在或未上线 */
+export function courseOfKp(
+  kpId: string,
+): { subject: SubjectMeta; grade: GradeMeta; course: Course; kp: KnowledgePoint } | undefined {
+  for (const lc of liveCourses()) {
+    const kp = findKp(lc.course, kpId)
+    if (kp) return { ...lc, kp }
+  }
+  return undefined
+}
+
 // ── 目录：学科 → 年级（驱动选择页与占位）。──────────────────────────────
 // live 的年级挂 courseId 指向已注册课程；soon 为占位「敬请期待」。
 

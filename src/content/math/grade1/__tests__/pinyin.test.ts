@@ -4,7 +4,7 @@ import { dictKeys, isHan, pinyinOf, rubySegments, translate } from '@/engine/i18
 import { PINYIN } from '../pinyin'
 
 /** 需要注音的词条前缀：孩子在练习页会看到的题干 / 选项 / 教具文案 / 知识点标题，以及外壳的练习、结算词条。 */
-const NEEDS_PINYIN = /^(q|opt|dir|side|rel|cat|shape|lineup|tf|kp|practice|summary)\./
+const NEEDS_PINYIN = /^(q|opt|dir|side|rel|cat|shape|lineup|tf|kp|practice|summary|battle|skin)\./
 
 const SYLLABLE = /^[a-zü]*[āáǎàaēéěèeīíǐìiōóǒòoūúǔùuǖǘǚǜü][a-zü]*$/
 

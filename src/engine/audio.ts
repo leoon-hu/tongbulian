@@ -44,6 +44,11 @@ function ensureContext(): AudioContext | null {
   return ctx
 }
 
+/** 共享的 AudioContext（对战音效在上面合成短音；没有 WebAudio 的环境返回 null） */
+export function audioContext(): AudioContext | null {
+  return ensureContext()
+}
+
 /** 在用户手势里调用（每次触摸都可以调，很便宜）：恢复 AudioContext、解锁 <audio> 元素池 */
 export function unlockAudio(): void {
   if (!inBrowser) return

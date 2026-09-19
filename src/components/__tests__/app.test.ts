@@ -10,6 +10,10 @@ import { liveCourses } from '@/engine/catalog'
 import { SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
 import { useInstallStore } from '@/stores/install'
+import { useBattleStore } from '@/stores/battle'
+// 对战的两个视图是按需加载的：先静态导入一次，路由里的 import() 就不用在用例中途等模块转换
+import '@/views/battle/BattleSetupView.vue'
+import '@/views/battle/BattleArenaView.vue'
 
 // 语言是模块级单例 + 本地存储持久化——每个用例后复位，保证相互独立。
 afterEach(() => {
@@ -412,5 +416,156 @@ describe('App 集成冒烟', () => {
     expect(shown(w)).not.toContain('这是什么图形')
     expect(shown(w)).not.toContain('数一数')
     w.unmount()
+  })
+})
+
+describe('对战模式（§8，第 1 阶段：单设备）', () => {
+  const BATTLE_KEY = 'tongbulian:battle'
+  const KP = 's1-05-carry-add'
+
+  /** 竞技场与皮肤组件都是按需加载的，多刷几轮 */
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 5; i++) await flushPromises()
+  }
+  /** 等到条件成立（路由跳转要等懒加载的视图），最多刷 200 轮 */
+  async function until(pred: () => boolean): Promise<void> {
+    for (let i = 0; i < 200 && !pred(); i++) await flushPromises()
+    expect(pred()).toBe(true)
+    await settle()
+  }
+  const pathIs = (path: string) => () => router.currentRoute.value.path === path
+  function fakeTimers(): void {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+  }
+  function correctOf(q: { answer: { kind: string; value?: number; choiceId?: string } }): number | string {
+    return q.answer.kind === 'number' ? q.answer.value! : q.answer.choiceId!
+  }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('地图上的「⚔️ 对战」开关 → 设置页先问名字 → 开始进竞技场（无全局顶栏、标题带「对战」）', async () => {
+    const w = await mountAt(MAP)
+    const toggle = w.find('.tab.battle')
+    expect(toggle.exists()).toBe(true)
+    await toggle.trigger('click')
+    await w.find('.node.open').trigger('click')
+    await until(pathIs('/battle/new/s1-00-count'))
+    expect(shown(w)).toContain('跟谁打')
+    expect(document.title).toContain('对战')
+    // 第一次进对战先问名字：点一个现成名字就行
+    expect(shown(w)).toContain('你叫什么')
+    const chip = w.find('.sheet .chip')
+    const picked = chip.text()
+    await chip.trigger('click')
+    await w.find('form.sheet').trigger('submit')
+    await flushPromises()
+    expect(w.find('.sheet').exists()).toBe(false)
+    expect(JSON.parse(localStorage.getItem(BATTLE_KEY)!).names.me).toBe(picked)
+    expect(w.find('.name-chip.red .nm').text()).toBe(picked)
+    expect(shown(w)).toContain('机器人快慢')
+    // 选一个皮肤后开始
+    await w.findAll('.skins .tile')[1]!.trigger('click')
+    await w.find('.start-btn').trigger('click')
+    await until(pathIs('/battle/local/s1-00-count'))
+    expect(router.currentRoute.value.query.mode).toBe('ai')
+    expect(w.find('.app-header').exists()).toBe(false)
+    expect(w.find('.arena').exists()).toBe(true)
+    expect(w.find('.countdown').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('两人同屏：左右各一个可操作的区域，红队答对 8 题出结果页，「再来一局」重新倒数', async () => {
+    fakeTimers()
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'tug' }))
+    const w = await mountAt(`/battle/local/${KP}?mode=duo`)
+    await settle()
+    const store = useBattleStore()
+    expect(store.state?.phase).toBe('countdown')
+    store.beginPlay()
+    await settle()
+    expect(w.findAll('.team')).toHaveLength(2)
+    expect(w.findAll('.row.operable')).toHaveLength(2)
+    expect(w.find('.team.red .team-name').text()).toBe('小兔')
+    expect(w.find('.team.blue .team-name').text()).toBe('小虎')
+    expect(w.find('.strip.top').exists()).toBe(true) // 拔河在上方横条
+
+    // 第一题从界面上答：数字键盘按数字再 ✓，选择题点正确的那张卡
+    const left = store.state!.players[0]!
+    const q = store.questionOf(left)
+    const ans = q.answer
+    const redRow = w.find('.team.red .row.operable')
+    if (ans.kind === 'number') {
+      for (const d of String(ans.value)) {
+        await redRow.findAll('.key').find((k) => k.text() === d)!.trigger('click')
+      }
+      await redRow.find('.key.ok').trigger('click')
+    } else {
+      const i = q.choices!.findIndex((c) => c.id === ans.choiceId)
+      await redRow.findAll('.cards .card')[i]!.trigger('click')
+    }
+    await flushPromises()
+    expect(store.state!.score.red).toBe(1)
+    expect(w.find('.team.red .score').text()).toBe('1')
+    expect(w.find('.team.red .feedback.right').exists()).toBe(true)
+    vi.advanceTimersByTime(700)
+    await flushPromises()
+    expect(w.find('.team.red .feedback').exists()).toBe(false)
+
+    for (let i = 1; i < 8; i++) {
+      store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
+      vi.advanceTimersByTime(700)
+    }
+    await settle()
+    expect(store.state!.phase).toBe('ended')
+    expect(w.find('.result').exists()).toBe(false) // 先播胜利动画
+    vi.advanceTimersByTime(2100)
+    await settle()
+    expect(w.find('.result').exists()).toBe(true)
+    expect(shown(w)).toContain('红队获胜')
+    expect(shown(w)).toContain('差一点点')
+    expect(w.find('.result .score').text().replace(/\s/g, '')).toBe('8:0')
+
+    await w.findAll('.result .big-btn')[0]!.trigger('click') // 再来一局
+    await settle()
+    expect(store.state!.phase).toBe('countdown')
+    expect(store.state!.score).toEqual({ red: 0, blue: 0 })
+    expect(w.find('.countdown').exists()).toBe(true)
+    w.unmount()
+    expect(store.state).toBeNull()
+  })
+
+  it('打机器人：只有左边可操作，机器人那行是「作答显示」；退出要确认后回地图', async () => {
+    fakeTimers()
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' }, skin: 'rocket' }))
+    const w = await mountAt(`/battle/local/${KP}?mode=ai`)
+    await settle()
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    expect(w.findAll('.row.operable')).toHaveLength(1)
+    expect(shown(w.find('.team.blue .team-name'))).toBe('机器人')
+    expect(w.find('.team.blue .watch').exists()).toBe(true)
+    expect(shown(w.find('.team.blue'))).toContain('想一想')
+    expect(w.find('.strip.center').exists()).toBe(true) // 火箭在左右之间
+
+    await w.find('.bar-btn').trigger('click')
+    expect(shown(w)).toContain('要退出比赛吗')
+    await w.findAll('.confirm .big-btn')[1]!.trigger('click')
+    await until(pathIs(MAP))
+    expect(store.state).toBeNull()
+    w.unmount()
+  })
+
+  it('练习页页头的 ⚔️ 进对战设置页；没有名字时直接打开竞技场地址会退回设置页', async () => {
+    const w = await mountAt(practice(KP))
+    await w.find('.battle-btn').trigger('click')
+    await until(pathIs(`/battle/new/${KP}`))
+    w.unmount()
+
+    const w2 = await mountAt(`/battle/local/${KP}?mode=duo`)
+    await until(pathIs(`/battle/new/${KP}`))
+    w2.unmount()
   })
 })

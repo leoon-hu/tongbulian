@@ -21,6 +21,17 @@ const router = createRouter({
       name: 'practice',
       component: () => import('@/views/PracticeView.vue'),
     },
+    // 对战（需求 §8）：设置页与单设备竞技场只带 kpId（学科 / 年级由目录反查）
+    {
+      path: '/battle/new/:kpId',
+      name: 'battle-setup',
+      component: () => import('@/views/battle/BattleSetupView.vue'),
+    },
+    {
+      path: '/battle/local/:kpId',
+      name: 'battle-local',
+      component: () => import('@/views/battle/BattleArenaView.vue'),
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

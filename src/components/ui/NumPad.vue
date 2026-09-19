@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-const props = withDefaults(defineProps<{ maxLen?: number }>(), { maxLen: 3 })
-const emit = defineEmits<{ confirm: [value: number] }>()
+/** hideDisplay：不画显示框，由外层用 input 事件自己画（对战手机紧凑版把它放到题干那一栏，省高度） */
+const props = withDefaults(defineProps<{ maxLen?: number; hideDisplay?: boolean }>(), { maxLen: 3, hideDisplay: false })
+/** input：显示框里的内容每次变化都发出去（对战里对手 / 观战者要看到他正在按什么） */
+const emit = defineEmits<{ confirm: [value: number]; input: [value: string] }>()
 
 const value = ref('')
+watch(value, (v) => emit('input', v))
 
 function tapDigit(d: number): void {
   if (value.value.length >= props.maxLen) return
@@ -27,7 +30,7 @@ function confirm(): void {
 
 <template>
   <div class="numpad">
-    <div class="display" :class="{ empty: value === '' }">
+    <div v-if="!hideDisplay" class="display" :class="{ empty: value === '' }">
       {{ value === '' ? '?' : value }}
     </div>
     <div class="grid">

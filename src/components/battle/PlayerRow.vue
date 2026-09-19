@@ -1,0 +1,251 @@
+<script setup lang="ts">
+// 队区里的一行 = 一个人：名字 + 答 n · 对 m，题干（注音 + 🔊），
+// 自己可操作的行是作答面板；别人的行是「作答显示」（WatchInput）；答完一题先显示对错（反馈窗口）再换下一题。
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import type { Question } from '@/types/models'
+import type { Player } from '@/battle/protocol'
+import type { Feedback } from '@/stores/battle'
+import { answerLabel } from '@/engine/answer'
+import { lang, ui } from '@/engine/i18n'
+import { questionSpeech } from '@/engine/speech'
+import { hush, say } from '@/engine/voice'
+import QuestionRenderer from '@/components/practice/QuestionRenderer.vue'
+import AnswerPanel from '@/components/practice/AnswerPanel.vue'
+import RubyText from '@/components/ui/RubyText.vue'
+import WatchInput from './WatchInput.vue'
+
+const props = defineProps<{
+  player: Player
+  /** 正在答的题（反馈窗口期间是刚答完的那道）；倒数阶段为 null */
+  question: Question | null
+  feedback: Feedback | null
+  operable: boolean
+  /** 进题自动读（打机器人 / 多设备时每台设备只有一个真人才开；两人同屏不开，点 🔊 才读） */
+  autoRead: boolean
+  /** 队里只有他一个：名字已在队名条上，行里不再重复 */
+  solo: boolean
+  /** 手机横屏紧凑版（B29）：题干与作答面板左右并排，数字键盘的显示框挪到题干这一栏 */
+  compact?: boolean
+}>()
+const emit = defineEmits<{ answer: [given: unknown]; input: [value: string] }>()
+
+/** 紧凑版自己画的显示框内容（跟着键盘的 input 事件） */
+const typed = ref('')
+function onInput(v: string): void {
+  typed.value = v
+  emit('input', v)
+}
+
+const displayName = computed(() => (props.player.kind === 'ai' ? ui('battle.robot') : props.player.name))
+
+function read(): void {
+  if (props.question) say(questionSpeech(props.question, lang.value), lang.value)
+}
+
+watch(
+  () => [props.question?.id, props.feedback === null, props.player.index] as const,
+  ([id, free]) => {
+    typed.value = ''
+    if (props.autoRead && id && free) say(questionSpeech(props.question!, lang.value), lang.value, 150)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  if (props.autoRead) hush()
+})
+</script>
+
+<template>
+  <div class="row" :class="[player.team, { operable, offline: !player.online }]">
+    <div class="row-head">
+      <span v-if="!solo" class="name">{{ displayName }}</span>
+      <span class="stats">{{ ui('battle.stats', { n: player.index, m: player.correct }) }}</span>
+    </div>
+    <div v-if="question" class="row-body">
+      <div
+        class="q"
+        role="button"
+        tabindex="0"
+        :aria-label="ui('practice.replay')"
+        @click="read"
+        @keydown.enter.prevent="read"
+      >
+        <QuestionRenderer :key="`${player.index}-${question.id}`" :question="question" with-speaker />
+        <div
+          v-if="compact && operable && !feedback && question.input === 'numpad'"
+          :key="`typed-${player.index}`"
+          class="typed"
+          :class="{ empty: !typed }"
+        >
+          {{ typed || '?' }}
+        </div>
+      </div>
+      <div class="a">
+        <div v-if="feedback" class="feedback" :class="feedback.correct ? 'right' : 'wrong'">
+          <span class="mark">{{ feedback.correct ? '✅' : '❌' }}</span>
+          <p v-if="!feedback.correct" class="answer">
+            <RubyText :text="{ k: 'practice.answerIs' }" />
+            <strong><RubyText :text="answerLabel(feedback.question)" /></strong>
+          </p>
+        </div>
+        <AnswerPanel
+          v-else-if="operable"
+          :key="`panel-${player.index}`"
+          :question="question"
+          :revealed="null"
+          :hide-display="compact"
+          @answer="(g) => emit('answer', g)"
+          @input="onInput"
+        />
+        <WatchInput v-else :key="`watch-${player.index}`" :question="question" :input="player.input" />
+      </div>
+    </div>
+    <p v-else class="waiting"><RubyText :text="{ k: 'battle.ready' }" /></p>
+  </div>
+</template>
+
+<style scoped>
+/* 行是竖向 flex：题干可以被压缩、内部滚动，作答面板不压缩——键盘永远在视野里，不用滚下去找 */
+.row {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--c-card);
+  border: 2px solid transparent;
+}
+.row.operable {
+  box-shadow: var(--shadow-card);
+}
+.row.red.operable {
+  border-color: rgba(255, 107, 107, 0.35);
+}
+.row.blue.operable {
+  border-color: rgba(74, 163, 255, 0.35);
+}
+.row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--c-text-light);
+}
+.name {
+  font-weight: 800;
+  color: var(--c-text);
+}
+.row-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.q {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  width: 100%;
+  transition: transform 0.08s ease;
+}
+.q:active {
+  transform: scale(0.985);
+}
+.a {
+  flex: none;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mark {
+  font-size: 48px;
+  line-height: 1;
+}
+.answer {
+  font-size: var(--fs-md);
+  text-align: center;
+}
+.answer strong {
+  color: var(--c-green);
+  font-size: var(--fs-lg);
+  margin-left: 0.3em;
+}
+.waiting {
+  text-align: center;
+  color: var(--c-text-light);
+  padding: 20px 0;
+}
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* 手机横屏紧凑版（B29）：题干与作答面板左右并排 */
+.compact .row {
+  padding: 6px 8px;
+  gap: 4px;
+}
+.compact .row-head {
+  font-size: 13px;
+}
+.compact .row-body {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.compact .q {
+  flex: 0 0 50%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+/* 紧凑版：题干缩一档免得十格阵横着被裁掉；显示框贴在这一栏底部，题干再高也看得见 */
+.compact .q :deep(.stem) {
+  zoom: 0.85;
+}
+.typed {
+  position: sticky;
+  bottom: 0;
+  flex: none;
+  min-width: 96px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  background: var(--c-card);
+  border: 2px dashed var(--c-primary);
+  font-size: var(--fs-huge);
+  font-weight: 800;
+  text-align: center;
+  color: var(--c-primary-dark);
+  line-height: 1.5;
+}
+.typed.empty {
+  color: var(--c-locked);
+}
+.compact .a {
+  flex: 1;
+  min-width: 0;
+  max-height: 100%;
+  overflow: auto;
+}
+</style>

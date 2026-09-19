@@ -1,7 +1,8 @@
 /**
- * README 用的预览图：用无头 Chrome（CDP）模拟 iPhone（390×844 @2x，触屏）截四张到 screenshots/。
+ * README 用的预览图：用无头 Chrome（CDP）模拟 iPhone（390×844 @2x，触屏）截四张到 screenshots/，
+ * 再横过来（852×393 @3x）截一张对战竞技场。
  * 用法：npm run dev 后执行 `npm run screenshots`（环境变量 BASE_URL、CHROME 可改）。
- * 安装提示条不进预览图：预先把静默期写成永久。
+ * 安装提示条不进预览图：预先把静默期写成永久；对战的昵称也预先写好，免得先弹名字面板。
  */
 
 import { spawn } from "node:child_process";
@@ -17,7 +18,8 @@ mkdirSync(outDir, { recursive: true });
 const profile = mkdtempSync(join(tmpdir(), "screenshots-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const INIT = "try{localStorage.setItem('tongbulian:install','{\\\"until\\\":9007199254740991}')}catch(e){}";
+const BATTLE_PREFS = JSON.stringify({ names: { me: "🐰 小兔", left: "", right: "" }, skin: "race", aiLevel: "mid" });
+const INIT = `try{localStorage.setItem('tongbulian:install','{"until":9007199254740991}');localStorage.setItem('tongbulian:battle',${JSON.stringify(BATTLE_PREFS)})}catch(e){}`;
 const SHOTS = [
   {
     "name": "home",
@@ -34,6 +36,14 @@ const SHOTS = [
   {
     "name": "clock",
     "path": "#/s/math/g/g2/practice/m2s2-01-clock-hour"
+  },
+  {
+    "name": "battle",
+    "path": "#/battle/local/s1-05-carry-add?mode=ai",
+    "w": 852,
+    "h": 393,
+    "scale": 3,
+    "load": 6500
   }
 ];
 
@@ -62,6 +72,9 @@ await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-sch
 await send("Page.addScriptToEvaluateOnNewDocument", { source: INIT });
 try {
   for (const s of SHOTS) {
+    // 每张可以指定自己的尺寸（对战竞技场要横屏）
+    const [w, h, scale] = [s.w ?? W, s.h ?? H, s.scale ?? SCALE];
+    await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: scale, mobile: true, screenOrientation: { type: w > h ? "landscapePrimary" : "portraitPrimary", angle: w > h ? 90 : 0 } });
     await send("Page.navigate", { url: BASE + "/" + s.path });
     await sleep(s.load ?? 2500);
     for (const st of s.steps ?? []) {

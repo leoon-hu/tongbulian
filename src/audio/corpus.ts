@@ -1,7 +1,7 @@
 /**
  * 朗读语料：把所有可能读出来的片段收齐（生成音频包的输入，也是 manifest 测试的依据）。
  * - 数字 0–100 与中文的「两」：题目里的数都在这个范围
- * - 外壳固定句：正确答案是 / 鼓励语 / 结算
+ * - 外壳固定句：正确答案是 / 鼓励语 / 结算 / 对战的开始与胜负播报
  * - 每个知识点用固定种子跑三档难度各 CORPUS_SEEDS 题，题干与答案的片段全部收进来
  * 种子固定，所以结果是确定的；模板改了、生成器改了，这里的集合跟着变，测试会提醒重跑 npm run audio。
  */
@@ -12,7 +12,19 @@ import { answerSpeech, phraseSpeech, questionSpeech, RIGHT_KEYS } from '@/engine
 
 export const CORPUS_SEEDS = 300
 
-const FIXED_KEYS = ['practice.answerIs', 'summary.success', 'summary.scorePre', 'summary.scorePost', ...RIGHT_KEYS]
+const FIXED_KEYS = [
+  'practice.answerIs',
+  'summary.success',
+  'summary.scorePre',
+  'summary.scorePost',
+  ...RIGHT_KEYS,
+  // 对战（B39）：开始、胜负播报、横屏提示；队名是固定词条，昵称不读
+  'battle.go',
+  'battle.win.red',
+  'battle.win.blue',
+  'battle.close',
+  'battle.rotate',
+]
 
 export function collectCorpus(): Record<Lang, string[]> {
   const sets: Record<Lang, Set<string>> = { zh: new Set(), en: new Set() }

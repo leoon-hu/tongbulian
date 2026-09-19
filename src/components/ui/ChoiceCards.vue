@@ -6,6 +6,9 @@ defineProps<{
   choices: Choice[]
   /** 作答后揭示：正确项标绿，选错项标红，并禁用点击 */
   revealed?: { correctId: string; selectedId: string } | null
+  /** 只看不点（对战里看别人答题）：highlight 是他正点着的那张 */
+  readonly?: boolean
+  highlight?: string
 }>()
 const emit = defineEmits<{ select: [id: string] }>()
 </script>
@@ -19,8 +22,9 @@ const emit = defineEmits<{ select: [id: string] }>()
       :class="{
         correct: revealed && c.id === revealed.correctId,
         wrong: revealed && c.id === revealed.selectedId && c.id !== revealed.correctId,
+        picked: readonly && c.id === highlight,
       }"
-      :disabled="!!revealed"
+      :disabled="!!revealed || readonly"
       @click="emit('select', c.id)"
     >
       <RubyText :text="c.label" />
@@ -61,5 +65,9 @@ const emit = defineEmits<{ select: [id: string] }>()
   border-color: var(--c-red);
   background: #ffefef;
   color: var(--c-red);
+}
+.card.picked {
+  border-color: var(--c-primary);
+  background: #fff3e6;
 }
 </style>

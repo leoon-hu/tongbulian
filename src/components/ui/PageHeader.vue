@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 /**
  * 子页标题栏：返回键 + 标题，默认插槽的内容（比如练习页的进度点）放在标题下面一行，
  * 不跟标题抢同一行的宽度——手机上标题带注音本来就宽，挤在一行会被折成两截。
+ * actions 插槽在最右边（练习页的「⚔️ 对战」按钮）。
  */
 defineProps<{ title?: string; back?: string }>()
 const router = useRouter()
@@ -16,6 +17,7 @@ const router = useRouter()
       <h1 class="title"><slot name="title">{{ title }}</slot></h1>
       <div v-if="$slots.default" class="extra"><slot /></div>
     </div>
+    <div v-if="$slots.actions" class="actions"><slot name="actions" /></div>
   </header>
 </template>
 
@@ -55,5 +57,9 @@ const router = useRouter()
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.actions {
+  flex: none;
+  align-self: flex-start;
 }
 </style>

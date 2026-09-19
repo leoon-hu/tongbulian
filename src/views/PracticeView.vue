@@ -141,6 +141,11 @@ function retry(): void {
         <span class="kp-icon">{{ kp.icon }}</span>
         <RubyText :text="{ k: kpTitleKey(kp) }" />
       </template>
+      <template #actions>
+        <button type="button" class="battle-btn" :aria-label="ui('battle.enter')" @click="router.push(`/battle/new/${kpId}`)">
+          ⚔️
+        </button>
+      </template>
       <!-- 进度点：答对绿、答错红、当前橙、没做的灰 -->
       <div class="dots">
         <span
@@ -213,6 +218,18 @@ function retry(): void {
 }
 .kp-icon {
   flex: none;
+}
+.battle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  font-size: 22px;
+  transition: transform 0.08s ease;
+}
+.battle-btn:active {
+  transform: scale(0.92);
 }
 .dots {
   display: flex;

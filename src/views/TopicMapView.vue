@@ -6,11 +6,13 @@ import { ROUND_SIZE, hasGenerator } from '@/engine'
 import { getCourse, getSubject, kpsOfUnit } from '@/engine/catalog'
 import { kpTitle, ui, unitTitle } from '@/engine/i18n'
 import { useProgressStore } from '@/stores/progress'
+import { useBattleStore } from '@/stores/battle'
 
 // 某「学科×年级」的知识点地图。无效课程回顶层。
 const route = useRoute()
 const router = useRouter()
 const progress = useProgressStore()
+const battle = useBattleStore()
 
 const subjectId = computed(() => String(route.params.subjectId))
 const gradeId = computed(() => String(route.params.gradeId))
@@ -48,10 +50,11 @@ function statusOf(kp: KnowledgePoint): NodeStatus {
 
 const SEGMENTS = Array.from({ length: ROUND_SIZE }, (_, i) => i)
 
+// 「⚔️ 对战」开关（B26）开着时点知识点进对战设置页，否则进练习页
 function tapNode(kp: KnowledgePoint): void {
-  if (statusOf(kp) === 'open') {
-    router.push(`/s/${subjectId.value}/g/${gradeId.value}/practice/${kp.id}`)
-  }
+  if (statusOf(kp) !== 'open') return
+  if (battle.mapMode) router.push(`/battle/new/${kp.id}`)
+  else router.push(`/s/${subjectId.value}/g/${gradeId.value}/practice/${kp.id}`)
 }
 </script>
 
@@ -65,15 +68,26 @@ function tapNode(kp: KnowledgePoint): void {
       </div>
     </header>
 
-    <nav v-if="semesters.length > 1" class="tabs">
+    <nav class="tabs">
+      <template v-if="semesters.length > 1">
+        <button
+          v-for="sem in semesters"
+          :key="sem.semester"
+          class="tab"
+          :class="{ active: sem.semester === activeSem }"
+          @click="activeSem = sem.semester"
+        >
+          {{ ui('sem.' + sem.semester) }}
+        </button>
+      </template>
       <button
-        v-for="sem in semesters"
-        :key="sem.semester"
-        class="tab"
-        :class="{ active: sem.semester === activeSem }"
-        @click="activeSem = sem.semester"
+        type="button"
+        class="tab battle"
+        :class="{ active: battle.mapMode }"
+        :aria-pressed="battle.mapMode"
+        @click="battle.mapMode = !battle.mapMode"
       >
-        {{ ui('sem.' + sem.semester) }}
+        ⚔️ {{ ui('battle.title') }}
       </button>
     </nav>
 
@@ -186,6 +200,14 @@ function tapNode(kp: KnowledgePoint): void {
 .tab.active {
   background: var(--grad-node);
   color: var(--c-text);
+}
+.tab.battle {
+  flex: none;
+  margin-left: auto;
+}
+.tab.battle.active {
+  background: var(--c-primary);
+  color: #fff;
 }
 .unit {
   background: var(--c-card);
