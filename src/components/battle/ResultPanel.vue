@@ -51,7 +51,7 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  background: rgba(253, 246, 236, 0.96);
+  background: rgba(253, 246, 236, 0.9);
   overflow: auto;
 }
 .trophy {

@@ -48,14 +48,18 @@ describe('比赛状态机（B1–B9）', () => {
     expect(r.state.players[0]).toMatchObject({ index: 1, correct: 0 })
     expect(r.events).toEqual([{ type: 'answered', playerId: 'a', index: 0, correct: false, given: '3' }])
     m = r.state
+    // 连对 3 / 5 题弹提示，到 7 分弹「还差一分」；0 : 0 平局起步不算「反超」
+    const extra: Record<number, string[]> = { 3: ['streak'], 5: ['streak'], 7: ['nearWin'] }
     for (let i = 1; i <= 7; i++) {
       r = answer(m, 'a', i, true, 'x', 2000 + i)
       m = r.state
       expect(m.phase).toBe('playing')
-      expect(r.events.map((e) => e.type)).toEqual(['answered', 'point'])
+      expect(r.events.map((e) => e.type)).toEqual(['answered', 'point', ...(extra[i] ?? [])])
+      expect(findPlayer(m, 'a')!.streak).toBe(i)
     }
     expect(m.score.red).toBe(7)
     expect(m.lastPoint).toBe('red')
+    expect(r.events).toContainEqual({ type: 'nearWin', team: 'red' })
     r = answer(m, 'a', 8, true, 'x', 9999)
     expect(r.state.phase).toBe('ended')
     expect(r.state.winner).toBe('red')
@@ -74,6 +78,27 @@ describe('比赛状态机（B1–B9）', () => {
     expect(answer(m, 'zzz', 0, true, 'x', 1).state).toBe(m)
     const once = answer(m, 'a', 0, true, 'x', 1).state
     expect(answer(once, 'a', 0, true, 'x', 1).state).toBe(once)
+  })
+
+  it('反超：从落后变成领先才弹，追平不弹；答错连对归零', () => {
+    let m = playing()
+    m = answer(m, 'b', 0, true, 'x', 1).state // 蓝 1 : 0
+    m = answer(m, 'b', 1, true, 'x', 1).state // 蓝 2 : 0
+    let r = answer(m, 'a', 0, true, 'x', 1) // 红 1 : 2，还落后
+    expect(r.events.map((e) => e.type)).toEqual(['answered', 'point'])
+    r = answer(r.state, 'a', 1, true, 'x', 1) // 2 : 2 追平：不弹
+    expect(r.events.map((e) => e.type)).toEqual(['answered', 'point'])
+    r = answer(r.state, 'a', 2, true, 'x', 1) // 红 3 : 2 反超（同时连对 3）
+    expect(r.events.map((e) => e.type)).toEqual(['answered', 'point', 'streak', 'lead'])
+    expect(r.events).toContainEqual({ type: 'lead', team: 'red' })
+    r = answer(r.state, 'a', 3, false, 'x', 1)
+    expect(findPlayer(r.state, 'a')!.streak).toBe(0)
+    expect(r.events).toHaveLength(1)
+    // 结束那一题只发 finished，不再发连对 / 反超
+    let e = r.state
+    for (let i = 4; i < 9; i++) e = answer(e, 'a', i, true, 'x', 1).state
+    expect(e.score.red).toBe(8)
+    expect(e.winner).toBe('red')
   })
 
   it('各答各的：两队的分数互不影响，先到 8 的赢', () => {

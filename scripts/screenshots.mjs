@@ -43,7 +43,11 @@ const SHOTS = [
     "w": 852,
     "h": 393,
     "scale": 3,
-    "load": 6500
+    "load": 1500,
+    "steps": [
+      { "eval": "window.__battle.beginPlay()", "after": 400 },
+      { "eval": "window.__battle.state = { ...window.__battle.state, score: { red: 5, blue: 3 }, lastPoint: 'red', leading: 'red' }", "after": 1200 }
+    ]
   }
 ];
 

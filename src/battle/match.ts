@@ -6,8 +6,10 @@ import type { Difficulty } from '@/types/models'
 import { ROUND_SIZE } from '@/engine'
 import type { MatchEvent, MatchState, Player, Team } from './protocol'
 
-/** 倒数 3、2、1 + 「开始」的总时长 */
-export const COUNTDOWN_MS = 3600
+/** 「预备」+ 倒数 3、2、1 + 「开始」的总时长 */
+export const COUNTDOWN_MS = 4400
+/** 连对几题弹出提示（B5a） */
+export const STREAK_MILESTONES: readonly number[] = [3, 5]
 
 export interface PlayerInit {
   id: string
@@ -32,6 +34,7 @@ export function createMatch(opts: { kpId: string; skin: string; players: PlayerI
       seed: 0,
       index: 0,
       correct: 0,
+      streak: 0,
       input: '',
       online: true,
     })),
@@ -40,6 +43,7 @@ export function createMatch(opts: { kpId: string; skin: string; players: PlayerI
     endedAt: 0,
     winner: null,
     lastPoint: null,
+    leading: null,
   }
 }
 
@@ -61,6 +65,7 @@ export function startMatch(state: MatchState, seeds: Record<string, number>, now
       seed: seeds[p.id] ?? p.seed,
       index: 0,
       correct: 0,
+      streak: 0,
       input: '',
     })),
     score: { red: 0, blue: 0 },
@@ -68,6 +73,7 @@ export function startMatch(state: MatchState, seeds: Record<string, number>, now
     endedAt: 0,
     winner: null,
     lastPoint: null,
+    leading: null,
   }
 }
 
@@ -85,9 +91,15 @@ export function setInput(state: MatchState, playerId: string, input: string): Ma
   return { ...state, players }
 }
 
+/** 谁领先（比分严格更高）：没有就是 null */
+function leader(score: Record<Team, number>): Team | null {
+  if (score.red === score.blue) return null
+  return score.red > score.blue ? 'red' : 'blue'
+}
+
 /**
  * 某人答了第 index 题：只在比赛中、且 index 正是他的下一题时生效（乱序 / 重复提交直接忽略）。
- * 答对给他的队伍 +1；到目标分就结束。
+ * 答对给他的队伍 +1；到目标分就结束。附带的 streak / lead / nearWin 事件给界面弹提示（B5a）。
  */
 export function answer(
   state: MatchState,
@@ -100,17 +112,24 @@ export function answer(
   const i = state.players.findIndex((p) => p.id === playerId)
   const player = state.players[i]
   if (state.phase !== 'playing' || !player || player.index !== index) return { state, events: [] }
+  const streak = correct ? player.streak + 1 : 0
   const players = state.players.slice()
-  players[i] = { ...player, index: index + 1, correct: player.correct + (correct ? 1 : 0), input: '' }
+  players[i] = { ...player, index: index + 1, correct: player.correct + (correct ? 1 : 0), streak, input: '' }
   const events: MatchEvent[] = [{ type: 'answered', playerId, index, correct, given }]
   let next: MatchState = { ...state, players }
   if (correct) {
-    const score = { ...state.score, [player.team]: state.score[player.team] + 1 }
-    next = { ...next, score, lastPoint: player.team }
-    events.push({ type: 'point', team: player.team, playerId })
-    if (score[player.team] >= state.target) {
-      next = { ...next, phase: 'ended', winner: player.team, endedAt: now }
-      events.push({ type: 'finished', winner: player.team })
+    const team = player.team
+    const score = { ...state.score, [team]: state.score[team] + 1 }
+    const ahead = leader(score)
+    next = { ...next, score, lastPoint: team, leading: ahead ?? state.leading }
+    events.push({ type: 'point', team, playerId, streak })
+    if (score[team] >= state.target) {
+      next = { ...next, phase: 'ended', winner: team, endedAt: now }
+      events.push({ type: 'finished', winner: team })
+    } else {
+      if (STREAK_MILESTONES.includes(streak)) events.push({ type: 'streak', playerId, team, n: streak })
+      if (ahead === team && state.leading !== null && state.leading !== team) events.push({ type: 'lead', team })
+      if (score[team] === state.target - 1) events.push({ type: 'nearWin', team })
     }
   }
   return { state: next, events }

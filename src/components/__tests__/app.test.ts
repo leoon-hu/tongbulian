@@ -515,7 +515,8 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
 
     for (let i = 1; i < 8; i++) {
       store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
-      vi.advanceTimersByTime(700)
+      // 连对 3 / 5 题、到 7 分会弹提示（B5a），反馈窗口延长到 1.4 秒
+      vi.advanceTimersByTime(1500)
     }
     await settle()
     expect(store.state!.phase).toBe('ended')

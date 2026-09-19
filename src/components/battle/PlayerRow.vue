@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// 队区里的一行 = 一个人：名字 + 答 n · 对 m，题干（注音 + 🔊），
-// 自己可操作的行是作答面板；别人的行是「作答显示」（WatchInput）；答完一题先显示对错（反馈窗口）再换下一题。
+// 队区里的一行 = 一个人：名字 + 答 n · 对 m（连对 2 题起有 🔥 ×n），题干（注音 + 🔊），
+// 自己可操作的行是作答面板；别人的行是「作答显示」（WatchInput，机器人带表情）；答完一题先显示对错（反馈窗口）再换下一题。
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Question } from '@/types/models'
 import type { Player } from '@/battle/protocol'
@@ -37,6 +37,12 @@ function onInput(v: string): void {
 }
 
 const displayName = computed(() => (props.player.kind === 'ai' ? ui('battle.robot') : props.player.name))
+/** 机器人的表情（B11）：想题 / 在按 / 答对 / 答错 */
+const mood = computed(() => {
+  if (props.player.kind !== 'ai') return undefined
+  if (props.feedback) return props.feedback.correct ? '😄' : '😅'
+  return props.player.input ? '🤖' : '🤔'
+})
 
 function read(): void {
   if (props.question) say(questionSpeech(props.question, lang.value), lang.value)
@@ -60,6 +66,7 @@ onBeforeUnmount(() => {
     <div class="row-head">
       <span v-if="!solo" class="name">{{ displayName }}</span>
       <span class="stats">{{ ui('battle.stats', { n: player.index, m: player.correct }) }}</span>
+      <span v-if="player.streak >= 2" :key="player.streak" class="streak" :title="ui('battle.streakBadge')">🔥 ×{{ player.streak }}</span>
     </div>
     <div v-if="question" class="row-body">
       <div
@@ -87,6 +94,8 @@ onBeforeUnmount(() => {
             <RubyText :text="{ k: 'practice.answerIs' }" />
             <strong><RubyText :text="answerLabel(feedback.question)" /></strong>
           </p>
+          <span v-if="feedback.correct && player.kind === 'ai'" class="ai-mood" aria-hidden="true">😄</span>
+          <span v-else-if="player.kind === 'ai'" class="ai-mood" aria-hidden="true">😅</span>
         </div>
         <AnswerPanel
           v-else-if="operable"
@@ -97,7 +106,7 @@ onBeforeUnmount(() => {
           @answer="(g) => emit('answer', g)"
           @input="onInput"
         />
-        <WatchInput v-else :key="`watch-${player.index}`" :question="question" :input="player.input" />
+        <WatchInput v-else :key="`watch-${player.index}`" :question="question" :input="player.input" :mood="mood" />
       </div>
     </div>
     <p v-else class="waiting"><RubyText :text="{ k: 'battle.ready' }" /></p>
@@ -128,7 +137,6 @@ onBeforeUnmount(() => {
 }
 .row-head {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
   gap: 8px;
   font-size: var(--fs-sm);
@@ -137,6 +145,14 @@ onBeforeUnmount(() => {
 .name {
   font-weight: 800;
   color: var(--c-text);
+}
+.stats {
+  flex: 1;
+}
+.streak {
+  font-weight: 900;
+  color: var(--c-primary-dark);
+  animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .row-body {
   display: flex;
@@ -176,6 +192,9 @@ onBeforeUnmount(() => {
   font-size: 48px;
   line-height: 1;
 }
+.feedback.right .mark {
+  animation: bounce 0.5s ease;
+}
 .answer {
   font-size: var(--fs-md);
   text-align: center;
@@ -184,6 +203,10 @@ onBeforeUnmount(() => {
   color: var(--c-green);
   font-size: var(--fs-lg);
   margin-left: 0.3em;
+}
+.ai-mood {
+  font-size: 40px;
+  line-height: 1;
 }
 .waiting {
   text-align: center;
@@ -198,6 +221,17 @@ onBeforeUnmount(() => {
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+@keyframes bounce {
+  0% {
+    transform: scale(0.5) rotate(-20deg);
+  }
+  60% {
+    transform: scale(1.3) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
   }
 }
 /* 手机横屏紧凑版（B29）：题干与作答面板左右并排 */
@@ -247,5 +281,9 @@ onBeforeUnmount(() => {
   min-width: 0;
   max-height: 100%;
   overflow: auto;
+}
+.compact .mood,
+.compact .ai-mood {
+  font-size: 30px;
 }
 </style>

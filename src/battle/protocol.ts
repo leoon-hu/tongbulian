@@ -23,6 +23,8 @@ export interface Player {
   /** 下一题的序号 = 已答题数 */
   index: number
   correct: number
+  /** 当前连对了几题（答错归零；B5a 的 🔥 与音高） */
+  streak: number
   /** 正在按的内容（数字串或选项 id），给别人看 */
   input: string
   online: boolean
@@ -43,11 +45,20 @@ export interface MatchState {
   winner: Team | null
   /** 最近得分的队伍（皮肤播得分动画用） */
   lastPoint: Team | null
+  /** 最近一次领先（比分严格更高）的队伍；追平不改。「反超」= 我刚领先而上一个领先的是对方 */
+  leading: Team | null
 }
 
+/**
+ * 一次答题产生的事件（顺序：answered → point → streak / lead / nearWin → finished）。
+ * streak：连对到 3 / 5 题；lead：从落后变成领先；nearWin：到目标分只差 1。结束那一题不再发这三种。
+ */
 export type MatchEvent =
   | { type: 'answered'; playerId: string; index: number; correct: boolean; given: string }
-  | { type: 'point'; team: Team; playerId: string }
+  | { type: 'point'; team: Team; playerId: string; streak: number }
+  | { type: 'streak'; playerId: string; team: Team; n: number }
+  | { type: 'lead'; team: Team }
+  | { type: 'nearWin'; team: Team }
   | { type: 'finished'; winner: Team }
 
 export function otherTeam(team: Team): Team {

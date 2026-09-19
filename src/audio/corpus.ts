@@ -19,11 +19,15 @@ const FIXED_KEYS = [
   'summary.scorePost',
   ...RIGHT_KEYS,
   // 对战（B39）：开始、胜负播报、横屏提示；队名是固定词条，昵称不读
+  'battle.getReady',
   'battle.go',
   'battle.win.red',
   'battle.win.blue',
   'battle.close',
   'battle.rotate',
+  'battle.streak',
+  'battle.lead',
+  'battle.nearWin',
 ]
 
 export function collectCorpus(): Record<Lang, string[]> {

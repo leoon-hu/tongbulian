@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 竞技场（B28–B33）：横向三块——左区（红队）、右区（蓝队）、游戏区（皮肤说了算：上方横条或左右之间的竖条）。
 // 单设备模式：这里直接驱动 stores/battle 的本地对局；倒数 → 比赛 → 胜利动画 → 结果页。
+// 弹出提示（连对 / 反超 / 还差一分）与胜利播报的朗读在这里，音效在 store 里。
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasGenerator } from '@/engine'
@@ -18,6 +19,8 @@ import TeamPanel from '@/components/battle/TeamPanel.vue'
 import Countdown from '@/components/battle/Countdown.vue'
 import ResultPanel from '@/components/battle/ResultPanel.vue'
 import RotateOverlay from '@/components/battle/RotateOverlay.vue'
+import Callout from '@/components/battle/Callout.vue'
+import VictoryOverlay from '@/components/battle/VictoryOverlay.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
@@ -40,6 +43,11 @@ else if (!store.state || store.state.kpId !== kpId || store.mode !== mode) {
   // 刷新或直接打开地址：名字都还在就直接开一局，缺名字回设置页
   if (!store.prefs.names.me || (mode === 'duo' && !store.prefs.names.right)) router.replace(setupPath)
   else store.startLocal({ kpId, mode })
+}
+
+// 开发时把 store 挂到 window 上，截图脚本可以直接摆出某个比分 / 弹出提示 / 胜利画面来核对布局
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  ;(window as unknown as { __battle?: unknown }).__battle = store
 }
 
 const state = computed(() => store.state)
@@ -89,6 +97,14 @@ watch(
   { immediate: true },
 )
 const elapsed = computed(() => (state.value ? formatElapsed(elapsedMs(state.value, now.value)) : '00:00'))
+
+// ── 弹出提示：朗读（B5a） ──
+watch(
+  () => store.callout,
+  (c) => {
+    if (c) say(phraseSpeech({ k: c.key, p: c.p }, lang.value), lang.value)
+  },
+)
 
 // ── 结束：胜利动画 → 播报队名 → 结果页 ──
 const showResult = ref(false)
@@ -173,6 +189,7 @@ onBeforeUnmount(() => {
         team="red"
         :rows="redRows"
         :score="state.score.red"
+        :target="state.target"
         :operable="store.operable"
         :auto-read="autoRead"
         :compact="compact"
@@ -186,6 +203,7 @@ onBeforeUnmount(() => {
         team="blue"
         :rows="blueRows"
         :score="state.score.blue"
+        :target="state.target"
         :operable="store.operable"
         :auto-read="autoRead"
         :compact="compact"
@@ -194,7 +212,9 @@ onBeforeUnmount(() => {
       />
     </div>
 
+    <Callout :callout="store.callout" />
     <Countdown v-if="phase === 'countdown'" @done="store.beginPlay()" />
+    <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
     <ResultPanel v-if="showResult" :state="state" @rematch="store.rematch()" @change-skin="changeSkin" @exit="exit" />
 
     <div v-if="confirming" class="confirm-mask" @click.self="confirming = false">
@@ -262,7 +282,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 .strip.top {
-  height: 100px;
+  height: 120px;
   margin: 0 8px 8px;
 }
 .strip.center {
@@ -278,7 +298,7 @@ onBeforeUnmount(() => {
   padding: 0 8px 8px;
 }
 .slot-center .field {
-  grid-template-columns: 1fr 140px 1fr;
+  grid-template-columns: 1fr 150px 1fr;
 }
 .confirm-mask {
   position: absolute;
@@ -308,33 +328,13 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
-/* 手机横屏紧凑版（B29）：点击目标 48px、字号缩一档、横条 64px、竖条 96px、键盘间距收窄 */
+/* 手机横屏紧凑版（B29）：点击目标 48px、字号缩一档、横条 56px、竖条 96px、键盘间距收窄 */
 .arena.compact {
   --tap-min: 48px;
   --fs-huge: 28px;
   --fs-xl: 22px;
   --fs-lg: 18px;
   --fs-md: 15px;
-}
-.arena.compact :deep(.numpad) {
-  gap: 6px;
-}
-.arena.compact :deep(.numpad .grid) {
-  gap: 6px;
-}
-.arena.compact :deep(.numpad .display) {
-  padding: 0 16px;
-  border-width: 2px;
-}
-.arena.compact :deep(.team-head) {
-  padding: 2px 10px;
-  font-size: 14px;
-}
-.arena.compact :deep(.team-head .score) {
-  font-size: 20px;
-}
-.arena.compact :deep(.rows) {
-  padding: 4px;
 }
 .arena.compact .bar {
   height: 36px;
@@ -354,5 +354,29 @@ onBeforeUnmount(() => {
 .arena.compact .field {
   gap: 6px;
   padding: 0 6px 6px;
+}
+.arena.compact :deep(.numpad) {
+  gap: 6px;
+}
+.arena.compact :deep(.numpad .grid) {
+  gap: 6px;
+}
+.arena.compact :deep(.numpad .display) {
+  padding: 0 16px;
+  border-width: 2px;
+}
+.arena.compact :deep(.team-head) {
+  padding: 2px 10px;
+  font-size: 14px;
+}
+.arena.compact :deep(.team-head .score) {
+  font-size: 20px;
+}
+.arena.compact :deep(.team-head .progress i) {
+  width: 7px;
+  height: 7px;
+}
+.arena.compact :deep(.rows) {
+  padding: 4px;
 }
 </style>

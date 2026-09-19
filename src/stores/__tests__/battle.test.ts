@@ -5,7 +5,7 @@ import '@/content/math/grade1'
 import type { Player } from '@/battle/protocol'
 import { AI_ID } from '@/battle/ai'
 import type { Question } from '@/types/models'
-import { FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, useBattleStore } from '../battle'
+import { FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, useBattleStore } from '../battle'
 
 const KP = 's1-05-carry-add'
 
@@ -85,7 +85,13 @@ describe('两人同屏（B12）', () => {
     for (let i = 0; i < 8; i++) {
       s.submit('left', correctOf(s.questionOf(left())))
       expect(s.pending.left).toMatchObject({ correct: true })
+      // 连对 3 / 5 题与到 7 分会弹提示（B5a），弹的时候反馈窗口延长到 1.4 秒
+      const score = i + 1
+      if (score === 3 || score === 5) expect(s.callout).toMatchObject({ key: 'battle.streak', team: 'red', p: { n: score } })
+      else if (score === 7) expect(s.callout).toMatchObject({ key: 'battle.nearWin', team: 'red' })
       vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
+      if (s.pending.left) vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS - FEEDBACK_RIGHT_MS)
+      expect(s.pending.left).toBeUndefined()
     }
     expect(s.state!.phase).toBe('ended')
     expect(s.state!.winner).toBe('red')

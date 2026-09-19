@@ -1,17 +1,17 @@
 /**
  * 对战的客户端状态（需求 §8）：本机偏好（昵称等，localStorage `tongbulian:battle`）、
- * 当前这一局（MatchState 快照）、答完后的反馈窗口、机器人的计时器。
+ * 当前这一局（MatchState 快照）、答完后的反馈窗口、弹出提示、机器人的计时器。
  * 单设备模式在这里直接跑 battle/match 的状态机；多设备模式以后换成由中继服务发来的快照，竞技场页不用变。
  */
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import type { Difficulty, Question } from '@/types/models'
+import type { Difficulty, LParam, Question } from '@/types/models'
 import { createRng, type RNG } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
 import { answerSpeech, questionSpeech } from '@/engine/speech'
 import { warmUp } from '@/engine/voice'
-import type { MatchEvent, MatchState, Player } from '@/battle/protocol'
+import type { MatchEvent, MatchState, Player, Team } from '@/battle/protocol'
 import {
   answer as applyAnswer,
   beginPlay as applyBegin,
@@ -24,13 +24,16 @@ import {
 import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, isAiLevel, planAnswer, type AiLevel } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
-import { playSfx } from '@/battle/sfx'
-import { RANDOM_SKIN, resolveSkin, skinById } from '@/battle/skins'
+import { playSfx, streakPitch, type Sfx } from '@/battle/sfx'
+import { RANDOM_SKIN, resolveSkin, skinById, type SkinKind } from '@/battle/skins'
 
 export type LocalMode = 'ai' | 'duo'
-/** 答对 / 答错后停留多久再出下一题（B5） */
+/** 答对 / 答错后停留多久再出下一题（B5）；弹出提示时答对的停留延长，让话说完（B5a） */
 export const FEEDBACK_RIGHT_MS = 600
 export const FEEDBACK_WRONG_MS = 1200
+export const FEEDBACK_CALLOUT_MS = 1400
+/** 弹出提示显示多久 */
+export const CALLOUT_MS = 1600
 
 const KEY = 'tongbulian:battle'
 
@@ -49,6 +52,17 @@ export interface Feedback {
   correct: boolean
   given: string
 }
+
+/** 弹出提示（B5a）：连对 / 反超 / 还差一分，词条 + 参数，带队色 */
+export interface Callout {
+  id: number
+  key: string
+  p?: Record<string, LParam>
+  team: Team
+}
+
+/** 皮肤类型对应的得分音效（跑 / 拉 = 呼啸，盖 = 咚，化 = 咔嚓） */
+const KIND_SFX: Record<SkinKind, Sfx> = { race: 'whoosh', tug: 'whoosh', grow: 'thud', consume: 'crack' }
 
 function randomId(): string {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6)
@@ -110,6 +124,8 @@ export const useBattleStore = defineStore('battle', () => {
   const operable = ref<string[]>([])
   const pending = ref<Record<string, Feedback>>({})
   const lastEvent = ref<MatchEvent | null>(null)
+  const callout = ref<Callout | null>(null)
+  let calloutSeq = 0
 
   let aiRng: RNG = createRng()
   let aiLevel: AiLevel = 'mid'
@@ -151,6 +167,14 @@ export const useBattleStore = defineStore('battle', () => {
     warmUp(tokens, lang.value)
   }
 
+  function reset(): void {
+    clearAll(timers)
+    clearAll(aiTimers)
+    pending.value = {}
+    lastEvent.value = null
+    callout.value = null
+  }
+
   /** 开一局单设备的比赛（进入倒数）。names 缺的用「我」的名字补，设置页会保证名字都有 */
   function startLocal(opts: {
     kpId: string
@@ -161,10 +185,7 @@ export const useBattleStore = defineStore('battle', () => {
     aiSeed?: number
     now?: number
   }): void {
-    clearAll(timers)
-    clearAll(aiTimers)
-    pending.value = {}
-    lastEvent.value = null
+    reset()
     mode.value = opts.mode
     aiLevel = opts.aiLevel ?? prefs.value.aiLevel
     aiRng = createRng(opts.aiSeed)
@@ -203,7 +224,20 @@ export const useBattleStore = defineStore('battle', () => {
     if (state.value) state.value = applyInput(state.value, playerId, input)
   }
 
-  /** 某人提交了答案：判分、记进状态机、开反馈窗口、放音效 */
+  function showCallout(key: string, team: Team, p?: Record<string, LParam>): void {
+    callout.value = { id: ++calloutSeq, key, team, p }
+    playSfx('pop')
+    const id = calloutSeq
+    later(
+      timers,
+      () => {
+        if (callout.value?.id === id) callout.value = null
+      },
+      CALLOUT_MS,
+    )
+  }
+
+  /** 某人提交了答案：判分、记进状态机、开反馈窗口、放音效、弹提示（B5 / B5a） */
   function submit(playerId: string, given: unknown, now = Date.now()): void {
     const s = state.value
     if (!s || s.phase !== 'playing' || pending.value[playerId]) return
@@ -214,13 +248,29 @@ export const useBattleStore = defineStore('battle', () => {
     const res = applyAnswer(s, playerId, p.index, ok, String(given), now)
     state.value = res.state
     pending.value = { ...pending.value, [playerId]: { question: q, correct: ok, given: String(given) } }
+    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 反超 > 还差一分 > 连对
+    let toCall: MatchEvent | null = null
+    const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1 }
     for (const e of res.events) {
       lastEvent.value = e
-      if (e.type === 'point') playSfx('ding')
+      if (e.type === 'point') {
+        playSfx('ding', streakPitch(e.streak))
+        const kind = skinById(res.state.skin)?.kind
+        if (kind) playSfx(KIND_SFX[kind])
+      }
       if (e.type === 'finished') {
         clearAll(aiTimers)
-        later(timers, () => playSfx('fanfare'), 400)
+        later(timers, () => playSfx('fanfare'), 300)
+        later(timers, () => playSfx('cheer'), 500)
       }
+      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
+        toCall = e
+      }
+    }
+    if (toCall) {
+      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' }>
+      if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
+      else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
     }
     if (!ok) playSfx('dong')
     later(
@@ -231,7 +281,7 @@ export const useBattleStore = defineStore('battle', () => {
         pending.value = rest
         if (p.kind === 'ai') aiStep()
       },
-      ok ? FEEDBACK_RIGHT_MS : FEEDBACK_WRONG_MS,
+      ok ? (toCall ? FEEDBACK_CALLOUT_MS : FEEDBACK_RIGHT_MS) : FEEDBACK_WRONG_MS,
     )
   }
 
@@ -263,19 +313,13 @@ export const useBattleStore = defineStore('battle', () => {
   function rematch(seeds?: Record<string, number>, now = Date.now()): void {
     const s = state.value
     if (!s) return
-    clearAll(timers)
-    clearAll(aiTimers)
-    pending.value = {}
-    lastEvent.value = null
+    reset()
     state.value = startMatch(s, seedsFor(s.players, seeds), now)
     prepareVoice()
   }
 
   function leave(): void {
-    clearAll(timers)
-    clearAll(aiTimers)
-    pending.value = {}
-    lastEvent.value = null
+    reset()
     state.value = null
     mode.value = null
     operable.value = []
@@ -289,6 +333,7 @@ export const useBattleStore = defineStore('battle', () => {
     operable,
     pending,
     lastEvent,
+    callout,
     setName,
     startLocal,
     questionOf,
