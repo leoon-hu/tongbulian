@@ -59,6 +59,13 @@ export const SKINS: readonly SkinMeta[] = [
     game: () => import('../games/rocket3d').then((m) => m.load()),
   },
   {
+    id: 'balloon',
+    icon: '🎈',
+    slot: 'center',
+    kind: 'race',
+    game: () => import('../games/balloon').then((m) => m.createBalloonGame),
+  },
+  {
     id: 'tower',
     icon: '🧱',
     slot: 'center',
