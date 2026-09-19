@@ -118,7 +118,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with "play again" (same people and game, new questions), "change game" and "leave".',
+            text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with "play again" (same people and game, new questions), "change game" and "leave". In a room the host also gets "next chapter": the same room moves on to the next topic in this book (with that chapter\'s game), with no new room or rescanning, all the way to the last topic; everyone else just waits for the host.',
           },
         ],
       },
@@ -243,7 +243,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；可以「再来一局」（同样的人和游戏，换一组题）、「换个游戏」或「退出」。',
+          text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；可以「再来一局」（同样的人和游戏，换一组题）、「换个游戏」或「退出」。「各用各的」时主持人还有「下一章」：同一个房间接着打这一册的下一个知识点（游戏也换成那一章的），不用重新建房、重新扫码，可以一直打到这一册最后一个知识点；别人等主持人点就行。',
         },
       ],
     },
@@ -301,7 +301,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             },
             {
               q: '「各用各的」连不上、进不去房间？',
-              a: '要有网络和对战服务：用 file:// 打开或托管方没有中继服务时这一项是灰的，连不上会提示检查网络。链接错了、房间已关闭（没人 10 分钟或建了 3 小时）都会提示；提示「版本不一样」就刷新页面再从链接进；一台设备只算一个人，同一个浏览器再开一个标签页会顶掉先开的（想在一台电脑上试两个人，用无痕窗口或另一个浏览器）；比赛已经开始才进来的人只能先观战，再来一局时再进队。',
+              a: '要有网络和对战服务：用 file:// 打开或托管方没有中继服务时这一项是灰的，连不上会提示检查网络。链接错了、房间已关闭（没人 10 分钟或建了 3 小时）都会提示；提示「版本不一样」就刷新页面再从链接进；一台设备只算一个人，同一个浏览器再开一个标签页会顶掉先开的（想在一台电脑上试两个人，用无痕窗口或另一个浏览器）；比赛已经开始才进来的人只能先观战，再来一局 / 下一章时再进队。',
             },
             { q: '进度存在哪里？会不会丢？', a: '只存在这台设备的浏览器里，不上传，换设备不同步；清了浏览器数据就没了。' },
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },

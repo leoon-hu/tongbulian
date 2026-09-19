@@ -59,6 +59,22 @@ export function courseOfKp(
   return undefined
 }
 
+/** 这个知识点所在那一册（上 / 下）的全部知识点，按目录顺序（含 ☆ 单元）；不在目录里 → []。对战按章节排游戏、「下一章」都用它 */
+export function volumeKps(kpId: string): KnowledgePoint[] {
+  const info = courseOfKp(kpId)
+  if (!info) return []
+  const semesterOf = (unitId: string): number | undefined => info.course.units.find((u) => u.id === unitId)?.semester
+  const sem = semesterOf(info.kp.unitId)
+  return info.course.knowledgePoints.filter((kp) => semesterOf(kp.unitId) === sem)
+}
+
+/** 本册目录里的下一个知识点（对战结果页「下一章」，B9）；已是最后一个 / 不在目录里 → null */
+export function nextKp(kpId: string): string | null {
+  const list = volumeKps(kpId)
+  const i = list.findIndex((kp) => kp.id === kpId)
+  return i >= 0 && i + 1 < list.length ? list[i + 1]!.id : null
+}
+
 // ── 目录：学科 → 年级（驱动选择页与占位）。──────────────────────────────
 // live 的年级挂 courseId 指向已注册课程；soon 为占位「敬请期待」。
 

@@ -183,6 +183,34 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(r.match).toBeNull()
   })
 
+  it('下一章（B9）：只有主持人、上一局结束后才行；换成新的知识点与皮肤重新倒数、种子重发；kpId / 皮肤不合法报 bad；之后再来一局仍在新知识点上', () => {
+    let r = playing()
+    expect(errorOf(r, 'host01', { type: 'next', kpId: 's1-06-x', skin: 'car' })).toBe('bad') // 还在比赛
+    for (let i = 0; i < 8; i++) r = ok(r, 'red001', { type: 'answer', index: i, given: '3', correct: true })
+    expect(r.match!.phase).toBe('ended')
+    expect(errorOf(r, 'red001', { type: 'next', kpId: 's1-06-x', skin: 'car' })).toBe('notHost')
+    expect(errorOf(r, 'host01', { type: 'next', kpId: '', skin: 'car' })).toBe('bad')
+    expect(errorOf(r, 'host01', { type: 'next', kpId: 'x'.repeat(65), skin: 'car' })).toBe('bad')
+    expect(errorOf(r, 'host01', { type: 'next', kpId: 's1-06-x', skin: '' })).toBe('bad')
+    const seedsBefore = r.match!.players.map((p) => p.seed)
+    expect(events(r, 'host01', { type: 'next', kpId: 's1-06-x', skin: 'car' }).map((e) => e.type)).toEqual(['countdown'])
+    r = ok(r, 'host01', { type: 'next', kpId: 's1-06-x', skin: 'car' })
+    expect(r.kpId).toBe('s1-06-x')
+    expect(r.skin).toBe('car')
+    expect(r.match!.phase).toBe('countdown')
+    expect(r.match!.kpId).toBe('s1-06-x')
+    expect(r.match!.skin).toBe('car')
+    expect(r.match!.score).toEqual({ red: 0, blue: 0 })
+    expect(r.match!.players.map((p) => p.id)).toEqual(['red001', 'blue01'])
+    expect(r.match!.players.map((p) => p.seed)).not.toEqual(seedsBefore)
+    r = tick(r, T0 + 10 + COUNTDOWN_MS).room
+    for (let i = 0; i < 8; i++) r = ok(r, 'blue01', { type: 'answer', index: i, given: '3', correct: true })
+    expect(r.match!.winner).toBe('blue')
+    r = ok(r, 'host01', { type: 'rematch' })
+    expect(r.match!.kpId).toBe('s1-06-x')
+    expect(r.match!.skin).toBe('car')
+  })
+
   it('换皮肤只有主持人、比赛中不行', () => {
     let r = joined(joined(room(), 'red001', 'red'), 'blue01', 'blue')
     expect(errorOf(r, 'red001', { type: 'skin', skin: 'tug' })).toBe('notHost')

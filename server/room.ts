@@ -1,6 +1,6 @@
 /**
  * 房间状态机（需求 B13–B25、B41–B45）：纯函数——输入一条消息，输出新房间 + 要做的事（广播快照、发瞬时事件、给某人报错）。
- * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、举手、主持人、锁队、开始 / 结束 / 再来一局（没有难度：题目难度与练习页一样固定）。
+ * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、举手、主持人、锁队、开始 / 结束 / 再来一局 / 下一章（没有难度：题目难度与练习页一样固定）。
  * 进来的人不指定队就分到人少的队（一样多进红队）；建房的设备只观战（算主持人）；红蓝两队都有人在线且没开过局就自动开始（autoStart）；
  * 主持人掉线 HOST_GRACE_MS 内回来不换人（屏幕锁一下就换主持人太吓人）。
  * 网络层（index.ts）只管连接、房间表、心跳、限流、节流广播；node 里能单测。
@@ -250,13 +250,22 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
       const seedMap = Object.fromEntries(participants(room).map((m) => [m.clientId, seeds()]))
       return { room: startRoom(base, seedMap, now), effects: [{ type: 'broadcast' }, { type: 'event', e: { type: 'countdown' } }] }
     }
-    case 'rematch': {
+    case 'rematch':
+    case 'next': {
+      // 再来一局 / 下一章（B9）：都要主持人、都要上一局已结束；下一章换 kpId 与皮肤（客户端按目录算好传来，服务器不认识目录）
       if (!isHost) return { room, effects: [err(from, 'notHost')] }
       if (!room.match || room.match.phase !== 'ended') return { room, effects: [err(from, 'bad')] }
+      let target = base
+      if (msg.type === 'next') {
+        if (typeof msg.kpId !== 'string' || !msg.kpId || msg.kpId.length > 64 || typeof msg.skin !== 'string' || !msg.skin || msg.skin.length > 32) {
+          return { room, effects: [err(from, 'bad')] }
+        }
+        target = { ...base, kpId: msg.kpId, skin: msg.skin }
+      }
       const ps = participants(room)
       if (!ps.some((m) => m.role === 'red') || !ps.some((m) => m.role === 'blue')) return { room, effects: [err(from, 'bad')] }
       const seedMap = Object.fromEntries(ps.map((m) => [m.clientId, seeds()]))
-      return { room: startRoom(base, seedMap, now), effects: [{ type: 'broadcast' }, { type: 'event', e: { type: 'countdown' } }] }
+      return { room: startRoom(target, seedMap, now), effects: [{ type: 'broadcast' }, { type: 'event', e: { type: 'countdown' } }] }
     }
     case 'end': {
       if (!isHost) return { room, effects: [err(from, 'notHost')] }

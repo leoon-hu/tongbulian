@@ -10,7 +10,8 @@ import { phraseSpeech } from '@/engine/speech'
 import { hush, say } from '@/engine/voice'
 import type { Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
-import { finishKey, ruleKey, skinById } from '@/battle/skins'
+import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
+import { nextKp } from '@/engine/catalog'
 import { useBattleStore } from '@/stores/battle'
 import { useSettingsStore } from '@/stores/settings'
 import type { RowData } from '@/components/battle/rows'
@@ -72,6 +73,12 @@ const myTeam = computed<Team | null>(() => {
 })
 /** 只观战的设备（多设备里建房的那台 / 扫观战码的）：顶栏标一下 */
 const watching = computed(() => store.mode === 'online' && store.operable.length === 0)
+/** 线上结果页的「下一章」（B9）：本册目录里的下一个知识点；null = 已是最后一个；单设备不传（undefined，结果页没有这个键） */
+const nextKpId = computed<string | null | undefined>(() => (store.mode === 'online' && state.value ? nextKp(state.value.kpId) : undefined))
+function goNext(): void {
+  const id = nextKpId.value
+  if (id) store.nextChapter(id, chapterSkin(id))
+}
 
 // ── 计时 ──
 // 线上模式按服务器时钟（store.now() 含偏差修正），各设备时钟不一样也不会算出负的用时
@@ -210,7 +217,17 @@ onBeforeUnmount(() => {
     <Callout :callout="store.callout" />
     <Countdown v-if="phase === 'countdown'" :rule="store.intro && state ? ruleKey(state.skin) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
-    <ResultPanel v-if="showResult" :state="state" :host="host" :changeable="store.mode !== 'online'" @rematch="store.rematch()" @change-skin="emit('changeSkin')" @exit="exit" />
+    <ResultPanel
+      v-if="showResult"
+      :state="state"
+      :host="host"
+      :changeable="store.mode !== 'online'"
+      :next="nextKpId"
+      @rematch="store.rematch()"
+      @next="goNext"
+      @change-skin="emit('changeSkin')"
+      @exit="exit"
+    />
 
     <div v-if="confirming" class="confirm-mask" @click.self="confirming = false">
       <div class="confirm" role="dialog">

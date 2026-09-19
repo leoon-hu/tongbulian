@@ -481,6 +481,12 @@ export const useBattleStore = defineStore('battle', () => {
     prepareVoice()
   }
 
+  /** 下一章（B9，线上主持人）：同一房间换成本册下一个知识点与它按章节排到的皮肤，由服务器开新一局；单设备没有这个键 */
+  function nextChapter(kpId: string, skin: string): void {
+    if (mode.value !== 'online') return
+    transport?.send({ type: 'next', kpId, skin })
+  }
+
   function leave(): void {
     reset()
     state.value = null
@@ -514,6 +520,7 @@ export const useBattleStore = defineStore('battle', () => {
     setInput,
     submit,
     rematch,
+    nextChapter,
     leave,
   }
 })

@@ -7,9 +7,13 @@ import { ui } from '@/engine/i18n'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
-/** host = false（多设备的非主持人）：没有「再来一局 / 换个游戏」，写「等主持人再来一局…」；changeable = false（线上）：没有「换个游戏」 */
-const props = withDefaults(defineProps<{ state: MatchState; host?: boolean; changeable?: boolean }>(), { host: true, changeable: true })
-const emit = defineEmits<{ rematch: []; changeSkin: []; exit: [] }>()
+/**
+ * host = false（多设备的非主持人）：没有「下一章 / 再来一局 / 换个游戏」，写「等主持人开始下一局…」；changeable = false（线上）：没有「换个游戏」；
+ * next（线上主持人的「下一章」，B9）：本册下一个知识点的 id，是最大的按钮，上面写着下一章是哪个知识点；null = 这一册已是最后一个，写「这一册都打完啦！」；
+ * 不传 = 单设备，没有这个键
+ */
+const props = withDefaults(defineProps<{ state: MatchState; host?: boolean; changeable?: boolean; next?: string | null }>(), { host: true, changeable: true })
+const emit = defineEmits<{ rematch: []; changeSkin: []; next: []; exit: [] }>()
 
 const winner = computed<Team>(() => props.state.winner ?? 'red')
 const loser = computed<Team>(() => (winner.value === 'red' ? 'blue' : 'red'))
@@ -33,9 +37,12 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
         <span v-if="p.team === loser" class="close"><RubyText :text="{ k: 'battle.close' }" /></span>
       </li>
     </ul>
+    <p v-if="host && next" class="next-hint"><RubyText :text="{ k: 'battle.next' }" />：<RubyText :text="{ k: `kp.${next}` }" /></p>
+    <p v-else-if="host && next === null" class="next-hint done"><RubyText :text="{ k: 'battle.lastChapter' }" /></p>
     <div class="actions">
       <template v-if="host">
-        <BigButton color="green" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
+        <BigButton v-if="next" color="green" class="next-btn" @click="emit('next')"><RubyText :text="{ k: 'battle.next' }" /> ▶</BigButton>
+        <BigButton :color="next ? 'blue' : 'green'" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
         <BigButton v-if="changeable" color="blue" @click="emit('changeSkin')"><RubyText :text="{ k: 'battle.changeSkin' }" /></BigButton>
       </template>
       <p v-else class="host-wait"><RubyText :text="{ k: 'room.hostWait' }" /></p>
@@ -45,6 +52,16 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
 </template>
 
 <style scoped>
+.next-hint {
+  margin: 4px 0 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--c-text-light);
+  text-align: center;
+}
+.next-hint.done {
+  color: var(--c-primary-dark);
+}
 .host-wait {
   margin: 0;
   padding: 8px 16px;

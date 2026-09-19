@@ -6,10 +6,13 @@ import type { Question } from '@/types/models'
 import { COUNTDOWN_MS } from '@/battle/match'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
 import { apply, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
+import { nextKp } from '@/engine/catalog'
+import { chapterSkin } from '@/battle/skins'
 import { ANSWER_WAIT_MS, FEEDBACK_RIGHT_MS, useBattleStore } from '../battle'
 import { useRoomStore } from '../room'
 
-const KP = 's1-05-carry-add'
+/** 上册倒数第二个知识点：「下一章」还有下一个（s1-05-carry-add 是最后一个） */
+const KP = 's1-04-simple-addsub'
 const CODE = 'ABC234'
 const HOST = 'hhhhhh'
 let seedN = 0
@@ -108,7 +111,7 @@ describe('房间 store（B19–B25）', () => {
     expect(room.me?.role).toBe('watch') // 建房的设备只观战
   })
 
-  it('比赛：快照里的 match 进 battle store，只有自己那行可操作；输入节流发出；答题只发消息、反馈等服务器推进了题号才关；事件进队列；再来一局发给服务器；观战者没有可操作行', () => {
+  it('比赛：快照里的 match 进 battle store，只有自己那行可操作；输入节流发出；答题只发消息、反馈等服务器推进了题号才关；事件进队列；再来一局 / 下一章发给服务器；观战者没有可操作行', () => {
     const room = useRoomStore()
     const battle = useBattleStore()
     battle.setName('me', '小兔')
@@ -190,6 +193,26 @@ describe('房间 store（B19–B25）', () => {
     expect(battle.state?.score).toEqual({ red: 0, blue: 0 })
     expect(battle.pending).toEqual({})
     expect(battle.events[battle.events.length - 1]?.e).toEqual({ type: 'countdown' }) // 事件先于快照到，不能被清掉
+
+    // 下一章（B9）：发 next 带本册下一个知识点与它按章节排到的皮肤；服务器开新一局后本机状态换成新知识点、比分清零
+    r = tick(r, 20_000 + COUNTDOWN_MS).room
+    ws.receive({ type: 'event', e: { type: 'go' } })
+    feed()
+    for (let i = 0; i < 8; i++) applyAndFeed(me, { type: 'answer', index: i, given: '7', correct: true }, 30_000 + i)
+    expect(battle.state?.phase).toBe('ended')
+    const NEXT = nextKp(KP)!
+    expect(NEXT).toBeTruthy()
+    ws.sent.length = 0
+    battle.nextChapter(NEXT, chapterSkin(NEXT))
+    expect(ws.msgs).toEqual([{ type: 'next', kpId: NEXT, skin: chapterSkin(NEXT) }])
+    applyAndFeed(HOST, { type: 'next', kpId: NEXT, skin: chapterSkin(NEXT) }, 40_000)
+    expect(battle.state?.kpId).toBe(NEXT)
+    expect(battle.state?.skin).toBe(chapterSkin(NEXT))
+    expect(battle.state?.phase).toBe('countdown')
+    expect(battle.state?.score).toEqual({ red: 0, blue: 0 })
+    expect(battle.pending).toEqual({})
+    expect(battle.operable).toEqual([me])
+    expect(battle.questionOf(battle.state!.players.find((x) => x.id === me)!)).toBeTruthy()
 
     ws.receive({ type: 'state', room: snapshot(r), you: 'zzzzzz', now: 5000 })
     expect(battle.operable).toEqual([])

@@ -5,9 +5,9 @@ import { createPinia } from 'pinia'
 import router from '@/router'
 import App from '@/App.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
-import { setLang } from '@/engine/i18n'
+import { setLang, ui } from '@/engine/i18n'
 import { SKINS, chapterSkin, skinById } from '@/battle/skins'
-import { liveCourses } from '@/engine/catalog'
+import { liveCourses, nextKp } from '@/engine/catalog'
 import { SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
 import { useInstallStore } from '@/stores/install'
@@ -613,7 +613,8 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
 
 describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
   const BATTLE_KEY = 'tongbulian:battle'
-  const KP = 's1-05-carry-add'
+  /** 上册倒数第二个知识点：结果页「下一章」还有下一个（s1-05-carry-add 是上册最后一个，nextKp 给 null） */
+  const KP = 's1-04-simple-addsub'
   const CODE = 'ABC234'
   let seedN = 0
   const seeds = (): number => ++seedN
@@ -633,7 +634,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     FakeWs.reset()
   })
 
-  it('设置页「各用各的」→ 建房间 → 只有三个二维码（红队 / 蓝队 / 观战 + 链接 + 复制 + 一句说明）→ 两队都有人后服务器自动开始 → 建房的设备只观战 → 结果页主持人有「再来一局」没有「换个游戏」→ 退出回地图', async () => {
+  it('设置页「各用各的」→ 建房间 → 只有三个二维码（红队 / 蓝队 / 观战 + 链接 + 复制 + 一句说明）→ 两队都有人后服务器自动开始 → 建房的设备只观战 → 结果页主持人有「下一章」「再来一局」没有「换个游戏」→ 下一章同一房间换成本册下一个知识点 → 退出回地图', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
     const w = await mountAt(`/battle/new/${KP}`)
@@ -714,14 +715,41 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(shown(w)).toContain('红队获胜')
-    expect(w.findAll('.result .big-btn')).toHaveLength(2) // 再来一局 + 退出，线上没有「换个游戏」
+    // 线上主持人：下一章（最大）+ 再来一局 + 退出，没有「换个游戏」；上面写着下一章是哪个知识点
+    const NEXT = nextKp(KP)!
+    expect(NEXT).toBeTruthy()
+    expect(w.findAll('.result .big-btn')).toHaveLength(3)
     expect(shown(w.find('.result'))).not.toContain('换个游戏')
+    expect(w.find('.result .next-btn').exists()).toBe(true)
+    expect(shown(w.find('.result .next-hint'))).toContain(ui(`kp.${NEXT}`))
     ws.sent.length = 0
-    await w.findAll('.result .big-btn')[0]!.trigger('click')
+    await w.findAll('.result .big-btn')[1]!.trigger('click') // 再来一局
     expect(ws.msgs).toEqual([{ type: 'rematch' }])
     applyAndPush(me, { type: 'rematch' }, 20_000)
     await settle()
     expect(w.find('.countdown').exists()).toBe(true)
+    expect(battle.state?.kpId).toBe(KP)
+    // 打完再点「下一章」：同一房间换成本册下一个知识点与它按章节排到的游戏，服务器直接开新一局倒数
+    r = tick(r, 20_000 + COUNTDOWN_MS).room
+    ws.receive({ type: 'event', e: { type: 'go' } })
+    push()
+    await settle()
+    for (let i = 0; i < 8; i++) applyAndPush('bbbbbb', { type: 'answer', index: i, given: '7', correct: true }, 30_000 + i)
+    await settle()
+    vi.advanceTimersByTime(2100)
+    await settle()
+    expect(shown(w.find('.result'))).toContain('蓝队获胜')
+    ws.sent.length = 0
+    await w.find('.result .next-btn').trigger('click')
+    expect(ws.msgs).toEqual([{ type: 'next', kpId: NEXT, skin: chapterSkin(NEXT) }])
+    applyAndPush(me, { type: 'next', kpId: NEXT, skin: chapterSkin(NEXT) }, 40_000)
+    await settle()
+    expect(w.find('.result').exists()).toBe(false)
+    expect(w.find('.countdown').exists()).toBe(true)
+    expect(battle.state?.kpId).toBe(NEXT)
+    expect(battle.state?.skin).toBe(chapterSkin(NEXT))
+    expect(battle.state?.score).toEqual({ red: 0, blue: 0 })
+    expect(router.currentRoute.value.path).toBe(`/battle/${CODE}`) // 还在同一个房间
 
     ws.sent.length = 0
     await w.find('.bar-btn').trigger('click')

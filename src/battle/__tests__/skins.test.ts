@@ -4,7 +4,7 @@ import { createRng } from '@/engine'
 import { stubCanvas, stubCtx } from '../game/__tests__/stub'
 import type { Phase, Team } from '../protocol'
 import { RANDOM_SKIN, SKINS, chapterSkin, ratio, resolveSkin, skinById } from '../skins'
-import { getCourse } from '@/engine/catalog'
+import { getCourse, nextKp, volumeKps } from '@/engine/catalog'
 
 describe('皮肤注册表（B34–B36）', () => {
   it('每种皮肤有 id / 图标 / 位置 / 类别，id 唯一；random 与不认识的 id 都落到真实皮肤', () => {
@@ -55,5 +55,19 @@ describe('按章节的游戏（B36）', () => {
     second.forEach((kp, i) => expect(chapterSkin(kp.id)).toBe(games[i % games.length]))
     expect(chapterSkin(first[0]!.id)).toBe(games[0])
     expect(chapterSkin('nope')).toBe(games[0])
+  })
+
+  it('nextKp：本册目录里的下一个知识点，最后一个 / 不在目录里 → null（结果页「下一章」用）；volumeKps 是那一册的清单', () => {
+    const course = getCourse('math', 'g1')!
+    const sem = (kp: { unitId: string }) => course.units.find((u) => u.id === kp.unitId)!.semester
+    const first = course.knowledgePoints.filter((kp) => sem(kp) === 1)
+    const second = course.knowledgePoints.filter((kp) => sem(kp) === 2)
+    expect(volumeKps(first[0]!.id).map((kp) => kp.id)).toEqual(first.map((kp) => kp.id))
+    expect(volumeKps(second[0]!.id).map((kp) => kp.id)).toEqual(second.map((kp) => kp.id))
+    first.forEach((kp, i) => expect(nextKp(kp.id)).toBe(first[i + 1]?.id ?? null))
+    second.forEach((kp, i) => expect(nextKp(kp.id)).toBe(second[i + 1]?.id ?? null))
+    expect(nextKp(first[first.length - 1]!.id)).toBeNull() // 上册最后一个不接到下册
+    expect(nextKp('nope')).toBeNull()
+    expect(volumeKps('nope')).toEqual([])
   })
 })
