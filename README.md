@@ -27,7 +27,7 @@ npm run typecheck    # vue-tsc --noEmit
 npm test             # vitest run（生成器多种子自洽、题目渲染冒烟、整站集成、存储）
 npm run test:watch
 npm run screenshots  # npm run dev 之后：无头 Chrome 模拟 iPhone 截 README 用的预览图到 screenshots/（含横屏的对战竞技场）
-npm run battle:survey  # npm run dev 之后：把对战里每种「题干 × 作答方式」组合在 iPhone / iPad 横屏各截一张并拼图到 screenshots/survey/，肉眼核对排版
+npm run battle:survey  # npm run dev 之后：把每种「题干 × 作答方式」组合在 iPhone / iPad 横屏各截一张并拼图到 screenshots/survey/，肉眼核对对战排版；加 -- practice 查练习页（竖屏 + 横屏 + iPad）
 npx vitest run src/content/math/grade2/generators/__tests__/generators.test.ts   # 单个文件
 npx vitest run -t "凑十"                                                          # 按用例名过滤
 npm run audio        # 重建朗读音频包（改了题目文案 / 生成器之后；需要 pip install edge-tts numpy 并联网）

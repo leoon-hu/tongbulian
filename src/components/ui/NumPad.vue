@@ -44,7 +44,8 @@ function confirm(): void {
 </script>
 
 <template>
-  <div class="numpad" :class="layout">
+  <!-- 只把 wide 当 class 挂上去：默认值 grid 若也挂上，会和下面键盘容器的 .grid 撞名，外层也变成三列网格（撞过） -->
+  <div class="numpad" :class="{ wide: layout === 'wide' }">
     <div v-if="!hideDisplay" class="display" :class="{ empty: value === '' }">
       {{ value === '' ? '?' : value }}
     </div>

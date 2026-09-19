@@ -16,6 +16,7 @@ import AngleGlyph from '@/components/math/AngleGlyph.vue'
 import ShapeGlyph from '@/components/math/ShapeGlyph.vue'
 import VerticalForm from '@/components/math/VerticalForm.vue'
 import ChoiceCards from '@/components/ui/ChoiceCards.vue'
+import NumPad from '@/components/ui/NumPad.vue'
 import { setLang } from '@/engine/i18n'
 
 const KNOWLEDGE_POINTS = [...G1, ...G2]
@@ -37,12 +38,35 @@ describe('题目渲染冒烟测试（每个知识点用真实题目挂载）', (
             const panel = mount(AnswerPanel, { props: { question: q, revealed: null } })
             // numpad 或 choice 都应渲染出可点的按钮
             expect(panel.findAll('button').length).toBeGreaterThan(0)
+            if (q.input === 'numpad') {
+              // 回归：默认布局的键盘外层不能带 grid 类（和内部键盘容器的 .grid 撞名，显示框会跑到键盘旁边）
+              const pad = panel.find('.numpad')
+              expect(pad.classes()).not.toContain('grid')
+              expect(pad.classes()).not.toContain('wide')
+              expect(panel.findAll('.numpad > .grid')).toHaveLength(1)
+              expect(panel.findAll('.numpad > .display')).toHaveLength(1)
+            }
             panel.unmount()
           }
         }
       }
     })
   }
+})
+
+describe('数字键盘的两种布局', () => {
+  it('默认 3 × 4：1…9 / ⌫ 0 ✓；wide 两行六键：1 2 3 4 5 ⌫ / 6 7 8 9 0 ✓；hideDisplay 不画显示框', () => {
+    const grid = mount(NumPad)
+    expect(grid.findAll('.key').map((k) => k.text())).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✓'])
+    expect(grid.find('.numpad').classes()).toEqual(['numpad'])
+    expect(grid.find('.display').exists()).toBe(true)
+    grid.unmount()
+    const wide = mount(NumPad, { props: { layout: 'wide', hideDisplay: true } })
+    expect(wide.findAll('.key').map((k) => k.text())).toEqual(['1', '2', '3', '4', '5', '⌫', '6', '7', '8', '9', '0', '✓'])
+    expect(wide.find('.numpad').classes()).toEqual(['numpad', 'wide'])
+    expect(wide.find('.display').exists()).toBe(false)
+    wide.unmount()
+  })
 })
 
 describe('位置：题干方位词与图标轴一致（回归：QuestionRenderer 必须转发 lineup 的 axis）', () => {
