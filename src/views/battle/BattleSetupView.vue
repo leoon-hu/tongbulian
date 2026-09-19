@@ -72,6 +72,9 @@ function start(): void {
         <RubyText :text="{ k: 'battle.title' }" />
         <span class="kp-name">{{ info.kp.icon }} <RubyText :text="{ k: kpTitleKey(info.kp) }" /></span>
       </template>
+      <template #actions>
+        <RouterLink class="howto" to="/help#rules">{{ ui('help.howto') }}</RouterLink>
+      </template>
     </PageHeader>
 
     <section class="block">
@@ -159,6 +162,20 @@ function start(): void {
 </template>
 
 <style scoped>
+.howto {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  color: var(--c-text);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
 .setup {
   max-width: 840px;
   margin: 0 auto;

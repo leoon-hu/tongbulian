@@ -3,6 +3,7 @@
 // 同时按当前学科切换主题皮肤（data-theme 驱动 styles/themes.css），<html lang> 跟随界面语言，
 // <title> 跟随页面（首页用 index.html 里的完整标题，子页「知识点 · 一年级数学 · 同步练」）。
 import { computed, watch } from 'vue'
+import { HELP_TITLE } from '@/help/content'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/ui/AppHeader.vue'
 import { courseOfKp, findKp, getCourse, getGrade, getSubject } from '@/engine/catalog'
@@ -20,6 +21,7 @@ function battleInfo() {
 
 const BASE_TITLE = document.title
 function pageTitle(): string {
+  if (route.name === 'help') return `${HELP_TITLE[lang.value]} · ${ui('brand.title')}`
   const battle = battleInfo()
   if (battle) {
     return [

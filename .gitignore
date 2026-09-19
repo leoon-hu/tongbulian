@@ -18,3 +18,4 @@ dist
 # 只留在本机，不进仓库
 docs/
 deploy/
+public/help/

@@ -31,6 +31,8 @@ export const SHELL_ZH: Dict = {
   'sem.2': '下册',
   // 首页底部给家长的一句说明 + 各年级知识点清单（静态页）的链接
   'home.about': '按人教版教材单元随机出题；汉字标拼音、题目自动朗读；免费、无广告、离线可用。',
+  'help.link': '❓ 帮助与说明：学习内容、对战玩法、规则、技巧、常见问题',
+  'help.howto': '❓ 怎么玩',
   'home.topics': '{name}知识点清单',
   // 首页底部「更多应用」：同一作者另外三个站（名单在 engine/sites.ts），静态页页脚也用
   'sites.more': '更多应用',
@@ -258,6 +260,8 @@ export const SHELL_EN: Dict = {
   'sem.1': 'Term 1',
   'sem.2': 'Term 2',
   'home.about': 'Random questions by PEP textbook unit; pinyin on every character, every question read aloud; free, no ads, works offline.',
+  'help.link': '❓ Help & guide: what to learn, how the battle works, rules, tips, FAQ',
+  'help.howto': '❓ How to play',
   'home.topics': '{name} topic list',
   'sites.more': 'More apps',
   'sites.aiword': 'Jiaci',

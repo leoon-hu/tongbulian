@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { getGenerator } from '@/engine'
 import { allCourses, liveCourses as catalogCourses } from '@/engine/catalog'
 import { SISTER_SITES } from '@/engine/sites'
+import { translate } from '@/engine/i18n'
+import { SKINS } from '@/battle/skins'
 import {
   SAMPLES_PER_TIER,
   applyHome,
@@ -20,6 +22,8 @@ import {
 
 const INDEX = new URL('../../../index.html', import.meta.url)
 const SITE = 'https://example.com'
+
+const zhWord = (k: string): string => translate({ k }, 'zh')
 
 describe('SEO 静态页', () => {
   const pages = staticPages(SITE)
@@ -48,7 +52,7 @@ describe('SEO 静态页', () => {
       coursePath(lc.course),
       ...lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).map((kp) => kpPath(lc.course, kp)),
     ])
-    expect(pages.map((p) => p.path)).toEqual(expected)
+    expect(pages.map((p) => p.path)).toEqual([...expected, 'help/'])
     for (const p of pages) expect(p.file).toBe(p.path.endsWith('/') ? `${p.path}index.html` : p.path)
     // 注册了但没在目录里挂 courseId 的包不出页
     expect(allCourses().length).toBeGreaterThanOrEqual(courses.length)
@@ -133,6 +137,19 @@ describe('SEO 静态页', () => {
     expect(stemText({ kind: 'lineup', items: ['🐶', '🐱', '🐭'], highlight: 1 })).toBe('🐶 【🐱】 🐭')
     expect(stemText({ kind: 'sequence', cells: [{ kind: 'item', label: '🔺' }, { kind: 'blank' }] })).toBe('🔺 ?')
     expect(stemText({ kind: 'vertical', a: 345, op: '+', b: 278 })).toBe('（竖式：345 + 278）')
+  })
+
+  it('帮助页：五节都在、每种游戏的规则句都在、常见问题有 FAQPage 结构化数据、链回首页与课程页', () => {
+    const help = byPath.get('help/')!
+    expect(help.file).toBe('help/index.html')
+    for (const id of ['learn', 'play', 'rules', 'tips', 'faq']) expect(help.html).toContain(`<section id="${id}"`)
+    for (const s of SKINS) expect(help.html).toContain(zhWord(`skin.${s.id}`))
+    expect(help.html).toContain('"@type":"FAQPage"')
+    expect(help.html).toContain('谁先答对 8 题谁赢')
+    expect(help.html).toContain('href="../"')
+    expect(help.html).toContain('href="../math/g1/"')
+    // 其它每页的页脚都链到帮助页
+    for (const p of pages) if (p.path !== 'help/') expect(p.html).toContain('help/">帮助与说明</a>')
   })
 
   it('sitemap 列出首页与全部静态页', () => {

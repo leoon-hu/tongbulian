@@ -17,6 +17,14 @@
 <p align="center">
   <img src="screenshots/battle.png" width="72%" alt="对战：打机器人（手机横屏，赛跑皮肤）">
 </p>
+<p align="center">
+  <img src="screenshots/battle-setup.png" width="24%" alt="对战设置：跟谁打、机器人快慢、选游戏">
+  <img src="screenshots/help.png" width="24%" alt="帮助与说明：学习内容、对战玩法、规则、技巧、常见问题">
+  <img src="screenshots/battle-rule.png" width="49%" alt="开局先讲一句规则（iPad，赛跑）">
+</p>
+<p align="center">
+  <img src="screenshots/battle-ipad.png" width="72%" alt="对战：两人一台（iPad 横屏，盖楼皮肤）">
+</p>
 
 ```bash
 npm install
@@ -73,6 +81,16 @@ npm run og           # 用无头 Chrome 重新渲染分享图 public/og.png（�
 - **声音**：打机器人时进题自动读题（两人同屏不自动读，点 🔊 读自己的题，互相打断）；答对「叮」（连对时越来越高）+ 按皮肤一声（呼啸 / 咚 / 咔嚓）、答错「咚」、倒数「嘀嘀嘀 — 嘟」、弹出提示「啵」、胜利小号声加欢呼，都是 WebAudio 振荡器和噪声现场合成的，没有音频文件。
 - **结果页**：🏆 谁赢、比分、用时、每人「答 n · 对 m」，输的一方写「差一点点！」；「再来一局」（同样的人和游戏，换一组题）、「换个游戏」、「退出」。对战不改地图上的练习进度，也不存战绩。
 
+## 帮助：学习内容、玩法、规则、技巧、常见问题
+
+应用里有一页「❓ 帮助与说明」（首页底部、对战设置页页头的「怎么玩」都能进；在线版也有一张不用 JS 的静态页 [tongbulian.jiaci.app/help/](https://tongbulian.jiaci.app/help/)，中英文随界面切换），内容和这里一致：
+
+- **学习内容与题目**：按现行人教版教材（2022 版课标新教材）的单元出题，现在一年级数学 26 个、二年级数学 29 个知识点可练；题目每次随机生成、一轮 8 题；数字键盘或四选一作答；题干配十格阵、实物图、钟面、人民币、图形、数轴、尺子、竖式、排队等教具；每个汉字标拼音、进题自动朗读、🔊 再听；答错读出并显示正确答案、有教具的演示一遍；不计时、不扣分、没有排行；免费、无广告、不注册，进度只在本机。
+- **对战怎么玩**：地图右上角打开「⚔️ 对战」再点知识点（或练习页页头的 ⚔️）→ 选「打机器人」（🐢 慢 / 🐰 中 / 🚀 快）或「两人一台」→ 选游戏（8 种 + 🎲 随机）→ 第一次问一次名字 → 先讲一句这个游戏的规则 → 预备、3、2、1、开始。竞技场一律横向：左红右蓝，游戏画面在上方横条或中间竖条，每人一行题目 + 键盘 / 选项卡。结束进结果页：再来一局 / 换个游戏 / 退出。
+- **游戏规则**：谁先答对 8 题谁赢；两边的题各自独立、来自同一个知识点；答对得 1 分、画面走一步，答错不扣分、不锁题；连对 3 / 5 题、反超、到一半（4 分）、还差一分（7 分）都会弹出并朗读；到 8 分立刻结束；对战不改练习进度、不存战绩。每种游戏的赢法：赛跑先跑到终点，赛车先冲过终点，火箭先飞到星星，热气球先飞到云上，盖楼先盖到八层，拔河先把对方拉过线，融冰先把对方的冰化完。
+- **游戏技巧**：先听清题再答（🔊 再听一遍）；数字键盘打错用 ⌫、确认再按 ✓，选项卡先看拼音；打机器人先选 🐢 慢，赢了再升；稳比快重要，连对有加成；两人一台各管各的；先在练习模式做熟再对战；装到主屏幕全屏、离线都能玩。
+- **常见问题**：没声音（看 🔇、iPhone 静音键、先点一下屏幕）、手机要横屏、怎么装到主屏幕离线用、进度只在本机不同步、题目几乎不重复、「火箭升空 3D」是要联网首次下载的试点、机器人有三档且会答错、改名字在对战设置页、其它年级和学科陆续补充、免费无广告开源。
+
 ## 拼音与朗读
 
 - **拼音**：中文模式下练习页的所有汉字（题干、选项、页头、答错讲解、结算）都逐字注音，字体用为初学者设计的 [Andika](https://software.sil.org/andika/)（单层 a / g，OFL，自托管）。每条中文词条配一条与汉字逐字对齐的拼音（各内容包的 `pinyin.ts`、`src/locales/shell.ts`），一 / 不按实际读音标变调，有测试保证音节数与汉字数相等。
@@ -109,7 +127,7 @@ npm run og           # 用无头 Chrome 重新渲染分享图 public/og.png（�
 
 纯静态站：`npm run build` 后把 `dist/` 整个放到任何支持 HTTPS 的静态托管（nginx、对象存储、Pages 服务都行），不需要服务端；`base: './'`，放在子目录也能跑。
 
-- **搜索引擎**：应用是 hash 路由，搜索引擎只看得到根地址，所以构建前 `scripts/seo.mjs`（`prebuild` / `predev` 自动跑，也可 `npm run seo`）按目录生成一套不用 JS 的静态页放进 `public/`：每个上线课程一张目录页（`math/g1/`：上下册单元与知识点清单）、每个知识点一张（`math/g1/s1-05-carry-add.html`：介绍、固定种子生成的 6 道示例题含选项与答案、同单元其它知识点、「开始练习」深链到应用），都带标题 / 描述 / canonical / Open Graph / 面包屑 JSON-LD。入口页 `index.html` 的标题、描述、JSON-LD 与应用挂载前的静态简介也由同一份目录生成（写在 `<!-- seo:head -->` / `<!-- seo:body -->` 两段标记之间，别手改，有测试保证与目录一致），首页底部有各清单页的链接，子页的 `<title>` 跟随页面。页面文案在 `src/seo/site.ts`。
+- **搜索引擎**：应用是 hash 路由，搜索引擎只看得到根地址，所以构建前 `scripts/seo.mjs`（`prebuild` / `predev` 自动跑，也可 `npm run seo`）按目录生成一套不用 JS 的静态页放进 `public/`：每个上线课程一张目录页（`math/g1/`：上下册单元与知识点清单）、每个知识点一张（`math/g1/s1-05-carry-add.html`：介绍、固定种子生成的 6 道示例题含选项与答案、同单元其它知识点、「开始练习」深链到应用）、帮助页一张（`help/`：学习内容、对战玩法、规则、技巧、常见问题，常见问题带 FAQPage 结构化数据），都带标题 / 描述 / canonical / Open Graph / 面包屑 JSON-LD，每页页脚互相链接（首页、帮助、其它年级、另外三个站）。入口页的描述、关键词与静态简介也写进了对战模式和游戏名。入口页 `index.html` 的标题、描述、JSON-LD 与应用挂载前的静态简介也由同一份目录生成（写在 `<!-- seo:head -->` / `<!-- seo:body -->` 两段标记之间，别手改，有测试保证与目录一致），首页底部有各清单页的链接，子页的 `<title>` 跟随页面。页面文案在 `src/seo/site.ts`。
 - 构建时若本机 `.env` 里有 `SITE_URL=https://你的域名`，页面会带上 canonical / Open Graph 的绝对地址，并生成 `robots.txt` 与列出全部静态页的 `sitemap.xml`；没有就不带（页面照常可用，也没有 sitemap）。分享图 `public/og.png`（1200×630）由 `npm run og` 用无头 Chrome 渲染，文案取自同一份目录。静态页与分享图不进离线包；托管时最好让未命中的地址直接 404（不要回退到 `index.html`，会被搜索引擎当成软 404）。
 - 已注册 Service Worker（vite-plugin-pwa，`registerType: 'autoUpdate'`）：首次打开会把页面、字体和全部朗读片段（约 5.7 MB）预缓存，之后断网可用；重新部署后再打开会自动换新版本。自己部署时**必须是 HTTPS**（局域网 http 地址不行，Service Worker 不会注册）。
 - **安装提示**：没从主屏幕打开时，首页顶上有一条「安装 同步练」提示（给家长看的，不出声、不遮按钮）：Android / 电脑 Chrome、Edge 点「安装」直接弹系统安装框；iPhone / iPad 点「怎么做」看步骤（Safari 分享 → 添加到主屏幕）；微信 / QQ 里教先在浏览器打开。关掉 3 天后再提示，装好了不再出现；电脑上只在能一键安装时提示。逻辑在 `src/engine/install.ts`（可单测）+ `src/stores/install.ts`，画在 `components/ui/InstallBar.vue`，静默期记在 localStorage `tongbulian:install`。
@@ -167,7 +185,7 @@ src/
 ├── styles/                  tokens.css（结构令牌 + 基础调色板 + 拼音字体）、themes.css（按学科换肤）、base.css
 └── types/models.ts          全部核心类型：Question / StemPart / Course / KnowledgePoint …
 public/audio/                朗读音频片段（脚本生成）；public/fonts/ 拼音字体 Andika；图标；og.png 分享图
-public/<学科>/<年级>/         搜索引擎用的静态页（scripts/seo.mjs 构建前生成，连同 robots.txt / sitemap.xml 都不进仓库）
+public/<学科>/<年级>/、help/  搜索引擎用的静态页（scripts/seo.mjs 构建前生成，连同 robots.txt / sitemap.xml 都不进仓库）
 screenshots/                 README 用的预览图（npm run screenshots 生成，不进构建产物）
 scripts/                     collect-speech.mjs 收集语料、build-audio.py 生成音频包、seo.mjs 生成静态页、og.mjs 渲染分享图
 vite.config.ts               base './'、PWA 清单与预缓存（静态页不进离线包）、siteMeta（按 .env 的 SITE_URL 填 canonical 等绝对地址）

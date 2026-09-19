@@ -38,6 +38,7 @@ function tapSubject(sub: SubjectMeta): void {
     </div>
     <footer class="about">
       <p>{{ ui('home.about') }}</p>
+      <p class="about-help"><RouterLink to="/help">{{ ui('help.link') }}</RouterLink></p>
       <p class="about-links">
         <a v-for="c in courses" :key="c.course.id" :href="`./${c.course.subjectId}/${c.course.gradeId}/`">
           {{ ui('home.topics', { name: ui('course.name', { grade: c.grade.title, subject: c.subject.title }) }) }}
@@ -54,6 +55,14 @@ function tapSubject(sub: SubjectMeta): void {
 </template>
 
 <style scoped>
+.about-help {
+  margin: 4px 0 8px;
+}
+.about-help a {
+  color: var(--c-primary-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
 .picker {
   max-width: 840px;
   margin: 0 auto;

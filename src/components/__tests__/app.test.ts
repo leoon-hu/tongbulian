@@ -6,6 +6,7 @@ import router from '@/router'
 import App from '@/App.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
 import { setLang } from '@/engine/i18n'
+import { SKINS } from '@/battle/skins'
 import { liveCourses } from '@/engine/catalog'
 import { SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
@@ -574,5 +575,39 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     const w2 = await mountAt(`/battle/local/${KP}?mode=duo`)
     await until(pathIs(`/battle/new/${KP}`))
     w2.unmount()
+  })
+})
+
+describe('帮助页（F17）', () => {
+  it('首页页脚链到帮助页；帮助页五节都在、规则一节列出每种游戏；切英文标题跟着换；标题栏是「帮助与说明 · 同步练」', async () => {
+    const w = await mountAt('/')
+    const link = w.find('.about-help a')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('#/help')
+    await router.push('/help')
+    await flushPromises()
+    await flushPromises()
+    const text = shown(w)
+    for (const t of ['学习内容与题目', '对战怎么玩', '游戏规则', '游戏技巧', '常见问题']) expect(text).toContain(t)
+    expect(w.findAll('.game')).toHaveLength(SKINS.length)
+    expect(text).toContain('谁先答对 8 题谁赢')
+    expect(text).toContain('火箭就升高一段')
+    expect(document.title).toBe('帮助与说明 · 同步练')
+    setLang('en')
+    await flushPromises()
+    expect(shown(w)).toContain('Rules')
+    expect(shown(w)).not.toContain('游戏规则')
+    expect(document.title).toBe('Help & guide · Chapter Practice')
+    w.unmount()
+  })
+
+  it('对战设置页页头有「怎么玩」，指向帮助页的规则一节', async () => {
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'race', aiLevel: 'mid' }))
+    const w = await mountAt('/battle/new/s1-00-count')
+    for (let i = 0; i < 50 && !w.find('.howto').exists(); i++) await flushPromises()
+    const a = w.find('.howto')
+    expect(a.exists()).toBe(true)
+    expect(a.attributes('href')).toBe('#/help#rules')
+    w.unmount()
   })
 })

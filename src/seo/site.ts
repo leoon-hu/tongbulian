@@ -14,6 +14,8 @@ import { SUBJECTS, kpsOfUnit, liveCourses as catalogCourses } from '@/engine/cat
 import { translate } from '@/engine/i18n'
 import { answerLabel } from '@/engine/answer'
 import { SISTER_SITES } from '@/engine/sites'
+import { SKINS } from '@/battle/skins'
+import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
 
 export const SITE_NAME = '同步练'
 export const SITE_TAGLINE = '人教版小学同步练习'
@@ -55,6 +57,9 @@ const unitLabel = (u: Unit): string => `${u.numbered === false ? '' : `第 ${u.o
 export const coursePath = (c: Course): string => `${c.subjectId}/${c.gradeId}/`
 export const kpPath = (c: Course, kp: KnowledgePoint): string => `${c.subjectId}/${c.gradeId}/${kp.id}.html`
 const ROOT = '../../'
+/** 帮助页在 help/ 下，一层深 */
+export const HELP_PATH = 'help/'
+const HELP_ROOT = '../'
 const appMap = (c: Course): string => `${ROOT}#/s/${c.subjectId}/g/${c.gradeId}`
 const appPractice = (c: Course, kp: KnowledgePoint): string => `${appMap(c)}/practice/${kp.id}`
 
@@ -206,6 +211,8 @@ function sisterLinks(): string {
 
 function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string): string {
   const fullTitle = `${meta.title} · ${SITE_NAME}`
+  // 回站点根的相对路径按页面深度算：<学科>/<年级>/ 下两层是 ../../，help/ 下一层是 ../
+  const root = '../'.repeat(meta.path.split('/').length - 1)
   const crumbHtml = crumbs
     .map((c) => `<li>${c.href ? `<a href="${c.href}">${esc(c.text)}</a>` : esc(c.text)}</li>`)
     .join('')
@@ -228,8 +235,8 @@ function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: st
     <meta name="description" content="${esc(meta.description)}" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#ff8a3d" />
-    <link rel="icon" type="image/svg+xml" href="${ROOT}favicon.svg" />
-    <link rel="apple-touch-icon" href="${ROOT}apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="${root}favicon.svg" />
+    <link rel="apple-touch-icon" href="${root}apple-touch-icon.png" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="${SITE_NAME}" />
     <meta property="og:title" content="${esc(fullTitle)}" />
@@ -244,7 +251,7 @@ ${STYLE}
   </head>
   <body>
     <header>
-      <a class="brand" href="${ROOT}"><img src="${ROOT}icon-192.png" alt="" width="36" height="36" />${SITE_NAME} · ${SITE_TAGLINE}</a>
+      <a class="brand" href="${root}"><img src="${root}icon-192.png" alt="" width="36" height="36" />${SITE_NAME} · ${SITE_TAGLINE}</a>
       <ol class="crumbs">${crumbHtml}</ol>
     </header>
     <main>
@@ -252,7 +259,7 @@ ${body}
     </main>
     <footer>
       <p>${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，每个汉字标拼音、每道题自动朗读；免费、无广告、不用注册，添加到主屏幕后没有网也能用。</p>
-      <p><a href="${ROOT}">打开${SITE_NAME}</a></p>
+      <p><a href="${root}">打开${SITE_NAME}</a> · <a href="${root}${HELP_PATH}">帮助与说明</a>（学习内容、对战玩法、规则、技巧、常见问题）</p>
       <p>${sisterLinks()}</p>
     </footer>
   </body>
@@ -414,6 +421,71 @@ ${siblings
   )
 }
 
+// ── 帮助页：help/ ────────────────────────────────────────────────────────
+
+/** 帮助页（需求 F17）：和应用里的帮助页同一份内容，只有中文；常见问题以 FAQPage 结构化数据给搜索引擎 */
+function helpPage(siteUrl: string): string {
+  const sections = helpSections('zh')
+  const games = helpGames('zh')
+  const title = `${HELP_TITLE.zh}：学习内容、对战玩法、规则、技巧与常见问题`
+  const description = `${SITE_NAME}${HELP_LEAD.zh}对战模式：同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢；打机器人或两人一台，${games.length} 种游戏画面。`
+  const render = (b: ReturnType<typeof helpSections>[number]['blocks'][number]): string => {
+    switch (b.kind) {
+      case 'p':
+        return `    <p>${esc(b.text)}</p>`
+      case 'list':
+        return `    <ul>\n${b.items.map((i) => `      <li>${esc(i)}</li>`).join('\n')}\n    </ul>`
+      case 'steps':
+        return `    <ol>\n${b.items.map((i) => `      <li>${esc(i)}</li>`).join('\n')}\n    </ol>`
+      case 'games':
+        return `    <ul class="topics">\n${games.map((g) => `      <li><span>${g.icon} ${esc(g.name)}</span><br />${esc(g.rule)}</li>`).join('\n')}\n    </ul>`
+      case 'faq':
+        return b.items.map((i) => `    <h3>${esc(i.q)}</h3>\n    <p>${esc(i.a)}</p>`).join('\n')
+    }
+  }
+  const body = `
+    <h1>${esc(HELP_TITLE.zh)}</h1>
+    <p class="lead">${esc(HELP_LEAD.zh)}</p>
+    <a class="cta" href="${HELP_ROOT}">打开${SITE_NAME}</a>
+    <p class="links">${sections.map((s) => `<a href="#${s.id}">${s.icon} ${esc(s.title)}</a>`).join('')}</p>
+${sections
+  .map(
+    (s) => `
+    <section id="${s.id}" class="sem">
+      <h2>${s.icon} ${esc(s.title)}</h2>
+${s.blocks.map(render).join('\n')}
+    </section>`,
+  )
+  .join('')}
+    <h2>去练习</h2>
+    <p class="links">${liveCourses()
+      .map((o) => `<a href="${HELP_ROOT}${coursePath(o.course)}">${esc(o.name)}</a>`)
+      .join('')}<a href="${HELP_ROOT}">${SITE_NAME}首页</a></p>`
+  const faq = sections.find((s) => s.id === 'faq')?.blocks.find((b) => b.kind === 'faq')
+  const jsonLd: Record<string, unknown>[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: title,
+      description,
+      inLanguage: 'zh-CN',
+      isPartOf: webApp(siteUrl),
+    },
+  ]
+  if (faq && faq.kind === 'faq') {
+    jsonLd.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faq.items.map((i) => ({
+        '@type': 'Question',
+        name: i.q,
+        acceptedAnswer: { '@type': 'Answer', text: i.a },
+      })),
+    })
+  }
+  return page({ path: HELP_PATH, title, description, jsonLd }, siteUrl, [{ href: HELP_ROOT, text: SITE_NAME }, { text: HELP_TITLE.zh }], body)
+}
+
 // ── 全部静态页 + robots / sitemap ──────────────────────────────────────
 
 export interface StaticPage {
@@ -432,11 +504,12 @@ export function staticPages(siteUrl: string): StaticPage[] {
       out.push({ file: kpPath(lc.course, kp), path: kpPath(lc.course, kp), html: kpPage(lc, kp, siteUrl) })
     }
   }
+  out.push({ file: `${HELP_PATH}index.html`, path: HELP_PATH, html: helpPage(siteUrl) })
   return out
 }
 
-/** 静态页所在的顶层目录（= 学科 id），脚本重新生成前先清掉，改了知识点 id 不会留下旧页 */
-export const STATIC_DIRS: string[] = SUBJECTS.map((s) => s.id)
+/** 静态页所在的顶层目录（= 学科 id + help），脚本重新生成前先清掉，改了知识点 id 不会留下旧页 */
+export const STATIC_DIRS: string[] = [...SUBJECTS.map((s) => s.id), 'help']
 
 export function robotsTxt(siteUrl: string): string {
   return `User-agent: *\nAllow: /\n${siteUrl ? `Sitemap: ${siteUrl}/sitemap.xml\n` : ''}`
@@ -463,8 +536,8 @@ export function homeMeta(): { title: string; description: string; ogDescription:
   const list = lcs.map((lc) => `${lc.name} ${liveKps(lc.course).length} 个知识点`).join('、')
   return {
     title: `${SITE_NAME} · 人教版小学${subjects}同步练习（${grades}，带拼音和朗读）`,
-    description: `${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，${list}可练；每个汉字标拼音、每道题自动朗读，答错有教具演示；免费、无广告、不用注册、可离线使用。`,
-    ogDescription: `按人教版教材单元随机出题，${list}；汉字标拼音、题目自动朗读，免费、可离线。`,
+    description: `${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，${list}可练；每个汉字标拼音、每道题自动朗读，答错有教具演示；还有对战模式，打机器人或两人一台比谁先答对 8 题；免费、无广告、不用注册、可离线使用。`,
+    ogDescription: `按人教版教材单元随机出题，${list}；汉字标拼音、题目自动朗读，还能对战；免费、可离线。`,
     keywords: [
       SITE_NAME,
       '小学数学练习',
@@ -478,6 +551,9 @@ export function homeMeta(): { title: string; description: string; ogDescription:
       '拼音',
       '在线练习',
       '儿童学习',
+      '数学对战游戏',
+      '口算比赛',
+      '两人对战',
     ].join(','),
     grades,
     kpCount,
@@ -499,7 +575,7 @@ export function homeHead(): string {
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
     audience: { '@type': 'EducationalAudience', educationalRole: 'student' },
-    featureList: `人教版${m.grades}数学 ${m.kpCount} 个知识点随机出题；汉字标拼音；题目自动朗读；答错教具演示；中英文切换；离线可用；可添加到主屏幕`,
+    featureList: `人教版${m.grades}数学 ${m.kpCount} 个知识点随机出题；汉字标拼音；题目自动朗读；答错教具演示；对战模式（打机器人 / 两人一台，${SKINS.length} 种实时绘图的游戏画面）；中英文切换；离线可用；可添加到主屏幕`,
     description: m.ogDescription,
   }
   // JSON-LD 一行一个键：没配置 SITE_URL 时构建插件会把含 __SITE_URL__ 的那一行整行删掉，其余仍是合法 JSON
@@ -539,6 +615,9 @@ export function homeBody(): string {
         </p>
 ${sections}
         <p>其它年级和${esc(soon.join('、'))}陆续补充。</p>
+        <h2>对战模式</h2>
+        <p>同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），也可以两个人一台平板左右分屏；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。</p>
+        <p><a href="./${HELP_PATH}">帮助与说明：学习内容、对战玩法、规则、技巧、常见问题 →</a></p>
         <p>${sisterLinks()}</p>
       </main>`
 }

@@ -32,6 +32,8 @@ const router = createRouter({
       name: 'battle-local',
       component: () => import('@/views/battle/BattleArenaView.vue'),
     },
+    // 帮助页（需求 F17）：学习内容 / 题目、对战玩法、规则、技巧、常见问题
+    { path: '/help', name: 'help', component: () => import('@/views/HelpView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
