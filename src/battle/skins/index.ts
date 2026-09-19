@@ -24,6 +24,8 @@ export interface SkinMeta {
   load: () => Promise<Component>
   /** 实时绘图的游戏（B34）：有它就用 canvas 版 */
   game?: GameLoader
+  /** 试点（B36f）：列表里能选，「随机」不会挑到它 */
+  pilot?: boolean
 }
 
 /** 「随机」：每局开始时从注册表里挑一个 */
@@ -45,6 +47,15 @@ export const SKINS: readonly SkinMeta[] = [
     kind: 'race',
     load: () => import('./RocketSkin.vue').then((m) => m.default),
     game: () => import('../games/rocket').then((m) => m.createRocketGame),
+  },
+  {
+    id: 'rocket3d',
+    icon: '🚀',
+    slot: 'center',
+    kind: 'race',
+    pilot: true,
+    load: () => import('./RocketSkin.vue').then((m) => m.default),
+    game: () => import('../games/rocket3d').then((m) => m.load()),
   },
   {
     id: 'tower',
@@ -78,7 +89,7 @@ export function skinById(id: string): SkinMeta | undefined {
 
 /** 把设置里的皮肤 id 落实成一个真实皮肤：random 或不认识的 id 都随机挑 */
 export function resolveSkin(id: string, rng: RNG): string {
-  return skinById(id)?.id ?? rng.pick(SKINS).id
+  return skinById(id)?.id ?? rng.pick(SKINS.filter((s) => !s.pilot)).id
 }
 
 /** 比分占目标分的比例 0…1 */

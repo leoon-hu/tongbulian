@@ -73,7 +73,18 @@ function fail(e: unknown): void {
   } catch {
     /* 已经在出错了 */
   }
+  if (old?.meta.renderer === 'webgl') freshCanvas()
   useModule(createFallbackGame(), 'fallback')
+}
+
+/** 拿过 WebGL 上下文的 canvas 拿不到 2D 上下文了：换一块新的给保底画面 */
+function freshCanvas(): void {
+  const old = canvasEl.value
+  if (!old || typeof document === 'undefined') return
+  const c = document.createElement('canvas')
+  c.className = old.className
+  old.replaceWith(c)
+  canvasEl.value = c
 }
 
 function guard(fn: () => void): void {

@@ -21,7 +21,9 @@
     "game:survey": "node scripts/game-survey.mjs"
   },
   "dependencies": {
+    "@types/three": "^0.186.0",
     "pinia": "^3.0.4",
+    "three": "^0.186.0",
     "vue": "^3.5.39",
     "vue-router": "^5.1.0"
   },

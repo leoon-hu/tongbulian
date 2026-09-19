@@ -10,14 +10,14 @@ import GameSlot from '@/components/battle/GameSlot.vue'
 const state = (red = 0, blue = 0): GameState => ({ red, blue, target: 8, phase: 'playing', winner: null, lastPoint: null })
 
 /** 记录调用的假游戏；可以让某个方法抛错 */
-function spyGame(opts: { throwIn?: keyof GameModule } = {}) {
+function spyGame(opts: { throwIn?: keyof GameModule; renderer?: '2d' | 'webgl' } = {}) {
   const calls: string[] = []
   const events: string[] = []
   const boom = (name: keyof GameModule): void => {
     if (opts.throwIn === name) throw new Error(`boom in ${name}`)
   }
   const mod: GameModule = {
-    meta: { id: 'spy', renderer: '2d' },
+    meta: { id: 'spy', renderer: opts.renderer ?? '2d' },
     mount: () => {
       calls.push('mount')
       boom('mount')
@@ -117,6 +117,30 @@ describe('GameHost（B34a：宿主）', () => {
     await flushPromises()
     await flushPromises()
     expect(w2.find('.game-host').attributes('data-status')).toBe('fallback')
+    w2.unmount()
+  })
+
+  it('WebGL 游戏出错换保底画面时给它一块新 canvas（拿过 WebGL 上下文的拿不到 2D）；2D 游戏出错则沿用原来的', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const gl = spyGame({ throwIn: 'setState', renderer: 'webgl' })
+    const w = mount(GameHost, { props: { load: gl.load, state: state(2, 1), events: [] } })
+    const before = w.find('.game-host > canvas.game-canvas').element
+    await flushPromises()
+    await flushPromises()
+    expect(w.find('.game-host').attributes('data-status')).toBe('fallback')
+    const canvases = w.findAll('.game-host canvas')
+    expect(canvases).toHaveLength(1)
+    expect(canvases[0]!.element).not.toBe(before)
+    expect(canvases[0]!.classes()).toContain('game-canvas')
+    w.unmount()
+
+    const flat = spyGame({ throwIn: 'setState' })
+    const w2 = mount(GameHost, { props: { load: flat.load, state: state(2, 1), events: [] } })
+    const same = w2.find('.game-host > canvas.game-canvas').element
+    await flushPromises()
+    await flushPromises()
+    expect(w2.find('.game-host').attributes('data-status')).toBe('fallback')
+    expect(w2.find('.game-host > canvas.game-canvas').element).toBe(same)
     w2.unmount()
   })
 })
