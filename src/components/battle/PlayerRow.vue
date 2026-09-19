@@ -54,10 +54,25 @@ function read(): void {
 const qEl = ref<HTMLElement | null>(null)
 const qZoom = ref(1)
 const MIN_ZOOM = 0.5
+/** 紧凑版的作答栏也按栏高缩放（--azoom）：四行数字键盘在 375px 高的手机上也整格放得下，不裁底边、不滚动（2026-09-20 用户截图） */
+const aZoom = ref(1)
+const MIN_AZOOM = 0.7
+function fitAnswer(body: HTMLElement): void {
+  if (!props.compact) {
+    aZoom.value = 1
+    return
+  }
+  const panel = body.querySelector<HTMLElement>(':scope > .a > *')
+  // 面板本身被栏高压住（max-height），原始高度看它的 scrollHeight（元素自己坐标系里的尺寸，不受 zoom 影响）
+  const natural = panel ? Math.max(panel.scrollHeight, panel.offsetHeight) : 0
+  const avail = body.clientHeight
+  aZoom.value = natural > 0 && avail > 0 ? Math.max(MIN_AZOOM, Math.min(1, Math.floor((avail / natural) * 100) / 100)) : 1
+}
 function fitQuestion(): void {
   const q = qEl.value
   const stem = q?.querySelector<HTMLElement>('.stem')
   const body = q?.parentElement
+  if (body) fitAnswer(body)
   if (!q || !stem || !body) return
   const max = props.compact ? 0.85 : 1
   // offsetWidth / offsetHeight 是元素自己坐标系里的尺寸，不受 zoom 影响，就是原始大小
@@ -87,6 +102,7 @@ watch(
   () => [props.question?.id, props.player.index, props.compact] as const,
   () => {
     qZoom.value = props.compact ? 0.85 : 1
+    aZoom.value = 1
     nextTick(fitQuestion)
   },
 )
@@ -151,6 +167,7 @@ onBeforeUnmount(() => {
           :revealed="null"
           :hide-display="compact"
           :layout="compact ? 'grid' : 'wide'"
+          :style="compact ? { zoom: aZoom } : undefined"
           @answer="(g) => emit('answer', g)"
           @input="onInput"
         />
@@ -377,6 +394,12 @@ onBeforeUnmount(() => {
   min-width: 0;
   max-height: 100%;
   overflow: auto;
+}
+/* 按钮的队色底边和投影不占布局，作答栏一滚动最下一排就被裁掉一截（2026-09-20 用户截图）：
+   给网格留出底边 + 投影的高度，两侧也留一点；整块再按栏高缩放（--azoom，fitAnswer），所以正常情况不会滚动 */
+.compact .a :deep(.cards),
+.compact .a :deep(.numpad) {
+  padding: 2px 4px 10px;
 }
 /* 紧凑版的选项卡：矮一点；文字长的排成一列，别在窄卡片里折成三行 */
 .compact .a :deep(.cards) {
