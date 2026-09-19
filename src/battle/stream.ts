@@ -1,5 +1,5 @@
 /**
- * 题目流（需求 B4）：每个参赛者一条，由 (kpId, seed, difficulty) 决定，按 index 取题。
+ * 题目流（需求 B4）：每个参赛者一条，由 (kpId, seed) 决定，按 index 取题；难度与练习页一样固定为当前档。
  * 分批用 buildSession 生成（每批 16 题、批内按签名去重），用完下一批，总数不限；
  * 生成器是确定性的，所以对手、观战者、重连都能从同一组参数复现同一道题。
  */
@@ -15,11 +15,14 @@ export function batchSeed(seed: number, batch: number): number {
   return (seed + Math.imul(batch, 0x9e3779b1)) >>> 0
 }
 
-function batchOf(kpId: string, seed: number, difficulty: Difficulty, batch: number): Question[] {
-  const key = `${kpId}|${seed}|${difficulty}|${batch}`
+/** 与练习页相同的当前档（需求 F4）；对战不单独调难度 */
+const LEVEL: Difficulty = 1
+
+function batchOf(kpId: string, seed: number, batch: number): Question[] {
+  const key = `${kpId}|${seed}|${batch}`
   let qs = cache.get(key)
   if (!qs) {
-    qs = buildSession(kpId, BATCH_SIZE, { seed: batchSeed(seed, batch), difficulty })
+    qs = buildSession(kpId, BATCH_SIZE, { seed: batchSeed(seed, batch), difficulty: LEVEL })
     if (qs.length === 0) throw new Error(`empty batch for ${kpId}`)
     cache.set(key, qs)
   }
@@ -27,10 +30,10 @@ function batchOf(kpId: string, seed: number, difficulty: Difficulty, batch: numb
 }
 
 /** 题目流里第 index 题（从 0 起） */
-export function questionAt(kpId: string, seed: number, difficulty: Difficulty, index: number): Question {
+export function questionAt(kpId: string, seed: number, index: number): Question {
   let offset = index
   for (let batch = 0; batch < 10000; batch++) {
-    const qs = batchOf(kpId, seed, difficulty, batch)
+    const qs = batchOf(kpId, seed, batch)
     if (offset < qs.length) return qs[offset]!
     offset -= qs.length
   }
@@ -38,8 +41,8 @@ export function questionAt(kpId: string, seed: number, difficulty: Difficulty, i
 }
 
 /** 从 from 起连续 count 题（预解码朗读片段用） */
-export function questionsAhead(kpId: string, seed: number, difficulty: Difficulty, from: number, count: number): Question[] {
-  return Array.from({ length: count }, (_, i) => questionAt(kpId, seed, difficulty, from + i))
+export function questionsAhead(kpId: string, seed: number, from: number, count: number): Question[] {
+  return Array.from({ length: count }, (_, i) => questionAt(kpId, seed, from + i))
 }
 
 export function clearStreamCache(): void {

@@ -53,7 +53,7 @@ console.log(`${combos.length} 种组合`);
 
 // 2. 截图
 for (let i = 0; i < 120; i++) { try { await fetch(BASE + "/"); break; } catch { await sleep(500); } }
-const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, skin: "race", aiLevel: "mid", difficulty: 1 });
+const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, skin: "race", aiLevel: "mid" });
 const LAYOUTS =
   PAGE === "battle"
     ? { iphone: { w: 852, h: 393, scale: 2, rows: 4 }, ipad: { w: 1024, h: 768, scale: 1.5, rows: 3 } }

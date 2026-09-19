@@ -9,7 +9,6 @@ import { createRng } from '@/engine'
 import { unlockAudio } from '@/engine/audio'
 import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
-import type { Difficulty } from '@/types/models'
 import type { Member, Role, Team } from '@/battle/protocol'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
 import { RANDOM_SKIN, resolveSkin, ruleKey, skinById } from '@/battle/skins'
@@ -33,7 +32,6 @@ const battle = useBattleStore()
 const code = String(route.params.code)
 const ROLES: readonly Role[] = ['red', 'blue', 'watch']
 const TEAMS: readonly Team[] = ['red', 'blue']
-const DIFFS: readonly Difficulty[] = [1, 2, 3]
 /** 链接里的默认身份（B20）：只是进来时的默认，不是密钥；不带就由服务器分到人少的队 */
 const linkRole = ROLES.find((r) => r === route.query.t)
 
@@ -115,7 +113,7 @@ function share(url: string): void {
   navigator.share({ title: `${ui('brand.title')} · ${ui('battle.title')}`, text: ui('room.invite.title'), url }).catch(() => {})
 }
 
-// ── 更多（让子 / 锁定队伍 / 指定队伍的链接 / 邀请更多人）默认收起 ──
+// ── 更多（锁定队伍 / 指定队伍的链接 / 邀请更多人）默认收起 ──
 const more = ref(false)
 function toggleMore(): void {
   more.value = !more.value
@@ -125,9 +123,6 @@ const skinOpen = ref(false)
 
 // ── 名单与我的操作 ──
 const membersOf = (team: Team): Member[] => room.teamMembers(team)
-function setDifficulty(m: Member, d: Difficulty): void {
-  if (m.difficulty !== d) room.setDifficulty(d, m.clientId === room.you ? undefined : m.clientId)
-}
 function joinTeam(team: Team): void {
   unlockAudio()
   room.setTeam(team)
@@ -271,7 +266,6 @@ onBeforeUnmount(() => {
             <span v-if="m.clientId === room.you" class="tag me"><RubyText :text="{ k: 'room.me' }" /></span>
             <span v-if="m.clientId === snap.hostId" class="tag host"><RubyText :text="{ k: 'room.host' }" /></span>
             <span v-if="!m.online" class="tag off">📶 <RubyText :text="{ k: 'room.offline' }" /></span>
-            <span v-if="m.difficulty > 1" class="tag diff">{{ ui('battle.diffBadge', { n: m.difficulty }) }}</span>
             <span v-if="m.ready" class="ready-mark" :title="ui('room.raised')">✓</span>
           </li>
         </ul>
@@ -292,7 +286,7 @@ onBeforeUnmount(() => {
       </button>
     </section>
 
-    <!-- 更多：让子 / 锁定队伍（主持人）、指定队伍的链接、邀请更多人 -->
+    <!-- 更多：锁定队伍（主持人）、指定队伍的链接、邀请更多人 -->
     <section class="block">
       <button type="button" class="more-toggle" :aria-expanded="more" @click="toggleMore">
         <span class="more-icon" aria-hidden="true">⚙️</span>
@@ -303,25 +297,6 @@ onBeforeUnmount(() => {
       </button>
       <div v-if="more" class="more">
         <template v-if="isHost">
-          <h3 class="more-title"><RubyText :text="{ k: 'battle.handicap' }" /></h3>
-          <p class="hint"><RubyText :text="{ k: 'battle.handicap.hint' }" /></p>
-          <div v-for="m in room.participants" :key="m.clientId" class="hrow" :class="m.role">
-            <span class="hwho"><span class="who">{{ m.role === 'red' ? '🔴' : '🔵' }}</span>{{ m.name }}</span>
-            <div class="hlevels" role="radiogroup">
-              <button
-                v-for="d in DIFFS"
-                :key="d"
-                type="button"
-                class="hlevel"
-                :class="{ on: m.difficulty === d }"
-                role="radio"
-                :aria-checked="m.difficulty === d"
-                @click="setDifficulty(m, d)"
-              >
-                <RubyText :text="{ k: `battle.diff.${d}` }" />
-              </button>
-            </div>
-          </div>
           <button type="button" class="chip lock" :class="{ on: locked }" @click="room.setLock(!locked)">
             {{ locked ? '🔒' : '🔓' }} <RubyText :text="{ k: locked ? 'room.locked' : 'room.lock' }" />
           </button>
@@ -783,42 +758,6 @@ onBeforeUnmount(() => {
 .more-title {
   margin: 8px 0 6px;
   font-size: var(--fs-md);
-  color: var(--c-primary-dark);
-}
-.hrow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 8px 0;
-}
-.hrow + .hrow {
-  border-top: 1px solid var(--c-line);
-}
-.hwho {
-  flex: 1 1 140px;
-  font-weight: 800;
-}
-.hwho .who {
-  margin-right: 6px;
-}
-.hlevels {
-  display: flex;
-  gap: 8px;
-}
-.hlevel {
-  min-width: 64px;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: var(--radius-md);
-  background: var(--c-bg);
-  border: 2px solid transparent;
-  font-weight: 700;
-  color: var(--c-text);
-}
-.hlevel.on {
-  border-color: var(--c-primary);
-  background: #fff3e6;
   color: var(--c-primary-dark);
 }
 .chip.lock {

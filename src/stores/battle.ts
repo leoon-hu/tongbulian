@@ -5,7 +5,7 @@
  */
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import type { Difficulty, LParam, Question } from '@/types/models'
+import type { LParam, Question } from '@/types/models'
 import { createRng, type RNG } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
@@ -54,14 +54,10 @@ export interface BattlePrefs {
   names: { me: string; left: string; right: string }
   skin: string
   aiLevel: AiLevel
-  /** 让子（B8）：每个参赛者各自的难度档——me / ai 是打机器人时的我和机器人，left / right 是两人同屏的左右 */
-  difficulty: Record<DiffSlot, Difficulty>
   /** 每种游戏上次讲开场规则句的时间（ms）：本设备第一次进这个游戏才讲，一天内不重复（B6） */
   intros: Record<string, number>
 }
 
-export type DiffSlot = 'me' | 'left' | 'right' | 'ai'
-export const DIFF_SLOTS: readonly DiffSlot[] = ['me', 'left', 'right', 'ai']
 
 /** 同一个游戏隔多久再讲一次开场规则句 */
 export const INTRO_AGAIN_MS = 24 * 60 * 60 * 1000
@@ -85,26 +81,12 @@ function randomId(): string {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6)
 }
 
-function isDifficulty(v: unknown): v is Difficulty {
-  return v === 1 || v === 2 || v === 3
-}
-
-/** 旧版存的是一个数（所有人同一档），新版每个参赛者一档；坏的回默认 */
-function parseDifficulty(v: unknown, base: Record<DiffSlot, Difficulty>): Record<DiffSlot, Difficulty> {
-  if (isDifficulty(v)) return { me: v, left: v, right: v, ai: v }
-  const o = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>
-  const out = { ...base }
-  for (const slot of DIFF_SLOTS) if (isDifficulty(o[slot])) out[slot] = o[slot]
-  return out
-}
-
 function loadPrefs(): BattlePrefs {
   const base: BattlePrefs = {
     clientId: randomId(),
     names: { me: '', left: '', right: '' },
     skin: RANDOM_SKIN,
     aiLevel: 'mid',
-    difficulty: { me: 1, left: 1, right: 1, ai: 1 },
     intros: {},
   }
   try {
@@ -118,7 +100,6 @@ function loadPrefs(): BattlePrefs {
       names: { me: str(names.me), left: str(names.left), right: str(names.right) },
       skin: typeof p.skin === 'string' && (p.skin === RANDOM_SKIN || skinById(p.skin)) ? p.skin : base.skin,
       aiLevel: isAiLevel(p.aiLevel) ? p.aiLevel : base.aiLevel,
-      difficulty: parseDifficulty(p.difficulty, base.difficulty),
       intros: Object.fromEntries(
         Object.entries(typeof p.intros === 'object' && p.intros !== null ? (p.intros as Record<string, unknown>) : {}).filter(
           (kv): kv is [string, number] => typeof kv[1] === 'number' && Number.isFinite(kv[1]),
@@ -218,7 +199,7 @@ export const useBattleStore = defineStore('battle', () => {
     const tokens = s.players
       .filter((p) => p.kind === 'human')
       .flatMap((p) =>
-        questionsAhead(s.kpId, p.seed, p.difficulty, p.index, 16).flatMap((q) => [
+        questionsAhead(s.kpId, p.seed, p.index, 16).flatMap((q) => [
           ...questionSpeech(q, lang.value),
           ...answerSpeech(q, lang.value),
         ]),
@@ -365,16 +346,15 @@ export const useBattleStore = defineStore('battle', () => {
     aiRng = createRng(opts.aiSeed)
     const skin = resolveSkin(opts.skin ?? prefs.value.skin, createRng())
     const me = prefs.value.names.me
-    const d = prefs.value.difficulty
     const players: PlayerInit[] =
       opts.mode === 'ai'
         ? [
-            { id: 'left', name: me, team: 'red', difficulty: d.me },
-            { id: AI_ID, name: '', team: 'blue', kind: 'ai', difficulty: d.ai },
+            { id: 'left', name: me, team: 'red' },
+            { id: AI_ID, name: '', team: 'blue', kind: 'ai' },
           ]
         : [
-            { id: 'left', name: prefs.value.names.left || me, team: 'red', difficulty: d.left },
-            { id: 'right', name: prefs.value.names.right, team: 'blue', difficulty: d.right },
+            { id: 'left', name: prefs.value.names.left || me, team: 'red' },
+            { id: 'right', name: prefs.value.names.right, team: 'blue' },
           ]
     operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
     const now = opts.now ?? Date.now()
@@ -387,7 +367,7 @@ export const useBattleStore = defineStore('battle', () => {
   function questionOf(p: Player): Question {
     const s = state.value
     if (!s) throw new Error('no match')
-    return questionAt(s.kpId, p.seed, p.difficulty, p.index)
+    return questionAt(s.kpId, p.seed, p.index)
   }
 
   /** 倒数结束：开打，机器人开始动（线上模式由服务器定时刻，这里不动） */

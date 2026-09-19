@@ -15,7 +15,7 @@ mkdirSync(outDir, { recursive: true });
 const only = process.argv[2];
 const KP = "s1-05-carry-add";
 const SKINS = ["race", "car", "rocket", "rocket3d", "balloon", "tower", "tug", "ice"].filter((s) => !only || s === only);
-const prefs = (skin) => JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, skin, aiLevel: "mid", difficulty: 1 });
+const prefs = (skin) => JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, skin, aiLevel: "mid" });
 const HIDE = "(()=>{const s=document.createElement('style');s.textContent='.countdown,.victory,.result,.callout,.confirm-mask{display:none!important}';document.head.appendChild(s);return 'ok'})()";
 
 const POSES = [

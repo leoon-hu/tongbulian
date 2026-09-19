@@ -2,7 +2,6 @@
  * 比赛状态机（纯函数，需求 B1–B9）：加分、判胜、事件。单设备对局在页面里跑它，中继服务的房间也跑它。
  * 每个函数返回新的状态对象，不改入参（store 里整个替换，Vue 才会响应）。
  */
-import type { Difficulty } from '@/types/models'
 import { ROUND_SIZE } from '@/engine'
 import type { MatchEvent, MatchState, Player, Team } from './protocol'
 
@@ -16,7 +15,6 @@ export interface PlayerInit {
   name: string
   team: Team
   kind?: 'human' | 'ai'
-  difficulty?: Difficulty
 }
 
 export function createMatch(opts: { kpId: string; skin: string; players: PlayerInit[]; target?: number }): MatchState {
@@ -30,7 +28,6 @@ export function createMatch(opts: { kpId: string; skin: string; players: PlayerI
       name: p.name,
       team: p.team,
       kind: p.kind ?? 'human',
-      difficulty: p.difficulty ?? 1,
       seed: 0,
       index: 0,
       correct: 0,

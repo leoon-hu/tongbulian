@@ -70,8 +70,6 @@ describe('房间 store（B19–B25）', () => {
     ws.sent.length = 0
     room.setTeam('blue')
     room.setReady(true)
-    room.setDifficulty(2)
-    room.setDifficulty(3, HOST)
     room.setSkin('tug')
     room.setLock(true)
     room.start()
@@ -80,8 +78,6 @@ describe('房间 store（B19–B25）', () => {
     expect(ws.msgs).toEqual([
       { type: 'team', role: 'blue' },
       { type: 'ready', ready: true },
-      { type: 'difficulty', difficulty: 2 },
-      { type: 'difficulty', difficulty: 3, clientId: HOST },
       { type: 'skin', skin: 'tug' },
       { type: 'lock', locked: true },
       { type: 'start' },

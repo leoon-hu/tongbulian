@@ -136,9 +136,8 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     const go = tick(r, T0 + 10 + COUNTDOWN_MS)
     expect(go.room.match!.phase).toBe('playing')
     expect(go.effects).toContainEqual({ type: 'event', e: { type: 'go' } })
-    // 倒数中不能换队 / 改难度 / 再开始
+    // 倒数中不能换队 / 再开始
     expect(errorOf(r, 'red001', { type: 'team', role: 'watch' })).toBe('started')
-    expect(errorOf(r, 'red001', { type: 'difficulty', difficulty: 2 })).toBe('bad')
     expect(errorOf(r, 'host01', { type: 'start' })).toBe('bad')
   })
 
@@ -167,19 +166,12 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(r.match).toBeNull()
   })
 
-  it('难度：自己在大厅随时改，主持人能改别人的，别人改别人不行；换皮肤只有主持人、比赛中不行', () => {
+  it('换皮肤只有主持人、比赛中不行', () => {
     let r = joined(joined(room(), 'red001', 'red'), 'blue01', 'blue')
-    r = ok(r, 'red001', { type: 'difficulty', difficulty: 3 })
-    expect(r.members.find((m) => m.clientId === 'red001')!.difficulty).toBe(3)
-    expect(errorOf(r, 'red001', { type: 'difficulty', difficulty: 2, clientId: 'blue01' })).toBe('notHost')
-    r = ok(r, 'host01', { type: 'difficulty', difficulty: 2, clientId: 'blue01' })
-    expect(r.members.find((m) => m.clientId === 'blue01')!.difficulty).toBe(2)
-    expect(errorOf(r, 'host01', { type: 'difficulty', difficulty: 9 as never })).toBe('bad')
     expect(errorOf(r, 'red001', { type: 'skin', skin: 'tug' })).toBe('notHost')
     r = ok(r, 'host01', { type: 'skin', skin: 'tug' })
     expect(r.skin).toBe('tug')
     r = ok(r, 'host01', { type: 'start' })
-    expect(r.match!.players.map((p) => p.difficulty)).toEqual([3, 2])
     expect(r.match!.skin).toBe('tug')
     expect(errorOf(r, 'host01', { type: 'skin', skin: 'race' })).toBe('bad')
   })

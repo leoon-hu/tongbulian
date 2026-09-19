@@ -4,7 +4,6 @@
  */
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { Difficulty } from '@/types/models'
 import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
 import { useBattleStore } from './battle'
@@ -126,9 +125,6 @@ export const useRoomStore = defineStore('room', () => {
   function setReady(ready: boolean): void {
     client?.send({ type: 'ready', ready })
   }
-  function setDifficulty(difficulty: Difficulty, clientId?: string): void {
-    client?.send(clientId ? { type: 'difficulty', difficulty, clientId } : { type: 'difficulty', difficulty })
-  }
   function start(): void {
     client?.send({ type: 'start' })
   }
@@ -186,7 +182,6 @@ export const useRoomStore = defineStore('room', () => {
     create,
     setTeam,
     setReady,
-    setDifficulty,
     start,
     end,
     rematch,

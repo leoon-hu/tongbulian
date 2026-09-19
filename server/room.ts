@@ -1,12 +1,11 @@
 /**
  * 房间状态机（需求 B13–B25、B41–B45）：纯函数——输入一条消息，输出新房间 + 要做的事（广播快照、发瞬时事件、给某人报错）。
- * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、举手、主持人、锁队、开始 / 结束 / 再来一局。
+ * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、举手、主持人、锁队、开始 / 结束 / 再来一局（没有难度：题目难度与练习页一样固定）。
  * 进来的人不指定队就分到人少的队（一样多进红队）；建房的人自动进红队；开始只要两队都有人在线（举手不是条件）；
  * 主持人掉线 HOST_GRACE_MS 内回来不换人（屏幕锁一下就换主持人太吓人）。
  * 网络层（index.ts）只管连接、房间表、心跳、限流、节流广播；node 里能单测。
  */
 import type { ArenaEvent, ClientMsg, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
-import type { Difficulty } from '@/types/models'
 import { answer, beginPlay, createMatch, setInput, startMatch } from '@/battle/match'
 import { cleanName } from '@/battle/names'
 
@@ -48,7 +47,6 @@ export function isCode(v: unknown): v is string {
 }
 
 const isTeam = (r: Role): r is Team => r === 'red' || r === 'blue'
-const isDifficulty = (v: unknown): v is Difficulty => v === 1 || v === 2 || v === 3
 const isRole = (v: unknown): v is Role => v === 'red' || v === 'blue' || v === 'watch'
 
 function teamCount(room: Room, team: Team): number {
@@ -82,7 +80,7 @@ export function createRoom(opts: {
   code: string
   kpId: string
   skin: string
-  host: { clientId: string; name: string; role?: Role; difficulty?: Difficulty }
+  host: { clientId: string; name: string; role?: Role }
   version: string
   now: number
 }): Room {
@@ -91,7 +89,6 @@ export function createRoom(opts: {
     name: cleanName(opts.host.name),
     role: opts.host.role ?? 'red',
     ready: false,
-    difficulty: opts.host.difficulty ?? 1,
     online: true,
     joinedAt: opts.now,
   }
@@ -137,7 +134,7 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
       }
     }
   }
-  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, difficulty: 1, online: true, joinedAt: now }
+  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now }
   const next: Room = { ...room, members: [...room.members, member], lastActive: now }
   return error ? { room: next, error } : { room: next }
 }
@@ -205,7 +202,7 @@ function startRoom(room: Room, seeds: Record<string, number>, now: number): Room
   const match = createMatch({
     kpId: room.kpId,
     skin: room.skin,
-    players: ps.map((m) => ({ id: m.clientId, name: m.name, team: m.role as Team, difficulty: m.difficulty })),
+    players: ps.map((m) => ({ id: m.clientId, name: m.name, team: m.role as Team })),
   })
   const started = startMatch(match, seeds, now)
   const players = started.players.map((p) => ({ ...p, online: room.members.find((m) => m.clientId === p.id)?.online ?? true }))
@@ -236,14 +233,6 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
       if (!isTeam(me.role) || inMatch(room)) return { room, effects: [err(from, 'bad')] }
       if (me.ready === !!msg.ready) return { room, effects: [] }
       return { room: members((m) => ({ ...m, ready: !!msg.ready })), effects: [{ type: 'broadcast' }] }
-    }
-    case 'difficulty': {
-      if (!isDifficulty(msg.difficulty) || inMatch(room)) return { room, effects: [err(from, 'bad')] }
-      const target = msg.clientId ?? from
-      if (target !== from && !isHost) return { room, effects: [err(from, 'notHost')] }
-      if (!room.members.some((m) => m.clientId === target)) return { room, effects: [err(from, 'bad')] }
-      const next = withMembers(base, room.members.map((m) => (m.clientId === target ? { ...m, difficulty: msg.difficulty } : m)))
-      return { room: next, effects: [{ type: 'broadcast' }] }
     }
     case 'start': {
       if (!isHost) return { room, effects: [err(from, 'notHost')] }

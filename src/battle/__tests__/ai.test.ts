@@ -11,7 +11,7 @@ describe('机器人（B11）', () => {
     for (const level of AI_LEVELS) {
       const { minMs, maxMs } = AI_PROFILE[level]
       for (let seed = 1; seed <= 60; seed++) {
-        const q = questionAt('s1-05-carry-add', seed, 1, seed % 5)
+        const q = questionAt('s1-05-carry-add', seed, seed % 5)
         const plan = planAnswer(q, level, createRng(seed))
         const total = plan.thinkMs + plan.keys.length * AI_KEY_MS + AI_SUBMIT_MS
         expect(plan.thinkMs).toBeGreaterThanOrEqual(500)
@@ -34,7 +34,7 @@ describe('机器人（B11）', () => {
       let right = 0
       const N = 600
       for (let i = 0; i < N; i++) {
-        const q = questionAt('s1-02-addsub-10', 1, 1, i % 40)
+        const q = questionAt('s1-02-addsub-10', 1, i % 40)
         if (planAnswer(q, level, rng).correct) right++
       }
       expect(Math.abs(right / N - AI_PROFILE[level].accuracy)).toBeLessThan(0.06)

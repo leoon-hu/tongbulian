@@ -618,7 +618,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await online.trigger('click')
     expect(shown(w.find('.start-btn'))).toContain('建房间')
     expect(w.find('.join').exists()).toBe(true) // 输房间号加入
-    expect(w.find('.more-toggle').exists()).toBe(false) // 让子在大厅里
+    expect(w.find('.more-toggle').exists()).toBe(false) // 设置页没有「更多」
     await w.find('.start-btn').trigger('click')
     expect(shown(w.find('.start-btn'))).toContain('正在连接')
     const ws = FakeWs.last()
@@ -648,10 +648,10 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(w.find('.bar .start-btn').attributes('disabled')).toBeDefined()
     expect(shown(w.find('.bar'))).toContain('两队都有人才能开始')
     expect(shown(w)).toContain('对战开始啦') // 规则句在大厅里看
-    expect(w.find('.more').exists()).toBe(false) // 让子 / 锁队 / 链接默认收起
+    expect(w.find('.more').exists()).toBe(false) // 锁队 / 链接默认收起
     await w.find('.more-toggle').trigger('click')
     expect(w.findAll('.more .link')).toHaveLength(3)
-    expect(w.findAll('.more .hrow')).toHaveLength(1)
+    expect(w.find('.more .chip.lock').exists()).toBe(true)
 
     // 客人不带队伍进来：服务器分到人少的蓝队；开始键亮起
     r = join(r, { clientId: 'bbbbbb', name: '小虎', version: 'v1' }, 2500).room
@@ -831,26 +831,6 @@ describe('帮助页（F17）', () => {
     expect(shown(w)).toContain('Rules')
     expect(shown(w)).not.toContain('游戏规则')
     expect(document.title).toBe('Help & guide · Chapter Practice')
-    w.unmount()
-  })
-
-  it('设置页「更多 · 让子」：展开后每人一行三档，选了记进偏好，开局机器人按自己的档出题；行头显示档位角标', async () => {
-    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'race', aiLevel: 'mid' }))
-    const w = await mountAt('/battle/new/s1-00-count')
-    for (let i = 0; i < 50 && !w.find('.more-toggle').exists(); i++) await flushPromises()
-    expect(w.find('.handicap').exists()).toBe(false)
-    await w.find('.more-toggle').trigger('click')
-    expect(w.findAll('.hrow')).toHaveLength(2)
-    const robotRow = w.findAll('.hrow')[1]!
-    await robotRow.findAll('.hlevel')[2]!.trigger('click')
-    const store = useBattleStore()
-    expect(store.prefs.difficulty).toEqual({ me: 1, left: 1, right: 1, ai: 3 })
-    expect(JSON.parse(localStorage.getItem('tongbulian:battle')!).difficulty.ai).toBe(3)
-    await w.find('.start-btn').trigger('click')
-    for (let i = 0; i < 50 && !w.find('.arena').exists(); i++) await flushPromises()
-    expect(store.state!.players.map((p) => p.difficulty)).toEqual([1, 3])
-    expect(shown(w.find('.team.blue .row-head'))).toContain('3 档')
-    expect(w.find('.team.red .row-head .diff').exists()).toBe(false)
     w.unmount()
   })
 
