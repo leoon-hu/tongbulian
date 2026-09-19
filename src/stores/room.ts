@@ -1,5 +1,6 @@
 /**
- * 多设备房间的客户端状态（需求 B13–B25）：连中继服务、拿整份房间快照、发操作；
+ * 多设备房间的客户端状态（需求 B13–B25，2026-09-20 用户定的极简流程）：连中继服务、拿整份房间快照；
+ * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / input / answer / rematch / leave / ping。
  * 比赛部分交给 stores/battle（syncOnline / onRemoteEvent），竞技场页不知道自己在哪种模式下（B41）。
  */
 import { computed, ref } from 'vue'
@@ -34,11 +35,6 @@ export const useRoomStore = defineStore('room', () => {
     const p = snapshot.value?.match?.phase
     return p === 'countdown' || p === 'playing' || p === 'ended'
   })
-  /** 两队都至少 1 人在线就能开始（举手不是条件，B21） */
-  const canStart = computed(() => {
-    const ps = participants.value.filter((m) => m.online)
-    return isHost.value && !inMatch.value && ps.some((m) => m.role === 'red') && ps.some((m) => m.role === 'blue')
-  })
   const teamMembers = (team: Team): Member[] => snapshot.value?.members.filter((m) => m.role === team) ?? []
 
   function useFactory(f: RoomClientOptions['factory'] | undefined): void {
@@ -63,13 +59,13 @@ export const useRoomStore = defineStore('room', () => {
     battle.syncOnline(room, me, serverNow)
   }
 
+  function onEvent(e: ArenaEvent): void {
+    battle.onRemoteEvent(e)
+  }
+
   /** 页面回到前台（手机锁屏 / 切走再回来）：不等退避，立刻重连（B23） */
   function onVisible(): void {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') client?.kick()
-  }
-
-  function onEvent(e: ArenaEvent): void {
-    battle.onRemoteEvent(e)
   }
 
   function makeClient(): RoomClient | null {
@@ -102,7 +98,7 @@ export const useRoomStore = defineStore('room', () => {
     return client
   }
 
-  /** 打开链接 / 输房间号：连上就进房（t = 链接里的默认身份） */
+  /** 扫码 / 打开链接：连上就进房（t = 链接里的身份：红队 / 蓝队 / 观战） */
   function enter(roomCode: string, t?: Role): void {
     reset()
     code.value = roomCode
@@ -110,35 +106,13 @@ export const useRoomStore = defineStore('room', () => {
     c?.connect(roomCode, t)
   }
 
-  /** 设置页「建房间」：连上后建房，拿到快照就知道房间号 */
+  /** 设置页「建房间」：连上后建房，拿到快照就知道房间号；建房的这台设备只观战 */
   function create(kpId: string, skin: string): void {
     reset()
     const c = makeClient()
     if (!c) return
     c.connect()
     c.send({ type: 'create', kpId, skin })
-  }
-
-  function setTeam(role: Role): void {
-    client?.send({ type: 'team', role })
-  }
-  function setReady(ready: boolean): void {
-    client?.send({ type: 'ready', ready })
-  }
-  function start(): void {
-    client?.send({ type: 'start' })
-  }
-  function end(): void {
-    client?.send({ type: 'end' })
-  }
-  function rematch(): void {
-    client?.send({ type: 'rematch' })
-  }
-  function setSkin(skin: string): void {
-    client?.send({ type: 'skin', skin })
-  }
-  function setLock(locked: boolean): void {
-    client?.send({ type: 'lock', locked })
   }
 
   function reset(): void {
@@ -175,18 +149,10 @@ export const useRoomStore = defineStore('room', () => {
     participants,
     watchers,
     inMatch,
-    canStart,
     teamMembers,
     useFactory,
     enter,
     create,
-    setTeam,
-    setReady,
-    start,
-    end,
-    rematch,
-    setSkin,
-    setLock,
     leave,
     /** 给测试：直接喂一份快照 / 事件（不经网络） */
     _feed: { onState, onEvent, setError },

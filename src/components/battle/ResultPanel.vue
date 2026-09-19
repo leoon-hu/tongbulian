@@ -7,8 +7,8 @@ import { ui } from '@/engine/i18n'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
-/** host = false（多设备的非主持人）：没有「再来一局 / 换个游戏」，写「等主持人再来一局…」 */
-const props = withDefaults(defineProps<{ state: MatchState; host?: boolean }>(), { host: true })
+/** host = false（多设备的非主持人）：没有「再来一局 / 换个游戏」，写「等主持人再来一局…」；changeable = false（线上）：没有「换个游戏」 */
+const props = withDefaults(defineProps<{ state: MatchState; host?: boolean; changeable?: boolean }>(), { host: true, changeable: true })
 const emit = defineEmits<{ rematch: []; changeSkin: []; exit: [] }>()
 
 const winner = computed<Team>(() => props.state.winner ?? 'red')
@@ -36,7 +36,7 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
     <div class="actions">
       <template v-if="host">
         <BigButton color="green" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
-        <BigButton color="blue" @click="emit('changeSkin')"><RubyText :text="{ k: 'battle.changeSkin' }" /></BigButton>
+        <BigButton v-if="changeable" color="blue" @click="emit('changeSkin')"><RubyText :text="{ k: 'battle.changeSkin' }" /></BigButton>
       </template>
       <p v-else class="host-wait"><RubyText :text="{ k: 'room.hostWait' }" /></p>
       <BigButton color="ghost" @click="emit('exit')"><RubyText :text="{ k: 'battle.exit' }" /></BigButton>

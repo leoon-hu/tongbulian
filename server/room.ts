@@ -1,7 +1,7 @@
 /**
  * 房间状态机（需求 B13–B25、B41–B45）：纯函数——输入一条消息，输出新房间 + 要做的事（广播快照、发瞬时事件、给某人报错）。
  * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、举手、主持人、锁队、开始 / 结束 / 再来一局（没有难度：题目难度与练习页一样固定）。
- * 进来的人不指定队就分到人少的队（一样多进红队）；建房的人自动进红队；开始只要两队都有人在线（举手不是条件）；
+ * 进来的人不指定队就分到人少的队（一样多进红队）；建房的设备只观战（算主持人）；红蓝两队都有人在线且没开过局就自动开始（autoStart）；
  * 主持人掉线 HOST_GRACE_MS 内回来不换人（屏幕锁一下就换主持人太吓人）。
  * 网络层（index.ts）只管连接、房间表、心跳、限流、节流广播；node 里能单测。
  */
@@ -87,7 +87,7 @@ export function createRoom(opts: {
   const host: Member = {
     clientId: opts.host.clientId,
     name: cleanName(opts.host.name),
-    role: opts.host.role ?? 'red',
+    role: opts.host.role ?? 'watch',
     ready: false,
     online: true,
     joinedAt: opts.now,
@@ -210,6 +210,16 @@ function startRoom(room: Room, seeds: Record<string, number>, now: number): Room
 }
 
 const err = (to: string, error: RoomError): Effect => ({ type: 'error', to, error })
+
+/**
+ * 自动开始（B21）：红蓝两队都至少 1 人在线、而且这个房间还没开过局（match 为 null）就开始倒数；
+ * 比赛结束后不自动再来（要主持人按「再来一局」）。网络层每次改动房间后调一次。
+ */
+export function autoStart(room: Room, now: number, seeds: () => number = () => Math.floor(Math.random() * 2 ** 31)): Result {
+  if (room.match !== null || !canStartRoom(room)) return { room, effects: [] }
+  const seedMap = Object.fromEntries(participants(room).map((m) => [m.clientId, seeds()]))
+  return { room: startRoom({ ...room, lastActive: now }, seedMap, now), effects: [{ type: 'broadcast' }, { type: 'event', e: { type: 'countdown' } }] }
+}
 
 /**
  * 处理一条消息。seeds：开始 / 再来一局时给每个参赛者的题目种子（网络层生成；测试注入）。

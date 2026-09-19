@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
     <Callout :callout="store.callout" />
     <Countdown v-if="phase === 'countdown'" :rule="store.intro && state ? ruleKey(state.skin) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
-    <ResultPanel v-if="showResult" :state="state" :host="host" @rematch="store.rematch()" @change-skin="emit('changeSkin')" @exit="exit" />
+    <ResultPanel v-if="showResult" :state="state" :host="host" :changeable="store.mode !== 'online'" @rematch="store.rematch()" @change-skin="emit('changeSkin')" @exit="exit" />
 
     <div v-if="confirming" class="confirm-mask" @click.self="confirming = false">
       <div class="confirm" role="dialog">

@@ -19,10 +19,9 @@ function correctOf(q: Question): number | string {
   return q.answer.kind === 'number' ? q.answer.value : q.answer.choiceId
 }
 
-/** 服务器那边的房间：主持人 hhhhhh 建房后改成只主持（观战），me 从红队链接进来 */
+/** 服务器那边的房间：主持人 hhhhhh 建房（观战），me 从红队链接进来 */
 function roomWith(me: string): Room {
-  let r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: HOST, name: '主持' }, version: 'v1', now: 1000 })
-  r = apply(r, HOST, { type: 'team', role: 'watch' }, 1500, seeds).room
+  const r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: HOST, name: '主持' }, version: 'v1', now: 1000 })
   return join(r, { clientId: me, name: '小兔', t: 'red', version: 'v1' }, 2000).room
 }
 
@@ -37,7 +36,7 @@ afterEach(() => {
 })
 
 describe('房间 store（B19–B25）', () => {
-  it('进房：连上后 hello 带房间号与默认身份；快照进来后 me / isHost / 名单 / canStart 都对；操作都变成消息；提示类错误 3 秒自己清、致命的留着；离开释放座位', () => {
+  it('进房：连上后 hello 带房间号与身份；快照进来后 me / isHost / 名单都对；提示类错误 3 秒自己清、致命的留着；离开释放座位', () => {
     const room = useRoomStore()
     const battle = useBattleStore()
     battle.setName('me', '小兔')
@@ -62,38 +61,13 @@ describe('房间 store（B19–B25）', () => {
     expect(room.watchers.map((m) => m.clientId)).toEqual([HOST])
     expect(room.teamMembers('red').map((m) => m.name)).toEqual(['小兔'])
     expect(room.teamMembers('blue')).toEqual([])
-    expect(room.canStart).toBe(false)
     expect(room.inMatch).toBe(false)
     expect(battle.state).toBeNull()
     expect(battle.online).toEqual({ you: me, hostId: HOST })
 
-    ws.sent.length = 0
-    room.setTeam('blue')
-    room.setReady(true)
-    room.setSkin('tug')
-    room.setLock(true)
-    room.start()
-    room.end()
-    room.rematch()
-    expect(ws.msgs).toEqual([
-      { type: 'team', role: 'blue' },
-      { type: 'ready', ready: true },
-      { type: 'skin', skin: 'tug' },
-      { type: 'lock', locked: true },
-      { type: 'start' },
-      { type: 'end' },
-      { type: 'rematch' },
-    ])
-
-    // 主持人拿到房间后 canStart：两队都有人在线就行（举手不是条件）
-    r = apply(r, HOST, { type: 'team', role: 'blue' }, 3000, seeds).room
     ws.receive({ type: 'state', room: snapshot(r), you: HOST, now: 5000 })
     expect(room.isHost).toBe(true)
-    expect(room.canStart).toBe(true)
-    const off = apply({ ...r, members: r.members.map((m) => (m.clientId === me ? { ...m, online: false } : m)) }, HOST, { type: 'ping' }, 3000, seeds).room
-    ws.receive({ type: 'state', room: snapshot(off), you: HOST, now: 5000 })
-    expect(room.canStart).toBe(false)
-    ws.receive({ type: 'state', room: snapshot(r), you: HOST, now: 5000 })
+    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
 
     ws.receive({ type: 'error', error: 'teamFull' })
     expect(room.error).toBe('teamFull')
@@ -113,7 +87,7 @@ describe('房间 store（B19–B25）', () => {
     expect(battle.mode).toBeNull()
   })
 
-  it('建房：连上后先 hello（不带房间号）再 create；拿到快照就有房间号、自己是主持人', () => {
+  it('建房：连上后先 hello（不带房间号）再 create；拿到快照就有房间号、自己是主持人、只观战', () => {
     const room = useRoomStore()
     const battle = useBattleStore()
     battle.setName('me', '小兔')
@@ -131,8 +105,7 @@ describe('房间 store（B19–B25）', () => {
     ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
     expect(room.code).toBe(CODE)
     expect(room.isHost).toBe(true)
-    expect(room.me?.role).toBe('red') // 建房的人自动进红队
-    expect(room.canStart).toBe(false)
+    expect(room.me?.role).toBe('watch') // 建房的设备只观战
   })
 
   it('比赛：快照里的 match 进 battle store，只有自己那行可操作；输入节流发出；答题只发消息、反馈等服务器推进了题号才关；事件进队列；再来一局发给服务器；观战者没有可操作行', () => {

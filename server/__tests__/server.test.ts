@@ -66,7 +66,7 @@ afterAll(async () => {
 })
 
 describe('中继服务（B41–B46）', () => {
-  it('建房 → 加入 → 就绪 → 开始 → 倒数 → 开打 → 答题 → 结束 → 再来一局 → 离开；重连接回座位；错版本 / 错房间号被拒', async () => {
+  it('建房 → 加入 → 两队齐了自动开始 → 倒数 → 开打 → 答题 → 结束 → 再来一局 → 离开；重连接回座位；错版本 / 错房间号被拒', async () => {
     const a = new Client(server.port)
     const b = new Client(server.port)
     await Promise.all([a.open(), b.open()])
@@ -82,14 +82,11 @@ describe('中继服务（B41–B46）', () => {
     b.send({ type: 'hello', clientId: 'bbbbbb', name: '小虎', version: 'v1', code, t: 'blue' })
     const joinedB = await b.state()
     expect(joinedB.room.members.map((m) => [m.clientId, m.role])).toEqual([
-      ['aaaaaa', 'red'],
+      ['aaaaaa', 'watch'],
       ['bbbbbb', 'blue'],
     ])
+    // 主持人自己也进红队：两队都有人了，服务器自动开始（B21）
     a.send({ type: 'team', role: 'red' })
-    a.send({ type: 'ready', ready: true })
-    b.send({ type: 'ready', ready: true })
-    await b.state((s) => s.room.members.every((m) => m.ready))
-    a.send({ type: 'start' })
     const countdown = await a.wait((m) => m.type === 'event' && m.e.type === 'countdown')
     expect(countdown.type).toBe('event')
     await b.wait((m) => m.type === 'event' && m.e.type === 'go')

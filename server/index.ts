@@ -7,7 +7,7 @@
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, RoomError, ServerMsg } from '@/battle/protocol'
-import { apply, createRoom, expired, isCode, join, makeCode, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
+import { apply, autoStart, createRoom, expired, isCode, join, makeCode, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
 
 export const MAX_ROOMS = 500
 export const MAX_MSG_BYTES = 4096
@@ -105,6 +105,9 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
         commit(code, tick(room, Math.max(now(), at)))
       }, at - now())
     }
+    // 红蓝两队都有人在线且还没开过局：自动开始（B21）；开始后 match 不为 null，这里不会再进
+    const auto = autoStart(res.room, now(), seed)
+    if (auto.room !== res.room) commit(code, auto)
   }
 
   function leaveRoom(c: Conn, remove: boolean): void {
@@ -156,10 +159,9 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     }
     if (res.error) fail(c.ws, res.error)
     c.code = msg.code
-    rooms.set(msg.code, res.room)
-    // 加入 / 重连的人马上拿到一份快照，别人按节流广播
+    // 加入 / 重连的人马上拿到一份快照，别人按节流广播；两队齐了 commit 里会自动开始
     send(c.ws, { type: 'state', room: snapshot(res.room), you: c.clientId, now: now() })
-    flush(msg.code)
+    commit(msg.code, { room: res.room, effects: [{ type: 'broadcast' }] })
   }
 
   function onCreate(c: Conn, msg: Extract<ClientMsg, { type: 'create' }>): void {

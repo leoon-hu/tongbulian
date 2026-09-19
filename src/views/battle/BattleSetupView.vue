@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）→ 开始；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」的面板里，页面默认不展示；
-// 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 进大厅；或输入房间号加入别人的房间
+// 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
@@ -16,7 +16,6 @@ import BigButton from '@/components/ui/BigButton.vue'
 import ConfigSheet from '@/components/battle/ConfigSheet.vue'
 import NameSheet from '@/components/battle/NameSheet.vue'
 import ModeIcon from '@/components/battle/ModeIcon.vue'
-import JoinCodeForm from '@/components/battle/JoinCodeForm.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -170,9 +169,6 @@ function start(): void {
       </p>
     </div>
 
-    <section v-if="mode === 'online'" class="block join-block">
-      <JoinCodeForm />
-    </section>
 
     <ConfigSheet v-if="config" v-model:skin="skin" @close="config = false" @rename="(w) => (asking = w)" />
     <NameSheet
@@ -192,9 +188,6 @@ function start(): void {
   text-align: center;
   color: var(--c-primary-dark);
   font-weight: 700;
-}
-.join-block {
-  padding-bottom: 16px;
 }
 .start {
   flex-wrap: wrap;

@@ -15,7 +15,7 @@ import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
 import { COUNTDOWN_MS } from '@/battle/match'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
-import { apply, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
+import { apply, autoStart, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
 // 对战的三个视图是按需加载的：先静态导入一次，路由里的 import() 就不用在用例中途等模块转换
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
@@ -627,9 +627,9 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     FakeWs.reset()
   })
 
-  it('设置页「各用各的」→ 建房间 → 主持人大厅（二维码 + 房间号，自己已在红队，底部「开始比赛」）→ 客人进来自动到蓝队 → 开始 → 服务器倒数开打 → 只有自己那行可操作 → 答题发给服务器 → 到 8 分出结果页；主持权换人后只能等；退出回地图', async () => {
+  it('设置页「各用各的」→ 建房间 → 只有三个二维码（红队 / 蓝队 / 观战 + 链接 + 复制 + 一句说明）→ 两队都有人后服务器自动开始 → 建房的设备只观战 → 结果页主持人有「再来一局」没有「换个游戏」→ 退出回地图', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
-    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' }, skin: 'race' }))
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
     const w = await mountAt(`/battle/new/${KP}`)
     const room = useRoomStore()
     const battle = useBattleStore()
@@ -639,14 +639,12 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(online.attributes('disabled')).toBeUndefined()
     await online.trigger('click')
     expect(shown(w.find('.start-btn'))).toContain('建房间')
-    expect(w.find('.join').exists()).toBe(true) // 输房间号加入
-    expect(w.find('.more-toggle').exists()).toBe(false) // 设置页没有「更多」
+    expect(w.find('.join').exists()).toBe(false) // 没有「输入房间号加入」
     await w.find('.start-btn').trigger('click')
-    expect(shown(w.find('.start-btn'))).toContain('正在连接')
     const ws = FakeWs.last()
     ws.open()
     expect(ws.msgs.map((m) => m.type)).toEqual(['hello', 'create'])
-    expect(ws.msgs[1]).toMatchObject({ type: 'create', kpId: KP, skin: chapterSkin(KP) }) // 按章节排到的游戏
+    expect(ws.msgs[1]).toMatchObject({ type: 'create', kpId: KP, skin: chapterSkin(KP) })
 
     let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
     const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
@@ -659,89 +657,66 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     push()
     await until(pathIs(`/battle/${CODE}`))
     expect(document.title).toContain(CODE)
-    expect(w.find('.app-header').exists()).toBe(true)
-    // 主持人首屏：二维码 + 房间号 + 复制；自己已经在红队（带「我」「主持人」）；底部开始键还不亮
-    expect(w.find('.invite .qr-wrap').exists()).toBe(true)
-    expect(w.find('.invite .code-big').text()).toBe(CODE)
-    expect(w.find('.col.red .member.me').exists()).toBe(true)
-    expect(shown(w.find('.col.red .member.me'))).toContain('主持人')
-    expect(w.findAll('.switch')).toHaveLength(1) // 只有「换到蓝队」
-    expect(w.find('.status').exists()).toBe(false) // 状态牌是给其他人看的
-    expect(w.find('.bar .start-btn').attributes('disabled')).toBeDefined()
-    expect(shown(w.find('.bar'))).toContain('两队都有人才能开始')
-    expect(shown(w)).toContain('对战开始啦') // 规则句在大厅里看
-    expect(w.find('.more').exists()).toBe(false) // 锁队 / 链接默认收起
-    await w.find('.more-toggle').trigger('click')
-    expect(w.findAll('.more .link')).toHaveLength(3)
-    expect(w.find('.more .chip.lock').exists()).toBe(true)
+    // 二维码页：三张卡各有链接与复制，一句说明；没有名单、开始键、更多
+    expect(w.find('.codes-page').exists()).toBe(true)
+    const cards = w.findAll('.code-card')
+    expect(cards).toHaveLength(3)
+    expect(cards[0]!.find('.url').text()).toContain(`#/battle/${CODE}?t=red`)
+    expect(cards[1]!.find('.url').text()).toContain(`#/battle/${CODE}?t=blue`)
+    expect(cards[2]!.find('.url').text()).toContain(`#/battle/${CODE}?t=watch`)
+    expect(cards.every((c) => c.find('.chip').exists())).toBe(true)
+    expect(shown(w)).toContain('扫码进入')
+    expect(shown(w.find('.code-card.red .who'))).toContain('等待扫码')
+    expect(w.find('.start-btn').exists()).toBe(false)
+    expect(w.find('.more-toggle').exists()).toBe(false)
+    expect(w.find('.skins').exists()).toBe(false)
 
-    // 客人不带队伍进来：服务器分到人少的蓝队；开始键亮起
-    r = join(r, { clientId: 'bbbbbb', name: '小虎', version: 'v1' }, 2500).room
+    // 红队扫码进来：码下面写谁进了；蓝队还没人，不开始
+    r = join(r, { clientId: 'rrrrrr', name: '小猫', t: 'red', version: 'v1' }, 2500).room
     push()
     await settle()
-    expect(shown(w.find('.col.blue'))).toContain('小虎')
-    expect(w.find('.bar .start-btn').attributes('disabled')).toBeUndefined()
-    ws.sent.length = 0
-    await w.find('.bar .start-btn').trigger('click')
-    expect(ws.msgs).toEqual([{ type: 'start' }])
-    applyAndPush(me, { type: 'start' }, 3000)
+    expect(shown(w.find('.code-card.red .who'))).toContain('小猫')
+    expect(autoStart(r, 2600, seeds).room).toBe(r)
+    expect(w.find('.arena').exists()).toBe(false)
+    // 蓝队进来：服务器自动开始
+    r = join(r, { clientId: 'bbbbbb', name: '小虎', t: 'blue', version: 'v1' }, 2700).room
+    const auto = autoStart(r, 3000, seeds)
+    expect(auto.room.match?.phase).toBe('countdown')
+    r = auto.room
+    for (const e of auto.effects) if (e.type === 'event') ws.receive({ type: 'event', e: e.e })
+    push()
     await settle()
     expect(w.find('.app-header').exists()).toBe(false)
     expect(w.find('.arena').exists()).toBe(true)
     expect(w.find('.countdown').exists()).toBe(true)
-
     r = tick(r, 3000 + COUNTDOWN_MS).room
     ws.receive({ type: 'event', e: { type: 'go' } })
     push()
     await settle()
-    expect(w.find('.countdown').exists()).toBe(false)
-    expect(w.findAll('.row.operable')).toHaveLength(1)
-    expect(w.find('.team.red .row.operable').exists()).toBe(true)
-    expect(w.find('.team.blue .watch').exists()).toBe(true)
-    expect(w.find('.team.red .team-name').text()).toBe('小兔')
+    expect(w.findAll('.row.operable')).toHaveLength(0) // 建房的设备只观战
+    expect(w.findAll('.watch')).toHaveLength(2)
+    expect(w.find('.team.red .team-name').text()).toBe('小猫')
     expect(w.find('.team.blue .team-name').text()).toBe('小虎')
 
-    // 从界面上答第一题：只发消息，分要等服务器
-    const meP = battle.state!.players.find((p) => p.id === me)!
-    const q = battle.questionOf(meP)
-    const ans = q.answer
-    ws.sent.length = 0
-    const redRow = w.find('.team.red .row.operable')
-    if (ans.kind === 'number') {
-      for (const d of String(ans.value)) await redRow.findAll('.key').find((k) => k.text() === d)!.trigger('click')
-      await redRow.find('.key.ok').trigger('click')
-    } else {
-      const i = q.choices!.findIndex((c) => c.id === ans.choiceId)
-      await redRow.findAll('.cards .card')[i]!.trigger('click')
-    }
-    await flushPromises()
-    const given = ans.kind === 'number' ? String(ans.value) : ans.choiceId
-    expect(ws.msgs.find((m) => m.type === 'answer')).toEqual({ type: 'answer', index: 0, given, correct: true })
-    expect(w.find('.team.red .feedback.right').exists()).toBe(true)
-    expect(w.find('.team.red .score').text()).toBe('0')
-    applyAndPush(me, { type: 'answer', index: 0, given, correct: true }, 8000)
-    vi.advanceTimersByTime(700)
-    await settle()
-    expect(w.find('.team.red .score').text()).toBe('1')
-    expect(w.find('.team.red .feedback').exists()).toBe(false)
-
-    for (let i = 1; i < 8; i++) applyAndPush(me, { type: 'answer', index: i, given: '7', correct: true }, 8000 + i)
+    for (let i = 0; i < 8; i++) applyAndPush('rrrrrr', { type: 'answer', index: i, given: '7', correct: true }, 8000 + i)
     await settle()
     expect(battle.state!.phase).toBe('ended')
     vi.advanceTimersByTime(2100)
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(shown(w)).toContain('红队获胜')
-    expect(shown(w.find('.result'))).toContain('再来一局') // 主持人才有
-
-    r = { ...r, hostId: 'bbbbbb' } // 主持权换人
-    push()
+    expect(w.findAll('.result .big-btn')).toHaveLength(2) // 再来一局 + 退出，线上没有「换个游戏」
+    expect(shown(w.find('.result'))).not.toContain('换个游戏')
+    ws.sent.length = 0
+    await w.findAll('.result .big-btn')[0]!.trigger('click')
+    expect(ws.msgs).toEqual([{ type: 'rematch' }])
+    applyAndPush(me, { type: 'rematch' }, 20_000)
     await settle()
-    expect(shown(w.find('.result'))).toContain('等主持人')
-    expect(w.findAll('.result .big-btn')).toHaveLength(1) // 只剩「退出」
+    expect(w.find('.countdown').exists()).toBe(true)
 
     ws.sent.length = 0
-    await w.find('.result .big-btn').trigger('click')
+    await w.find('.bar-btn').trigger('click')
+    await w.findAll('.confirm .big-btn')[1]!.trigger('click')
     await until(pathIs(MAP))
     expect(ws.msgs.map((m) => m.type)).toContain('leave')
     expect(ws.closed).toBe(true)
@@ -770,8 +745,8 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w.unmount()
   })
 
-  it('打开邀请链接：没有名字先问，选好名字后带房间号 hello；客人的大厅先说「你在蓝队 · 等主持人开始」，举手只是告诉主持人；房间关了给提示并能回去', async () => {
-    const w = await mountAt(`/battle/${CODE}?t=blue`)
+  it('扫红队码进来：没有名字先问，选好名字后带房间号与身份 hello → 三方连接状态窗口（红队有我、蓝队还没有人）→ 蓝队进来服务器自动开始 → 只有自己那行可操作；房间关了给提示能回去', async () => {
+    const w = await mountAt(`/battle/${CODE}?t=red`)
     const room = useRoomStore()
     const battle = useBattleStore()
     room.useFactory((url) => new FakeWs(url))
@@ -782,54 +757,41 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     const ws = FakeWs.last()
     ws.open()
     const me = battle.prefs.clientId
-    expect(ws.msgs[0]).toMatchObject({ type: 'hello', code: CODE, t: 'blue' })
+    expect(ws.msgs[0]).toMatchObject({ type: 'hello', code: CODE, t: 'red' })
     expect(shown(w)).toContain('正在连接')
 
     let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: 'hhhhhh', name: '小兔' }, version: 'v1', now: 1000 })
-    r = join(r, { clientId: me, name: '小虎', t: 'blue', version: 'v1' }, 2000).room
-    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    r = join(r, { clientId: me, name: '小猫', t: 'red', version: 'v1' }, 2000).room
+    const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    push()
     await settle()
-    expect(w.find('.status.blue').exists()).toBe(true)
-    expect(shown(w.find('.status'))).toContain('你在蓝队')
-    expect(shown(w.find('.status'))).toContain('等主持人开始')
-    expect(w.find('.invite').exists()).toBe(false) // 邀请收在「更多」里
-    expect(w.find('.bar .start-btn').exists()).toBe(false)
-    expect(shown(w.find('.bar'))).toContain('等主持人开始')
-    ws.sent.length = 0
-    await w.find('.raise').trigger('click')
-    expect(ws.msgs).toEqual([{ type: 'ready', ready: true }])
-    r = apply(r, me, { type: 'ready', ready: true }, 2100, seeds).room
-    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    expect(w.find('.wait').exists()).toBe(true)
+    expect(w.find('.codes-page').exists()).toBe(false)
+    expect(shown(w.find('.wait'))).toContain('等大家进来')
+    expect(shown(w.find('.sides li.red'))).toContain('我')
+    expect(shown(w.find('.sides li.blue'))).toContain('还没有人')
+    expect(shown(w.find('.sides li.watch'))).toContain('1')
+    expect(w.find('.start-btn').exists()).toBe(false)
+
+    r = join(r, { clientId: 'bbbbbb', name: '小虎', t: 'blue', version: 'v1' }, 2500).room
+    const auto = autoStart(r, 3000, seeds)
+    r = auto.room
+    for (const e of auto.effects) if (e.type === 'event') ws.receive({ type: 'event', e: e.e })
+    push()
     await settle()
-    expect(w.find('.raise.on').exists()).toBe(true)
-    expect(w.find('.col.blue .ready-mark').exists()).toBe(true)
-    await w.find('.col.red .switch').trigger('click')
-    expect(ws.msgs[ws.msgs.length - 1]).toEqual({ type: 'team', role: 'red' })
+    expect(w.find('.arena').exists()).toBe(true)
+    r = tick(r, 3000 + COUNTDOWN_MS).room
+    ws.receive({ type: 'event', e: { type: 'go' } })
+    push()
+    await settle()
+    expect(w.findAll('.row.operable')).toHaveLength(1)
+    expect(w.find('.team.red .row.operable').exists()).toBe(true)
 
     ws.receive({ type: 'error', error: 'closed' })
     await settle()
     expect(shown(w)).toContain('房间已关闭')
     await w.find('.room-msg .big-btn').trigger('click')
     await until(pathIs(MAP))
-    w.unmount()
-  })
-
-  it('输房间号加入：首页底部有入口，加入页 6 位自动大写、对了进房间页；错的房间号给提示', async () => {
-    const home = await mountAt('/')
-    expect(home.find('.about-join a').attributes('href')).toBe('#/battle/join')
-    home.unmount()
-    const w = await mountAt('/battle/join')
-    const room = useRoomStore()
-    room.useFactory((url) => new FakeWs(url))
-    expect(document.title).toContain('加入对战房间')
-    const input = w.find('#join-code')
-    await input.setValue('abc23')
-    expect(w.find('.join .big-btn').attributes('disabled')).toBeDefined()
-    await input.setValue('abc234')
-    expect((input.element as HTMLInputElement).value).toBe('ABC234')
-    await w.find('form.join').trigger('submit')
-    await until(pathIs(`/battle/${CODE}`))
-    expect(shown(w)).toContain('你叫什么') // 没名字先问
     w.unmount()
   })
 })
