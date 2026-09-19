@@ -12,6 +12,7 @@ import RubyText from '@/components/ui/RubyText.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import SkinPicker from '@/components/battle/SkinPicker.vue'
 import NameSheet from '@/components/battle/NameSheet.vue'
+import ModeIcon from '@/components/battle/ModeIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,15 +78,15 @@ function start(): void {
       <h2 class="label"><RubyText :text="{ k: 'battle.who' }" /></h2>
       <div class="modes">
         <button type="button" class="mode" :class="{ on: mode === 'ai' }" @click="mode = 'ai'">
-          <span class="mode-icon">🤖</span>
+          <ModeIcon mode="ai" />
           <RubyText :text="{ k: 'battle.mode.ai' }" />
         </button>
         <button type="button" class="mode" :class="{ on: mode === 'duo' }" @click="mode = 'duo'">
-          <span class="mode-icon">👫</span>
+          <ModeIcon mode="duo" />
           <RubyText :text="{ k: 'battle.mode.duo' }" />
         </button>
         <button type="button" class="mode soon" disabled>
-          <span class="mode-icon">📱</span>
+          <ModeIcon mode="online" />
           <RubyText :text="{ k: 'battle.mode.online' }" />
           <small>{{ ui('chooser.soon') }}</small>
         </button>
@@ -227,9 +228,9 @@ function start(): void {
   font-weight: 400;
   color: var(--c-text-light);
 }
-.mode-icon {
-  font-size: 40px;
-  line-height: 1;
+/* 三张卡的示意图（ModeIcon）：一台 / 两台手机，卡越宽图越大，最大 132px */
+.mode :deep(.mode-pic) {
+  margin-bottom: 2px;
 }
 .level-icon {
   font-size: 30px;

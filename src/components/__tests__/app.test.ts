@@ -465,6 +465,12 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(JSON.parse(localStorage.getItem(BATTLE_KEY)!).names.me).toBe(picked)
     expect(w.find('.name-chip.red .nm').text()).toBe(picked)
     expect(shown(w)).toContain('机器人快慢')
+    // 三张「跟谁打」卡各有一幅示意图（B27）：前两张一台手机，第三张两台；只有打机器人那张画机器人
+    const pics = w.findAll('.mode .mode-pic')
+    expect(pics.length).toBe(3)
+    expect(pics.map((p) => p.findAll('.phone').length)).toEqual([1, 1, 2])
+    expect(pics.map((p) => p.find('.robot').exists())).toEqual([true, false, false])
+    expect(pics.map((p) => p.findAll('.person').length)).toEqual([1, 2, 2])
     // 选一个皮肤后开始
     await w.findAll('.skins .tile')[1]!.trigger('click')
     await w.find('.start-btn').trigger('click')
