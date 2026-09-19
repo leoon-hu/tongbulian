@@ -109,6 +109,7 @@ onBeforeUnmount(() => {
   <div class="row" :class="[player.team, { operable, offline: !player.online }]">
     <div class="row-head">
       <span v-if="!solo" class="name">{{ displayName }}</span>
+      <span v-if="player.difficulty > 1" class="diff"><RubyText :text="{ k: 'battle.diffBadge', p: { n: player.difficulty } }" /></span>
       <span class="stats">{{ ui('battle.stats', { n: player.index, m: player.correct }) }}</span>
       <span v-if="player.streak >= 2" :key="player.streak" class="streak" :title="ui('battle.streakBadge')">🔥 ×{{ player.streak }}</span>
     </div>
@@ -228,6 +229,13 @@ onBeforeUnmount(() => {
 .name {
   font-weight: 800;
   color: var(--c-text);
+}
+.diff {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff3e6;
+  color: var(--c-primary-dark);
+  font-weight: 800;
 }
 .stats {
   flex: 1;

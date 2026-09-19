@@ -5,8 +5,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
+import type { Difficulty } from '@/types/models'
 import { AI_LEVELS, type AiLevel } from '@/battle/ai'
-import { useBattleStore, type LocalMode } from '@/stores/battle'
+import { useBattleStore, type DiffSlot, type LocalMode } from '@/stores/battle'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import BigButton from '@/components/ui/BigButton.vue'
@@ -31,6 +32,24 @@ const asking = ref<'me' | 'left' | 'right' | null>(null)
 const names = computed(() => store.prefs.names)
 const leftName = computed(() => names.value.left || names.value.me)
 
+// 让子（B8 / B27 ④）：叠在「更多」里；有人不是一档就默认展开，家长一眼看到现在的设置
+const more = ref(Object.values(store.prefs.difficulty).some((d) => d !== 1))
+const DIFFS: readonly Difficulty[] = [1, 2, 3]
+const handicapRows = computed<{ slot: DiffSlot; team: 'red' | 'blue'; name: string }[]>(() =>
+  mode.value === 'ai'
+    ? [
+        { slot: 'me', team: 'red', name: names.value.me || '…' },
+        { slot: 'ai', team: 'blue', name: `🤖 ${ui('battle.robot')}` },
+      ]
+    : [
+        { slot: 'left', team: 'red', name: leftName.value || '…' },
+        { slot: 'right', team: 'blue', name: names.value.right || '…' },
+      ],
+)
+function setDifficulty(slot: DiffSlot, d: Difficulty): void {
+  store.prefs.difficulty = { ...store.prefs.difficulty, [slot]: d }
+}
+
 // 第一次进对战先问名字（B17）
 onMounted(() => {
   if (!names.value.me) asking.value = 'me'
@@ -54,9 +73,12 @@ function start(): void {
     return
   }
   store.startLocal({ kpId, mode: mode.value })
-  // 在这个手势里试着全屏（iPad / Android / 电脑；iPhone 不支持就算了）
+  // 在这个手势里试着全屏（iPad / Android / 电脑；iPhone 不支持就算了），全屏了再试横屏锁（B30，只有 Android 装到桌面 / 全屏时可用）
   try {
-    document.documentElement.requestFullscreen?.()?.catch(() => {})
+    document.documentElement
+      .requestFullscreen?.()
+      ?.then(() => (screen.orientation as { lock?: (o: string) => Promise<void> }).lock?.('landscape')?.catch(() => {}))
+      .catch(() => {})
   } catch {
     /* 不支持 */
   }
@@ -147,6 +169,36 @@ function start(): void {
       </div>
     </section>
 
+    <section class="block">
+      <button type="button" class="more-toggle" :aria-expanded="more" @click="more = !more">
+        <span class="more-icon" aria-hidden="true">⚙️</span>
+        <RubyText :text="{ k: 'battle.more' }" />
+        <span class="more-sep" aria-hidden="true">·</span>
+        <RubyText :text="{ k: 'battle.handicap' }" />
+        <span class="chev" aria-hidden="true">{{ more ? '▴' : '▾' }}</span>
+      </button>
+      <div v-if="more" class="handicap">
+        <p class="hint"><RubyText :text="{ k: 'battle.handicap.hint' }" /></p>
+        <div v-for="row in handicapRows" :key="row.slot" class="hrow" :class="row.team">
+          <span class="hwho"><span class="who">{{ row.team === 'red' ? '🔴' : '🔵' }}</span>{{ row.name }}</span>
+          <div class="hlevels" role="radiogroup">
+            <button
+              v-for="d in DIFFS"
+              :key="d"
+              type="button"
+              class="hlevel"
+              :class="{ on: store.prefs.difficulty[row.slot] === d }"
+              role="radio"
+              :aria-checked="store.prefs.difficulty[row.slot] === d"
+              @click="setDifficulty(row.slot, d)"
+            >
+              <RubyText :text="{ k: `battle.diff.${d}` }" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="start">
       <BigButton color="green" class="start-btn" @click="start"><RubyText :text="{ k: 'battle.start' }" /></BigButton>
     </div>
@@ -162,6 +214,77 @@ function start(): void {
 </template>
 
 <style scoped>
+.more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  color: var(--c-text);
+  font-weight: 800;
+  font-size: var(--fs-md);
+}
+.more-sep {
+  color: var(--c-text-light);
+}
+.chev {
+  color: var(--c-text-light);
+}
+.handicap {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+}
+.hint {
+  margin: 0 0 8px;
+  color: var(--c-text-light);
+  font-size: var(--fs-sm);
+}
+.hrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 0;
+}
+.hrow + .hrow {
+  border-top: 1px solid var(--c-line);
+}
+.hwho {
+  flex: 1 1 140px;
+  font-weight: 800;
+}
+.hwho .who {
+  margin-right: 6px;
+}
+.hlevels {
+  display: flex;
+  gap: 8px;
+}
+.hlevel {
+  min-width: 64px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--c-bg);
+  border: 2px solid transparent;
+  font-weight: 700;
+  color: var(--c-text);
+  transition: transform 0.08s ease;
+}
+.hlevel:active {
+  transform: scale(0.94);
+}
+.hlevel.on {
+  border-color: var(--c-primary);
+  background: #fff3e6;
+  color: var(--c-primary-dark);
+}
 .howto {
   display: inline-flex;
   align-items: center;

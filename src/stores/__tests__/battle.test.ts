@@ -45,7 +45,7 @@ describe('对战偏好（B50）', () => {
     const broken = useBattleStore()
     expect(broken.prefs.skin).toBe('random')
     expect(broken.prefs.aiLevel).toBe('mid')
-    expect(broken.prefs.difficulty).toBe(1)
+    expect(broken.prefs.difficulty).toEqual({ me: 1, left: 1, right: 1, ai: 1 })
     localStorage.setItem('tongbulian:battle', JSON.stringify({ skin: 'nope', aiLevel: 'turbo', names: 5, difficulty: 9 }))
     setActivePinia(createPinia())
     expect(useBattleStore().prefs.skin).toBe('random')
@@ -53,6 +53,25 @@ describe('对战偏好（B50）', () => {
 })
 
 describe('两人同屏（B12）', () => {
+  it('让子：难度按参赛者各记一份，旧版存的一个数迁成四份；打机器人用 me / ai，两人同屏用 left / right', () => {
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, difficulty: 3 }))
+    setActivePinia(createPinia())
+    const old = useBattleStore()
+    expect(old.prefs.difficulty).toEqual({ me: 3, left: 3, right: 3, ai: 3 })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, difficulty: { me: 2, ai: 9, right: 3 } }))
+    setActivePinia(createPinia())
+    const s = useBattleStore()
+    expect(s.prefs.difficulty).toEqual({ me: 2, left: 1, right: 3, ai: 1 })
+    s.prefs.difficulty = { ...s.prefs.difficulty, ai: 3 }
+    s.startLocal({ kpId: KP, mode: 'ai' })
+    expect(s.state!.players.map((p) => p.difficulty)).toEqual([2, 3])
+    s.leave()
+    s.startLocal({ kpId: KP, mode: 'duo' })
+    expect(s.state!.players.map((p) => p.difficulty)).toEqual([1, 3])
+    setActivePinia(createPinia())
+    expect(useBattleStore().prefs.difficulty.ai).toBe(3)
+  })
+
   it('开场规则句：本设备第一次进这个游戏才讲，同一个游戏一天内不重复，换游戏再讲，再来一局不讲；记在偏好里重开还在', () => {
     const t0 = 1_700_000_000_000
     const s = useBattleStore()

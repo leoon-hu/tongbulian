@@ -134,6 +134,7 @@ const confirming = ref(false)
 function exitFullscreen(): void {
   try {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    ;(screen.orientation as { unlock?: () => void }).unlock?.()
   } catch {
     /* 不支持 */
   }

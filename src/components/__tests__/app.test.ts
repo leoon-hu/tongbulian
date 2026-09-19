@@ -601,6 +601,26 @@ describe('帮助页（F17）', () => {
     w.unmount()
   })
 
+  it('设置页「更多 · 让子」：展开后每人一行三档，选了记进偏好，开局机器人按自己的档出题；行头显示档位角标', async () => {
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'race', aiLevel: 'mid' }))
+    const w = await mountAt('/battle/new/s1-00-count')
+    for (let i = 0; i < 50 && !w.find('.more-toggle').exists(); i++) await flushPromises()
+    expect(w.find('.handicap').exists()).toBe(false)
+    await w.find('.more-toggle').trigger('click')
+    expect(w.findAll('.hrow')).toHaveLength(2)
+    const robotRow = w.findAll('.hrow')[1]!
+    await robotRow.findAll('.hlevel')[2]!.trigger('click')
+    const store = useBattleStore()
+    expect(store.prefs.difficulty).toEqual({ me: 1, left: 1, right: 1, ai: 3 })
+    expect(JSON.parse(localStorage.getItem('tongbulian:battle')!).difficulty.ai).toBe(3)
+    await w.find('.start-btn').trigger('click')
+    for (let i = 0; i < 50 && !w.find('.arena').exists(); i++) await flushPromises()
+    expect(store.state!.players.map((p) => p.difficulty)).toEqual([1, 3])
+    expect(shown(w.find('.team.blue .row-head'))).toContain('3 档')
+    expect(w.find('.team.red .row-head .diff').exists()).toBe(false)
+    w.unmount()
+  })
+
   it('对战设置页页头有「怎么玩」，指向帮助页的规则一节', async () => {
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'race', aiLevel: 'mid' }))
     const w = await mountAt('/battle/new/s1-00-count')
