@@ -126,6 +126,7 @@ export const SHELL_ZH: Dict = {
   'battle.nearWin': '还差一分！',
   // 皮肤名（battle/skins/index.ts 的注册表）
   'skin.race': '赛跑',
+  'skin.car': '赛车',
   'skin.rocket': '火箭升空',
   'skin.rocket3d': '火箭升空 3D',
   'skin.tower': '盖楼',
@@ -187,6 +188,7 @@ export const SHELL_PINYIN: Record<string, string> = {
   'battle.lead': 'fǎn chāo la',
   'battle.nearWin': 'hái chà yì fēn',
   'skin.race': 'sài pǎo',
+  'skin.car': 'sài chē',
   'skin.rocket': 'huǒ jiàn shēng kōng',
   'skin.rocket3d': 'huǒ jiàn shēng kōng',
   'skin.tower': 'gài lóu',
@@ -308,6 +310,7 @@ export const SHELL_EN: Dict = {
   'battle.lead': 'Took the lead!',
   'battle.nearWin': 'One more!',
   'skin.race': 'Race',
+  'skin.car': 'Race cars',
   'skin.rocket': 'Rocket',
   'skin.rocket3d': 'Rocket 3D',
   'skin.tower': 'Tower',

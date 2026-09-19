@@ -37,6 +37,13 @@ export const SKINS: readonly SkinMeta[] = [
     game: () => import('../games/race').then((m) => m.createRaceGame),
   },
   {
+    id: 'car',
+    icon: '🏎️',
+    slot: 'top',
+    kind: 'race',
+    game: () => import('../games/car').then((m) => m.createCarGame),
+  },
+  {
     id: 'rocket',
     icon: '🚀',
     slot: 'center',
