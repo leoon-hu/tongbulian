@@ -10,6 +10,8 @@ const props = defineProps<{
   revealed?: { correctId: string; selectedId: string } | null
   /** 数字键盘不画显示框（外层自己画） */
   hideDisplay?: boolean
+  /** 数字键盘布局：grid 3 × 4 / wide 两行六键 */
+  layout?: 'grid' | 'wide'
 }>()
 const emit = defineEmits<{ answer: [given: unknown]; input: [value: string] }>()
 
@@ -25,6 +27,7 @@ const maxLen = computed(() =>
       v-if="question.input === 'numpad'"
       :max-len="maxLen"
       :hide-display="hideDisplay"
+      :layout="layout ?? 'grid'"
       @confirm="(n) => emit('answer', n)"
       @input="(v) => emit('input', v)"
     />

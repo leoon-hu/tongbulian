@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Choice } from '@/types/models'
+import { t } from '@/engine/i18n'
 import RubyText from '@/components/ui/RubyText.vue'
 
-defineProps<{
+const props = defineProps<{
   choices: Choice[]
   /** 作答后揭示：正确项标绿，选错项标红，并禁用点击 */
   revealed?: { correctId: string; selectedId: string } | null
@@ -11,10 +13,21 @@ defineProps<{
   highlight?: string
 }>()
 const emit = defineEmits<{ select: [id: string] }>()
+
+/**
+ * 文字选项的长度（纯数字的选项不算，770 这种两列放得下）：
+ * wordy = 有 3 个字以上的文字（一样多、长方体、12元…，对战手机紧凑版排成一列，窄卡片里不折行）；
+ * long = 有 4 个字以上的（平行四边形、11元5角…，字号小一档）
+ */
+const textLen = computed(() =>
+  Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+$/.test(s)).map((s) => Array.from(s).length)),
+)
+const wordy = computed(() => textLen.value >= 3)
+const long = computed(() => textLen.value > 3)
 </script>
 
 <template>
-  <div class="cards">
+  <div class="cards" :class="{ wordy, long }">
     <button
       v-for="c in choices"
       :key="c.id"
@@ -55,6 +68,10 @@ const emit = defineEmits<{ select: [id: string] }>()
 }
 .card:not(:disabled):active {
   transform: scale(0.94);
+}
+.cards.long .card {
+  font-size: var(--fs-lg);
+  padding: 6px 8px;
 }
 .card.correct {
   border-color: var(--c-green);

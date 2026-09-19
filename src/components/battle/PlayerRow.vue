@@ -149,6 +149,7 @@ onBeforeUnmount(() => {
           :question="question"
           :revealed="null"
           :hide-display="compact"
+          :layout="compact ? 'grid' : 'wide'"
           @answer="(g) => emit('answer', g)"
           @input="onInput"
         />
@@ -328,6 +329,23 @@ onBeforeUnmount(() => {
   max-height: 100%;
   overflow: auto;
 }
+/* 紧凑版的选项卡：矮一点；文字长的排成一列，别在窄卡片里折成三行 */
+.compact .a :deep(.cards) {
+  gap: 8px;
+}
+.compact .a :deep(.cards .card) {
+  min-height: 60px;
+  font-size: var(--fs-lg);
+}
+.compact .a :deep(.cards.wordy) {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.compact .a :deep(.cards.wordy .card) {
+  min-height: 44px;
+  font-size: var(--fs-md);
+  padding: 2px 8px;
+}
 /* 紧凑版的观看行：表情缩小、去掉「想一想」文字（表情已经在想了）、选项卡矮一点，别把作答栏撑出去 */
 .compact .ai-mood,
 .compact .a :deep(.mood) {
@@ -338,9 +356,5 @@ onBeforeUnmount(() => {
 }
 .compact .a :deep(.thinking) {
   display: none;
-}
-.compact .a :deep(.cards .card) {
-  min-height: 60px;
-  font-size: var(--fs-lg);
 }
 </style>

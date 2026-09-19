@@ -12,6 +12,9 @@ dist
 /public/chinese/
 /public/english/
 
+# 对战排版普查的截图（npm run battle:survey）
+/screenshots/survey/
+
 # 只留在本机，不进仓库
 docs/
 deploy/

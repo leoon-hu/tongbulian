@@ -1,8 +1,23 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-/** hideDisplay：不画显示框，由外层用 input 事件自己画（对战手机紧凑版把它放到题干那一栏，省高度） */
-const props = withDefaults(defineProps<{ maxLen?: number; hideDisplay?: boolean }>(), { maxLen: 3, hideDisplay: false })
+/**
+ * hideDisplay：不画显示框，由外层用 input 事件自己画（对战手机紧凑版把它放到题干那一栏，省高度）。
+ * layout：grid = 手机键盘式 3 × 4（练习页）；wide = 两行六键「1 2 3 4 5 ⌫ / 6 7 8 9 0 ✓」（对战 iPad，矮一半，给题干留高度）
+ */
+const props = withDefaults(defineProps<{ maxLen?: number; hideDisplay?: boolean; layout?: 'grid' | 'wide' }>(), {
+  maxLen: 3,
+  hideDisplay: false,
+  layout: 'grid',
+})
+
+type Key = { kind: 'digit'; d: number } | { kind: 'back' } | { kind: 'ok' }
+const DIGITS = (ds: number[]): Key[] => ds.map((d) => ({ kind: 'digit', d }))
+const keys = computed<Key[]>(() =>
+  props.layout === 'wide'
+    ? [...DIGITS([1, 2, 3, 4, 5]), { kind: 'back' }, ...DIGITS([6, 7, 8, 9, 0]), { kind: 'ok' }]
+    : [...DIGITS([1, 2, 3, 4, 5, 6, 7, 8, 9]), { kind: 'back' }, ...DIGITS([0]), { kind: 'ok' }],
+)
 /** input：显示框里的内容每次变化都发出去（对战里对手 / 观战者要看到他正在按什么） */
 const emit = defineEmits<{ confirm: [value: number]; input: [value: string] }>()
 
@@ -29,15 +44,16 @@ function confirm(): void {
 </script>
 
 <template>
-  <div class="numpad">
+  <div class="numpad" :class="layout">
     <div v-if="!hideDisplay" class="display" :class="{ empty: value === '' }">
       {{ value === '' ? '?' : value }}
     </div>
     <div class="grid">
-      <button v-for="d in 9" :key="d" class="key" @click="tapDigit(d)">{{ d }}</button>
-      <button class="key func" @click="backspace">⌫</button>
-      <button class="key" @click="tapDigit(0)">0</button>
-      <button class="key ok" :disabled="value === ''" @click="confirm">✓</button>
+      <template v-for="(k, i) in keys" :key="i">
+        <button v-if="k.kind === 'digit'" class="key" @click="tapDigit(k.d)">{{ k.d }}</button>
+        <button v-else-if="k.kind === 'back'" class="key func" @click="backspace">⌫</button>
+        <button v-else class="key ok" :disabled="value === ''" @click="confirm">✓</button>
+      </template>
     </div>
   </div>
 </template>
@@ -94,5 +110,19 @@ function confirm(): void {
 }
 .key.ok:disabled {
   background: var(--c-locked);
+}
+/* 两行六键：更宽、更矮 */
+.numpad.wide {
+  max-width: 480px;
+  gap: 10px;
+}
+.numpad.wide .grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.numpad.wide .display {
+  padding: 0 20px;
+  font-size: 36px;
+  line-height: 1.5;
 }
 </style>
