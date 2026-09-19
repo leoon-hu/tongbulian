@@ -218,6 +218,19 @@ export function drawCritter(ctx: CanvasRenderingContext2D, x: number, y: number,
   })
 }
 
+/** 队色圆牌（B32：横条游戏里每条赛道起点标一个，孩子一眼看出哪条是红队 / 蓝队的） */
+export function drawTeamBadge(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, team: 'red' | 'blue'): void {
+  ctx.fillStyle = '#ffffff'
+  circle(ctx, x, y, r)
+  ctx.fill()
+  ctx.fillStyle = team === 'red' ? '#ff6b6b' : '#4aa3ff'
+  circle(ctx, x, y, r * 0.72)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'
+  circle(ctx, x - r * 0.22, y - r * 0.22, r * 0.2)
+  ctx.fill()
+}
+
 /** 天空渐变（复用） */
 export function skyGradient(ctx: CanvasRenderingContext2D, h: number): CanvasGradient {
   return gradient(ctx, 0, 0, 0, h, [

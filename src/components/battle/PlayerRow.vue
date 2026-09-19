@@ -170,17 +170,53 @@ onBeforeUnmount(() => {
   gap: 6px;
   padding: 8px 10px;
   border-radius: var(--radius-md);
-  background: var(--c-card);
-  border: 2px solid transparent;
+  background: var(--team-soft);
+  border: 2px solid var(--team-line);
+}
+/* 队色变量由 TeamPanel 定义；单独挂载（测试 / 截图）时这里兜底 */
+.row.red {
+  --team: var(--c-red);
+  --team-dark: #d94c4c;
+  --team-soft: #fff1ef;
+  --team-line: #ffb8b8;
+}
+.row.blue {
+  --team: var(--c-blue);
+  --team-dark: #2f7fd6;
+  --team-soft: #edf5ff;
+  --team-line: #b3d6ff;
 }
 .row.operable {
   box-shadow: var(--shadow-card);
+  border-color: var(--team);
 }
-.row.red.operable {
-  border-color: rgba(255, 107, 107, 0.35);
+/* 按钮和底色分得开（B32，2026-09-20 用户提的）：选项卡 / 数字键白底、队色描边、队色底边，像立体的键；按下往下沉 */
+.row :deep(.cards .card:not(.correct):not(.wrong):not(.picked)),
+.row :deep(.numpad .key:not(.ok)) {
+  background: #fff;
+  border: 2px solid var(--team-line);
+  box-shadow:
+    0 4px 0 var(--team-dark),
+    0 6px 10px rgba(61, 44, 30, 0.1);
 }
-.row.blue.operable {
-  border-color: rgba(74, 163, 255, 0.35);
+.row :deep(.cards .card:not(:disabled):active),
+.row :deep(.numpad .key:not(.ok):active) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--team-dark);
+}
+.row :deep(.numpad .key.ok) {
+  border: 2px solid #2fbf7f;
+  box-shadow:
+    0 4px 0 #229a63,
+    0 6px 10px rgba(61, 44, 30, 0.1);
+}
+.row :deep(.numpad .key.ok:active) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #229a63;
+}
+.row :deep(.numpad .key.ok:disabled) {
+  border-color: var(--c-locked);
+  box-shadow: 0 4px 0 #bfb5a8;
 }
 .row-head {
   display: flex;

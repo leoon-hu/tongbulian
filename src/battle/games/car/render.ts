@@ -5,7 +5,7 @@
 import { gradient } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawCar } from '@/battle/game/sprites/car'
-import { drawCheckerFlag, drawCloud, drawCritter, drawFinishPost, drawHill, drawStarter, drawSun, drawTree, skyGradient, type CritterKind } from '@/battle/game/sprites/scenery'
+import { drawCheckerFlag, drawCloud, drawCritter, drawFinishPost, drawHill, drawStarter, drawSun, drawTeamBadge, drawTree, skyGradient, type CritterKind } from '@/battle/game/sprites/scenery'
 import type { CarGeometry, CarModel } from './model'
 
 const CROWD_KINDS: CritterKind[] = ['bear', 'pig', 'panda', 'monkey']
@@ -45,9 +45,10 @@ export function renderBackground(ctx: CanvasRenderingContext2D, g: CarGeometry):
   ctx.lineTo(W, (g.roadTop + g.roadBottom) / 2)
   ctx.stroke()
   ctx.restore()
-  // 起点线
+  // 起点线 + 每条车道起点的队色圆牌（B32）
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(g.startX, g.roadTop, Math.max(2, 3 * k), g.roadBottom - g.roadTop)
+  g.laneY.forEach((y, i) => drawTeamBadge(ctx, g.startX - 12 * k, y - g.size * 0.22, Math.min(g.size * 0.16, 9 * k), i === 0 ? 'red' : 'blue'))
   // 格子终点线
   const cell = Math.max(3, 5 * k)
   for (let y = g.roadTop, j = 0; y < g.roadBottom; y += cell, j++) {

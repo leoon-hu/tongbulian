@@ -16,6 +16,7 @@ import {
   drawMarker,
   drawStarter,
   drawSun,
+  drawTeamBadge,
   drawTree,
   skyGradient,
   type CritterKind,
@@ -62,9 +63,10 @@ export function renderBackground(ctx: CanvasRenderingContext2D, g: RaceGeometry,
     ctx.stroke()
     ctx.setLineDash([])
   }
-  // 起点线
+  // 起点线 + 每条赛道起点的队色圆牌（B32）
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(g.startX, g.laneY[0], Math.max(2, 3 * k), g.laneY[1] + g.laneH - g.laneY[0])
+  g.laneY.forEach((y, i) => drawTeamBadge(ctx, g.startX - 12 * k, y + g.laneH / 2, Math.min(g.laneH * 0.42, 9 * k), i === 0 ? 'red' : 'blue'))
   // 未亮的标记
   if (!g.compact) {
     for (let i = 1; i <= target; i++) {

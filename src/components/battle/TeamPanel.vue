@@ -63,14 +63,28 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
 </template>
 
 <style scoped>
+/* 队区（B32：一眼分清红队 / 蓝队）：队色描边、实心队名条白字、淡队色底；队色变量给下面的成员行与按钮用 */
 .team {
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.6);
+  border: 3px solid var(--team);
   overflow: hidden;
+}
+.team.red {
+  --team: var(--c-red);
+  --team-dark: #d94c4c;
+  --team-soft: #fff1ef;
+  --team-line: #ffb8b8;
+}
+.team.blue {
+  --team: var(--c-blue);
+  --team-dark: #2f7fd6;
+  --team-soft: #edf5ff;
+  --team-line: #b3d6ff;
 }
 .flash {
   position: absolute;
@@ -93,12 +107,8 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
   padding: 6px 12px;
   font-weight: 800;
   font-size: var(--fs-md);
-}
-.team.red .team-head {
-  background: rgba(255, 107, 107, 0.16);
-}
-.team.blue .team-head {
-  background: rgba(74, 163, 255, 0.16);
+  color: #fff;
+  background: var(--team-dark);
 }
 .team-name {
   flex: 1;
@@ -116,15 +126,11 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(61, 44, 30, 0.12);
+  background: rgba(255, 255, 255, 0.35);
   transition: transform 0.25s ease, background 0.25s ease;
 }
-.team.red .progress i.on {
-  background: var(--c-red);
-  transform: scale(1.2);
-}
-.team.blue .progress i.on {
-  background: var(--c-blue);
+.progress i.on {
+  background: #fff;
   transform: scale(1.2);
 }
 .score-wrap {
@@ -140,11 +146,8 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
   line-height: 1;
   animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.team.red .score {
-  color: var(--c-red);
-}
-.team.blue .score {
-  color: var(--c-blue);
+.score {
+  color: #fff;
 }
 .plus {
   position: absolute;
@@ -152,7 +155,7 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
   top: -0.2em;
   font-size: var(--fs-md);
   font-weight: 900;
-  color: var(--c-green);
+  color: #ffe27a;
   animation: rise 0.9s ease-out forwards;
   pointer-events: none;
 }
