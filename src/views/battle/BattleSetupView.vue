@@ -275,6 +275,23 @@ function start(): void {
 .join-btn:disabled {
   opacity: 0.45;
 }
+/* 窄屏（手机竖屏）放不下页头三个键：整块换到标题下面一行、靠右，标题不再被挤成竖排 */
+@media (max-width: 640px) {
+  .setup :deep(.page-header) {
+    flex-wrap: wrap;
+  }
+  .setup :deep(.page-header .actions) {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .config-btn,
+  .join-btn {
+    margin-right: 0;
+  }
+}
 .setup {
   max-width: 840px;
   margin: 0 auto;
