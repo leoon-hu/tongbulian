@@ -82,7 +82,7 @@ describe('中继服务（B41–B46）', () => {
     b.send({ type: 'hello', clientId: 'bbbbbb', name: '小虎', version: 'v1', code, t: 'blue' })
     const joinedB = await b.state()
     expect(joinedB.room.members.map((m) => [m.clientId, m.role])).toEqual([
-      ['aaaaaa', 'watch'],
+      ['aaaaaa', 'red'],
       ['bbbbbb', 'blue'],
     ])
     a.send({ type: 'team', role: 'red' })

@@ -6,13 +6,13 @@ import { FakeWs } from './fake-socket'
 const SNAP: RoomSnapshot = { code: 'ABC234', kpId: 's1-05-carry-add', skin: 'race', hostId: 'aaaaaa', locked: false, createdAt: 0, members: [], match: null }
 
 function client(overrides: Partial<RoomClientOptions> = {}) {
-  const calls = { state: [] as [RoomSnapshot, string][], events: [] as unknown[], errors: [] as string[], status: [] as SocketStatus[] }
+  const calls = { state: [] as [RoomSnapshot, string, number][], events: [] as unknown[], errors: [] as string[], status: [] as SocketStatus[] }
   const c = new RoomClient({
     url: 'ws://x/ws',
     clientId: 'aaaaaa',
     name: '小兔',
     version: 'v1',
-    onState: (r, y) => calls.state.push([r, y]),
+    onState: (r, y, n) => calls.state.push([r, y, n]),
     onEvent: (e) => calls.events.push(e),
     onError: (e) => calls.errors.push(e),
     onStatus: (s) => calls.status.push(s),
@@ -57,8 +57,8 @@ describe('RoomClient（B23 / B42 / B44）', () => {
     c.send({ type: 'start' })
     expect(ws.msgs[2]).toEqual({ type: 'start' })
 
-    ws.receive({ type: 'state', room: SNAP, you: 'aaaaaa' })
-    expect(calls.state).toEqual([[SNAP, 'aaaaaa']])
+    ws.receive({ type: 'state', room: SNAP, you: 'aaaaaa', now: 12345 })
+    expect(calls.state).toEqual([[SNAP, 'aaaaaa', 12345]])
     ws.receive({ type: 'event', e: { type: 'go' } })
     expect(calls.events).toEqual([{ type: 'go' }])
     ws.receive({ type: 'error', error: 'teamFull' })
@@ -108,6 +108,23 @@ describe('RoomClient（B23 / B42 / B44）', () => {
     back.drop()
     vi.advanceTimersByTime(BACKOFF_MS[0]!)
     expect(FakeWs.all).toHaveLength(7)
+  })
+
+  it('kick()：正在等退避时立刻再连一次；连着 / 关了都不动', () => {
+    const { c } = client()
+    c.connect('ABC234')
+    FakeWs.last().open()
+    c.kick()
+    expect(FakeWs.all).toHaveLength(1)
+    FakeWs.last().drop()
+    c.kick()
+    expect(FakeWs.all).toHaveLength(2)
+    expect(c.status).toBe('reconnecting')
+    FakeWs.last().open()
+    expect(c.status).toBe('open')
+    c.close()
+    c.kick()
+    expect(FakeWs.all).toHaveLength(2)
   })
 
   it('被顶掉 / 房间没了 / 版本不对：不再重连；close() 之后也不重连，再发的消息只攒着不报错', () => {

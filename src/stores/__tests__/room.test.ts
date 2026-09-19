@@ -6,7 +6,7 @@ import type { Question } from '@/types/models'
 import { COUNTDOWN_MS } from '@/battle/match'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
 import { apply, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
-import { FEEDBACK_RIGHT_MS, useBattleStore } from '../battle'
+import { ANSWER_WAIT_MS, FEEDBACK_RIGHT_MS, useBattleStore } from '../battle'
 import { useRoomStore } from '../room'
 
 const KP = 's1-05-carry-add'
@@ -19,9 +19,10 @@ function correctOf(q: Question): number | string {
   return q.answer.kind === 'number' ? q.answer.value : q.answer.choiceId
 }
 
-/** 服务器那边的房间：主持人 hhhhhh 建房，me 从红队链接进来 */
+/** 服务器那边的房间：主持人 hhhhhh 建房后改成只主持（观战），me 从红队链接进来 */
 function roomWith(me: string): Room {
-  const r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: HOST, name: '主持' }, version: 'v1', now: 1000 })
+  let r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: HOST, name: '主持' }, version: 'v1', now: 1000 })
+  r = apply(r, HOST, { type: 'team', role: 'watch' }, 1500, seeds).room
   return join(r, { clientId: me, name: '小兔', t: 'red', version: 'v1' }, 2000).room
 }
 
@@ -53,7 +54,7 @@ describe('房间 store（B19–B25）', () => {
     expect(ws.msgs[0]).toMatchObject({ type: 'hello', clientId: me, name: '小兔', code: CODE, t: 'red' })
 
     let r = roomWith(me)
-    ws.receive({ type: 'state', room: snapshot(r), you: me })
+    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
     expect(room.you).toBe(me)
     expect(room.me?.role).toBe('red')
     expect(room.isHost).toBe(false)
@@ -88,13 +89,15 @@ describe('房间 store（B19–B25）', () => {
       { type: 'rematch' },
     ])
 
-    // 主持人拿到房间后 canStart：两队都有人且都就绪
+    // 主持人拿到房间后 canStart：两队都有人在线就行（举手不是条件）
     r = apply(r, HOST, { type: 'team', role: 'blue' }, 3000, seeds).room
-    r = apply(r, HOST, { type: 'ready', ready: true }, 3000, seeds).room
-    r = apply(r, me, { type: 'ready', ready: true }, 3000, seeds).room
-    ws.receive({ type: 'state', room: snapshot(r), you: HOST })
+    ws.receive({ type: 'state', room: snapshot(r), you: HOST, now: 5000 })
     expect(room.isHost).toBe(true)
     expect(room.canStart).toBe(true)
+    const off = apply({ ...r, members: r.members.map((m) => (m.clientId === me ? { ...m, online: false } : m)) }, HOST, { type: 'ping' }, 3000, seeds).room
+    ws.receive({ type: 'state', room: snapshot(off), you: HOST, now: 5000 })
+    expect(room.canStart).toBe(false)
+    ws.receive({ type: 'state', room: snapshot(r), you: HOST, now: 5000 })
 
     ws.receive({ type: 'error', error: 'teamFull' })
     expect(room.error).toBe('teamFull')
@@ -129,10 +132,10 @@ describe('房间 store（B19–B25）', () => {
       { type: 'create', kpId: KP, skin: 'race' },
     ])
     const r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
-    ws.receive({ type: 'state', room: snapshot(r), you: me })
+    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
     expect(room.code).toBe(CODE)
     expect(room.isHost).toBe(true)
-    expect(room.me?.role).toBe('watch')
+    expect(room.me?.role).toBe('red') // 建房的人自动进红队
     expect(room.canStart).toBe(false)
   })
 
@@ -147,9 +150,8 @@ describe('房间 store（B19–B25）', () => {
     const me = battle.prefs.clientId
     let r = roomWith(me)
     r = apply(r, HOST, { type: 'team', role: 'blue' }, 3000, seeds).room
-    r = apply(r, HOST, { type: 'ready', ready: true }, 3000, seeds).room
-    r = apply(r, me, { type: 'ready', ready: true }, 3000, seeds).room
-    const feed = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me })
+    let serverNow = 5000
+    const feed = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: serverNow })
     const applyAndFeed = (from: string, msg: Parameters<typeof apply>[2], now: number): void => {
       const res = apply(r, from, msg, now, seeds)
       r = res.room
@@ -157,7 +159,10 @@ describe('房间 store（B19–B25）', () => {
       feed()
     }
 
+    // 服务器时钟比本机快 1 小时：用时按服务器时钟算，不会算出负数
+    serverNow = Date.now() + 3_600_000
     applyAndFeed(HOST, { type: 'start' }, 3000)
+    expect(battle.now() - Date.now()).toBeGreaterThan(3_599_000)
     expect(battle.state?.phase).toBe('countdown')
     expect(battle.operable).toEqual([me])
     expect(room.inMatch).toBe(true)
@@ -192,6 +197,14 @@ describe('房间 store（B19–B25）', () => {
     expect(battle.pending[me]).toBeDefined() // 快照还没推进题号
     applyAndFeed(me, { type: 'answer', index: 0, given: '7', correct: true }, 8000)
     expect(battle.pending[me]).toBeUndefined()
+    // 消息丢了：等 ANSWER_WAIT_MS 没等到快照推进就放开这题
+    ws.sent.length = 0
+    battle.submit(me, correctOf(battle.questionOf(battle.state!.players.find((x) => x.id === me)!)))
+    expect(ws.msgs).toHaveLength(1)
+    vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + ANSWER_WAIT_MS - 10)
+    expect(battle.pending[me]).toBeDefined()
+    vi.advanceTimersByTime(20)
+    expect(battle.pending[me]).toBeUndefined()
     expect(battle.state!.score.red).toBe(1)
     expect(battle.events.some((x) => x.e.type === 'point')).toBe(true)
 
@@ -209,7 +222,7 @@ describe('房间 store（B19–B25）', () => {
     expect(battle.pending).toEqual({})
     expect(battle.events[battle.events.length - 1]?.e).toEqual({ type: 'countdown' }) // 事件先于快照到，不能被清掉
 
-    ws.receive({ type: 'state', room: snapshot(r), you: 'zzzzzz' })
+    ws.receive({ type: 'state', room: snapshot(r), you: 'zzzzzz', now: 5000 })
     expect(battle.operable).toEqual([])
     room.leave()
     expect(battle.state).toBeNull()

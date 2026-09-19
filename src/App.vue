@@ -25,6 +25,7 @@ function battleInfo() {
 const BASE_TITLE = document.title
 function pageTitle(): string {
   if (route.name === 'help') return `${HELP_TITLE[lang.value]} · ${ui('brand.title')}`
+  if (route.name === 'battle-join') return [ui('room.join.title'), ui('battle.title'), ui('brand.title')].join(' · ')
   if (route.name === 'battle-room' && typeof route.params.code === 'string') {
     return [`${ui('room.title')} ${route.params.code}`, ui('battle.title'), ui('brand.title')].join(' · ')
   }

@@ -35,9 +35,10 @@ export const useRoomStore = defineStore('room', () => {
     const p = snapshot.value?.match?.phase
     return p === 'countdown' || p === 'playing' || p === 'ended'
   })
+  /** 两队都至少 1 人在线就能开始（举手不是条件，B21） */
   const canStart = computed(() => {
-    const ps = participants.value
-    return isHost.value && !inMatch.value && ps.some((m) => m.role === 'red') && ps.some((m) => m.role === 'blue') && ps.every((m) => m.ready)
+    const ps = participants.value.filter((m) => m.online)
+    return isHost.value && !inMatch.value && ps.some((m) => m.role === 'red') && ps.some((m) => m.role === 'blue')
   })
   const teamMembers = (team: Team): Member[] => snapshot.value?.members.filter((m) => m.role === team) ?? []
 
@@ -56,11 +57,16 @@ export const useRoomStore = defineStore('room', () => {
     }
   }
 
-  function onState(room: RoomSnapshot, me: string): void {
+  function onState(room: RoomSnapshot, me: string, serverNow?: number): void {
     snapshot.value = room
     you.value = me
     code.value = room.code
-    battle.syncOnline(room, me)
+    battle.syncOnline(room, me, serverNow)
+  }
+
+  /** 页面回到前台（手机锁屏 / 切走再回来）：不等退避，立刻重连（B23） */
+  function onVisible(): void {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') client?.kick()
   }
 
   function onEvent(e: ArenaEvent): void {
@@ -74,6 +80,10 @@ export const useRoomStore = defineStore('room', () => {
       return null
     }
     client?.close()
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', onVisible)
+      document.addEventListener('visibilitychange', onVisible)
+    }
     client = new RoomClient({
       url,
       clientId: battle.prefs.clientId,
@@ -146,6 +156,7 @@ export const useRoomStore = defineStore('room', () => {
 
   /** 离开房间：告诉服务器释放座位、断开连接；比赛状态也清掉 */
   function leave(): void {
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible)
     if (client) {
       client.send({ type: 'leave' })
       client.close()

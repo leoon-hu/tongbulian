@@ -39,6 +39,8 @@ export interface OnlineTransport {
 export const FEEDBACK_RIGHT_MS = 600
 export const FEEDBACK_WRONG_MS = 1200
 export const FEEDBACK_CALLOUT_MS = 1400
+/** 线上模式：答完一题后最多等服务器确认这么久，没等到就放开这题让他重答（B23） */
+export const ANSWER_WAIT_MS = 4000
 /** 弹出提示显示多久 */
 export const CALLOUT_MS = 1600
 /** 事件队列保留最近多少条 */
@@ -157,6 +159,11 @@ export const useBattleStore = defineStore('battle', () => {
   let inputPending: string | null = null
   /** 线上模式：答完一题后，反馈窗口时间到了 + 服务器快照里题号已推进 → 才关反馈（两个条件各记一份） */
   const awaiting = new Map<string, { index: number; elapsed: boolean }>()
+  /** 线上模式：服务器时钟 − 本机时钟（每份快照更新），比赛用时按它算，各设备时钟不一样也准 */
+  const clockOffset = ref(0)
+  function now(): number {
+    return Date.now() + clockOffset.value
+  }
   /** 本机可以操作的玩家 id */
   const operable = ref<string[]>([])
   const pending = ref<Record<string, Feedback>>({})
@@ -243,12 +250,20 @@ export const useBattleStore = defineStore('battle', () => {
     pending.value = rest
   }
 
-  /** 线上模式：反馈窗口时间到了、快照也推进了才关 */
+  /** 线上模式：反馈窗口时间到了、快照也推进了才关；等太久（消息丢了）就放开让他重答 */
   function settleOnline(playerId: string): void {
     const a = awaiting.get(playerId)
     if (!a || !a.elapsed) return
     const p = state.value ? findPlayer(state.value, playerId) : undefined
-    if (p && p.index < a.index && state.value?.phase === 'playing') return
+    if (p && p.index < a.index && state.value?.phase === 'playing') {
+      later(timers, () => {
+        if (awaiting.get(playerId) === a) {
+          awaiting.delete(playerId)
+          clearPending(playerId)
+        }
+      }, ANSWER_WAIT_MS)
+      return
+    }
     awaiting.delete(playerId)
     clearPending(playerId)
   }
@@ -304,9 +319,10 @@ export const useBattleStore = defineStore('battle', () => {
    * 收到房间快照：比赛部分替换进来；新开一局（开始时刻变了）时清掉上一局的反馈、计时与提示。
    * 事件队列留着：服务器的 event 立刻发、快照按 100 ms 节流，新一局的 countdown 事件会先于快照到。
    */
-  function syncOnline(room: RoomSnapshot, me: string): void {
+  function syncOnline(room: RoomSnapshot, me: string, serverNow?: number): void {
     mode.value = 'online'
     online.value = { you: me, hostId: room.hostId }
+    if (typeof serverNow === 'number') clockOffset.value = serverNow - Date.now()
     const match = room.match
     if (!match) {
       if (state.value) reset()
@@ -494,6 +510,7 @@ export const useBattleStore = defineStore('battle', () => {
     operable.value = []
     online.value = null
     transport = null
+    clockOffset.value = 0
   }
 
   return {
@@ -508,6 +525,7 @@ export const useBattleStore = defineStore('battle', () => {
     callout,
     intro,
     online,
+    now,
     setName,
     startLocal,
     startOnline,

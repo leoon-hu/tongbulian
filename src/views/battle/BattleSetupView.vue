@@ -8,6 +8,7 @@ import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
 import type { Difficulty } from '@/types/models'
 import { AI_LEVELS, type AiLevel } from '@/battle/ai'
+import { enterArenaFullscreen } from '@/battle/fullscreen'
 import { resolveSkin } from '@/battle/skins'
 import { useBattleStore, type BattleMode, type DiffSlot, type LocalMode } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
@@ -17,6 +18,7 @@ import BigButton from '@/components/ui/BigButton.vue'
 import SkinPicker from '@/components/battle/SkinPicker.vue'
 import NameSheet from '@/components/battle/NameSheet.vue'
 import ModeIcon from '@/components/battle/ModeIcon.vue'
+import JoinCodeForm from '@/components/battle/JoinCodeForm.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,44 +69,70 @@ function saveName(name: string): void {
   store.setName(which, name)
   if (which === 'left' && !names.value.me) store.setName('me', name)
   asking.value = null
+  if (pendingCreate) {
+    pendingCreate = false
+    createRoom()
+  }
 }
 
-// ── 多设备：建房间 / 输房间号加入 ──
+// ── 多设备（B19）：建房间 → 拿到快照就进大厅；连不上服务 CREATE_TIMEOUT_MS 后提示并放开按钮 ──
+const CREATE_TIMEOUT_MS = 8000
 const creating = ref(false)
-const joinCode = ref('')
-const joinOk = computed(() => /^[A-HJ-NP-Z2-9]{6}$/.test(joinCode.value))
-const roomError = computed(() => (creating.value && room.error && FATAL_ERRORS.includes(room.error) ? room.error : null))
+/** 建房失败的原因：服务器给的错误，或 'connect'（连不上） */
+const roomError = ref<string | null>(null)
+let createTimer: ReturnType<typeof setTimeout> | null = null
+/** 没名字时先问，问完接着建房 */
+let pendingCreate = false
+function stopCreating(): void {
+  creating.value = false
+  if (createTimer) clearTimeout(createTimer)
+  createTimer = null
+}
 watch(
   () => room.code,
   (c) => {
     if (creating.value && c && room.snapshot) {
-      creating.value = false
+      stopCreating()
       router.push(`/battle/${c}`)
     }
   },
 )
-watch(roomError, (e) => {
-  if (e) creating.value = false
-})
-function join(): void {
-  const c = joinCode.value.trim().toUpperCase()
-  if (!/^[A-HJ-NP-Z2-9]{6}$/.test(c)) return
-  router.push(`/battle/${c}`)
+watch(
+  () => room.error,
+  (e) => {
+    if (creating.value && e && FATAL_ERRORS.includes(e)) {
+      stopCreating()
+      room.leave()
+      roomError.value = e
+    }
+  },
+)
+function createRoom(): void {
+  if (creating.value) return
+  roomError.value = null
+  creating.value = true
+  room.create(kpId, resolveSkin(store.prefs.skin, createRng()))
+  createTimer = setTimeout(() => {
+    if (!creating.value) return
+    stopCreating()
+    room.leave()
+    roomError.value = 'connect'
+  }, CREATE_TIMEOUT_MS)
 }
 onBeforeUnmount(() => {
   // 建房还没回来就离开了：断掉，别留一个没人的房间
   if (creating.value) room.leave()
+  if (createTimer) clearTimeout(createTimer)
 })
 
 function start(): void {
   if (!names.value.me) {
+    pendingCreate = mode.value === 'online'
     asking.value = 'me'
     return
   }
   if (mode.value === 'online') {
-    if (creating.value) return
-    creating.value = true
-    room.create(kpId, resolveSkin(store.prefs.skin, createRng()))
+    createRoom()
     return
   }
   if (mode.value === 'duo' && !names.value.right) {
@@ -112,15 +140,8 @@ function start(): void {
     return
   }
   store.startLocal({ kpId, mode: mode.value as LocalMode })
-  // 在这个手势里试着全屏（iPad / Android / 电脑；iPhone 不支持就算了），全屏了再试横屏锁（B30，只有 Android 装到桌面 / 全屏时可用）
-  try {
-    document.documentElement
-      .requestFullscreen?.()
-      ?.then(() => (screen.orientation as { lock?: (o: string) => Promise<void> }).lock?.('landscape')?.catch(() => {}))
-      .catch(() => {})
-  } catch {
-    /* 不支持 */
-  }
+  // 在这个手势里试着全屏 + 横屏锁（B30）：只有触屏设备，电脑不自动全屏
+  enterArenaFullscreen()
   router.push({ path: `/battle/local/${kpId}`, query: { mode: mode.value } })
 }
 </script>
@@ -242,27 +263,14 @@ function start(): void {
       <BigButton color="green" class="start-btn" :disabled="creating" @click="start">
         <RubyText :text="{ k: mode === 'online' ? (creating ? 'room.connecting' : 'room.create') : 'battle.start' }" />
       </BigButton>
-      <p v-if="roomError" class="room-error" role="alert"><RubyText :text="{ k: `room.error.${roomError}` }" /></p>
+      <p v-if="roomError" class="room-error" role="alert">
+        <RubyText :text="{ k: roomError === 'connect' ? 'room.connect.slow' : `room.error.${roomError}` }" />
+      </p>
     </div>
 
-    <form v-if="mode === 'online'" class="join" @submit.prevent="join">
-      <label class="join-label" for="join-code"><RubyText :text="{ k: 'room.join' }" /></label>
-      <div class="join-row">
-        <input
-          id="join-code"
-          v-model="joinCode"
-          class="join-input"
-          type="text"
-          inputmode="text"
-          autocapitalize="characters"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="6"
-          :placeholder="ui('room.join.hint')"
-        />
-        <BigButton color="blue" :disabled="!joinOk" @click="join"><RubyText :text="{ k: 'room.join.go' }" /></BigButton>
-      </div>
-    </form>
+    <section v-if="mode === 'online'" class="block join-block">
+      <JoinCodeForm />
+    </section>
 
     <NameSheet
       v-if="asking"
@@ -282,39 +290,8 @@ function start(): void {
   color: var(--c-primary-dark);
   font-weight: 700;
 }
-.join {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px 16px;
-}
-.join-label {
-  font-weight: 800;
-  color: var(--c-text-light);
-}
-.join-row {
-  display: flex;
-  gap: 10px;
-}
-.join-input {
-  width: 160px;
-  min-height: var(--tap-min);
-  padding: 0 14px;
-  border-radius: var(--radius-md);
-  border: 3px solid var(--c-line);
-  background: var(--c-card);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: var(--fs-xl);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-align: center;
-  color: var(--c-text);
-}
-.join-input:focus {
-  outline: none;
-  border-color: var(--c-primary);
+.join-block {
+  padding-bottom: 16px;
 }
 .start {
   flex-wrap: wrap;

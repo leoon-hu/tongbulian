@@ -106,7 +106,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             kind: 'steps',
             items: [
               'Enter: turn on "⚔️ Battle" at the top right of the topic map, then tap a topic; or tap ⚔️ in the header of a practice page.',
-              'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: the host creates a room and sends the red / blue / watch links or shows a QR code; everyone picks a team in the lobby and taps "Ready", then the host starts; up to 6 per team, or just watch).',
+              'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: one person taps "Create room" and gets a QR code and a room code on screen; the others scan it with a phone (or type the code under "Join a battle" at the bottom of the home page), land on the smaller team automatically and can switch or just watch; once both teams have someone, the host taps "Start the match"; up to 6 per team).',
               `Pick a game: ${games} game scenes, or 🎲 random for a new one every match.`,
               'The first time you are asked for a name; pick a ready-made one. It is not asked again.',
               'Start: the first time this device plays a game, it explains the rule in one sentence (not repeated within a day), then "Ready… 3, 2, 1, go!" and both sides get their first question.',
@@ -153,7 +153,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               'Against the robot, start with 🐢 slow and move up to 🐰 or 🚀 after winning.',
               'Steady beats fast: a wrong answer costs nothing, but the other side keeps moving. Answers in a row get a bonus (higher chime, livelier scene).',
               'Two on one device: each side keeps to its own half. A grown-up can play along with a child.',
-              'On own devices, get everyone into the lobby and tapping "Ready" before starting; if the connection drops, keep the page open and it reconnects to the same seat. The room code is the key, so only share it with your players.',
+              'On own devices, players tap "I\'m ready" when they arrive so the host sees a ✓ next to their name; if the connection drops, keep the page open and it reconnects to the same seat. The room code is the key, so only share it with your players.',
               'Practise the topic in practice mode first; then the battle is easier.',
               'Install the site to the home screen: it opens full screen and works without internet.',
             ],
@@ -176,7 +176,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               },
               {
                 q: 'Can\'t connect or join a room on own devices?',
-                a: 'It needs a network and the battle service: when the page is opened from file:// or the host has no relay service, that option is greyed out. A wrong code or a closed room (empty for 10 minutes or 3 hours old) shows a message; on "different version" refresh and open the link again; a second tab in the same browser replaces the first; anyone who joins after the match started can only watch until the next round.',
+                a: 'It needs a network and the battle service: when the page is opened from file:// or the host has no relay service, that option is greyed out, and you get a hint if it cannot connect. A wrong code or a closed room (empty for 10 minutes or 3 hours old) shows a message; on "different version" refresh and open the link again; one device counts as one player, so a second tab in the same browser replaces the first (use a private window or another browser to try two players on one computer); anyone who joins after the match started can only watch until the next round.',
               },
               { q: 'Where is progress stored? Can it be lost?', a: 'Only in this device\'s browser; nothing is uploaded and devices do not sync. Clearing browser data clears it.' },
               { q: 'Do questions repeat?', a: 'They are generated randomly, so almost never. An unfinished round continues with the same questions; a finished one gets new ones.' },
@@ -232,7 +232,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           kind: 'steps',
           items: [
             '进入：知识点地图右上角打开「⚔️ 对战」，再点一个知识点；或者在练习页页头点 ⚔️。',
-            '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：主持人建房间，把红队 / 蓝队 / 观战链接发出去或让别人扫二维码，大厅里选队、点「准备好了」，主持人开始；每队最多 6 人，也可以只看）。',
+            '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：一个人点「建房间」，屏幕上出一个二维码和房间号，其他人用手机扫码（或在首页底部「加入对战」里输房间号）就进来了，自动分到人少的队，可以换队或只看；建房的人看到两队都有人就点「开始比赛」；每队最多 6 人）。',
             `选游戏：${games} 种游戏画面，也可以「🎲 随机」，每局换一种。`,
             '第一次会问名字，点一个现成的就行，以后不再问。',
             '开始：这台设备第一次玩这个游戏会先讲一句规则（一天内不重复），然后「预备…3、2、1，开始！」，两边同时拿到第一题。',
@@ -279,7 +279,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             '第一次打机器人先选 🐢 慢，赢了再升到 🐰 或 🚀。',
             '稳比快重要：答错虽然不扣分，但对方在往前走；连对还有加成（声音更高、画面更带劲）。',
             '两人一台时左右各管各的，别去按对方那边；大人可以陪小朋友一起玩。',
-            '各用各的时先让大家都进大厅、点「准备好了」再开始；掉线了别关页面，会自动接回原来的座位；房间号本身就是钥匙，别发给不相干的人。',
+            '各用各的时，进来的人点一下「我准备好了」，建房的人看到名字旁边有 ✓ 就知道他在看了；掉线了别关页面，会自动接回原来的座位；房间号本身就是钥匙，别发给不相干的人。',
             '先在练习模式把这个知识点做熟，再去对战更有把握。',
             '把网站装到平板 / 手机的主屏幕，全屏打开、没有网也能玩。',
           ],
@@ -302,7 +302,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             },
             {
               q: '「各用各的」连不上、进不去房间？',
-              a: '要有网络和对战服务：用 file:// 打开或托管方没有中继服务时这一项是灰的。房间号打错、房间已关闭（没人 10 分钟或建了 3 小时）都会提示；提示「版本不一样」就刷新页面再从链接进；同一个浏览器再开一个标签页会顶掉先开的；比赛已经开始才进来的人只能先观战，再来一局时再进队。',
+              a: '要有网络和对战服务：用 file:// 打开或托管方没有中继服务时这一项是灰的，连不上会提示检查网络。房间号打错、房间已关闭（没人 10 分钟或建了 3 小时）都会提示；提示「版本不一样」就刷新页面再从链接进；一台设备只算一个人，同一个浏览器再开一个标签页会顶掉先开的（想在一台电脑上试两个人，用无痕窗口或另一个浏览器）；比赛已经开始才进来的人只能先观战，再来一局时再进队。',
             },
             { q: '进度存在哪里？会不会丢？', a: '只存在这台设备的浏览器里，不上传，换设备不同步；清了浏览器数据就没了。' },
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },

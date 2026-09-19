@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { COUNTDOWN_MS } from '@/battle/match'
 import type { ArenaEvent, ClientMsg } from '@/battle/protocol'
-import { ROOM_IDLE_MS, ROOM_LIFE_MS, ROOM_MAX, TEAM_MAX, apply, createRoom, expired, isCode, join, makeCode, setOnline, snapshot, tick, type Room } from '../room'
+import { HOST_GRACE_MS, ROOM_IDLE_MS, ROOM_LIFE_MS, ROOM_MAX, TEAM_MAX, apply, createRoom, expired, isCode, join, makeCode, reassignHost, setOnline, snapshot, tick, type Room } from '../room'
 
 const V = 'v1'
 const T0 = 1_700_000_000_000
 let seedN = 100
 const seeds = (): number => ++seedN
 
-function room(): Room {
+/** 建好的房间，主持人默认在红队；大多数用例让主持人只主持（观战），两队各进一个人 */
+function fresh(): Room {
   return createRoom({ code: 'ABCDEF', kpId: 's1-05-carry-add', skin: 'race', host: { clientId: 'host01', name: '主持人' }, version: V, now: T0 })
+}
+function room(): Room {
+  return apply(fresh(), 'host01', { type: 'team', role: 'watch' }, T0, seeds).room
 }
 function joined(r: Room, id: string, t?: 'red' | 'blue' | 'watch', name = id): Room {
   const res = join(r, { clientId: id, name, t, version: V }, T0 + 1)
@@ -32,11 +36,9 @@ const events = (r: Room, from: string, msg: ClientMsg): ArenaEvent[] =>
     .effects.filter((e) => e.type === 'event')
     .map((e) => (e.type === 'event' ? e.e : { type: 'go' }))
 
-/** 两队各一人、都就绪、主持人观战 → 开始 → 开打 */
+/** 两队各一人、主持人观战 → 开始 → 开打（不用举手） */
 function playing(): Room {
   let r = joined(joined(room(), 'red001', 'red'), 'blue01', 'blue')
-  r = ok(r, 'red001', { type: 'ready', ready: true })
-  r = ok(r, 'blue01', { type: 'ready', ready: true })
   r = ok(r, 'host01', { type: 'start' })
   return tick(r, T0 + 10 + COUNTDOWN_MS).room
 }
@@ -54,7 +56,8 @@ describe('房间号（B19）', () => {
 })
 
 describe('房间状态机（B13–B25、B41–B45）', () => {
-  it('建房：主持人观战、没锁、没比赛；快照不带版本；加入：版本不一致拒绝、满了拒绝、同一 clientId 回来接回座位', () => {
+  it('建房：主持人自动在红队、没锁、没比赛；快照不带版本；加入：版本不一致拒绝、满了拒绝、同一 clientId 回来接回座位', () => {
+    expect(fresh().members[0]!.role).toBe('red')
     const r = room()
     expect(r.hostId).toBe('host01')
     expect(r.members[0]!.role).toBe('watch')
@@ -62,7 +65,7 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(Object.keys(snapshot(r))).not.toContain('version')
     expect(join(r, { clientId: 'x', name: 'x', version: 'v2' }, T0).error).toBe('version')
     let full = r
-    for (let i = 1; i < ROOM_MAX; i++) full = joined(full, `c${String(i).padStart(4, '0')}`)
+    for (let i = 1; i < ROOM_MAX; i++) full = joined(full, `c${String(i).padStart(4, '0')}`, 'watch')
     expect(join(full, { clientId: 'one-more', name: '多', version: V }, T0).error).toBe('full')
     const back = join(full, { clientId: 'c0003', name: '新名字', version: V }, T0 + 5)
     expect(back.error).toBeUndefined()
@@ -70,12 +73,26 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(back.room.members.find((m) => m.clientId === 'c0003')!.name).toBe('新名字')
   })
 
-  it('进队：链接指定的队默认进去；这队满了先当观众并提示；比赛中只能观战；大厅里能换队（换队清掉就绪）；锁队后非主持人不能换', () => {
+  it('进队：不指定队就分到人少的队（一样多进红队）；链接指定的队默认进去；这队满了进另一队并提示、都满了观战；比赛中只能观战；大厅里能换队（换队清掉举手）；锁队后非主持人不能换', () => {
+    // 主持人在红队时，第一个不带 t 的人进蓝队，第二个进红队，第三个再进蓝队
+    let auto = joined(fresh(), 'auto01')
+    expect(auto.members.find((m) => m.clientId === 'auto01')!.role).toBe('blue')
+    auto = joined(auto, 'auto02')
+    expect(auto.members.find((m) => m.clientId === 'auto02')!.role).toBe('red')
+    auto = joined(auto, 'auto03')
+    expect(auto.members.find((m) => m.clientId === 'auto03')!.role).toBe('blue')
+    expect(joined(auto, 'auto04', 'watch').members.find((m) => m.clientId === 'auto04')!.role).toBe('watch')
+
     let r = joined(room(), 'red001', 'red')
     for (let i = 2; i <= TEAM_MAX; i++) r = joined(r, `red00${i}`, 'red')
     const seventh = join(r, { clientId: 'red007', name: '七', t: 'red', version: V }, T0)
     expect(seventh.error).toBe('teamFull')
-    expect(seventh.room.members.find((m) => m.clientId === 'red007')!.role).toBe('watch')
+    expect(seventh.room.members.find((m) => m.clientId === 'red007')!.role).toBe('blue')
+    let both = seventh.room
+    for (let i = 2; i <= TEAM_MAX; i++) both = joined(both, `blue0${i}`, 'blue')
+    const stuck = join(both, { clientId: 'anyone', name: '满', version: V }, T0)
+    expect(stuck.error).toBe('teamFull')
+    expect(stuck.room.members.find((m) => m.clientId === 'anyone')!.role).toBe('watch')
     r = joined(r, 'blue01', 'blue')
     r = ok(r, 'blue01', { type: 'ready', ready: true })
     expect(r.members.find((m) => m.clientId === 'blue01')!.ready).toBe(true)
@@ -93,15 +110,19 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(late.error).toBe('started')
     expect(late.room.members.find((m) => m.clientId === 'late01')!.role).toBe('watch')
     expect(errorOf(late.room, 'late01', { type: 'team', role: 'red' })).toBe('started')
+    const lateAuto = join(p, { clientId: 'late02', name: '更晚', version: V }, T0 + 20)
+    expect(lateAuto.error).toBe('started')
+    expect(lateAuto.room.members.find((m) => m.clientId === 'late02')!.role).toBe('watch')
   })
 
-  it('开始：只有主持人、两队都有人且全部就绪才行；开始后进入倒数、发 countdown；到点 tick 开打发 go；就绪清零', () => {
-    let r = joined(joined(room(), 'red001', 'red'), 'blue01', 'blue')
+  it('开始：只有主持人、两队都至少 1 人在线才行（举手不是条件）；开始后进入倒数、发 countdown；到点 tick 开打发 go；举手清零', () => {
+    let r = joined(room(), 'red001', 'red')
+    expect(errorOf(r, 'host01', { type: 'start' })).toBe('bad')
+    r = joined(r, 'blue01', 'blue')
     expect(errorOf(r, 'red001', { type: 'start' })).toBe('notHost')
-    expect(errorOf(r, 'host01', { type: 'start' })).toBe('bad')
+    const blueOff = setOnline(r, 'blue01', false, T0 + 5).room
+    expect(errorOf(blueOff, 'host01', { type: 'start' })).toBe('bad')
     r = ok(r, 'red001', { type: 'ready', ready: true })
-    expect(errorOf(r, 'host01', { type: 'start' })).toBe('bad')
-    r = ok(r, 'blue01', { type: 'ready', ready: true })
     expect(events(r, 'host01', { type: 'start' })).toEqual([{ type: 'countdown' }])
     r = ok(r, 'host01', { type: 'start' })
     expect(r.match!.phase).toBe('countdown')
@@ -157,21 +178,30 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(errorOf(r, 'red001', { type: 'skin', skin: 'tug' })).toBe('notHost')
     r = ok(r, 'host01', { type: 'skin', skin: 'tug' })
     expect(r.skin).toBe('tug')
-    r = ok(r, 'red001', { type: 'ready', ready: true })
-    r = ok(r, 'blue01', { type: 'ready', ready: true })
     r = ok(r, 'host01', { type: 'start' })
     expect(r.match!.players.map((p) => p.difficulty)).toEqual([3, 2])
     expect(r.match!.skin).toBe('tug')
     expect(errorOf(r, 'host01', { type: 'skin', skin: 'race' })).toBe('bad')
   })
 
-  it('掉线与主持：主持人掉线交给最早在线的参赛者，回来不抢回；比赛里的人标掉线；离开释放座位；过期判断', () => {
+  it('掉线与主持：主持人掉线 20 秒内不换人，超过才交给最早在线的参赛者，回来不抢回；比赛里的人标掉线、离开的人也算掉线；离开释放座位并立刻交接；过期判断', () => {
     let r = joined(joined(joined(room(), 'watch1', 'watch'), 'red001', 'red'), 'blue01', 'blue')
     r = setOnline(r, 'host01', false, T0 + 30).room
+    expect(r.hostId).toBe('host01')
+    expect(r.members[0]!.offlineAt).toBe(T0 + 30)
+    expect(reassignHost(r, T0 + 30 + HOST_GRACE_MS - 1).room).toBe(r)
+    const back = setOnline(r, 'host01', true, T0 + 40).room
+    expect(back.hostId).toBe('host01')
+    expect(back.members[0]!.offlineAt).toBeUndefined()
+    r = reassignHost(r, T0 + 30 + HOST_GRACE_MS).room
     expect(r.hostId).toBe('red001')
-    r = setOnline(r, 'host01', true, T0 + 40).room
+    r = setOnline(r, 'host01', true, T0 + 100).room
     expect(r.hostId).toBe('red001')
+    expect(reassignHost(r, T0 + 200).room).toBe(r)
     let p = playing()
+    p = ok(p, 'blue01', { type: 'leave' })
+    expect(p.match!.players.find((x) => x.id === 'blue01')!.online).toBe(false)
+    p = playing()
     p = setOnline(p, 'blue01', false, T0 + 50).room
     expect(p.match!.players.find((x) => x.id === 'blue01')!.online).toBe(false)
     expect(p.members.find((m) => m.clientId === 'blue01')!.online).toBe(false)

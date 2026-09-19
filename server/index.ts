@@ -7,13 +7,15 @@
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, RoomError, ServerMsg } from '@/battle/protocol'
-import { apply, createRoom, expired, isCode, join, makeCode, setOnline, snapshot, tick, type Effect, type Room } from './room'
+import { apply, createRoom, expired, isCode, join, makeCode, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
 
 export const MAX_ROOMS = 500
 export const MAX_MSG_BYTES = 4096
 export const RATE_PER_SEC = 20
 export const HEARTBEAT_MS = 60_000
 export const BROADCAST_MS = 100
+/** 心跳 / 交接 / GC 的检查间隔（测试可注入） */
+export const SWEEP_MS = 10_000
 
 interface Conn {
   ws: WebSocket
@@ -35,6 +37,8 @@ export interface BattleServerOptions {
   schedule?: (fn: () => void, ms: number) => void
   seed?: () => number
   log?: (line: string) => void
+  /** 心跳 / 交接 / GC 的间隔（测试注入短一点） */
+  sweepMs?: number
 }
 
 export interface BattleServer {
@@ -74,7 +78,8 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       const room = rooms.get(code)
       if (!room) return
       const snap = snapshot(room)
-      for (const c of connsOf(code)) if (c.clientId) send(c.ws, { type: 'state', room: snap, you: c.clientId })
+      const t = now()
+      for (const c of connsOf(code)) if (c.clientId) send(c.ws, { type: 'state', room: snap, you: c.clientId, now: t })
     }, BROADCAST_MS)
   }
 
@@ -153,7 +158,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     c.code = msg.code
     rooms.set(msg.code, res.room)
     // 加入 / 重连的人马上拿到一份快照，别人按节流广播
-    send(c.ws, { type: 'state', room: snapshot(res.room), you: c.clientId })
+    send(c.ws, { type: 'state', room: snapshot(res.room), you: c.clientId, now: now() })
     flush(msg.code)
   }
 
@@ -176,7 +181,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name }, version: c.version, now: now() })
     rooms.set(code, room)
     c.code = code
-    send(c.ws, { type: 'state', room: snapshot(room), you: c.clientId })
+    send(c.ws, { type: 'state', room: snapshot(room), you: c.clientId, now: now() })
   }
 
   function onMessage(c: Conn, data: string): void {
@@ -248,11 +253,13 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     })
   })
 
-  // 心跳（B44）：60 秒没消息就当掉线；房间 GC（B19）
+  // 心跳（B44）：60 秒没消息就当掉线；主持人掉线太久交接（B22）；房间 GC（B19）
   const heartbeat = setInterval(() => {
     const t = now()
     for (const c of conns) if (t - c.lastSeen > HEARTBEAT_MS) c.ws.terminate()
     for (const [code, room] of rooms) {
+      const handover = reassignHost(room, t)
+      if (handover.room !== room) commit(code, handover)
       if (!expired(room, t)) continue
       for (const c of connsOf(code)) {
         fail(c.ws, 'closed')
@@ -260,7 +267,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       }
       rooms.delete(code)
     }
-  }, 10_000)
+  }, opts.sweepMs ?? SWEEP_MS)
 
   return new Promise((resolve, reject) => {
     wss.once('error', reject)

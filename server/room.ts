@@ -1,6 +1,8 @@
 /**
  * 房间状态机（需求 B13–B25、B41–B45）：纯函数——输入一条消息，输出新房间 + 要做的事（广播快照、发瞬时事件、给某人报错）。
- * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、就绪、主持人、锁队、开始 / 结束 / 再来一局。
+ * 比赛本身是 src/battle/match.ts 那一份状态机（单设备也跑它）；这里只管成员、座位、举手、主持人、锁队、开始 / 结束 / 再来一局。
+ * 进来的人不指定队就分到人少的队（一样多进红队）；建房的人自动进红队；开始只要两队都有人在线（举手不是条件）；
+ * 主持人掉线 HOST_GRACE_MS 内回来不换人（屏幕锁一下就换主持人太吓人）。
  * 网络层（index.ts）只管连接、房间表、心跳、限流、节流广播；node 里能单测。
  */
 import type { ArenaEvent, ClientMsg, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
@@ -31,6 +33,8 @@ export const ROOM_MAX = 32
 /** 全部连接断开多久后销毁房间；建房多久后一定销毁（B19） */
 export const ROOM_IDLE_MS = 10 * 60 * 1000
 export const ROOM_LIFE_MS = 3 * 60 * 60 * 1000
+/** 主持人掉线多久才把主持权交给别人（B22） */
+export const HOST_GRACE_MS = 20 * 1000
 
 /** 房间号 6 位：去掉 0 O 1 I L 这些易混字符（B19） */
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -50,6 +54,11 @@ const isRole = (v: unknown): v is Role => v === 'red' || v === 'blue' || v === '
 function teamCount(room: Room, team: Team): number {
   return room.members.filter((m) => m.role === team).length
 }
+/** 人少的队（一样多进红队） */
+function smallerTeam(room: Room): Team {
+  return teamCount(room, 'red') <= teamCount(room, 'blue') ? 'red' : 'blue'
+}
+const otherTeam = (t: Team): Team => (t === 'red' ? 'blue' : 'red')
 
 /** 比赛进行中（倒数或比赛）：不能换队、不能改难度 */
 function inMatch(room: Room): boolean {
@@ -80,7 +89,7 @@ export function createRoom(opts: {
   const host: Member = {
     clientId: opts.host.clientId,
     name: cleanName(opts.host.name),
-    role: opts.host.role ?? 'watch',
+    role: opts.host.role ?? 'red',
     ready: false,
     difficulty: opts.host.difficulty ?? 1,
     online: true,
@@ -101,8 +110,9 @@ export function createRoom(opts: {
 }
 
 /**
- * 加入（打开链接 / 重连）：同一 clientId 回来就接回原座位；比赛开始后只能观战；这队满了先当观众。
- * 返回的 error 是给这个人的提示（started / teamFull 是提示，仍然加入；version / full 是拒绝，room 不变）。
+ * 加入（打开链接 / 重连）：同一 clientId 回来就接回原座位；没指定队就分到人少的队；比赛开始后只能观战；
+ * 指定的队满了就进另一队、都满了观战。返回的 error 是给这个人的提示（started / teamFull 是提示，仍然加入；
+ * version / full 是拒绝，room 不变）。
  */
 export function join(room: Room, who: { clientId: string; name: string; t?: Role; version: string }, now: number): { room: Room; error?: RoomError } {
   if (who.version !== room.version) return { room, error: 'version' }
@@ -113,26 +123,31 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
     return { room: withMembers({ ...room, lastActive: now }, members) }
   }
   if (room.members.length >= ROOM_MAX) return { room, error: 'full' }
-  let role: Role = who.t && isRole(who.t) ? who.t : 'watch'
+  const wanted: Role | undefined = who.t && isRole(who.t) ? who.t : undefined
+  let role: Role = 'watch'
   let error: RoomError | undefined
-  if (isTeam(role) && inMatch(room)) {
-    role = 'watch'
-    error = 'started'
-  } else if (isTeam(role) && teamCount(room, role) >= TEAM_MAX) {
-    role = 'watch'
-    error = 'teamFull'
+  if (wanted !== 'watch') {
+    if (inMatch(room)) error = 'started'
+    else {
+      const pick = wanted ?? smallerTeam(room)
+      if (teamCount(room, pick) < TEAM_MAX) role = pick
+      else {
+        error = 'teamFull'
+        if (teamCount(room, otherTeam(pick)) < TEAM_MAX) role = otherTeam(pick)
+      }
+    }
   }
   const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, difficulty: 1, online: true, joinedAt: now }
   const next: Room = { ...room, members: [...room.members, member], lastActive: now }
   return error ? { room: next, error } : { room: next }
 }
 
-/** 换成员名单，同时把比赛里对应的人的在线状态 / 名字跟上 */
+/** 换成员名单，同时把比赛里对应的人的在线状态 / 名字跟上；离开房间的人在比赛里算掉线 */
 function withMembers(room: Room, members: Member[]): Room {
   if (!room.match) return { ...room, members }
   const players = room.match.players.map((p) => {
     const m = members.find((x) => x.clientId === p.id)
-    return m ? { ...p, online: m.online, name: m.name } : p
+    return m ? { ...p, online: m.online, name: m.name } : p.online ? { ...p, online: false } : p
   })
   return { ...room, members, match: { ...room.match, players } }
 }
@@ -147,12 +162,25 @@ function nextHost(room: Room): string {
 export function setOnline(room: Room, clientId: string, online: boolean, now: number): Result {
   const m = room.members.find((x) => x.clientId === clientId)
   if (!m || m.online === online) return { room, effects: [] }
-  let next = withMembers(
+  const next = withMembers(
     { ...room, lastActive: now },
-    room.members.map((x) => (x === m ? { ...x, online } : x)),
+    room.members.map((x) => {
+      if (x !== m) return x
+      const { offlineAt: _drop, ...rest } = x
+      return online ? { ...rest, online: true } : { ...rest, online: false, offlineAt: now }
+    }),
   )
-  if (!online && clientId === room.hostId) next = { ...next, hostId: nextHost(next) }
   return { room: next, effects: [{ type: 'broadcast' }] }
+}
+
+/** 主持人掉线超过 HOST_GRACE_MS（或已不在名单里）就交接；网络层定时调用（B22） */
+export function reassignHost(room: Room, now: number): Result {
+  const host = room.members.find((m) => m.clientId === room.hostId)
+  const gone = !host || (!host.online && now - (host.offlineAt ?? now) >= HOST_GRACE_MS)
+  if (!gone) return { room, effects: [] }
+  const next = nextHost(room)
+  if (next === room.hostId) return { room, effects: [] }
+  return { room: { ...room, hostId: next }, effects: [{ type: 'broadcast' }] }
 }
 
 /** 倒数到点：开打（B42：开始时刻由服务器定） */
@@ -166,9 +194,10 @@ function participants(room: Room): Member[] {
   return room.members.filter((m) => isTeam(m.role))
 }
 
+/** 两队都至少 1 人在线就能开始（举手不是条件，B21） */
 function canStartRoom(room: Room): boolean {
-  const ps = participants(room)
-  return ps.some((m) => m.role === 'red') && ps.some((m) => m.role === 'blue') && ps.every((m) => m.ready)
+  const ps = participants(room).filter((m) => m.online)
+  return ps.some((m) => m.role === 'red') && ps.some((m) => m.role === 'blue')
 }
 
 function startRoom(room: Room, seeds: Record<string, number>, now: number): Room {

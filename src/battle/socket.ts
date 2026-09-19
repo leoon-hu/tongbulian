@@ -31,7 +31,7 @@ export interface RoomClientOptions {
   clientId: string
   name: string
   version: string
-  onState(room: RoomSnapshot, you: string): void
+  onState(room: RoomSnapshot, you: string, now: number): void
   onEvent(e: ArenaEvent): void
   onError(error: RoomError): void
   onStatus(status: SocketStatus): void
@@ -68,6 +68,14 @@ export class RoomClient {
   send(msg: ClientMsg): void {
     if (this.ws && this.ws.readyState === OPEN && this.status === 'open') this.ws.send(JSON.stringify(msg))
     else this.outbox.push(msg)
+  }
+
+  /** 页面回到前台 / 网络回来：正在等退避的话立刻再连一次（B23） */
+  kick(): void {
+    if (this.closedByUs || !this.retryTimer) return
+    clearTimeout(this.retryTimer)
+    this.retryTimer = null
+    this.open()
   }
 
   close(): void {
@@ -135,7 +143,7 @@ export class RoomClient {
       }
       if (msg.type === 'state') {
         this.code = msg.room.code
-        this.opts.onState(msg.room, msg.you)
+        this.opts.onState(msg.room, msg.you, msg.now)
       } else if (msg.type === 'event') this.opts.onEvent(msg.e)
       else if (msg.type === 'error') {
         // 被顶掉 / 房间没了 / 版本不对：不再重连

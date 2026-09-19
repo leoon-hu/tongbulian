@@ -65,13 +65,15 @@ const blueRows = computed(() => rowsOf('blue'))
 const autoRead = computed(() => store.mode !== 'duo')
 
 // ── 计时 ──
-const now = ref(Date.now())
+// 线上模式按服务器时钟（store.now() 含偏差修正），各设备时钟不一样也不会算出负的用时
+const now = ref(store.now())
 let ticker: ReturnType<typeof setInterval> | null = null
 watch(
   phase,
   (p) => {
     if (ticker) clearInterval(ticker)
-    ticker = p === 'playing' ? setInterval(() => (now.value = Date.now()), 500) : null
+    now.value = store.now()
+    ticker = p === 'playing' ? setInterval(() => (now.value = store.now()), 500) : null
   },
   { immediate: true },
 )

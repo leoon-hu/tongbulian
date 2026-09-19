@@ -32,6 +32,8 @@ const router = createRouter({
       name: 'battle-local',
       component: () => import('@/views/battle/BattleArenaView.vue'),
     },
+    // 输房间号加入（B20）：给没法扫码的设备
+    { path: '/battle/join', name: 'battle-join', component: () => import('@/views/battle/BattleJoinView.vue') },
     // 多设备房间（B19–B21）：大厅 → 竞技场 → 结果，同一视图分阶段；房间号 6 位，去掉 0 O 1 I L
     {
       path: '/battle/:code([A-HJ-NP-Z2-9]{6})',

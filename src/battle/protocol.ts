@@ -85,10 +85,13 @@ export interface Member {
   /** 昵称（≤ 8 字，只显示） */
   name: string
   role: Role
+  /** 举手（B21）：告诉主持人「我在看」，不是开始的条件 */
   ready: boolean
   /** 让子（B8） */
   difficulty: Difficulty
   online: boolean
+  /** 掉线的时刻（在线时没有）；主持人掉线超过 HOST_GRACE_MS 才交接（B22） */
+  offlineAt?: number
   joinedAt: number
 }
 
@@ -139,7 +142,7 @@ export type RoomError =
 
 /** 服务器 → 客户端 */
 export type ServerMsg =
-  | { type: 'state'; room: RoomSnapshot; you: string }
+  | { type: 'state'; room: RoomSnapshot; you: string; /** 服务器当前时刻：客户端算比赛用时用（各设备时钟不一样） */ now: number }
   | { type: 'event'; e: ArenaEvent }
   | { type: 'error'; error: RoomError }
   | { type: 'pong' }

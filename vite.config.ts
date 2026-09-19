@@ -47,7 +47,8 @@ export default defineConfig(({ mode }) => {
   return {
     define: { __BUILD__: JSON.stringify(buildId()) },
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev，B46）
-    server: { proxy: { '/ws': { target: 'ws://127.0.0.1:8787', ws: true } } },
+    // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev 起在 8787；BATTLE_PORT 可改，方便另起一份测试）
+    server: { proxy: { '/ws': { target: `ws://127.0.0.1:${process.env.BATTLE_PORT ?? 8787}`, ws: true } } },
     // 相对路径：构建产物可直接双击 dist/index.html 离线打开（配合 hash 路由）
     base: './',
     plugins: [
