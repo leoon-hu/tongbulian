@@ -1,20 +1,15 @@
 /**
- * 皮肤注册表（需求 B34–B36）：皮肤只看比分，不认识题目。新皮肤 = 新建一个组件 + 这里加一行。
+ * 皮肤注册表（需求 B34–B36）：皮肤只看比分，不认识题目。
  * slot：top = 竞技场上方横条（跑道、拔河这类横向的）；center = 左右两区之间的竖条（火箭、盖楼这类竖向的）。
+ * 登记了 game（实时绘图的游戏模块，独立 chunk）的皮肤，竞技场在盒子里放 GameHost；没有的放 load 的 CSS 组件。
+ * 新游戏 = games/<id>/ 一个目录 + 这里加一行。
  */
 import type { Component } from 'vue'
 import type { RNG } from '@/engine'
-import type { Phase, Team } from '../protocol'
+import type { GameLoader, GameState } from '../game/contract'
 
-/** 所有皮肤组件的 props */
-export interface SkinProps {
-  red: number
-  blue: number
-  target: number
-  phase: Phase
-  winner: Team | null
-  lastPoint: Team | null
-}
+/** 所有皮肤组件的 props = 游戏的比分快照（同一份类型） */
+export type SkinProps = GameState
 
 export type SkinSlot = 'top' | 'center'
 /** race 并行推进 / tug 拉锯 / consume 消耗对方 / grow 成长、建造、收集 */
@@ -25,7 +20,10 @@ export interface SkinMeta {
   icon: string
   slot: SkinSlot
   kind: SkinKind
+  /** 旧的 emoji + CSS 皮肤组件（对应游戏上线一版后删） */
   load: () => Promise<Component>
+  /** 实时绘图的游戏（B34）：有它就用 canvas 版 */
+  game?: GameLoader
 }
 
 /** 「随机」：每局开始时从注册表里挑一个 */

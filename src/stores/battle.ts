@@ -11,7 +11,7 @@ import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
 import { answerSpeech, questionSpeech } from '@/engine/speech'
 import { warmUp } from '@/engine/voice'
-import type { MatchEvent, MatchState, Player, Team } from '@/battle/protocol'
+import type { ArenaEvent, MatchEvent, MatchState, Player, SeqEvent, Team } from '@/battle/protocol'
 import {
   answer as applyAnswer,
   beginPlay as applyBegin,
@@ -34,6 +34,8 @@ export const FEEDBACK_WRONG_MS = 1200
 export const FEEDBACK_CALLOUT_MS = 1400
 /** 弹出提示显示多久 */
 export const CALLOUT_MS = 1600
+/** 事件队列保留最近多少条 */
+export const EVENT_LOG = 64
 
 const KEY = 'tongbulian:battle'
 
@@ -124,8 +126,15 @@ export const useBattleStore = defineStore('battle', () => {
   const operable = ref<string[]>([])
   const pending = ref<Record<string, Feedback>>({})
   const lastEvent = ref<MatchEvent | null>(null)
+  /** 带序号的事件队列（最近 EVENT_LOG 条）：游戏宿主按序号转发；同一次答题的几条事件都在，不像 lastEvent 会互相覆盖 */
+  const events = ref<SeqEvent[]>([])
+  let eventSeq = 0
   const callout = ref<Callout | null>(null)
   let calloutSeq = 0
+
+  function pushEvent(e: ArenaEvent): void {
+    events.value = [...events.value.slice(-(EVENT_LOG - 1)), { seq: ++eventSeq, e }]
+  }
 
   let aiRng: RNG = createRng()
   let aiLevel: AiLevel = 'mid'
@@ -172,6 +181,7 @@ export const useBattleStore = defineStore('battle', () => {
     clearAll(aiTimers)
     pending.value = {}
     lastEvent.value = null
+    events.value = []
     callout.value = null
   }
 
@@ -204,6 +214,7 @@ export const useBattleStore = defineStore('battle', () => {
           ]
     operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
     state.value = startMatch(createMatch({ kpId: opts.kpId, skin, players }), seedsFor(players, opts.seeds), opts.now ?? Date.now())
+    pushEvent({ type: 'countdown' })
     prepareVoice()
   }
 
@@ -216,7 +227,9 @@ export const useBattleStore = defineStore('battle', () => {
   /** 倒数结束：开打，机器人开始动 */
   function beginPlay(now = Date.now()): void {
     if (!state.value) return
+    const before = state.value.phase
     state.value = applyBegin(state.value, now)
+    if (before === 'countdown' && state.value.phase === 'playing') pushEvent({ type: 'go' })
     if (mode.value === 'ai') aiStep()
   }
 
@@ -253,6 +266,7 @@ export const useBattleStore = defineStore('battle', () => {
     const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1 }
     for (const e of res.events) {
       lastEvent.value = e
+      pushEvent(e)
       if (e.type === 'point') {
         playSfx('ding', streakPitch(e.streak))
         const kind = skinById(res.state.skin)?.kind
@@ -315,6 +329,7 @@ export const useBattleStore = defineStore('battle', () => {
     if (!s) return
     reset()
     state.value = startMatch(s, seedsFor(s.players, seeds), now)
+    pushEvent({ type: 'countdown' })
     prepareVoice()
   }
 
@@ -333,6 +348,7 @@ export const useBattleStore = defineStore('battle', () => {
     operable,
     pending,
     lastEvent,
+    events,
     callout,
     setName,
     startLocal,

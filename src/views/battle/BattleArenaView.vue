@@ -2,7 +2,7 @@
 // 竞技场（B28–B33）：横向三块——左区（红队）、右区（蓝队）、游戏区（皮肤说了算：上方横条或左右之间的竖条）。
 // 单设备模式：这里直接驱动 stores/battle 的本地对局；倒数 → 比赛 → 胜利动画 → 结果页。
 // 弹出提示（连对 / 反超 / 还差一分）与胜利播报的朗读在这里，音效在 store 里。
-import { computed, defineAsyncComponent, onBeforeUnmount, ref, watch, type Component } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
@@ -16,6 +16,7 @@ import { useBattleStore, type LocalMode } from '@/stores/battle'
 import { useSettingsStore } from '@/stores/settings'
 import type { RowData } from '@/components/battle/rows'
 import TeamPanel from '@/components/battle/TeamPanel.vue'
+import GameSlot from '@/components/battle/GameSlot.vue'
 import Countdown from '@/components/battle/Countdown.vue'
 import ResultPanel from '@/components/battle/ResultPanel.vue'
 import RotateOverlay from '@/components/battle/RotateOverlay.vue'
@@ -53,17 +54,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 const state = computed(() => store.state)
 const phase = computed(() => state.value?.phase)
 const skin = computed(() => (state.value ? skinById(state.value.skin) : undefined))
-const skinComps = new Map<string, Component>()
-const SkinComp = computed(() => {
-  const meta = skin.value
-  if (!meta) return null
-  let c = skinComps.get(meta.id)
-  if (!c) {
-    c = defineAsyncComponent(meta.load)
-    skinComps.set(meta.id, c)
-  }
-  return c
-})
+/** 游戏只拿这份快照（B34）：与皮肤 props 同一个类型 */
 const skinProps = computed(() => {
   const s = state.value
   return s
@@ -180,8 +171,8 @@ onBeforeUnmount(() => {
       </button>
     </header>
 
-    <div v-if="skin?.slot === 'top' && SkinComp && skinProps" class="strip top">
-      <component :is="SkinComp" v-bind="skinProps" />
+    <div v-if="skin && skin.slot === 'top' && skinProps" class="strip top">
+      <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" />
     </div>
 
     <div class="field">
@@ -196,8 +187,8 @@ onBeforeUnmount(() => {
         @answer="(id, g) => store.submit(id, g)"
         @input="(id, v) => store.setInput(id, v)"
       />
-      <div v-if="skin?.slot === 'center' && SkinComp && skinProps" class="strip center">
-        <component :is="SkinComp" v-bind="skinProps" />
+      <div v-if="skin && skin.slot === 'center' && skinProps" class="strip center">
+        <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" />
       </div>
       <TeamPanel
         team="blue"
@@ -274,7 +265,9 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
   color: var(--c-text-light);
 }
+/* 游戏盒子（B34a ①）：尺寸由这里定，游戏的 canvas 绝对定位填满它，溢出裁掉 */
 .strip {
+  position: relative;
   flex: none;
   background: var(--c-card);
   border-radius: var(--radius-lg);

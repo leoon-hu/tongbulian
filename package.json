@@ -17,7 +17,8 @@
     "seo": "node scripts/seo.mjs",
     "og": "node scripts/og.mjs",
     "audio": "node scripts/collect-speech.mjs && python3 scripts/build-audio.py",
-    "battle:survey": "node scripts/battle-survey.mjs"
+    "battle:survey": "node scripts/battle-survey.mjs",
+    "game:survey": "node scripts/game-survey.mjs"
   },
   "dependencies": {
     "pinia": "^3.0.4",

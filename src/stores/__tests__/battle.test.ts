@@ -5,7 +5,7 @@ import '@/content/math/grade1'
 import type { Player } from '@/battle/protocol'
 import { AI_ID } from '@/battle/ai'
 import type { Question } from '@/types/models'
-import { FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, useBattleStore } from '../battle'
+import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, useBattleStore } from '../battle'
 
 const KP = 's1-05-carry-add'
 
@@ -108,6 +108,39 @@ describe('两人同屏（B12）', () => {
     expect(s.state!.players[0]!.seed).toBe(5)
     s.leave()
     expect(s.state).toBeNull()
+  })
+})
+
+describe('事件队列（B34：给游戏宿主用）', () => {
+  it('倒数、开打、每次答题的事件按序号入队，同一次答题的几条都在；只留最近 EVENT_LOG 条；离开清空', () => {
+    const s = useBattleStore()
+    s.setName('me', 'A')
+    s.setName('right', 'B')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    expect(s.events.map((x) => x.e.type)).toEqual(['countdown'])
+    s.beginPlay()
+    expect(s.events.map((x) => x.e.type)).toEqual(['countdown', 'go'])
+    expect(s.events.map((x) => x.seq)).toEqual([1, 2])
+    const left = (): Player => s.state!.players[0]!
+    for (let i = 0; i < 3; i++) {
+      s.submit('left', correctOf(s.questionOf(left())))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    // 第 3 题答对：answered → point → streak 三条都在，序号递增
+    const tail = s.events.slice(-3)
+    expect(tail.map((x) => x.e.type)).toEqual(['answered', 'point', 'streak'])
+    expect(tail.map((x) => x.seq)).toEqual([tail[0]!.seq, tail[0]!.seq + 1, tail[0]!.seq + 2])
+    // 一直答错不会结束比赛：把队列灌满，只留最近 EVENT_LOG 条，序号继续递增
+    for (let i = 0; i < EVENT_LOG + 10; i++) {
+      const q = s.questionOf(s.state!.players[1]!)
+      s.submit('right', q.answer.kind === 'number' ? -1 : 'zzz')
+      vi.advanceTimersByTime(FEEDBACK_WRONG_MS + 1)
+    }
+    expect(s.events).toHaveLength(EVENT_LOG)
+    const seqs = s.events.map((x) => x.seq)
+    expect(seqs[seqs.length - 1]! - seqs[0]!).toBe(EVENT_LOG - 1)
+    s.leave()
+    expect(s.events).toEqual([])
   })
 })
 

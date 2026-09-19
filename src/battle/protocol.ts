@@ -61,6 +61,15 @@ export type MatchEvent =
   | { type: 'nearWin'; team: Team }
   | { type: 'finished'; winner: Team }
 
+/** 竞技场事件 = 比赛事件 + 倒数开始 / 开打：给游戏画面用（多设备时也由服务器发） */
+export type ArenaEvent = MatchEvent | { type: 'countdown' } | { type: 'go' }
+
+/** 带序号的事件（store 的事件队列；宿主按序号只转发新的，重连 / 晚挂载不重放历史） */
+export interface SeqEvent {
+  seq: number
+  e: ArenaEvent
+}
+
 export function otherTeam(team: Team): Team {
   return team === 'red' ? 'blue' : 'red'
 }

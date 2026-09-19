@@ -28,6 +28,7 @@ npm test             # vitest run（生成器多种子自洽、题目渲染冒�
 npm run test:watch
 npm run screenshots  # npm run dev 之后：无头 Chrome 模拟 iPhone 截 README 用的预览图到 screenshots/（含横屏的对战竞技场）
 npm run battle:survey  # npm run dev 之后：把每种「题干 × 作答方式」组合在 iPhone / iPad 横屏各截一张并拼图到 screenshots/survey/，肉眼核对对战排版；加 -- practice 查练习页（竖屏 + 横屏 + iPad）
+npm run game:survey    # npm run dev 之后：每种游戏在 0:0 / 3:2 / 6:5 / 7:7 / 8:6 胜利 / 倒数 / 手机紧凑版各截一帧（只截游戏盒子），拼图到 screenshots/survey/sheet-game-*.png
 npx vitest run src/content/math/grade2/generators/__tests__/generators.test.ts   # 单个文件
 npx vitest run -t "凑十"                                                          # 按用例名过滤
 npm run audio        # 重建朗读音频包（改了题目文案 / 生成器之后；需要 pip install edge-tts numpy 并联网）
@@ -58,6 +59,8 @@ npm run og           # 用无头 Chrome 重新渲染分享图 public/og.png（�
 | 🧊 融冰 | 左右之间 | 飘雪，底下是水面有鱼游 | 对方的 8 块冰先裂再化成水滴 | 对方冰全化，企鹅滑进水里溅水花 |
 
 手机横屏的矮横条 / 窄竖条会用 CSS 容器查询自动隐藏装饰，只留角色与轨道。
+
+游戏正在逐个升级成 **canvas 实时绘图**（`src/battle/game/` 是与具体游戏无关的部分：契约、自研的 Canvas 2D 小引擎、宿主、保底画面；`src/battle/games/<id>/` 是每个游戏的模型与渲染）。升级后的游戏仍然只看比分、不认识题目，并且被严格隔离：只能填满竞技场分给它的那个盒子、不接触摸、不出声、没有文字也没有 CSS、按需加载、出错自动换成保底进度条，页面其余部分与布局不受任何游戏改动影响（有测试保证换任何皮肤盒子之外的 DOM 完全一致）。
 
 - **跟谁打**：「🤖 打机器人」——机器人有自己的题，按 🐢 慢 / 🐰 中 / 🚀 快三档节奏答题，会一个一个按出数字、也会答错，还有表情（🤔 想题、🤖 在按、😄 答对、😅 答错）；「👫 两人一台」——一台 iPad / 电脑横着放，左右各一个人的题和键盘，可以同时按。「📱 各用各的」（每人一台设备、经房间链接同步，可观战）在做，敬请期待。
 - **竞技场一律横向**：左区红队、右区蓝队、游戏画面在上方横条或左右之间的竖条（皮肤说了算）。手机竖着拿会提示「请把手机横过来」，横屏用紧凑版布局（题干与键盘左右并排）；iPad / Android / 电脑进竞技场会试着全屏。
@@ -140,7 +143,10 @@ src/
 ├── content/math/shared/     数学各年级共用：图形名与拼音、金额 / 时刻格式化、符号读法、emoji 名字、答错讲解的教具参数
 ├── battle/                  对战：protocol.ts 一局的快照与事件；match.ts 比赛状态机（纯函数：加分、判胜、连对 / 反超 / 还差一分事件）；stream.ts 题目流
 │   │                        questionAt(kpId, seed, 难度, 序号)（分批 buildSession，任何设备都能复现别人的题）；ai.ts 机器人的节奏与答案；
-│   │                        names.ts 现成名字池；sfx.ts WebAudio 合成的音效；skins/ 皮肤注册表 + 每种皮肤一个组件（只看比分）
+│   │                        names.ts 现成名字池；sfx.ts WebAudio 合成的音效；skins/ 皮肤注册表（id、位置、类别、CSS 组件、canvas 游戏加载函数）
+│   ├── game/                实时绘图的公共部分：contract.ts（游戏与页面之间唯一的契约 GameModule）、engine/（Canvas 2D 小引擎：帧循环 / 缓动 / 粒子 / 画图助手）、
+│   │                        host/GameHost.vue（宿主：canvas、尺寸、按需加载、喂快照与事件、循环、出错回退）、fallback.ts（保底画面：两条队色进度条）
+│   └── games/<id>/          每个游戏：model.ts（纯模型，node 可测）、render.ts（只画）、index.ts（组装）
 ├── audio/                   朗读语料：corpus.ts 收集片段、corpus.json / manifest.json（脚本生成）
 ├── seo/site.ts              搜索引擎用的静态页（课程目录页、知识点页含示例题）、robots / sitemap、index.html 两段简介的生成
 ├── locales/shell.ts         应用外壳词条（品牌、目录、导航、结算、鼓励语、安装提示）及其拼音，中英
@@ -148,7 +154,7 @@ src/
 │   ├── ui/                  通用控件：顶部栏、页头、大按钮、数字键盘、选择卡、撒花、注音文字 RubyText、安装提示条 InstallBar
 │   ├── practice/            练习流程：题干渲染 QuestionRenderer、作答面板、结算页
 │   ├── battle/              对战：队区 TeamPanel（进度点、+1、闪光）、成员行 PlayerRow（可操作 / 观看两种，🔥 连对）、作答显示 WatchInput（机器人表情）、
-│   │                        弹出提示 Callout、胜利彩纸 VictoryOverlay、倒数、结果页、横屏提示、昵称面板、选皮肤
+│   │                        GameSlot（游戏盒子里放宿主还是 CSS 皮肤）、弹出提示 Callout、胜利彩纸 VictoryOverlay、倒数、结果页、横屏提示、昵称面板、选皮肤
 │   └── math/                数学教具：十格阵、钟面（含分钟刻度）、人民币、图形、数轴、序列、排队、尺子、角、竖式…
 ├── views/                   选学科 → 选年级 → 知识点地图 → 练习；battle/ 对战设置页与竞技场
 ├── stores/                  progress（按知识点记已完成、当前这一轮的 seed 与对错数）、settings（语言 / 声音）、install（安装提示：事件、静默期）、
@@ -171,7 +177,8 @@ vite.config.ts               base './'、PWA 清单与预缓存（静态页不�
 - **知识点 id 全局唯一**（生成器注册表是全局 Map），新年级用不同前缀。
 - **引擎不认识内容**：`@/engine` 不导出 catalog，目录相关从 `@/engine/catalog` 导入；内容包只依赖 `@/engine` 与 `@/types`。
 - **皮肤靠 `<html data-theme>`**：`App.vue` 按当前学科切换，颜色全走 CSS 变量。
-- **对战与内容解耦**：游戏皮肤只吃 `{ red, blue, target, phase, winner, lastPoint }`，不认识题目；题目流由 `(kpId, seed, 难度, 序号)` 确定，所以对手 / 观战 / 重连都能复现同一道题，服务器（以后的多设备模式）不用传题；比赛状态机是纯函数，单设备在页面里跑，多设备时同一份跑在中继服务上。新皮肤 = `battle/skins/` 加一个组件 + 注册表一行（有测试把每种皮肤在 0…8 × 0…8 的每个比分下渲染一遍）。
+- **对战与内容解耦**：游戏只吃 `{ red, blue, target, phase, winner, lastPoint }` 和瞬时事件，不认识题目；题目流由 `(kpId, seed, 难度, 序号)` 确定，所以对手 / 观战 / 重连都能复现同一道题，服务器（以后的多设备模式）不用传题；比赛状态机是纯函数，单设备在页面里跑，多设备时同一份跑在中继服务上。
+- **游戏与页面隔离**：canvas 游戏实现 `battle/game/contract.ts` 的 `GameModule`，由 `GameHost` 装进竞技场的固定盒子里；游戏没有 CSS、不接触摸（`pointer-events: none`）、不出声、拿不到 store / 路由 / DOM，加载失败或抛错自动换保底画面。`arena-isolation.test.ts` 用每种皮肤挂载竞技场，断言盒子之外的 DOM 完全一致。新游戏 = `battle/games/<id>/` 一个目录（model / render / index）+ 注册表一行。
 
 ### 加一个年级（例：三年级数学）
 
