@@ -451,7 +451,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     vi.useRealTimers()
   })
 
-  it('地图上的「⚔️ 对战」开关 → 设置页先问名字 → 开始进竞技场（无全局顶栏、标题带「对战」）', async () => {
+  it('地图上的「⚔️ 对战」开关 → 设置页只有三张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；没名字点开始才问，问完直接进竞技场（无全局顶栏、标题带「对战」）', async () => {
     const w = await mountAt(MAP)
     const toggle = w.find('.tab.battle')
     expect(toggle.exists()).toBe(true)
@@ -460,31 +460,42 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     await until(pathIs('/battle/new/s1-00-count'))
     expect(shown(w)).toContain('跟谁打')
     expect(document.title).toContain('对战')
-    // 第一次进对战先问名字：点一个现成名字就行
-    expect(shown(w)).toContain('你叫什么')
-    const chip = w.find('.sheet .chip')
-    const picked = chip.text()
-    await chip.trigger('click')
-    await w.find('form.sheet').trigger('submit')
-    await flushPromises()
+    // 页面默认不问名字、不展示机器人快慢 / 选游戏 / 名字
     expect(w.find('.sheet').exists()).toBe(false)
-    expect(JSON.parse(localStorage.getItem(BATTLE_KEY)!).names.me).toBe(picked)
-    expect(w.find('.name-chip.red .nm').text()).toBe(picked)
-    expect(shown(w)).toContain('机器人快慢')
+    expect(shown(w)).not.toContain('机器人快慢')
+    expect(w.find('.skins').exists()).toBe(false)
+    expect(w.find('.name-chip').exists()).toBe(false)
     // 三张「跟谁打」卡各有一幅示意图（B27）：前两张一台手机，第三张两台；只有打机器人那张画机器人
     const pics = w.findAll('.mode .mode-pic')
     expect(pics.length).toBe(3)
     expect(pics.map((p) => p.findAll('.phone').length)).toEqual([1, 1, 2])
     expect(pics.map((p) => p.find('.robot').exists())).toEqual([true, false, false])
     expect(pics.map((p) => p.findAll('.person').length)).toEqual([1, 2, 2])
-    // 选一个皮肤后开始
-    await w.findAll('.skins .tile')[1]!.trigger('click')
+    // ⚙️ 配置：机器人快慢默认中、选游戏默认按章节、名字
+    await w.find('.config-btn').trigger('click')
+    expect(shown(w.find('.config'))).toContain('机器人快慢')
+    expect(shown(w.find('.config .level.on'))).toContain('中')
+    expect(shown(w.find('.config .skins .tile.on'))).toContain('按章节')
+    expect(shown(w.find('.config'))).toContain('我的名字')
+    await w.findAll('.config .skins .tile')[2]!.trigger('click') // 赛跑
+    await w.find('.config .done').trigger('click')
+    expect(w.find('.config').exists()).toBe(false)
+    const store = useBattleStore()
+    expect(store.prefs.skin).toBe('race')
+    // 没名字：点开始才问，点一个现成名字就直接进竞技场
     await w.find('.start-btn').trigger('click')
+    expect(shown(w)).toContain('你叫什么')
+    const chip = w.find('.sheet .chip')
+    const picked = chip.text()
+    await chip.trigger('click')
+    await w.find('form.sheet').trigger('submit')
     await until(pathIs('/battle/local/s1-00-count'))
+    expect(JSON.parse(localStorage.getItem(BATTLE_KEY)!).names.me).toBe(picked)
     expect(router.currentRoute.value.query.mode).toBe('ai')
     expect(w.find('.app-header').exists()).toBe(false)
     expect(w.find('.arena').exists()).toBe(true)
     expect(w.find('.countdown').exists()).toBe(true)
+    expect(store.state!.skin).toBe('race')
     w.unmount()
   })
 
@@ -728,16 +739,17 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w.unmount()
   })
 
-  it('建房连不上服务：8 秒后提示、按钮放开；没名字先问，问完直接建房', async () => {
+  it('建房连不上服务：8 秒后提示、按钮放开；没名字点建房间才问，问完直接建房', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     const w = await mountAt(`/battle/new/${KP}`)
     const room = useRoomStore()
     room.useFactory((url) => new FakeWs(url))
-    await w.find('.sheet .chip').trigger('click') // 第一次进对战问名字
+    await w.findAll('.mode')[2]!.trigger('click')
+    expect(w.find('.sheet').exists()).toBe(false)
+    await w.find('.start-btn').trigger('click')
+    await w.find('.sheet .chip').trigger('click') // 点了建房间才问名字
     await w.find('form.sheet').trigger('submit')
     await flushPromises()
-    await w.findAll('.mode')[2]!.trigger('click')
-    await w.find('.start-btn').trigger('click')
     expect(FakeWs.all).toHaveLength(1)
     vi.advanceTimersByTime(8100)
     await settle()
@@ -834,9 +846,10 @@ describe('帮助页（F17）', () => {
     w.unmount()
   })
 
-  it('对战设置页页头有「怎么玩」，指向帮助页的规则一节', async () => {
+  it('对战设置页页头有「⚙️ 配置」和「怎么玩」，怎么玩指向帮助页的规则一节', async () => {
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'race', aiLevel: 'mid' }))
     const w = await mountAt('/battle/new/s1-00-count')
+    expect(w.find('.config-btn').exists()).toBe(true)
     for (let i = 0; i < 50 && !w.find('.howto').exists(); i++) await flushPromises()
     const a = w.find('.howto')
     expect(a.exists()).toBe(true)

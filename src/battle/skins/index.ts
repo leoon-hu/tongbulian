@@ -5,6 +5,7 @@
  * 新游戏 = games/<id>/ 一个目录 + 这里加一行 + 词条 skin.<id>。
  */
 import type { RNG } from '@/engine'
+import { courseOfKp } from '@/engine/catalog'
 import type { GameLoader, GameState } from '../game/contract'
 
 /** 所有皮肤组件的 props = 游戏的比分快照（同一份类型） */
@@ -45,6 +46,8 @@ export function finishKey(id: string): string {
 
 /** 「随机」：每局开始时从注册表里挑一个 */
 export const RANDOM_SKIN = 'random'
+/** 「按章节」（B36，默认）：每册的知识点按目录顺序轮流对应一个游戏 */
+export const AUTO_SKIN = 'auto'
 
 export const SKINS: readonly SkinMeta[] = [
   {
@@ -110,9 +113,30 @@ export function skinById(id: string): SkinMeta | undefined {
   return SKINS.find((s) => s.id === id)
 }
 
-/** 把设置里的皮肤 id 落实成一个真实皮肤：random 或不认识的 id 都随机挑 */
-export function resolveSkin(id: string, rng: RNG): string {
-  return skinById(id)?.id ?? rng.pick(SKINS.filter((s) => !s.pilot)).id
+/** 可以自动挑到的游戏（试点不算） */
+function pickable(): SkinMeta[] {
+  return SKINS.filter((s) => !s.pilot)
+}
+
+/**
+ * 「按章节」：这个知识点在它那一册里排第几（目录顺序，含 ☆ 单元），第 i 个用第 i 个游戏，排完从头再排；
+ * 下一册重新从第一个游戏排起。不在目录里的知识点用第一个游戏。
+ */
+export function chapterSkin(kpId: string): string {
+  const games = pickable()
+  const info = courseOfKp(kpId)
+  if (!info) return games[0]!.id
+  const semesterOf = (unitId: string): number | undefined => info.course.units.find((u) => u.id === unitId)?.semester
+  const sem = semesterOf(info.kp.unitId)
+  const list = info.course.knowledgePoints.filter((kp) => semesterOf(kp.unitId) === sem)
+  const i = Math.max(0, list.findIndex((kp) => kp.id === kpId))
+  return games[i % games.length]!.id
+}
+
+/** 把设置里的皮肤 id 落实成一个真实皮肤：auto 按章节（要给 kpId），random 或不认识的 id 随机挑 */
+export function resolveSkin(id: string, rng: RNG, kpId?: string): string {
+  if (id === AUTO_SKIN && kpId) return chapterSkin(kpId)
+  return skinById(id)?.id ?? rng.pick(pickable()).id
 }
 
 /** 比分占目标分的比例 0…1 */

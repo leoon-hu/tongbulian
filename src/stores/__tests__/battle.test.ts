@@ -43,11 +43,11 @@ describe('对战偏好（B50）', () => {
     localStorage.setItem('tongbulian:battle', '{"skin":"nope","aiLevel":"turbo","names":5,"difficulty":9')
     setActivePinia(createPinia())
     const broken = useBattleStore()
-    expect(broken.prefs.skin).toBe('random')
+    expect(broken.prefs.skin).toBe('auto')
     expect(broken.prefs.aiLevel).toBe('mid')
     localStorage.setItem('tongbulian:battle', JSON.stringify({ skin: 'nope', aiLevel: 'turbo', names: 5, difficulty: 9 }))
     setActivePinia(createPinia())
-    expect(useBattleStore().prefs.skin).toBe('random')
+    expect(useBattleStore().prefs.skin).toBe('auto')
   })
 })
 

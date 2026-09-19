@@ -11,7 +11,7 @@ import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
 import type { Member, Role, Team } from '@/battle/protocol'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
-import { RANDOM_SKIN, resolveSkin, ruleKey, skinById } from '@/battle/skins'
+import { resolveSkin, ruleKey, skinById } from '@/battle/skins'
 import { useBattleStore } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import Arena from '@/components/battle/Arena.vue'
@@ -140,7 +140,7 @@ function start(): void {
   room.start()
 }
 function pickSkin(id: string): void {
-  room.setSkin(id === RANDOM_SKIN ? resolveSkin(id, createRng()) : id)
+  room.setSkin(resolveSkin(id, createRng(), snap.value?.kpId))
   skinOpen.value = false
 }
 

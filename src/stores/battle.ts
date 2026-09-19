@@ -25,7 +25,7 @@ import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, isAiLevel, planAnswer, type AiLevel } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
 import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
-import { RANDOM_SKIN, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
+import { AUTO_SKIN, RANDOM_SKIN, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
 export type LocalMode = 'ai' | 'duo'
 /** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
@@ -85,7 +85,7 @@ function loadPrefs(): BattlePrefs {
   const base: BattlePrefs = {
     clientId: randomId(),
     names: { me: '', left: '', right: '' },
-    skin: RANDOM_SKIN,
+    skin: AUTO_SKIN,
     aiLevel: 'mid',
     intros: {},
   }
@@ -98,7 +98,7 @@ function loadPrefs(): BattlePrefs {
     return {
       clientId: typeof p.clientId === 'string' && p.clientId ? p.clientId : base.clientId,
       names: { me: str(names.me), left: str(names.left), right: str(names.right) },
-      skin: typeof p.skin === 'string' && (p.skin === RANDOM_SKIN || skinById(p.skin)) ? p.skin : base.skin,
+      skin: typeof p.skin === 'string' && (p.skin === AUTO_SKIN || p.skin === RANDOM_SKIN || skinById(p.skin)) ? p.skin : base.skin,
       aiLevel: isAiLevel(p.aiLevel) ? p.aiLevel : base.aiLevel,
       intros: Object.fromEntries(
         Object.entries(typeof p.intros === 'object' && p.intros !== null ? (p.intros as Record<string, unknown>) : {}).filter(
@@ -344,7 +344,7 @@ export const useBattleStore = defineStore('battle', () => {
     mode.value = opts.mode
     aiLevel = opts.aiLevel ?? prefs.value.aiLevel
     aiRng = createRng(opts.aiSeed)
-    const skin = resolveSkin(opts.skin ?? prefs.value.skin, createRng())
+    const skin = resolveSkin(opts.skin ?? prefs.value.skin, createRng(), opts.kpId)
     const me = prefs.value.names.me
     const players: PlayerInit[] =
       opts.mode === 'ai'

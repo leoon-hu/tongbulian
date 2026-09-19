@@ -1,12 +1,11 @@
 <script setup lang="ts">
-// 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）、机器人快慢、选游戏、名字 → 开始；
-// 「各用各的」（B19 / B20）：建房间 → 进大厅；或输入房间号加入别人的房间
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+// 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）→ 开始；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」的面板里，页面默认不展示；
+// 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 进大厅；或输入房间号加入别人的房间
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
-import { AI_LEVELS, type AiLevel } from '@/battle/ai'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
 import { resolveSkin } from '@/battle/skins'
 import { useBattleStore, type BattleMode, type LocalMode } from '@/stores/battle'
@@ -14,7 +13,7 @@ import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import BigButton from '@/components/ui/BigButton.vue'
-import SkinPicker from '@/components/battle/SkinPicker.vue'
+import ConfigSheet from '@/components/battle/ConfigSheet.vue'
 import NameSheet from '@/components/battle/NameSheet.vue'
 import ModeIcon from '@/components/battle/ModeIcon.vue'
 import JoinCodeForm from '@/components/battle/JoinCodeForm.vue'
@@ -33,27 +32,27 @@ const mapPath = info ? `/s/${info.subject.id}/g/${info.grade.id}` : '/'
 const mode = ref<BattleMode>('ai')
 /** 多设备（B46）：这个地址有没有对战服务（file:// 打开就没有） */
 const online = computed(() => room.available)
-const AI_ICONS: Record<AiLevel, string> = { slow: '🐢', mid: '🐰', fast: '🚀' }
 /** 正在改谁的名字（NameSheet 打开时） */
-const asking = ref<'me' | 'left' | 'right' | null>(null)
+const asking = ref<'me' | 'right' | null>(null)
 const names = computed(() => store.prefs.names)
-const leftName = computed(() => names.value.left || names.value.me)
-
-// 第一次进对战先问名字（B17）
-onMounted(() => {
-  if (!names.value.me) asking.value = 'me'
-})
+/** 「⚙️ 配置」面板 */
+const config = ref(false)
+/** 点了「开始」但还缺名字：问完接着开始 */
+let pendingStart = false
 
 function saveName(name: string): void {
   const which = asking.value
   if (!which) return
   store.setName(which, name)
-  if (which === 'left' && !names.value.me) store.setName('me', name)
   asking.value = null
-  if (pendingCreate) {
-    pendingCreate = false
-    createRoom()
+  if (pendingStart) {
+    pendingStart = false
+    start()
   }
+}
+function cancelName(): void {
+  asking.value = null
+  pendingStart = false
 }
 
 // ── 多设备（B19）：建房间 → 拿到快照就进大厅；连不上服务 CREATE_TIMEOUT_MS 后提示并放开按钮 ──
@@ -62,8 +61,6 @@ const creating = ref(false)
 /** 建房失败的原因：服务器给的错误，或 'connect'（连不上） */
 const roomError = ref<string | null>(null)
 let createTimer: ReturnType<typeof setTimeout> | null = null
-/** 没名字时先问，问完接着建房 */
-let pendingCreate = false
 function stopCreating(): void {
   creating.value = false
   if (createTimer) clearTimeout(createTimer)
@@ -92,7 +89,7 @@ function createRoom(): void {
   if (creating.value) return
   roomError.value = null
   creating.value = true
-  room.create(kpId, resolveSkin(store.prefs.skin, createRng()))
+  room.create(kpId, resolveSkin(store.prefs.skin, createRng(), kpId))
   createTimer = setTimeout(() => {
     if (!creating.value) return
     stopCreating()
@@ -107,8 +104,9 @@ onBeforeUnmount(() => {
 })
 
 function start(): void {
+  // 从来没输过名字：现在问，问完接着开始（B17 / B18）
   if (!names.value.me) {
-    pendingCreate = mode.value === 'online'
+    pendingStart = true
     asking.value = 'me'
     return
   }
@@ -117,6 +115,7 @@ function start(): void {
     return
   }
   if (mode.value === 'duo' && !names.value.right) {
+    pendingStart = true
     asking.value = 'right'
     return
   }
@@ -136,6 +135,7 @@ function start(): void {
         <span class="kp-name">{{ info.kp.icon }} <RubyText :text="{ k: kpTitleKey(info.kp) }" /></span>
       </template>
       <template #actions>
+        <button type="button" class="config-btn" @click="config = true">{{ ui('battle.config') }}</button>
         <RouterLink class="howto" to="/help#rules">{{ ui('help.howto') }}</RouterLink>
       </template>
     </PageHeader>
@@ -159,57 +159,6 @@ function start(): void {
       </div>
     </section>
 
-    <section v-if="mode === 'ai'" class="block">
-      <h2 class="label"><RubyText :text="{ k: 'battle.ai.speed' }" /></h2>
-      <div class="levels" role="radiogroup">
-        <button
-          v-for="lv in AI_LEVELS"
-          :key="lv"
-          type="button"
-          class="level"
-          :class="{ on: store.prefs.aiLevel === lv }"
-          role="radio"
-          :aria-checked="store.prefs.aiLevel === lv"
-          @click="store.prefs.aiLevel = lv"
-        >
-          <span class="level-icon">{{ AI_ICONS[lv] }}</span>
-          <RubyText :text="{ k: `battle.ai.${lv}` }" />
-        </button>
-      </div>
-    </section>
-
-    <section class="block">
-      <h2 class="label"><RubyText :text="{ k: 'battle.pickSkin' }" /></h2>
-      <SkinPicker v-model="store.prefs.skin" />
-    </section>
-
-    <section class="block">
-      <h2 class="label"><RubyText :text="{ k: 'battle.names' }" /></h2>
-      <div class="names">
-        <button v-if="mode !== 'duo'" type="button" class="name-chip red" @click="asking = 'me'">
-          <span class="who">🔴</span>
-          <span class="nm">{{ names.me || '…' }}</span>
-          <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
-        </button>
-        <template v-else>
-          <button type="button" class="name-chip red" @click="asking = 'left'">
-            <span class="who"><RubyText :text="{ k: 'battle.name.left' }" /></span>
-            <span class="nm">{{ leftName || '…' }}</span>
-            <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
-          </button>
-          <button type="button" class="name-chip blue" @click="asking = 'right'">
-            <span class="who"><RubyText :text="{ k: 'battle.name.right' }" /></span>
-            <span class="nm">{{ names.right || '…' }}</span>
-            <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
-          </button>
-        </template>
-        <span v-if="mode === 'ai'" class="name-chip blue static">
-          <span class="who">🔵</span>
-          <span class="nm">🤖 <RubyText :text="{ k: 'battle.robot' }" /></span>
-        </span>
-      </div>
-    </section>
-
     <div class="start">
       <BigButton color="green" class="start-btn" :disabled="creating" @click="start">
         <RubyText :text="{ k: mode === 'online' ? (creating ? 'room.connecting' : 'room.create') : 'battle.start' }" />
@@ -223,12 +172,13 @@ function start(): void {
       <JoinCodeForm />
     </section>
 
+    <ConfigSheet v-if="config" @close="config = false" @rename="(w) => (asking = w)" />
     <NameSheet
       v-if="asking"
-      :initial="asking === 'right' ? names.right : asking === 'left' ? leftName : names.me"
-      :taken="asking === 'right' ? [leftName] : [names.right]"
+      :initial="asking === 'right' ? names.right : names.me"
+      :taken="asking === 'right' ? [names.me] : [names.right]"
       @save="saveName"
-      @close="asking = null"
+      @close="cancelName"
     />
   </div>
 </template>
@@ -247,7 +197,8 @@ function start(): void {
 .start {
   flex-wrap: wrap;
 }
-.howto {
+.howto,
+.config-btn {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -260,6 +211,9 @@ function start(): void {
   font-size: var(--fs-sm);
   text-decoration: none;
   white-space: nowrap;
+}
+.config-btn {
+  margin-right: 8px;
 }
 .setup {
   max-width: 840px;
@@ -283,14 +237,12 @@ function start(): void {
   color: var(--c-primary-dark);
   margin-bottom: 10px;
 }
-.modes,
-.levels {
+.modes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
-.mode,
-.level {
+.mode {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -306,15 +258,10 @@ function start(): void {
   color: var(--c-text);
   transition: transform 0.08s ease;
 }
-.level {
-  padding: 10px 8px;
-}
-.mode:not(:disabled):active,
-.level:active {
+.mode:not(:disabled):active {
   transform: scale(0.96);
 }
-.mode.on,
-.level.on {
+.mode.on {
   border-color: var(--c-primary);
   background: #fff3e6;
 }
@@ -333,49 +280,6 @@ function start(): void {
 /* 三张卡的示意图（ModeIcon）：一台 / 两台手机，卡越宽图越大，最大 132px */
 .mode :deep(.mode-pic) {
   margin-bottom: 2px;
-}
-.level-icon {
-  font-size: 30px;
-  line-height: 1;
-}
-.names {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.name-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--tap-min);
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: var(--c-card);
-  box-shadow: var(--shadow-card);
-  font-size: var(--fs-md);
-  font-weight: 700;
-  color: var(--c-text);
-  border: 3px solid transparent;
-}
-.name-chip.red {
-  border-color: rgba(255, 107, 107, 0.45);
-}
-.name-chip.blue {
-  border-color: rgba(74, 163, 255, 0.45);
-}
-.name-chip.static {
-  box-shadow: none;
-  background: var(--c-bg);
-}
-.who {
-  color: var(--c-text-light);
-  font-size: var(--fs-sm);
-}
-.nm {
-  font-size: var(--fs-lg);
-}
-.edit {
-  font-size: var(--fs-sm);
 }
 .start {
   display: flex;
