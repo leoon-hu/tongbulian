@@ -63,6 +63,15 @@ const redRows = computed(() => rowsOf('red'))
 const blueRows = computed(() => rowsOf('blue'))
 /** 打机器人 / 多设备：本机只有一个真人，进题自动读；两人同屏不自动读（B37） */
 const autoRead = computed(() => store.mode !== 'duo')
+/** 本机操作的行都在哪个队（打机器人 / 多设备是一队；两人同屏两队都有 → null，不标「我」也不盖遮罩） */
+const myTeam = computed<Team | null>(() => {
+  const s = state.value
+  if (!s || !store.operable.length) return null
+  const teams = new Set(s.players.filter((p) => store.operable.includes(p.id)).map((p) => p.team))
+  return teams.size === 1 ? [...teams][0]! : null
+})
+/** 只观战的设备（多设备里建房的那台 / 扫观战码的）：顶栏标一下 */
+const watching = computed(() => store.mode === 'online' && store.operable.length === 0)
 
 // ── 计时 ──
 // 线上模式按服务器时钟（store.now() 含偏差修正），各设备时钟不一样也不会算出负的用时
@@ -150,6 +159,7 @@ onBeforeUnmount(() => {
     <header class="bar">
       <button type="button" class="bar-btn" :aria-label="ui('battle.exit')" @click="confirming = true">✕</button>
       <span class="clock" aria-live="off">{{ elapsed }}</span>
+      <span v-if="watching" class="watching">👀 <RubyText :text="{ k: 'battle.watching' }" /></span>
       <button
         type="button"
         class="bar-btn"
@@ -172,6 +182,8 @@ onBeforeUnmount(() => {
         :score="state.score.red"
         :target="state.target"
         :operable="store.operable"
+        :mine="myTeam === 'red'"
+        :masks="myTeam !== null"
         :auto-read="autoRead"
         :compact="compact"
         @answer="(id, g) => store.submit(id, g)"
@@ -186,6 +198,8 @@ onBeforeUnmount(() => {
         :score="state.score.blue"
         :target="state.target"
         :operable="store.operable"
+        :mine="myTeam === 'blue'"
+        :masks="myTeam !== null"
         :auto-read="autoRead"
         :compact="compact"
         @answer="(id, g) => store.submit(id, g)"
@@ -232,6 +246,15 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   height: 48px;
   padding: 0 8px;
+}
+.watching {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(61, 44, 30, 0.08);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--c-text-light);
+  white-space: nowrap;
 }
 .bar-btn {
   width: 44px;

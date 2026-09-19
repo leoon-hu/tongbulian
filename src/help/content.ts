@@ -114,7 +114,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'The arena is always landscape: red team on the left, blue team on the right, the game scene across the top or in the middle. Each player has a row: the question on top (tap it or 🔊 to hear it again), the number pad or choice cards below. A phone held upright asks you to turn it sideways.',
+            text: 'The arena is always landscape: red team on the left, blue team on the right, the game scene across the top or in the middle. Each player has a row: the question on top (tap it or 🔊 to hear it again), the number pad or choice cards below. A phone held upright asks you to turn it sideways. Your team\'s header carries a "me" tag, rows you cannot operate are dimmed with a translucent mask that says "Theirs" or "Teammate", and a watch-only device shows "👀 Watching" in the top bar.',
           },
           {
             kind: 'p',
@@ -239,7 +239,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '竞技场一律横向：左边红队、右边蓝队，游戏画面在上方横条或左右之间的竖条。每人一行：上面是题目（点一下或点 🔊 再听一遍），下面是数字键盘或选项卡。手机竖着拿会提示横过来。',
+          text: '竞技场一律横向：左边红队、右边蓝队，游戏画面在上方横条或左右之间的竖条。每人一行：上面是题目（点一下或点 🔊 再听一遍），下面是数字键盘或选项卡。自己那一队的队名条上标着「我」，不能操作的行蒙着一层半透明遮罩、写着「对方」或「队友」；只观战的设备顶栏写「👀 观战中」。手机竖着拿会提示横过来。',
         },
         {
           kind: 'p',

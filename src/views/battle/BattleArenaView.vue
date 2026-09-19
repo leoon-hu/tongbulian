@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 单设备竞技场的路由页（打机器人 / 两人一台）：刷新或直接打开地址时开一局，然后交给 Arena；退出回地图、换游戏回设置页
+// 单设备竞技场的路由页（打机器人 / 两人一台）：刷新或直接打开地址时开一局，然后交给 Arena；退出回地图、换游戏回设置页。
+// 模板单根（.arena-page 壳，退出时 state 变 null 也留着）、根上不放 HTML 注释：App 的 <Transition> 只给单根做过渡
 import { onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasGenerator } from '@/engine'
@@ -40,5 +41,13 @@ onBeforeUnmount(() => store.leave())
 </script>
 
 <template>
-  <Arena v-if="store.state" @exit="exit" @change-skin="changeSkin" />
+  <div class="arena-page">
+    <Arena v-if="store.state" @exit="exit" @change-skin="changeSkin" />
+  </div>
 </template>
+
+<style scoped>
+.arena-page {
+  display: contents;
+}
+</style>

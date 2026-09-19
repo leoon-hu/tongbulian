@@ -521,6 +521,8 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     await settle()
     expect(w.findAll('.team')).toHaveLength(2)
     expect(w.findAll('.row.operable')).toHaveLength(2)
+    expect(w.findAll('.mask')).toHaveLength(0) // 两边都是自己：不盖遮罩、不标「我」
+    expect(w.findAll('.me-tag')).toHaveLength(0)
     expect(w.find('.team.red .team-name').text()).toBe('小兔')
     expect(w.find('.team.blue .team-name').text()).toBe('小虎')
     expect(w.find(`.strip.${skinById(chapterSkin(KP))!.slot}`).exists()).toBe(true) // 游戏按章节排定
@@ -580,6 +582,10 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     store.beginPlay()
     await settle()
     expect(w.findAll('.row.operable')).toHaveLength(1)
+    expect(shown(w.find('.team.red .me-tag'))).toBe('我')
+    expect(w.find('.team.red .mask').exists()).toBe(false)
+    expect(shown(w.find('.team.blue .mask'))).toContain('对方')
+    expect(w.find('.watching').exists()).toBe(false)
     expect(shown(w.find('.team.blue .team-name'))).toBe('机器人')
     expect(w.find('.team.blue .watch').exists()).toBe(true)
     expect(shown(w.find('.team.blue'))).toContain('想一想')
@@ -695,6 +701,9 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await settle()
     expect(w.findAll('.row.operable')).toHaveLength(0) // 建房的设备只观战
     expect(w.findAll('.watch')).toHaveLength(2)
+    expect(w.findAll('.mask')).toHaveLength(0)
+    expect(w.findAll('.me-tag')).toHaveLength(0)
+    expect(shown(w.find('.bar .watching'))).toContain('观战中')
     expect(w.find('.team.red .team-name').text()).toBe('小猫')
     expect(w.find('.team.blue .team-name').text()).toBe('小虎')
 
@@ -769,7 +778,9 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(w.find('.codes-page').exists()).toBe(false)
     expect(shown(w.find('.wait'))).toContain('等大家进来')
     expect(shown(w.find('.sides li.red'))).toContain('我')
-    expect(shown(w.find('.sides li.blue'))).toContain('还没有人')
+    expect(shown(w.find('.sides li.blue'))).toContain('等待连接')
+    expect(w.find('.sides li.blue .dots').exists()).toBe(true)
+    expect(w.find('.sides li.red .dots').exists()).toBe(false)
     expect(shown(w.find('.sides li.watch'))).toContain('1')
     expect(w.find('.start-btn').exists()).toBe(false)
 
@@ -786,6 +797,9 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await settle()
     expect(w.findAll('.row.operable')).toHaveLength(1)
     expect(w.find('.team.red .row.operable').exists()).toBe(true)
+    expect(shown(w.find('.team.red .me-tag'))).toBe('我')
+    expect(shown(w.find('.team.blue .mask'))).toContain('对方')
+    expect(w.find('.watching').exists()).toBe(false)
 
     ws.receive({ type: 'error', error: 'closed' })
     await settle()

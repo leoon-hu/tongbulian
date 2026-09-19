@@ -16,6 +16,10 @@ const props = defineProps<{
   operable: string[]
   autoRead: boolean
   compact?: boolean
+  /** 本机操作的行在这个队：队名条标「我」 */
+  mine?: boolean
+  /** 本机是参赛的（有可操作的行）：不能操作的行盖遮罩，自己队的写「队友」、对方队的写「对方」 */
+  masks?: boolean
 }>()
 const emit = defineEmits<{ answer: [playerId: string, given: unknown]; input: [playerId: string, value: string] }>()
 
@@ -36,6 +40,7 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
         </template>
         <RubyText v-else :text="{ k: `battle.team.${team}` }" />
       </span>
+      <span v-if="mine" class="me-tag"><RubyText :text="{ k: 'battle.me' }" /></span>
       <span class="progress" role="progressbar" :aria-valuenow="score" :aria-valuemax="target">
         <i v-for="(on, i) in dots" :key="i" :class="{ on }" />
       </span>
@@ -52,6 +57,7 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
         :question="row.question"
         :feedback="row.feedback"
         :operable="operable.includes(row.player.id)"
+        :masked="masks && !operable.includes(row.player.id) ? (mine ? 'mate' : 'theirs') : null"
         :auto-read="autoRead && operable.includes(row.player.id)"
         :solo="solo"
         :compact="compact"
@@ -63,6 +69,15 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
 </template>
 
 <style scoped>
+.me-tag {
+  flex: none;
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--team-dark);
+  font-size: var(--fs-sm);
+  font-weight: 900;
+}
 /* 队区（B32：一眼分清红队 / 蓝队）：队色描边、实心队名条白字、淡队色底；队色变量给下面的成员行与按钮用 */
 .team {
   position: relative;

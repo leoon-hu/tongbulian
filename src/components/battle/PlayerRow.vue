@@ -26,6 +26,8 @@ const props = defineProps<{
   solo: boolean
   /** 手机横屏紧凑版（B29）：题干与作答面板左右并排，数字键盘的显示框挪到题干这一栏 */
   compact?: boolean
+  /** 不能操作的行盖一层半透明遮罩（本机是参赛的时候）：'theirs' 对方、'mate' 队友 */
+  masked?: 'theirs' | 'mate' | null
 }>()
 const emit = defineEmits<{ answer: [given: unknown]; input: [value: string] }>()
 
@@ -130,6 +132,9 @@ onBeforeUnmount(() => {
       <span v-if="!player.online" class="off">📶 <RubyText :text="{ k: 'room.offline' }" /></span>
     </div>
     <div v-if="question" class="row-body">
+      <div v-if="masked" class="mask" aria-hidden="true">
+        <span class="mask-tag">{{ masked === 'mate' ? '🤝' : '👀' }} <RubyText :text="{ k: masked === 'mate' ? 'battle.mate' : 'battle.theirs' }" /></span>
+      </div>
       <div
         ref="qEl"
         class="q"
@@ -268,12 +273,34 @@ onBeforeUnmount(() => {
   animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .row-body {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+/* 不能操作的行：半透明遮罩 + 右上角一个小牌子，一眼看出这块不是自己按的（2026-09-20 用户提的） */
+.mask {
+  position: absolute;
+  inset: -4px;
+  z-index: 2;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 4px;
+}
+.mask-tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(61, 44, 30, 0.55);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: 800;
 }
 .q {
   flex: 0 1 auto;

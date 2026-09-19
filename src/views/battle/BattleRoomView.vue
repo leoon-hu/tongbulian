@@ -3,6 +3,7 @@
 //   建房的设备只观战、算主持人，页面上只有三个二维码（红队 / 蓝队 / 观战，各带链接与「复制」）和一句说明；
 //   扫码进来的人先看「三方连接状态」窗口；红蓝两队都有人在线时服务器自动开始 → 竞技场（Arena）→ 结果。
 // 房间的一切状态都来自服务器的快照（stores/room），这里只画；比赛部分由 stores/battle 的线上模式承接。
+// 模板只能有一个根元素、根上不能放 HTML 注释：App 的 <Transition mode="out-in"> 只给单根做过渡，多根（开发模式保留注释也算）会让过渡卡住、下一页空白。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { courseOfKp } from '@/engine/catalog'
@@ -118,6 +119,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <div class="room-page">
   <NameSheet v-if="asking" @save="saveName" @close="leave" />
 
   <div v-else-if="fatal" class="room-msg">
@@ -139,7 +141,6 @@ onBeforeUnmount(() => {
     <p v-else-if="toast" class="netbar" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
   </template>
 
-  <!-- 建房的设备（观战）：三个二维码 + 链接 + 复制，一句说明，别的没有（B20） -->
   <div v-else-if="myRole === 'watch'" class="codes-page">
     <PageHeader :back="mapPath">
       <template #title>
@@ -163,7 +164,7 @@ onBeforeUnmount(() => {
         </button>
         <p class="who" :class="{ some: membersOf(t).length }">
           <template v-if="membersOf(t).length">✓ <RubyText :text="{ k: 'room.joined' }" />：{{ names(membersOf(t)) }}</template>
-          <RubyText v-else :text="{ k: 'room.waiting' }" />
+          <template v-else><span class="dots" aria-hidden="true"><i /><i /><i /></span> <RubyText :text="{ k: 'room.waiting' }" /></template>
         </p>
       </section>
     </div>
@@ -184,7 +185,6 @@ onBeforeUnmount(() => {
     </div>
   </div>
 
-  <!-- 扫码进来的人：三方连接状态，人齐了服务器自动开始（B21） -->
   <div v-else class="wait">
     <p v-if="room.status === 'reconnecting'" class="netbar inline">📶 <RubyText :text="{ k: 'room.reconnecting' }" /></p>
     <p v-if="toast" class="toast" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
@@ -194,8 +194,9 @@ onBeforeUnmount(() => {
     <ul class="sides">
       <li v-for="t in TEAMS" :key="t" :class="[t, { in: membersOf(t).length }]">
         <span class="side-name">{{ t === 'red' ? '🔴' : '🔵' }} <RubyText :text="{ k: `battle.team.${t}` }" /></span>
-        <span class="side-who">{{ membersOf(t).length ? names(membersOf(t)) : ui('room.empty') }}</span>
-        <span class="side-mark">{{ membersOf(t).length ? '✓' : '…' }}</span>
+        <span class="side-who">{{ membersOf(t).length ? names(membersOf(t)) : ui('room.waitingSide') }}</span>
+        <span v-if="membersOf(t).length" class="side-mark">✓</span>
+        <span v-else class="dots" aria-hidden="true"><i /><i /><i /></span>
       </li>
       <li class="watch">
         <span class="side-name">👀 <RubyText :text="{ k: 'room.watch' }" /></span>
@@ -204,9 +205,54 @@ onBeforeUnmount(() => {
     </ul>
     <button type="button" class="chip leave" @click="leave"><RubyText :text="{ k: 'room.leave' }" /></button>
   </div>
+  </div>
 </template>
 
 <style scoped>
+.room-page {
+  display: contents;
+}
+/* 等待连接的加载动画：三个点轮流跳（reduced-motion 时不跳） */
+.dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+.dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-primary);
+  animation: dot 1.2s ease-in-out infinite;
+}
+.dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes dot {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+.sides li:not(.in) {
+  border-style: dashed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dots i {
+    animation: none;
+    opacity: 0.7;
+  }
+}
 .room-msg {
   display: flex;
   flex-direction: column;
