@@ -74,3 +74,72 @@ export interface SeqEvent {
 export function otherTeam(team: Team): Team {
   return team === 'red' ? 'blue' : 'red'
 }
+
+// ── 多设备房间（B13–B25、B41–B45）：房间快照与线上消息，客户端与 server/ 共用 ─────────────────
+
+/** 座位：红队 / 蓝队 / 观战 */
+export type Role = Team | 'watch'
+
+export interface Member {
+  clientId: string
+  /** 昵称（≤ 8 字，只显示） */
+  name: string
+  role: Role
+  ready: boolean
+  /** 让子（B8） */
+  difficulty: Difficulty
+  online: boolean
+  joinedAt: number
+}
+
+/** 整份房间快照（B42：任何变化都发整份） */
+export interface RoomSnapshot {
+  code: string
+  kpId: string
+  skin: string
+  /** 主持人（建房的那个连接；掉线自动交给最早在线的人） */
+  hostId: string
+  /** 锁定队伍：非主持人不能换队 */
+  locked: boolean
+  createdAt: number
+  members: Member[]
+  /** 比赛（与单设备同一份状态机）；大厅阶段是 null */
+  match: MatchState | null
+}
+
+/** 客户端 → 服务器 */
+export type ClientMsg =
+  | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role }
+  | { type: 'create'; kpId: string; skin: string }
+  | { type: 'team'; role: Role }
+  | { type: 'ready'; ready: boolean }
+  | { type: 'difficulty'; difficulty: Difficulty; clientId?: string }
+  | { type: 'start' }
+  | { type: 'end' }
+  | { type: 'rematch' }
+  | { type: 'skin'; skin: string }
+  | { type: 'lock'; locked: boolean }
+  | { type: 'input'; input: string }
+  | { type: 'answer'; index: number; given: string; correct: boolean }
+  | { type: 'leave' }
+  | { type: 'ping' }
+
+export type RoomError =
+  | 'noRoom' // 房间不存在（或已关闭）
+  | 'full' // 房间满了（≤ 32 个连接）
+  | 'teamFull' // 这队满了（≤ 6 人），先当观众
+  | 'started' // 比赛已经开始，先看着吧
+  | 'version' // 构建版本不一致，刷新一下再加入
+  | 'busy' // 服务器忙（房间数到上限）
+  | 'closed' // 房间已关闭
+  | 'replaced' // 已在另一个标签页打开
+  | 'locked' // 队伍已锁定
+  | 'notHost' // 只有主持人能做
+  | 'bad' // 现在不能这么做 / 消息不合法
+
+/** 服务器 → 客户端 */
+export type ServerMsg =
+  | { type: 'state'; room: RoomSnapshot; you: string }
+  | { type: 'event'; e: ArenaEvent }
+  | { type: 'error'; error: RoomError }
+  | { type: 'pong' }

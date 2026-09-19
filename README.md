@@ -135,7 +135,7 @@ npm run og           # 用无头 Chrome 重新渲染分享图 public/og.png（�
 
 ## 技术栈
 
-Vite + Vue 3（Composition API）+ TypeScript + Pinia + Vue Router（hash 路由，`base: './'`），原生 CSS + design tokens，不用 UI 框架，vite-plugin-pwa 做离线缓存；对战游戏是自研的 Canvas 2D 小引擎，Three.js 只给「火箭升空 3D」试点按需加载；测试用 Vitest（生成器测试跑在 node，组件测试用 happy-dom）。音频包由 Python 脚本生成（edge-tts + numpy + ffmpeg），运行时不需要。
+Vite + Vue 3（Composition API）+ TypeScript + Pinia + Vue Router（hash 路由，`base: './'`），原生 CSS + design tokens，不用 UI 框架，vite-plugin-pwa 做离线缓存；对战游戏是自研的 Canvas 2D 小引擎，Three.js 只给「火箭升空 3D」试点按需加载；对战的多设备模式需要一个内存中继服务（仓库 `server/`，TypeScript + `ws`，`npm run build:server` 打成单文件 `dist-server/battle.mjs`，任何支持 WebSocket 反向代理的 HTTPS 托管都能跑）；测试用 Vitest（生成器测试跑在 node，组件测试用 happy-dom）。音频包由 Python 脚本生成（edge-tts + numpy + ffmpeg），运行时不需要。
 
 ## 架构
 

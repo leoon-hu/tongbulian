@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
@@ -32,9 +33,21 @@ function siteMeta(siteUrl: string): Plugin {
   }
 }
 
+/** 构建版本（B43）：git 短 hash，没有 git 就用时间戳；多设备房间要求所有人同一个版本 */
+function buildId(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || String(Date.now())
+  } catch {
+    return String(Date.now())
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
+    define: { __BUILD__: JSON.stringify(buildId()) },
+    // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev，B46）
+    server: { proxy: { '/ws': { target: 'ws://127.0.0.1:8787', ws: true } } },
     // 相对路径：构建产物可直接双击 dist/index.html 离线打开（配合 hash 路由）
     base: './',
     plugins: [
@@ -86,7 +99,7 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'node',
-      include: ['src/**/__tests__/**/*.test.ts'],
+      include: ['src/**/__tests__/**/*.test.ts', 'server/**/__tests__/**/*.test.ts'],
     },
   }
 })
