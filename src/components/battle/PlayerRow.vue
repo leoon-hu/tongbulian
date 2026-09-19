@@ -282,8 +282,19 @@ onBeforeUnmount(() => {
   max-height: 100%;
   overflow: auto;
 }
-.compact .mood,
-.compact .ai-mood {
-  font-size: 30px;
+/* 紧凑版的观看行：表情缩小、去掉「想一想」文字（表情已经在想了）、选项卡矮一点，别把作答栏撑出去 */
+.compact .ai-mood,
+.compact .a :deep(.mood) {
+  font-size: 26px;
+}
+.compact .a :deep(.watch) {
+  gap: 6px;
+}
+.compact .a :deep(.thinking) {
+  display: none;
+}
+.compact .a :deep(.cards .card) {
+  min-height: 60px;
+  font-size: var(--fs-lg);
 }
 </style>
