@@ -6,7 +6,7 @@ import router from '@/router'
 import App from '@/App.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
 import { setLang } from '@/engine/i18n'
-import { SKINS } from '@/battle/skins'
+import { SKINS, chapterSkin, skinById } from '@/battle/skins'
 import { liveCourses } from '@/engine/catalog'
 import { SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
@@ -471,17 +471,22 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(pics.map((p) => p.findAll('.phone').length)).toEqual([1, 1, 2])
     expect(pics.map((p) => p.find('.robot').exists())).toEqual([true, false, false])
     expect(pics.map((p) => p.findAll('.person').length)).toEqual([1, 2, 2])
-    // ⚙️ 配置：机器人快慢默认中、选游戏默认按章节、名字
+    // ⚙️ 配置：机器人快慢默认中、选游戏默认高亮按章节排到的那个（没有「按章节」这张卡）、名字
     await w.find('.config-btn').trigger('click')
     expect(shown(w.find('.config'))).toContain('机器人快慢')
     expect(shown(w.find('.config .level.on'))).toContain('中')
-    expect(shown(w.find('.config .skins .tile.on'))).toContain('按章节')
+    const tiles = w.findAll('.config .skins .tile')
+    expect(tiles.some((t) => shown(t).includes('按章节'))).toBe(false) // 没有「按章节」这张卡
+    expect(tiles).toHaveLength(SKINS.length + 1) // 🎲 随机 + 每种游戏
+    const onIndex = tiles.findIndex((t) => t.classes('on'))
+    expect(SKINS[onIndex - 1]!.id).toBe(chapterSkin('s1-00-count'))
     expect(shown(w.find('.config'))).toContain('我的名字')
-    await w.findAll('.config .skins .tile')[2]!.trigger('click') // 赛跑
+    const other = SKINS.find((sk) => sk.id !== chapterSkin('s1-00-count'))!
+    await tiles[SKINS.indexOf(other) + 1]!.trigger('click') // 换一种，只算这一次
     await w.find('.config .done').trigger('click')
     expect(w.find('.config').exists()).toBe(false)
     const store = useBattleStore()
-    expect(store.prefs.skin).toBe('race')
+    expect(JSON.parse(localStorage.getItem(BATTLE_KEY) ?? '{}').skin).toBeUndefined() // 不记偏好
     // 没名字：点开始才问，点一个现成名字就直接进竞技场
     await w.find('.start-btn').trigger('click')
     expect(shown(w)).toContain('你叫什么')
@@ -495,7 +500,13 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(w.find('.app-header').exists()).toBe(false)
     expect(w.find('.arena').exists()).toBe(true)
     expect(w.find('.countdown').exists()).toBe(true)
-    expect(store.state!.skin).toBe('race')
+    expect(store.state!.skin).toBe(other.id)
+    // 下次进设置页又回到按章节排到的游戏
+    await router.push('/battle/new/s1-00-count')
+    await until(pathIs('/battle/new/s1-00-count'))
+    await w.find('.config-btn').trigger('click')
+    const again = w.findAll('.config .skins .tile')
+    expect(SKINS[again.findIndex((t) => t.classes('on')) - 1]!.id).toBe(chapterSkin('s1-00-count'))
     w.unmount()
   })
 
@@ -512,7 +523,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(w.findAll('.row.operable')).toHaveLength(2)
     expect(w.find('.team.red .team-name').text()).toBe('小兔')
     expect(w.find('.team.blue .team-name').text()).toBe('小虎')
-    expect(w.find('.strip.top').exists()).toBe(true) // 拔河在上方横条
+    expect(w.find(`.strip.${skinById(chapterSkin(KP))!.slot}`).exists()).toBe(true) // 游戏按章节排定
 
     // 第一题从界面上答：数字键盘按数字再 ✓，选择题点正确的那张卡
     const left = store.state!.players[0]!
@@ -572,7 +583,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(shown(w.find('.team.blue .team-name'))).toBe('机器人')
     expect(w.find('.team.blue .watch').exists()).toBe(true)
     expect(shown(w.find('.team.blue'))).toContain('想一想')
-    expect(w.find('.strip.center').exists()).toBe(true) // 火箭在左右之间
+    expect(w.find(`.strip.${skinById(chapterSkin(KP))!.slot}`).exists()).toBe(true)
 
     await w.find('.bar-btn').trigger('click')
     expect(shown(w)).toContain('要退出比赛吗')
@@ -635,7 +646,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     const ws = FakeWs.last()
     ws.open()
     expect(ws.msgs.map((m) => m.type)).toEqual(['hello', 'create'])
-    expect(ws.msgs[1]).toMatchObject({ type: 'create', kpId: KP, skin: 'race' })
+    expect(ws.msgs[1]).toMatchObject({ type: 'create', kpId: KP, skin: chapterSkin(KP) }) // 按章节排到的游戏
 
     let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
     const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })

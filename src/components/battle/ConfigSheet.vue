@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 对战配置面板（B27 ③）：机器人快慢、选游戏、改名字——设置页默认不展示这些，页头「⚙️ 配置」才打开；改了立刻记进偏好
+// 对战配置面板（B27 ③）：机器人快慢、选游戏、改名字——设置页默认不展示这些，页头「⚙️ 配置」才打开。
+// 快慢与名字改了立刻记进偏好；游戏是这一次的（默认按章节排到的那个，由设置页持有），不记偏好
 import { AI_LEVELS, type AiLevel } from '@/battle/ai'
 import { ui } from '@/engine/i18n'
 import { useBattleStore } from '@/stores/battle'
@@ -7,7 +8,8 @@ import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import SkinPicker from './SkinPicker.vue'
 
-const emit = defineEmits<{ close: []; rename: [which: 'me' | 'right'] }>()
+defineProps<{ skin: string }>()
+const emit = defineEmits<{ close: []; rename: [which: 'me' | 'right']; 'update:skin': [id: string] }>()
 const store = useBattleStore()
 const AI_ICONS: Record<AiLevel, string> = { slow: '🐢', mid: '🐰', fast: '🚀' }
 </script>
@@ -38,8 +40,8 @@ const AI_ICONS: Record<AiLevel, string> = { slow: '🐢', mid: '🐰', fast: '�
 
       <section class="part">
         <h3 class="label"><RubyText :text="{ k: 'battle.pickSkin' }" /></h3>
-        <p class="hint"><RubyText :text="{ k: 'battle.skin.auto.hint' }" /></p>
-        <SkinPicker v-model="store.prefs.skin" />
+        <p class="hint"><RubyText :text="{ k: 'battle.skin.once' }" /></p>
+        <SkinPicker :model-value="skin" @update:model-value="(id) => emit('update:skin', id)" />
       </section>
 
       <section class="part">

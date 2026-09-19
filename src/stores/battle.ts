@@ -25,7 +25,7 @@ import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, isAiLevel, planAnswer, type AiLevel } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
 import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
-import { AUTO_SKIN, RANDOM_SKIN, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
+import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
 export type LocalMode = 'ai' | 'duo'
 /** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
@@ -52,7 +52,6 @@ export interface BattlePrefs {
   clientId: string
   /** me：本设备的名字（打机器人、也是两人同屏左边的默认）；left / right：两人同屏各自记住的 */
   names: { me: string; left: string; right: string }
-  skin: string
   aiLevel: AiLevel
   /** 每种游戏上次讲开场规则句的时间（ms）：本设备第一次进这个游戏才讲，一天内不重复（B6） */
   intros: Record<string, number>
@@ -85,7 +84,6 @@ function loadPrefs(): BattlePrefs {
   const base: BattlePrefs = {
     clientId: randomId(),
     names: { me: '', left: '', right: '' },
-    skin: AUTO_SKIN,
     aiLevel: 'mid',
     intros: {},
   }
@@ -98,7 +96,6 @@ function loadPrefs(): BattlePrefs {
     return {
       clientId: typeof p.clientId === 'string' && p.clientId ? p.clientId : base.clientId,
       names: { me: str(names.me), left: str(names.left), right: str(names.right) },
-      skin: typeof p.skin === 'string' && (p.skin === AUTO_SKIN || p.skin === RANDOM_SKIN || skinById(p.skin)) ? p.skin : base.skin,
       aiLevel: isAiLevel(p.aiLevel) ? p.aiLevel : base.aiLevel,
       intros: Object.fromEntries(
         Object.entries(typeof p.intros === 'object' && p.intros !== null ? (p.intros as Record<string, unknown>) : {}).filter(
@@ -344,7 +341,8 @@ export const useBattleStore = defineStore('battle', () => {
     mode.value = opts.mode
     aiLevel = opts.aiLevel ?? prefs.value.aiLevel
     aiRng = createRng(opts.aiSeed)
-    const skin = resolveSkin(opts.skin ?? prefs.value.skin, createRng(), opts.kpId)
+    // 没指定就用按章节排到的游戏（B36）；设置页的「配置」里换的只影响这一次，不记偏好
+    const skin = resolveSkin(opts.skin ?? chapterSkin(opts.kpId), createRng())
     const me = prefs.value.names.me
     const players: PlayerInit[] =
       opts.mode === 'ai'

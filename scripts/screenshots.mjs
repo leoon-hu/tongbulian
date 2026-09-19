@@ -19,7 +19,7 @@ mkdirSync(outDir, { recursive: true });
 const profile = mkdtempSync(join(tmpdir(), "screenshots-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const BATTLE_PREFS = JSON.stringify({ names: { me: "🐰 小兔", left: "", right: "" }, skin: "race", aiLevel: "mid" });
+const BATTLE_PREFS = JSON.stringify({ names: { me: "🐰 小兔", left: "", right: "" }, aiLevel: "mid" });
 // 每个新文档都跑：只压掉安装提示条；对战偏好按每张截图的 prefs 在导航前写（写在这里会把每张的覆盖冲掉）
 const INIT = `try{localStorage.setItem('tongbulian:install','{"until":9007199254740991}')}catch(e){}`;
 const SHOTS = [
@@ -41,7 +41,7 @@ const SHOTS = [
   },
   {
     "name": "battle",
-    "path": "#/battle/local/s1-05-carry-add?mode=ai",
+    "path": "#/battle/local/s1-05-carry-add?mode=ai&skin=race",
     "w": 852,
     "h": 393,
     "scale": 3,
@@ -57,21 +57,19 @@ const SHOTS = [
   },
   {
     "name": "battle-rule",
-    "path": "#/battle/local/s1-05-carry-add?mode=ai",
+    "path": "#/battle/local/s1-05-carry-add?mode=ai&skin=rocket",
     "w": 1024,
     "h": 768,
     "scale": 2,
-    "load": 1300,
-    "prefs": { "skin": "rocket" }
+    "load": 1300
   },
   {
     "name": "battle-ipad",
-    "path": "#/battle/local/s1-05-carry-add?mode=duo",
+    "path": "#/battle/local/s1-05-carry-add?mode=duo&skin=tower",
     "w": 1024,
     "h": 768,
     "scale": 2,
     "load": 1500,
-    "prefs": { "skin": "tower" },
     "steps": [
       { "eval": "window.__battle.beginPlay()", "after": 400 },
       { "eval": "window.__battle.state = { ...window.__battle.state, score: { red: 5, blue: 3 }, lastPoint: 'red', leading: 'red' }", "after": 1400 }

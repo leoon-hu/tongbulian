@@ -43,8 +43,6 @@ export function finishKey(id: string): string {
 
 /** 「随机」：每局开始时从注册表里挑一个 */
 export const RANDOM_SKIN = 'random'
-/** 「按章节」（B36，默认）：每册的知识点按目录顺序轮流对应一个游戏 */
-export const AUTO_SKIN = 'auto'
 
 export const SKINS: readonly SkinMeta[] = [
   {
@@ -118,9 +116,8 @@ export function chapterSkin(kpId: string): string {
   return games[i % games.length]!.id
 }
 
-/** 把设置里的皮肤 id 落实成一个真实皮肤：auto 按章节（要给 kpId），random 或不认识的 id 随机挑 */
-export function resolveSkin(id: string, rng: RNG, kpId?: string): string {
-  if (id === AUTO_SKIN && kpId) return chapterSkin(kpId)
+/** 把选的皮肤 id 落实成一个真实皮肤：random 或不认识的 id 随机挑 */
+export function resolveSkin(id: string, rng: RNG): string {
   return skinById(id)?.id ?? rng.pick(SKINS).id
 }
 

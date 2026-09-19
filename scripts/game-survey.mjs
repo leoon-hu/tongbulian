@@ -15,7 +15,7 @@ mkdirSync(outDir, { recursive: true });
 const only = process.argv[2];
 const KP = "s1-05-carry-add";
 const SKINS = ["race", "car", "rocket", "balloon", "tower", "tug", "ice"].filter((s) => !only || s === only);
-const prefs = (skin) => JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, skin, aiLevel: "mid" });
+const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, aiLevel: "mid" });
 const HIDE = "(()=>{const s=document.createElement('style');s.textContent='.countdown,.victory,.result,.callout,.confirm-mask{display:none!important}';document.head.appendChild(s);return 'ok'})()";
 
 const POSES = [
@@ -35,9 +35,9 @@ try {
   for (const skin of SKINS) {
     for (const layout of [{ name: "ipad", w: 1024, h: 768, scale: 2 }, { name: "compact", w: 852, h: 393, scale: 3 }]) {
       await b.device(layout.w, layout.h, layout.scale);
-      await b.ev(`localStorage.setItem('tongbulian:battle', ${JSON.stringify(prefs(skin))})`);
+      await b.ev(`localStorage.setItem('tongbulian:battle', ${JSON.stringify(PREFS)})`);
       await b.navigate("about:blank", 200);
-      await b.navigate(`${BASE}/#/battle/local/${KP}?mode=duo`, 2200);
+      await b.navigate(`${BASE}/#/battle/local/${KP}?mode=duo&skin=${skin}`, 2200);
       await b.ev(HIDE);
       await b.ev("(()=>{window.__battle.beginPlay();return 'ok'})()");
       await sleep(400);

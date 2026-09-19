@@ -53,7 +53,7 @@ console.log(`${combos.length} 种组合`);
 
 // 2. 截图
 for (let i = 0; i < 120; i++) { try { await fetch(BASE + "/"); break; } catch { await sleep(500); } }
-const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, skin: "race", aiLevel: "mid" });
+const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, aiLevel: "mid" });
 const LAYOUTS =
   PAGE === "battle"
     ? { iphone: { w: 852, h: 393, scale: 2, rows: 4 }, ipad: { w: 1024, h: 768, scale: 1.5, rows: 3 } }
@@ -90,7 +90,7 @@ try {
       if (PAGE === "battle") {
         // 两种组合用「打机器人」截，顺便看观看行（作答显示 + 表情）的排版
         const mode = c.key === "text|choice" || c.key === "expr|numpad" ? "ai" : "duo";
-        await send("Page.navigate", { url: `${BASE}/#/battle/local/${c.kp}?mode=${mode}` }); await sleep(2200);
+        await send("Page.navigate", { url: `${BASE}/#/battle/local/${c.kp}?mode=${mode}&skin=race` }); await sleep(2200);
         await ev(`(()=>{const s=window.__battle;s.beginPlay();const ps=s.state.players.map(p=>({...p,seed:${c.seed},index:0}));s.state={...s.state,players:ps,score:{red:3,blue:2},leading:'red'};return 'ok'})()`);
         await sleep(1000);
         if (mode === "ai") label += "，打机器人";

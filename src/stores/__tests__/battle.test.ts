@@ -28,11 +28,9 @@ describe('对战偏好（B50）', () => {
     expect(s.prefs.names.me).toBe('')
     s.setName('me', '  🐰 小兔 ')
     s.setName('right', '小虎')
-    s.prefs.skin = 'tug'
     s.prefs.aiLevel = 'fast'
     const raw = JSON.parse(localStorage.getItem('tongbulian:battle')!)
     expect(raw.names).toEqual({ me: '🐰 小兔', left: '', right: '小虎' })
-    expect(raw.skin).toBe('tug')
     const clientId = raw.clientId
     setActivePinia(createPinia())
     const again = useBattleStore()
@@ -43,11 +41,9 @@ describe('对战偏好（B50）', () => {
     localStorage.setItem('tongbulian:battle', '{"skin":"nope","aiLevel":"turbo","names":5,"difficulty":9')
     setActivePinia(createPinia())
     const broken = useBattleStore()
-    expect(broken.prefs.skin).toBe('auto')
     expect(broken.prefs.aiLevel).toBe('mid')
     localStorage.setItem('tongbulian:battle', JSON.stringify({ skin: 'nope', aiLevel: 'turbo', names: 5, difficulty: 9 }))
     setActivePinia(createPinia())
-    expect(useBattleStore().prefs.skin).toBe('auto')
   })
 })
 

@@ -7,7 +7,7 @@ import { createRng, hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
-import { resolveSkin } from '@/battle/skins'
+import { chapterSkin, resolveSkin } from '@/battle/skins'
 import { useBattleStore, type BattleMode, type LocalMode } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -37,6 +37,8 @@ const asking = ref<'me' | 'right' | null>(null)
 const names = computed(() => store.prefs.names)
 /** 「⚙️ 配置」面板 */
 const config = ref(false)
+/** 这一次用的游戏：默认按章节排到的那个（B36），配置里换了只影响这一次 */
+const skin = ref(chapterSkin(kpId))
 /** 点了「开始」但还缺名字：问完接着开始 */
 let pendingStart = false
 
@@ -89,7 +91,7 @@ function createRoom(): void {
   if (creating.value) return
   roomError.value = null
   creating.value = true
-  room.create(kpId, resolveSkin(store.prefs.skin, createRng(), kpId))
+  room.create(kpId, resolveSkin(skin.value, createRng()))
   createTimer = setTimeout(() => {
     if (!creating.value) return
     stopCreating()
@@ -119,7 +121,7 @@ function start(): void {
     asking.value = 'right'
     return
   }
-  store.startLocal({ kpId, mode: mode.value as LocalMode })
+  store.startLocal({ kpId, mode: mode.value as LocalMode, skin: skin.value })
   // 在这个手势里试着全屏 + 横屏锁（B30）：只有触屏设备，电脑不自动全屏
   enterArenaFullscreen()
   router.push({ path: `/battle/local/${kpId}`, query: { mode: mode.value } })
@@ -172,7 +174,7 @@ function start(): void {
       <JoinCodeForm />
     </section>
 
-    <ConfigSheet v-if="config" @close="config = false" @rename="(w) => (asking = w)" />
+    <ConfigSheet v-if="config" v-model:skin="skin" @close="config = false" @rename="(w) => (asking = w)" />
     <NameSheet
       v-if="asking"
       :initial="asking === 'right' ? names.right : names.me"

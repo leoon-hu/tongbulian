@@ -3,7 +3,7 @@ import '@/content/math/grade1'
 import { createRng } from '@/engine'
 import { stubCanvas, stubCtx } from '../game/__tests__/stub'
 import type { Phase, Team } from '../protocol'
-import { AUTO_SKIN, RANDOM_SKIN, SKINS, chapterSkin, ratio, resolveSkin, skinById } from '../skins'
+import { RANDOM_SKIN, SKINS, chapterSkin, ratio, resolveSkin, skinById } from '../skins'
 import { getCourse } from '@/engine/catalog'
 
 describe('皮肤注册表（B34–B36）', () => {
@@ -44,7 +44,7 @@ describe('皮肤注册表（B34–B36）', () => {
 })
 
 describe('按章节的游戏（B36）', () => {
-  it('每册的知识点按目录顺序轮流对应一个游戏，排完从头再排，下一册重新排起；resolveSkin 认 auto', () => {
+  it('每册的知识点按目录顺序轮流对应一个游戏，排完从头再排，下一册重新排起', () => {
     const games = SKINS.map((s) => s.id)
     const course = getCourse('math', 'g1')!
     const sem = (kp: { unitId: string }) => course.units.find((u) => u.id === kp.unitId)!.semester
@@ -55,7 +55,5 @@ describe('按章节的游戏（B36）', () => {
     second.forEach((kp, i) => expect(chapterSkin(kp.id)).toBe(games[i % games.length]))
     expect(chapterSkin(first[0]!.id)).toBe(games[0])
     expect(chapterSkin('nope')).toBe(games[0])
-    expect(resolveSkin(AUTO_SKIN, createRng(1), first[1]!.id)).toBe(games[1])
-    expect(games).toContain(resolveSkin(AUTO_SKIN, createRng(1)))
   })
 })

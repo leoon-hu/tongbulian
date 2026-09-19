@@ -140,7 +140,7 @@ function start(): void {
   room.start()
 }
 function pickSkin(id: string): void {
-  room.setSkin(resolveSkin(id, createRng(), snap.value?.kpId))
+  room.setSkin(resolveSkin(id, createRng()))
   skinOpen.value = false
 }
 

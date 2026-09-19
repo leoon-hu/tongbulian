@@ -107,7 +107,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             items: [
               'Enter: turn on "⚔️ Battle" at the top right of the topic map, then tap a topic; or tap ⚔️ in the header of a practice page.',
               'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: one person taps "Create room" and gets a QR code and a room code on screen; the others scan it with a phone (or type the code under "Join a battle" at the bottom of the home page), land on the smaller team automatically and can switch or just watch; once both teams have someone, the host taps "Start the match"; up to 6 per team).',
-              `Games default to "by chapter": the topics in a volume take turns through the ${games} game scenes, so a new chapter means a new game; pick one yourself or 🎲 random under ⚙️ Settings in the header.`,
+              `Games follow the chapter: the topics in a volume take turns through the ${games} game scenes, so a new chapter means a new game; to switch for this match only (or 🎲 random), use ⚙️ Settings in the header — next time it goes back to the chapter's game.`,
               'The first time you tap Start you are asked for a name; pick a ready-made one. It is not asked again; names and the robot speed are under ⚙️ Settings.',
               'Start: the first time this device plays a game, it explains the rule in one sentence (not repeated within a day), then "Ready… 3, 2, 1, go!" and both sides get their first question.',
             ],
@@ -232,7 +232,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           items: [
             '进入：知识点地图右上角打开「⚔️ 对战」，再点一个知识点；或者在练习页页头点 ⚔️。',
             '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：一个人点「建房间」，屏幕上出一个二维码和房间号，其他人用手机扫码（或在首页底部「加入对战」里输房间号）就进来了，自动分到人少的队，可以换队或只看；建房的人看到两队都有人就点「开始比赛」；每队最多 6 人）。',
-            `游戏默认「按章节」：一册里的知识点轮流用 ${games} 种游戏画面，换章节就换游戏；想自己挑或「🎲 随机」每局一换，在页头「⚙️ 配置」里选。`,
+            `游戏按章节排定：一册里的知识点轮流用 ${games} 种游戏画面，换章节就换游戏；想这一次换一种或「🎲 随机」，在页头「⚙️ 配置」里选，只算这一次，下次又回到章节的游戏。`,
             '第一次点「开始」会问名字，点一个现成的就行，以后不再问；改名字、机器人快慢也在「⚙️ 配置」里。',
             '开始：这台设备第一次玩这个游戏会先讲一句规则（一天内不重复），然后「预备…3、2、1，开始！」，两边同时拿到第一题。',
           ],

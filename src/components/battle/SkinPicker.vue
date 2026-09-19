@@ -1,20 +1,15 @@
 <script setup lang="ts">
-// 选游戏（B36）：📚 按章节（默认）+ 🎲 随机 + 注册表里的每种皮肤一张小卡（emoji + 名字，注音）
-import { AUTO_SKIN, RANDOM_SKIN, SKINS } from '@/battle/skins'
+// 选游戏（B36）：🎲 随机 + 注册表里的每种皮肤一张小卡（emoji + 名字，注音）；默认高亮的是按章节排到的那个
+import { RANDOM_SKIN, SKINS } from '@/battle/skins'
 import RubyText from '@/components/ui/RubyText.vue'
 
 defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [id: string] }>()
 const RANDOM = RANDOM_SKIN
-const AUTO = AUTO_SKIN
 </script>
 
 <template>
   <div class="skins" role="radiogroup">
-    <button type="button" class="tile" :class="{ on: modelValue === AUTO }" role="radio" :aria-checked="modelValue === AUTO" @click="emit('update:modelValue', AUTO)">
-      <span class="icon">📚</span>
-      <RubyText :text="{ k: 'battle.skin.auto' }" />
-    </button>
     <button
       type="button"
       class="tile"
