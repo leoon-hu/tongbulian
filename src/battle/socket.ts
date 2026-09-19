@@ -35,6 +35,8 @@ export interface RoomClientOptions {
   onEvent(e: ArenaEvent): void
   onError(error: RoomError): void
   onStatus(status: SocketStatus): void
+  /** 口令查到的房间号与身份（B19） */
+  onFound?(code: string, t: Role): void
   /** 可注入的 WebSocket（测试用假的） */
   factory?: (url: string) => SocketLike
 }
@@ -145,6 +147,7 @@ export class RoomClient {
         this.code = msg.room.code
         this.opts.onState(msg.room, msg.you, msg.now)
       } else if (msg.type === 'event') this.opts.onEvent(msg.e)
+      else if (msg.type === 'found') this.opts.onFound?.(msg.code, msg.t)
       else if (msg.type === 'error') {
         // 被顶掉 / 房间没了 / 版本不对：不再重连
         if (msg.error === 'replaced' || msg.error === 'closed' || msg.error === 'noRoom' || msg.error === 'version') {

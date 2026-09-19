@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { COUNTDOWN_MS } from '@/battle/match'
 import type { ArenaEvent, ClientMsg } from '@/battle/protocol'
-import { HOST_GRACE_MS, ROOM_IDLE_MS, ROOM_LIFE_MS, ROOM_MAX, TEAM_MAX, apply, autoStart, createRoom, expired, isCode, join, makeCode, reassignHost, setOnline, snapshot, tick, type Room } from '../room'
+import { HOST_GRACE_MS, ROOM_IDLE_MS, ROOM_LIFE_MS, ROOM_MAX, TEAM_MAX, apply, autoStart, createRoom, expired, findByPasscode, isCode, isPasscode, join, makeCode, makePasscode, makePasscodes, reassignHost, setOnline, snapshot, tick, type Room } from '../room'
 
 const V = 'v1'
 const T0 = 1_700_000_000_000
@@ -52,6 +52,33 @@ describe('房间号（B19）', () => {
     expect(isCode('ABC0EF')).toBe(false)
     expect(isCode('abcdef')).toBe(false)
     expect(isCode('ABCDEFG')).toBe(false)
+  })
+})
+
+describe('口令（B19）', () => {
+  it('6 位数字、首位不为 0；三个身份互不相同、避开别的房间的；快照里带着；按口令找到房间与身份', () => {
+    expect(makePasscode(() => 0)).toBe('100000')
+    expect(makePasscode(() => 0.999999)).toBe('999999')
+    expect(isPasscode('123456')).toBe(true)
+    expect(isPasscode('012345')).toBe(false)
+    expect(isPasscode('12345')).toBe(false)
+    expect(isPasscode('1234567')).toBe(false)
+    expect(isPasscode(123456)).toBe(false)
+    let n = 0
+    const seq = (): number => ((n += 1) % 7) / 7 // 会撞的伪随机：撞了要换一个
+    const taken = new Set([makePasscode(() => 1 / 7)])
+    const ps = makePasscodes(taken, seq)
+    const all = Object.values(ps)
+    expect(all.every(isPasscode)).toBe(true)
+    expect(new Set(all).size).toBe(3)
+    expect(all.some((p) => taken.has(p))).toBe(false)
+    const r = fresh()
+    expect(Object.keys(r.passcodes).sort()).toEqual(['blue', 'red', 'watch'])
+    expect(snapshot(r).passcodes).toEqual(r.passcodes)
+    const other = createRoom({ code: 'ZZZZZZ', kpId: 'x', skin: 'race', host: { clientId: 'h2', name: 'h2' }, version: V, now: T0, passcodes: { red: '111111', blue: '222222', watch: '333333' } })
+    expect(findByPasscode([r, other], '222222')).toEqual({ code: 'ZZZZZZ', t: 'blue' })
+    expect(findByPasscode([r, other], r.passcodes.watch)).toEqual({ code: 'ABCDEF', t: 'watch' })
+    expect(findByPasscode([r, other], '000000')).toBeUndefined()
   })
 })
 

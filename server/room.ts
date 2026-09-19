@@ -46,6 +46,32 @@ export function isCode(v: unknown): v is string {
   return typeof v === 'string' && /^[A-HJ-NP-Z2-9]{6}$/.test(v)
 }
 
+const ROLES: readonly Role[] = ['red', 'blue', 'watch']
+
+/** 口令（B19）：6 位数字、首位不为 0；三个身份各一个，全服务器唯一，一个口令就定了房间 + 身份 */
+export function makePasscode(random: () => number = Math.random): string {
+  return String(100000 + Math.floor(random() * 900000))
+}
+export function isPasscode(v: unknown): v is string {
+  return typeof v === 'string' && /^[1-9][0-9]{5}$/.test(v)
+}
+/** 三个身份的口令：互不相同、也不与 taken（别的房间的）重复 */
+export function makePasscodes(taken: ReadonlySet<string> = new Set(), random: () => number = Math.random): Record<Role, string> {
+  const used = new Set(taken)
+  const one = (): string => {
+    let p = makePasscode(random)
+    while (used.has(p)) p = makePasscode(random)
+    used.add(p)
+    return p
+  }
+  return { red: one(), blue: one(), watch: one() }
+}
+/** 按口令找房间与身份；没有 → undefined */
+export function findByPasscode(rooms: Iterable<Room>, pass: string): { code: string; t: Role } | undefined {
+  for (const r of rooms) for (const t of ROLES) if (r.passcodes[t] === pass) return { code: r.code, t }
+  return undefined
+}
+
 const isTeam = (r: Role): r is Team => r === 'red' || r === 'blue'
 const isRole = (v: unknown): v is Role => v === 'red' || v === 'blue' || v === 'watch'
 
@@ -73,6 +99,7 @@ export function snapshot(room: Room): RoomSnapshot {
     createdAt: room.createdAt,
     members: room.members,
     match: room.match,
+    passcodes: room.passcodes,
   }
 }
 
@@ -83,6 +110,8 @@ export function createRoom(opts: {
   host: { clientId: string; name: string; role?: Role }
   version: string
   now: number
+  /** 三个身份的口令（网络层保证全服务器唯一）；不传就随机生成（测试用） */
+  passcodes?: Record<Role, string>
 }): Room {
   const host: Member = {
     clientId: opts.host.clientId,
@@ -101,6 +130,7 @@ export function createRoom(opts: {
     createdAt: opts.now,
     members: [host],
     match: null,
+    passcodes: opts.passcodes ?? makePasscodes(),
     version: opts.version,
     lastActive: opts.now,
   }

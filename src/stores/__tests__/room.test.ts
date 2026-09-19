@@ -111,6 +111,33 @@ describe('房间 store（B19–B25）', () => {
     expect(room.me?.role).toBe('watch') // 建房的设备只观战
   })
 
+  it('口令（B19）：lookup 连上先 hello（不带房间号）再发 lookup；found 进 room.found；不认识的口令是致命错误留着', () => {
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    battle.setName('me', '小兔')
+    room.useFactory((url) => new FakeWs(url))
+    room.lookup('123456')
+    const ws = FakeWs.last()
+    ws.open()
+    expect(ws.msgs).toEqual([
+      { type: 'hello', clientId: battle.prefs.clientId, name: '小兔', version: expect.any(String) },
+      { type: 'lookup', pass: '123456' },
+    ])
+    expect(room.found).toBeNull()
+    ws.receive({ type: 'found', code: CODE, t: 'blue' })
+    expect(room.found).toEqual({ code: CODE, t: 'blue' })
+    room.lookup('654321')
+    expect(room.found).toBeNull()
+    expect(ws.closed).toBe(true)
+    const ws2 = FakeWs.last()
+    ws2.open()
+    ws2.receive({ type: 'error', error: 'noRoom' })
+    vi.advanceTimersByTime(5000)
+    expect(room.error).toBe('noRoom')
+    room.leave()
+    expect(room.error).toBeNull()
+  })
+
   it('比赛：快照里的 match 进 battle store，只有自己那行可操作；输入节流发出；答题只发消息、反馈等服务器推进了题号才关；事件进队列；再来一局 / 下一章发给服务器；观战者没有可操作行', () => {
     const room = useRoomStore()
     const battle = useBattleStore()

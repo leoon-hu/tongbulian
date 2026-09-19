@@ -1,6 +1,6 @@
 /**
  * 多设备房间的客户端状态（需求 B13–B25，2026-09-20 用户定的极简流程）：连中继服务、拿整份房间快照；
- * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / input / answer / rematch / leave / ping。
+ * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / lookup / input / answer / rematch / next / leave / ping。
  * 比赛部分交给 stores/battle（syncOnline / onRemoteEvent），竞技场页不知道自己在哪种模式下（B41）。
  */
 import { computed, ref } from 'vue'
@@ -21,6 +21,8 @@ export const useRoomStore = defineStore('room', () => {
   const error = ref<RoomError | null>(null)
   /** 想进的房间号（连上前就有，页面显示用） */
   const code = ref<string | null>(null)
+  /** 口令查到的房间号与身份（B19）：设置页看到它就跳到房间页 */
+  const found = ref<{ code: string; t: Role } | null>(null)
   let client: RoomClient | null = null
   let errorTimer: ReturnType<typeof setTimeout> | null = null
   /** 测试可注入假的 WebSocket */
@@ -90,6 +92,9 @@ export const useRoomStore = defineStore('room', () => {
       onStatus: (s) => {
         status.value = s
       },
+      onFound: (roomCode, t) => {
+        found.value = { code: roomCode, t }
+      },
       factory,
     })
     battle.startOnline({
@@ -115,11 +120,21 @@ export const useRoomStore = defineStore('room', () => {
     c.send({ type: 'create', kpId, skin })
   }
 
+  /** 设置页「加入对战」：连上后拿口令换房间号与身份（found），再由页面按链接的方式进房 */
+  function lookup(pass: string): void {
+    reset()
+    const c = makeClient()
+    if (!c) return
+    c.connect()
+    c.send({ type: 'lookup', pass })
+  }
+
   function reset(): void {
     snapshot.value = null
     you.value = ''
     error.value = null
     code.value = null
+    found.value = null
     if (errorTimer) clearTimeout(errorTimer)
     errorTimer = null
   }
@@ -143,6 +158,7 @@ export const useRoomStore = defineStore('room', () => {
     status,
     error,
     code,
+    found,
     available,
     me,
     isHost,
@@ -153,6 +169,7 @@ export const useRoomStore = defineStore('room', () => {
     useFactory,
     enter,
     create,
+    lookup,
     leave,
     /** 给测试：直接喂一份快照 / 事件（不经网络） */
     _feed: { onState, onEvent, setError },

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import WebSocket from 'ws'
 import type { ClientMsg, ServerMsg } from '@/battle/protocol'
-import { createBattleServer, type BattleServer } from '../index'
+import { MAX_BAD_PASS, createBattleServer, type BattleServer } from '../index'
 
 /** 一个测试客户端：收到的消息排队，按条件等 */
 class Client {
@@ -78,6 +78,21 @@ describe('中继服务（B41–B46）', () => {
     expect(created.you).toBe('aaaaaa')
     expect(created.room.hostId).toBe('aaaaaa')
     expect(server.rooms.size).toBe(1)
+    expect(Object.values(created.room.passcodes).every((p) => /^[1-9][0-9]{5}$/.test(p))).toBe(true)
+
+    // 口令（B19）：另一个连接 hello 后 lookup → found（房间号 + 身份）；不认识的口令 noRoom，连错 MAX_BAD_PASS 次断开
+    const d = new Client(server.port)
+    await d.open()
+    d.send({ type: 'hello', clientId: 'dddddd', name: '口令', version: 'v1' })
+    d.send({ type: 'lookup', pass: created.room.passcodes.blue })
+    expect(await d.wait((m) => m.type === 'found')).toEqual({ type: 'found', code, t: 'blue' })
+    d.send({ type: 'lookup', pass: '000000' })
+    const miss = await d.wait((m) => m.type === 'error')
+    expect(miss.type === 'error' && miss.error).toBe('noRoom')
+    const dClosed = new Promise<number>((r) => d.ws.once('close', (c) => r(c)))
+    const wrong = ['999999', '999998', '999997', '999996', '999995'].filter((p) => !Object.values(created.room.passcodes).includes(p))
+    for (let i = 1; i < MAX_BAD_PASS; i++) d.send({ type: 'lookup', pass: wrong[i]! })
+    expect(await dClosed).toBe(4002)
 
     b.send({ type: 'hello', clientId: 'bbbbbb', name: '小虎', version: 'v1', code, t: 'blue' })
     const joinedB = await b.state()

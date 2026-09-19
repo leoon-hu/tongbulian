@@ -103,12 +103,16 @@ export interface RoomSnapshot {
   members: Member[]
   /** 比赛（与单设备同一份状态机）；大厅阶段是 null */
   match: MatchState | null
+  /** 三个身份各一个 6 位数字口令（B19）：设置页「加入对战」输了就以该身份进房；全服务器唯一 */
+  passcodes: Record<Role, string>
 }
 
 /** 客户端 → 服务器 */
 export type ClientMsg =
   | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role }
   | { type: 'create'; kpId: string; skin: string }
+  /** 口令换房间号与身份（B19）；服务器回 found，客户端再按链接的方式进房 */
+  | { type: 'lookup'; pass: string }
   | { type: 'team'; role: Role }
   | { type: 'ready'; ready: boolean }
   | { type: 'start' }
@@ -141,4 +145,5 @@ export type ServerMsg =
   | { type: 'state'; room: RoomSnapshot; you: string; /** 服务器当前时刻：客户端算比赛用时用（各设备时钟不一样） */ now: number }
   | { type: 'event'; e: ArenaEvent }
   | { type: 'error'; error: RoomError }
+  | { type: 'found'; code: string; t: Role }
   | { type: 'pong' }

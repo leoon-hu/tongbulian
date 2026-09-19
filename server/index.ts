@@ -7,12 +7,14 @@
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, RoomError, ServerMsg } from '@/battle/protocol'
-import { apply, autoStart, createRoom, expired, isCode, join, makeCode, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
+import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isPasscode, join, makeCode, makePasscodes, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
 
 export const MAX_ROOMS = 500
 export const MAX_MSG_BYTES = 4096
 export const RATE_PER_SEC = 20
 export const HEARTBEAT_MS = 60_000
+/** 一个连接口令连错几次就断开（口令只有 90 万种，别让人一直猜；B19） */
+export const MAX_BAD_PASS = 5
 export const BROADCAST_MS = 100
 /** 心跳 / 交接 / GC 的检查间隔（测试可注入） */
 export const SWEEP_MS = 10_000
@@ -27,6 +29,8 @@ interface Conn {
   /** 限流：这一秒收了几条 */
   windowStart: number
   count: number
+  /** 口令连错了几次 */
+  badPass: number
 }
 
 export interface BattleServerOptions {
@@ -180,10 +184,28 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     if (c.code) leaveRoom(c, true)
     let code = makeCode()
     while (rooms.has(code)) code = makeCode()
-    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name }, version: c.version, now: now() })
+    // 口令全服务器唯一（B19）：避开别的房间正在用的
+    const taken = new Set<string>()
+    for (const r of rooms.values()) for (const p of Object.values(r.passcodes)) taken.add(p)
+    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name }, version: c.version, now: now(), passcodes: makePasscodes(taken) })
     rooms.set(code, room)
     c.code = code
     send(c.ws, { type: 'state', room: snapshot(room), you: c.clientId, now: now() })
+  }
+
+  /** 口令换房间号与身份（B19）：不认识就 noRoom，连错 MAX_BAD_PASS 次断开 */
+  function onLookup(c: Conn, msg: Extract<ClientMsg, { type: 'lookup' }>): void {
+    if (!c.clientId) {
+      fail(c.ws, 'bad')
+      return
+    }
+    const hit = isPasscode(msg.pass) ? findByPasscode(rooms.values(), msg.pass) : undefined
+    if (hit) {
+      send(c.ws, { type: 'found', code: hit.code, t: hit.t })
+      return
+    }
+    fail(c.ws, 'noRoom')
+    if (++c.badPass >= MAX_BAD_PASS) c.ws.close(4002, 'too many tries')
   }
 
   function onMessage(c: Conn, data: string): void {
@@ -217,6 +239,10 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       onCreate(c, msg)
       return
     }
+    if (msg.type === 'lookup') {
+      onLookup(c, msg)
+      return
+    }
     if (!c.code || !c.clientId) {
       fail(c.ws, 'bad')
       return
@@ -237,7 +263,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
   const wss = new WebSocketServer({ host: opts.host ?? '127.0.0.1', port: opts.port ?? 8787, path: '/ws', maxPayload: MAX_MSG_BYTES })
 
   wss.on('connection', (ws) => {
-    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, lastSeen: now(), windowStart: now(), count: 0 }
+    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, lastSeen: now(), windowStart: now(), count: 0, badPass: 0 }
     conns.add(c)
     ws.on('message', (data, isBinary) => {
       if (isBinary) {

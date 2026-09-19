@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）→ 开始；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」的面板里，页面默认不展示；
-// 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来
+// 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来；
+// 页头「🔑 加入对战」：输 6 位数字口令，服务器换成房间号 + 身份，再按链接的方式进房（B19）
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
@@ -15,6 +16,7 @@ import RubyText from '@/components/ui/RubyText.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import ConfigSheet from '@/components/battle/ConfigSheet.vue'
 import NameSheet from '@/components/battle/NameSheet.vue'
+import JoinSheet from '@/components/battle/JoinSheet.vue'
 import ModeIcon from '@/components/battle/ModeIcon.vue'
 
 const route = useRoute()
@@ -98,10 +100,66 @@ function createRoom(): void {
     roomError.value = 'connect'
   }, CREATE_TIMEOUT_MS)
 }
+// ── 加入对战（B19）：输口令 → lookup → found 就按链接的方式进房；口令不对 / 连不上留在面板里提示 ──
+const joining = ref(false)
+const joinBusy = ref(false)
+/** 面板里要显示的错误词条键 */
+const joinError = ref<string | null>(null)
+let joinTimer: ReturnType<typeof setTimeout> | null = null
+function stopJoining(): void {
+  joinBusy.value = false
+  if (joinTimer) clearTimeout(joinTimer)
+  joinTimer = null
+}
+function openJoin(): void {
+  joinError.value = null
+  joining.value = true
+}
+function closeJoin(): void {
+  joining.value = false
+  if (joinBusy.value) {
+    stopJoining()
+    room.leave()
+  }
+}
+function join(pass: string): void {
+  if (joinBusy.value) return
+  joinError.value = null
+  joinBusy.value = true
+  room.lookup(pass)
+  joinTimer = setTimeout(() => {
+    if (!joinBusy.value) return
+    stopJoining()
+    room.leave()
+    joinError.value = 'room.connect.slow'
+  }, CREATE_TIMEOUT_MS)
+}
+watch(
+  () => room.found,
+  (f) => {
+    if (joinBusy.value && f) {
+      stopJoining()
+      joining.value = false
+      router.push({ path: `/battle/${f.code}`, query: { t: f.t } })
+    }
+  },
+)
+watch(
+  () => room.error,
+  (e) => {
+    if (joinBusy.value && e && FATAL_ERRORS.includes(e)) {
+      stopJoining()
+      room.leave()
+      joinError.value = e === 'noRoom' ? 'room.join.wrong' : `room.error.${e}`
+    }
+  },
+)
+
 onBeforeUnmount(() => {
-  // 建房还没回来就离开了：断掉，别留一个没人的房间
-  if (creating.value) room.leave()
+  // 建房 / 查口令还没回来就离开了：断掉，别留一个没人的房间
+  if (creating.value || joinBusy.value) room.leave()
   if (createTimer) clearTimeout(createTimer)
+  if (joinTimer) clearTimeout(joinTimer)
 })
 
 function start(): void {
@@ -136,6 +194,7 @@ function start(): void {
         <span class="kp-name">{{ info.kp.icon }} <RubyText :text="{ k: kpTitleKey(info.kp) }" /></span>
       </template>
       <template #actions>
+        <button type="button" class="join-btn" :disabled="!online" @click="openJoin">🔑 {{ ui('room.join') }}</button>
         <button type="button" class="config-btn" @click="config = true">{{ ui('battle.config') }}</button>
         <RouterLink class="howto" to="/help#rules">{{ ui('help.howto') }}</RouterLink>
       </template>
@@ -171,6 +230,7 @@ function start(): void {
 
 
     <ConfigSheet v-if="config" v-model:skin="skin" @close="config = false" @rename="(w) => (asking = w)" />
+    <JoinSheet v-if="joining" :busy="joinBusy" :error="joinError" @join="join" @close="closeJoin" />
     <NameSheet
       v-if="asking"
       :initial="asking === 'right' ? names.right : names.me"
@@ -193,7 +253,8 @@ function start(): void {
   flex-wrap: wrap;
 }
 .howto,
-.config-btn {
+.config-btn,
+.join-btn {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -207,8 +268,12 @@ function start(): void {
   text-decoration: none;
   white-space: nowrap;
 }
-.config-btn {
+.config-btn,
+.join-btn {
   margin-right: 8px;
+}
+.join-btn:disabled {
+  opacity: 0.45;
 }
 .setup {
   max-width: 840px;

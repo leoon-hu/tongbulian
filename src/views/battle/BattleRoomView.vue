@@ -101,6 +101,11 @@ async function copy(url: string): Promise<void> {
 }
 
 const membersOf = (team: Team): Member[] => room.teamMembers(team)
+/** 这个身份的口令（B19），三位一组好念 */
+const passOf = (t: Role): string => {
+  const p = snap.value?.passcodes?.[t] ?? ''
+  return p ? `${p.slice(0, 3)} ${p.slice(3)}` : ''
+}
 /** 名单文字：自己后面标「（我）」 */
 const names = (ms: Member[]): string => ms.map((m) => (m.clientId === room.you ? `${m.name}（${ui('room.me')}）` : m.name)).join('、')
 
@@ -159,6 +164,7 @@ onBeforeUnmount(() => {
           <div v-else class="qr-empty">…</div>
         </div>
         <code class="url">{{ linkOf(t) }}</code>
+        <p class="pass"><RubyText :text="{ k: 'room.pass' }" /><b>{{ passOf(t) }}</b></p>
         <button type="button" class="chip" :class="{ done: copied === linkOf(t) }" @click="copy(linkOf(t))">
           <RubyText :text="{ k: copied === linkOf(t) ? 'room.copied' : 'room.copy' }" />
         </button>
@@ -175,6 +181,7 @@ onBeforeUnmount(() => {
         <div v-else class="qr-empty">…</div>
       </div>
       <code class="url">{{ linkOf('watch') }}</code>
+      <p class="pass"><RubyText :text="{ k: 'room.pass' }" /><b>{{ passOf('watch') }}</b></p>
       <button type="button" class="chip" :class="{ done: copied === linkOf('watch') }" @click="copy(linkOf('watch'))">
         <RubyText :text="{ k: copied === linkOf('watch') ? 'room.copied' : 'room.copy' }" />
       </button>
@@ -211,6 +218,22 @@ onBeforeUnmount(() => {
 <style scoped>
 .room-page {
   display: contents;
+}
+/* 口令（B19）：每张卡的链接下面，数字大一点、三位一组 */
+.pass {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--c-text-light);
+}
+.pass b {
+  font-size: 30px;
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
 }
 /* 等待连接的加载动画：三个点轮流跳（reduced-motion 时不跳） */
 .dots {
