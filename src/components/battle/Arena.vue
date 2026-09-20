@@ -7,7 +7,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { lang, ui } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
-import { hush, say } from '@/engine/voice'
+import { hush, say, sayKeys } from '@/engine/voice'
 import type { Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
 import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
@@ -142,6 +142,10 @@ const onCompact = (e: MediaQueryListEvent): void => {
 compactMq?.addEventListener?.('change', onCompact)
 
 const confirming = ref(false)
+// 退出确认框弹出来时读「要退出比赛吗？」（B39a）
+watch(confirming, (c) => {
+  if (c) sayKeys(['battle.exit.ask'], lang.value)
+})
 
 function exitFullscreen(): void {
   try {

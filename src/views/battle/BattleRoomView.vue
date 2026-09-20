@@ -4,11 +4,14 @@
 //   扫码进来的人先看「三方连接状态」窗口；红蓝两队都有人在线时服务器自动开始 → 竞技场（Arena）→ 结果。
 //   一队有人进来后，建房的设备也能点「以另一队进入」自己上场，或「以观战方进入」到状态窗口只看（B20）。
 // 房间的一切状态都来自服务器的快照（stores/room），这里只画；比赛部分由 stores/battle 的线上模式承接。
+// 每换到一个画面就把上面的提示语读一遍（B39a）：二维码页的说明 / 「以另一队进入」提示、连接状态窗口的两句、连不上、致命错误、提示条；
+//   问名字由 NameSheet 自己读，竞技场里由倒数 / 读题接手。
 // 模板只能有一个根元素、根上不能放 HTML 注释：App 的 <Transition mode="out-in"> 只给单根做过渡，多根（开发模式保留注释也算）会让过渡卡住、下一页空白。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { courseOfKp } from '@/engine/catalog'
-import { ui } from '@/engine/i18n'
+import { lang, ui } from '@/engine/i18n'
+import { hush, sayKeys } from '@/engine/voice'
 import type { Member, Role, Team } from '@/battle/protocol'
 import { useBattleStore } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
@@ -117,6 +120,28 @@ const passOf = (t: Role): string => {
 /** 名单文字：自己后面标「（我）」 */
 const names = (ms: Member[]): string => ms.map((m) => (m.clientId === room.you ? `${m.name}（${ui('room.me')}）` : m.name)).join('、')
 
+// ── 提示语朗读（B39a）：当前画面上的那几句，画面换了就读新的；同一画面不重复读 ──
+const hint = computed<string[] | null>(() => {
+  if (asking.value) return null
+  if (fatal.value === 'version' && room.updating) return null
+  if (fatal.value) return [`room.error.${fatal.value}`]
+  if (!snap.value) return slow.value ? ['room.connect.slow'] : null
+  if (room.inMatch) return null
+  if (myRole.value === 'watch' && !entered.value) return joinedSide.value ? [`room.enter.hint.${joinedSide.value}`] : ['room.scan']
+  return ['room.wait.title', 'room.wait.sub']
+})
+watch(
+  () => hint.value?.join(' '),
+  (h) => {
+    if (h) sayKeys(h.split(' '), lang.value, 300)
+  },
+  { immediate: true },
+)
+// 提示条（这队满了 / 比赛已经开始…）：出现就读一遍
+watch(toast, (e) => {
+  if (e) sayKeys([`room.error.${e}`], lang.value)
+})
+
 function leave(): void {
   // 先记下地图地址：离开房间后快照没了，就不知道是哪个学科 / 年级了
   const to = mapPath.value
@@ -132,6 +157,7 @@ onBeforeUnmount(() => {
   if (slowTimer) clearTimeout(slowTimer)
   // 离开这个页面（返回键 / 换地址）= 离开房间，释放座位（B25）；刷新页面走的是重连
   room.leave()
+  hush()
 })
 </script>
 

@@ -1,7 +1,7 @@
 /**
  * 朗读语料：把所有可能读出来的片段收齐（生成音频包的输入，也是 manifest 测试的依据）。
  * - 数字 0–100 与中文的「两」：题目里的数都在这个范围
- * - 外壳固定句：正确答案是 / 鼓励语 / 结算 / 对战的开始与胜负播报
+ * - 外壳固定句：正确答案是 / 鼓励语 / 结算 / 对战的开始与胜负播报 / 页面打开时自动读的提示语
  * - 每个知识点用固定种子跑三档难度各 CORPUS_SEEDS 题，题干与答案的片段全部收进来
  * 种子固定，所以结果是确定的；模板改了、生成器改了，这里的集合跟着变，测试会提醒重跑 npm run audio。
  */
@@ -32,6 +32,24 @@ const FIXED_KEYS = [
   'battle.half.blue',
   // 开场规则句与结束语（B39）：每种有专属话的皮肤一条 + default
   ...['default', 'race', 'car', 'rocket', 'balloon', 'tower', 'tug', 'ice'].flatMap((id) => [`battle.rule.${id}`, `battle.finish.${id}`]),
+  // 页面打开 / 切换功能时自动读的提示语（B39a）：设置页「跟谁打」与三种模式的说明、问名字、退出确认，
+  // 房间的二维码页说明、「以另一队进入」提示、三方连接状态窗口、输口令面板，以及孩子会看到的错误提示
+  'battle.who',
+  'battle.mode.ai.desc',
+  'battle.mode.duo.desc',
+  'battle.mode.online.desc',
+  'battle.name.ask',
+  'battle.exit.ask',
+  'room.scan',
+  'room.enter.hint.red',
+  'room.enter.hint.blue',
+  'room.wait.title',
+  'room.wait.sub',
+  'room.join.title',
+  'room.join.hint',
+  'room.join.wrong',
+  'room.connect.slow',
+  ...['noRoom', 'closed', 'replaced', 'version', 'full', 'busy', 'teamFull', 'started', 'locked', 'notHost', 'bad'].map((e) => `room.error.${e}`),
 ]
 
 export function collectCorpus(): Record<Lang, string[]> {

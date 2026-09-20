@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// 昵称面板（B17）：一个输入框 + 6 个现成名字（不识字也能点），最多 8 个字
+// 昵称面板（B17）：一个输入框 + 6 个现成名字（不识字也能点），最多 8 个字；打开时读「你叫什么？」（B39a）
 import { computed, onMounted, ref } from 'vue'
 import { createRng } from '@/engine'
 import { lang, ui } from '@/engine/i18n'
+import { sayKeys } from '@/engine/voice'
 import { NAME_MAX, cleanName, suggestNames } from '@/battle/names'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
@@ -14,7 +15,10 @@ const value = ref(props.initial)
 const suggestions = suggestNames(lang.value, createRng(), 6, props.taken)
 const cleaned = computed(() => cleanName(value.value))
 const input = ref<HTMLInputElement | null>(null)
-onMounted(() => input.value?.focus())
+onMounted(() => {
+  input.value?.focus()
+  sayKeys(['battle.name.ask'], lang.value, 200)
+})
 
 function save(): void {
   if (cleaned.value) emit('save', cleaned.value)

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 // 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）→ 开始；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」的面板里，页面默认不展示；
 // 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来（输口令进房的「🔑 加入对战」在全局顶栏，不在这里）。
-// 选中哪张「跟谁打」的卡，卡下面出一行对应的说明（B27）
+// 选中哪张「跟谁打」的卡，卡下面出一行对应的说明（B27）；页面打开读「跟谁打？」+ 当前那张卡的说明，换卡读那张的说明，建房出错读错误提示（B39a）
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
-import { kpTitleKey, ui } from '@/engine/i18n'
+import { kpTitleKey, lang, ui } from '@/engine/i18n'
+import { hush, sayKeys } from '@/engine/voice'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
 import { AUTOCREATE_KEY, remember, takeIntent } from '@/engine/update'
 import { chapterSkin, resolveSkin } from '@/battle/skins'
@@ -107,11 +108,20 @@ watch(
   },
 )
 onMounted(() => {
-  // 上一次点「建房间」时页面更新重载了：接着建（B43）
+  // 上一次点「建房间」时页面更新重载了：接着建（B43），马上就走、不读提示
   if (takeIntent(AUTOCREATE_KEY) === kpId && online.value) {
     mode.value = 'online'
     createRoom()
+    return
   }
+  // 切页动画后再开口（与练习页读题一样）
+  sayKeys(['battle.who', `battle.mode.${mode.value}.desc`], lang.value, 350)
+})
+watch(mode, (m) => {
+  if (!creating.value) sayKeys([`battle.mode.${m}.desc`], lang.value)
+})
+watch(roomError, (e) => {
+  if (e) sayKeys([e === 'connect' ? 'room.connect.slow' : `room.error.${e}`], lang.value)
 })
 function createRoom(): void {
   if (creating.value) return
@@ -129,6 +139,8 @@ onBeforeUnmount(() => {
   // 建房还没回来就离开了：断掉，别留一个没人的房间
   if (creating.value) room.leave()
   if (createTimer) clearTimeout(createTimer)
+  // 离开页面停声（提示语别跟到下一页；竞技场的倒数在这之后才开口）
+  hush()
 })
 
 function start(): void {

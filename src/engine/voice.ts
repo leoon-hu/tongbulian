@@ -6,6 +6,7 @@ import type { Lang } from '@/types/models'
 import manifest from '@/audio/manifest.json'
 import { play, preload, stop } from './audio'
 import { cancel, check, run, sleep } from './runner'
+import { phraseSpeech } from './speech'
 
 interface Manifest {
   version: number
@@ -41,6 +42,18 @@ export function say(tokens: string[], lang: Lang, delayMs = 0): Promise<void> {
       check(signal)
     }
   })
+}
+
+/**
+ * 读几条固定词条（F13 / B39a）：页面打开、切到某个功能、弹出面板或提示时，把屏幕上的提示语读给还不太会认字的孩子听。
+ * 词条要在 corpus.ts 的 FIXED_KEYS 里（有预合成的音频）；与 say 一样独占，新的一句打断上一句。
+ */
+export function sayKeys(keys: string[], lang: Lang, delayMs = 0): Promise<void> {
+  return say(
+    keys.flatMap((k) => phraseSpeech({ k }, lang)),
+    lang,
+    delayMs,
+  )
 }
 
 /** 停掉正在播的一切 */

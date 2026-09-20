@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // 全局「加入对战」面板（B19）：顶栏的「🔑 加入对战」打开（App 渲染，任何页面都能用——口令是全局的，不挂在某个知识点的对战页上）。
 // 输 6 位数字口令 → room.lookup → 服务器回 found（房间号 + 身份）→ 按链接的方式进房；口令不对 / 连不上留在面板里提示。
+// 打开时读「输入口令 · 问建房间的人要口令…」，出错时读错误提示（B39a）。
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ui } from '@/engine/i18n'
+import { lang, ui } from '@/engine/i18n'
+import { sayKeys } from '@/engine/voice'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import { AUTOJOIN_KEY, remember, takeIntent } from '@/engine/update'
 import BigButton from '@/components/ui/BigButton.vue'
@@ -30,7 +32,12 @@ onMounted(() => {
   if (pending && /^[1-9][0-9]{5}$/.test(pending)) {
     value.value = pending
     submit()
+    return
   }
+  sayKeys(['room.join.title', 'room.join.hint'], lang.value, 200)
+})
+watch(error, (e) => {
+  if (e) sayKeys([e], lang.value)
 })
 
 /** 只留数字、最多 6 位（手机数字键盘也可能输进空格 / 横线） */
