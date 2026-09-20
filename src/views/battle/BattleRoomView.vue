@@ -53,7 +53,6 @@ const info = computed(() => (snap.value ? courseOfKp(snap.value.kpId) : undefine
 const mapPath = computed(() => (info.value ? `/s/${info.value.subject.id}/g/${info.value.grade.id}` : '/'))
 const me = computed(() => room.me)
 const myRole = computed<Role>(() => me.value?.role ?? 'watch')
-const isHost = computed(() => room.isHost)
 
 // 连太久：提示检查网络
 const slow = ref(false)
@@ -124,6 +123,10 @@ function leave(): void {
   room.leave()
   router.push(to)
 }
+// 有人点了「不玩了」（服务器关掉房间、发 closed）而我们正在结果页：三台设备一起回地图，不用再点「回去」（B9）
+watch(fatal, (e) => {
+  if (e === 'closed' && battle.state?.phase === 'ended') leave()
+})
 onBeforeUnmount(() => {
   if (copiedTimer) clearTimeout(copiedTimer)
   if (slowTimer) clearTimeout(slowTimer)
@@ -150,7 +153,7 @@ onBeforeUnmount(() => {
   </div>
 
   <template v-else-if="room.inMatch">
-    <Arena :host="isHost" @exit="leave" />
+    <Arena @exit="leave" />
     <p v-if="room.status === 'reconnecting'" class="netbar">📶 <RubyText :text="{ k: 'room.reconnecting' }" /></p>
     <p v-else-if="toast" class="netbar" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
   </template>

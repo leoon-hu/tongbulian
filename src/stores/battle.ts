@@ -130,7 +130,7 @@ export const useBattleStore = defineStore('battle', () => {
 
   const state = ref<MatchState | null>(null)
   const mode = ref<BattleMode | null>(null)
-  /** 线上模式：我是谁、主持人是谁（结果页只有主持人能「再来一局」） */
+  /** 线上模式：我是谁、主持人是谁 */
   const online = ref<{ you: string; hostId: string } | null>(null)
   let transport: OnlineTransport | null = null
   let inputTimer: ReturnType<typeof setTimeout> | null = null
@@ -466,7 +466,7 @@ export const useBattleStore = defineStore('battle', () => {
     )
   }
 
-  /** 再来一局：同样的人、知识点、皮肤，新 seed（线上由主持人发给服务器） */
+  /** 再来一局：同样的人、知识点、皮肤，新 seed（线上发给服务器，谁都能按） */
   function rematch(seeds?: Record<string, number>, now = Date.now()): void {
     const s = state.value
     if (!s) return
@@ -481,10 +481,16 @@ export const useBattleStore = defineStore('battle', () => {
     prepareVoice()
   }
 
-  /** 下一章（B9，线上主持人）：同一房间换成本册下一个知识点与它按章节排到的皮肤，由服务器开新一局；单设备没有这个键 */
+  /** 下一章（B9，线上谁都能按）：同一房间换成本册下一个知识点与它按章节排到的皮肤，由服务器开新一局；单设备没有这个键 */
   function nextChapter(kpId: string, skin: string): void {
     if (mode.value !== 'online') return
     transport?.send({ type: 'next', kpId, skin })
+  }
+
+  /** 不玩了（B9，线上谁都能按）：让服务器关掉房间，大家一起回地图 */
+  function quit(): void {
+    if (mode.value !== 'online') return
+    transport?.send({ type: 'quit' })
   }
 
   function leave(): void {
@@ -521,6 +527,7 @@ export const useBattleStore = defineStore('battle', () => {
     submit,
     rematch,
     nextChapter,
+    quit,
     leave,
   }
 })

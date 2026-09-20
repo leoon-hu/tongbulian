@@ -118,8 +118,10 @@ export type ClientMsg =
   | { type: 'start' }
   | { type: 'end' }
   | { type: 'rematch' }
-  /** 主持人「下一章」（B9）：同一房间换成本册下一个知识点（与它按章节排到的皮肤）再开一局；服务器不认识目录，只透传 */
+  /** 「下一章」（B9，谁都能发）：同一房间换成本册下一个知识点（与它按章节排到的皮肤）再开一局；服务器不认识目录，只透传 */
   | { type: 'next'; kpId: string; skin: string }
+  /** 「不玩了」（B9，上一局结束后谁都能发）：关掉房间，大家一起回地图 */
+  | { type: 'quit' }
   | { type: 'skin'; skin: string }
   | { type: 'lock'; locked: boolean }
   | { type: 'input'; input: string }

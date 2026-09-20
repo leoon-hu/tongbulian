@@ -240,6 +240,10 @@ describe('房间 store（B19–B25）', () => {
     expect(battle.pending).toEqual({})
     expect(battle.operable).toEqual([me])
     expect(battle.questionOf(battle.state!.players.find((x) => x.id === me)!)).toBeTruthy()
+    // 不玩了（B9）：发 quit；服务器关房间发 closed → 致命错误留着
+    ws.sent.length = 0
+    battle.quit()
+    expect(ws.msgs).toEqual([{ type: 'quit' }])
 
     ws.receive({ type: 'state', room: snapshot(r), you: 'zzzzzz', now: 5000 })
     expect(battle.operable).toEqual([])

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 结果页（B9）：胜方 + 成员、比分、用时、每人「答 n · 对 m」；输的一方写「差一点点！」；再来一局最大
+// 结果页（B9）：胜方 + 成员、比分、用时、每人「答 n · 对 m」；输的一方写「差一点点！」；单设备再来一局最大，线上下一章最大
 import { computed } from 'vue'
 import type { MatchState, Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
@@ -8,12 +8,12 @@ import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
 /**
- * host = false（多设备的非主持人）：没有「下一章 / 再来一局 / 换个游戏」，写「等主持人开始下一局…」；changeable = false（线上）：没有「换个游戏」；
- * next（线上主持人的「下一章」，B9）：本册下一个知识点的 id，是最大的按钮，上面写着下一章是哪个知识点；null = 这一册已是最后一个，写「这一册都打完啦！」；
- * 不传 = 单设备，没有这个键
+ * online（多设备房间，B9）：三个角色的结果页一模一样——「下一章」（最大）、「再来一局」、「不玩了」，谁都能点，谁先点就按谁的；没有「换个游戏」；
+ * next（线上「下一章」）：本册下一个知识点的 id，上面写着下一章是哪个知识点；null = 这一册已是最后一个，写「这一册都打完啦！」；
+ * 单设备（online = false）：「再来一局」「换个游戏」「退出」
  */
-const props = withDefaults(defineProps<{ state: MatchState; host?: boolean; changeable?: boolean; next?: string | null }>(), { host: true, changeable: true })
-const emit = defineEmits<{ rematch: []; changeSkin: []; next: []; exit: [] }>()
+const props = withDefaults(defineProps<{ state: MatchState; online?: boolean; next?: string | null }>(), { online: false })
+const emit = defineEmits<{ rematch: []; changeSkin: []; next: []; quit: []; exit: [] }>()
 
 const winner = computed<Team>(() => props.state.winner ?? 'red')
 const loser = computed<Team>(() => (winner.value === 'red' ? 'blue' : 'red'))
@@ -37,16 +37,19 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
         <span v-if="p.team === loser" class="close"><RubyText :text="{ k: 'battle.close' }" /></span>
       </li>
     </ul>
-    <p v-if="host && next" class="next-hint"><RubyText :text="{ k: 'battle.next' }" />：<RubyText :text="{ k: `kp.${next}` }" /></p>
-    <p v-else-if="host && next === null" class="next-hint done"><RubyText :text="{ k: 'battle.lastChapter' }" /></p>
+    <p v-if="online && next" class="next-hint"><RubyText :text="{ k: 'battle.next' }" />：<RubyText :text="{ k: `kp.${next}` }" /></p>
+    <p v-else-if="online && next === null" class="next-hint done"><RubyText :text="{ k: 'battle.lastChapter' }" /></p>
     <div class="actions">
-      <template v-if="host">
+      <template v-if="online">
         <BigButton v-if="next" color="green" class="next-btn" @click="emit('next')"><RubyText :text="{ k: 'battle.next' }" /> ▶</BigButton>
-        <BigButton :color="next ? 'blue' : 'green'" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
-        <BigButton v-if="changeable" color="blue" @click="emit('changeSkin')"><RubyText :text="{ k: 'battle.changeSkin' }" /></BigButton>
+        <BigButton :color="next ? 'blue' : 'green'" class="rematch-btn" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
+        <BigButton color="ghost" class="quit-btn" @click="emit('quit')"><RubyText :text="{ k: 'battle.quit' }" /></BigButton>
       </template>
-      <p v-else class="host-wait"><RubyText :text="{ k: 'room.hostWait' }" /></p>
-      <BigButton color="ghost" @click="emit('exit')"><RubyText :text="{ k: 'battle.exit' }" /></BigButton>
+      <template v-else>
+        <BigButton color="green" class="rematch-btn" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
+        <BigButton color="blue" @click="emit('changeSkin')"><RubyText :text="{ k: 'battle.changeSkin' }" /></BigButton>
+        <BigButton color="ghost" @click="emit('exit')"><RubyText :text="{ k: 'battle.exit' }" /></BigButton>
+      </template>
     </div>
   </div>
 </template>
@@ -61,13 +64,6 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
 }
 .next-hint.done {
   color: var(--c-primary-dark);
-}
-.host-wait {
-  margin: 0;
-  padding: 8px 16px;
-  font-size: var(--fs-md);
-  font-weight: 700;
-  color: var(--c-text-light);
 }
 .result {
   position: absolute;

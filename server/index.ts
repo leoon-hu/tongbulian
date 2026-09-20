@@ -87,10 +87,20 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     }, BROADCAST_MS)
   }
 
+  /** 关掉房间（「不玩了」/ 过期）：每个连接收到 closed 并脱离房间，房间从表里删掉 */
+  function closeRoom(code: string): void {
+    for (const c of connsOf(code)) {
+      fail(c.ws, 'closed')
+      c.code = null
+    }
+    rooms.delete(code)
+  }
+
   function runEffects(code: string, effects: Effect[]): void {
     for (const e of effects) {
       if (e.type === 'broadcast') flush(code)
       else if (e.type === 'event') for (const c of connsOf(code)) send(c.ws, { type: 'event', e: e.e })
+      else if (e.type === 'close') closeRoom(code)
       else for (const c of connsOf(code)) if (c.clientId === e.to) fail(c.ws, e.error)
     }
   }
@@ -289,11 +299,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       const handover = reassignHost(room, t)
       if (handover.room !== room) commit(code, handover)
       if (!expired(room, t)) continue
-      for (const c of connsOf(code)) {
-        fail(c.ws, 'closed')
-        c.code = null
-      }
-      rooms.delete(code)
+      closeRoom(code)
     }
   }, opts.sweepMs ?? SWEEP_MS)
 

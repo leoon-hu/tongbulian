@@ -119,10 +119,7 @@ describe('中继服务（B41–B46）', () => {
     const ended = await b.state((s) => s.room.match?.phase === 'ended')
     expect(ended.room.match!.winner).toBe('red')
 
-    b.send({ type: 'rematch' })
-    const notHost = await b.wait((m) => m.type === 'error')
-    expect(notHost.type === 'error' && notHost.error).toBe('notHost')
-    a.send({ type: 'rematch' })
+    b.send({ type: 'rematch' }) // 谁都能按（B9）
     // 测试里倒数只有 20 ms，快照按 100 ms 节流会把倒数那份合掉：等倒数事件，再等开打后的快照
     await b.wait((m) => m.type === 'event' && m.e.type === 'countdown')
     const again = await b.state((s) => s.room.match?.phase === 'playing' && s.room.match.score.red === 0)
@@ -154,6 +151,31 @@ describe('中继服务（B41–B46）', () => {
     b2.close()
     c.close()
     expect(logs[0]).toContain('/ws')
+  })
+
+  it('不玩了（B9）：结束后谁发 quit，房间里每个连接都收到 closed、房间销毁', async () => {
+    const a = new Client(server.port)
+    const b = new Client(server.port)
+    await Promise.all([a.open(), b.open()])
+    a.send({ type: 'hello', clientId: 'qa0001', name: '甲', version: 'v1' })
+    a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const created = await a.state()
+    const code = created.room.code
+    a.send({ type: 'team', role: 'red' })
+    b.send({ type: 'hello', clientId: 'qb0001', name: '乙', version: 'v1', code, t: 'blue' })
+    await b.wait((m) => m.type === 'event' && m.e.type === 'go')
+    await b.state((s) => s.room.match?.phase === 'playing')
+    for (let i = 0; i < 8; i++) b.send({ type: 'answer', index: i, given: '7', correct: true })
+    await a.state((s) => s.room.match?.phase === 'ended')
+    const before = server.rooms.size
+    b.send({ type: 'quit' })
+    const ca = await a.wait((m) => m.type === 'error')
+    const cb = await b.wait((m) => m.type === 'error')
+    expect(ca.type === 'error' && ca.error).toBe('closed')
+    expect(cb.type === 'error' && cb.error).toBe('closed')
+    expect(server.rooms.size).toBe(before - 1)
+    a.close()
+    b.close()
   })
 
   it('没先 hello 就发别的 → bad；超过 4 KB 的消息被断开', async () => {

@@ -28,7 +28,6 @@ import RubyText from '@/components/ui/RubyText.vue'
 /** 到 8 分后先播胜利动画，再出结果页（B6） */
 const RESULT_DELAY_MS = 2000
 
-const props = withDefaults(defineProps<{ host?: boolean }>(), { host: true })
 const emit = defineEmits<{ exit: []; changeSkin: [] }>()
 
 const store = useBattleStore()
@@ -42,7 +41,6 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 const state = computed(() => store.state)
 const phase = computed(() => state.value?.phase)
 const skin = computed(() => (state.value ? skinById(state.value.skin) : undefined))
-const host = computed(() => props.host)
 /** 游戏只拿这份快照（B34）：与皮肤 props 同一个类型 */
 const skinProps = computed(() => {
   const s = state.value
@@ -220,11 +218,11 @@ onBeforeUnmount(() => {
     <ResultPanel
       v-if="showResult"
       :state="state"
-      :host="host"
-      :changeable="store.mode !== 'online'"
+      :online="store.mode === 'online'"
       :next="nextKpId"
       @rematch="store.rematch()"
       @next="goNext"
+      @quit="store.quit()"
       @change-skin="emit('changeSkin')"
       @exit="exit"
     />

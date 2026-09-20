@@ -634,7 +634,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     FakeWs.reset()
   })
 
-  it('设置页「各用各的」→ 建房间 → 只有三个二维码（红队 / 蓝队 / 观战 + 链接 + 复制 + 一句说明）→ 两队都有人后服务器自动开始 → 建房的设备只观战 → 结果页主持人有「下一章」「再来一局」没有「换个游戏」→ 下一章同一房间换成本册下一个知识点 → 退出回地图', async () => {
+  it('设置页「各用各的」→ 建房间 → 只有三个二维码（红队 / 蓝队 / 观战 + 链接 + 复制 + 一句说明）→ 两队都有人后服务器自动开始 → 建房的设备只观战 → 结果页三个键「下一章」「再来一局」「不玩了」没有「换个游戏」→ 下一章同一房间换成本册下一个知识点 → 有人点不玩了大家回地图', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
     const w = await mountAt(`/battle/new/${KP}`)
@@ -735,11 +735,13 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(shown(w)).toContain('红队获胜')
-    // 线上主持人：下一章（最大）+ 再来一局 + 退出，没有「换个游戏」；上面写着下一章是哪个知识点
+    // 线上：下一章（最大）+ 再来一局 + 不玩了，三个角色一样，没有「换个游戏」；上面写着下一章是哪个知识点
     const NEXT = nextKp(KP)!
     expect(NEXT).toBeTruthy()
     expect(w.findAll('.result .big-btn')).toHaveLength(3)
+    expect(shown(w.find('.result .quit-btn'))).toContain('不玩了')
     expect(shown(w.find('.result'))).not.toContain('换个游戏')
+    expect(shown(w.find('.result'))).not.toContain('等主持人')
     expect(w.find('.result .next-btn').exists()).toBe(true)
     expect(shown(w.find('.result .next-hint'))).toContain(ui(`kp.${NEXT}`))
     ws.sent.length = 0
@@ -770,6 +772,47 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(battle.state?.skin).toBe(chapterSkin(NEXT))
     expect(battle.state?.score).toEqual({ red: 0, blue: 0 })
     expect(router.currentRoute.value.path).toBe(`/battle/${CODE}`) // 还在同一个房间
+    // 再打完一局，红队手机点了「不玩了」：服务器关房间发 closed → 这台（观战）也自动回地图
+    r = tick(r, 40_000 + COUNTDOWN_MS).room
+    ws.receive({ type: 'event', e: { type: 'go' } })
+    push()
+    await settle()
+    for (let i = 0; i < 8; i++) applyAndPush('rrrrrr', { type: 'answer', index: i, given: '7', correct: true }, 50_000 + i)
+    await settle()
+    vi.advanceTimersByTime(2100)
+    await settle()
+    expect(w.find('.result .quit-btn').exists()).toBe(true)
+    ws.receive({ type: 'error', error: 'closed' })
+    await until(pathIs(MAP))
+    expect(battle.state).toBeNull()
+    expect(w.find('.app-header').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('建房的设备退出比赛：✕ → 确认 → 发 leave 回地图', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
+    const w = await mountAt(`/battle/new/${KP}`)
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    room.useFactory((url) => new FakeWs(url))
+    const me = battle.prefs.clientId
+    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.start-btn').trigger('click')
+    const ws = FakeWs.last()
+    ws.open()
+    let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
+    const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    push()
+    await until(pathIs(`/battle/${CODE}`))
+    r = join(r, { clientId: 'rrrrrr', name: '小猫', t: 'red', version: 'v1' }, 2500).room
+    r = join(r, { clientId: 'bbbbbb', name: '小虎', t: 'blue', version: 'v1' }, 2700).room
+    const auto = autoStart(r, 3000, seeds)
+    r = auto.room
+    for (const e of auto.effects) if (e.type === 'event') ws.receive({ type: 'event', e: e.e })
+    push()
+    await settle()
+    expect(w.find('.arena').exists()).toBe(true)
 
     ws.sent.length = 0
     await w.find('.bar-btn').trigger('click')
