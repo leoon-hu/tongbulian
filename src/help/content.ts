@@ -1,7 +1,7 @@
 /**
- * 帮助页的内容（需求 F17）：学习内容 / 题目说明、对战玩法、规则、技巧、常见问题。
- * 应用里的帮助页（views/HelpView.vue，随语言切换）和给搜索引擎的静态页（seo/site.ts，只有中文）用同一份。
- * 只依赖目录与皮肤注册表（知识点数、游戏名与规则句都是算出来的，不手写数字）。
+ * 帮助页的内容（需求 F17）：对战怎么玩、游戏规则、技巧、学习内容 / 题目说明、常见问题——顺序按对战版的定位
+ * （2026-09-21）先讲对战。应用里的帮助页（views/HelpView.vue，随语言切换）和给搜索引擎的静态页（seo/site.ts，
+ * 只有中文）用同一份。只依赖目录与皮肤注册表（知识点数、游戏名与规则句都是算出来的，不手写数字）。
  */
 import type { Lang } from '@/types/models'
 import { getGenerator } from '@/engine'
@@ -36,8 +36,8 @@ export interface HelpGame {
 
 export const HELP_TITLE: Record<Lang, string> = { zh: '帮助与说明', en: 'Help & guide' }
 export const HELP_LEAD: Record<Lang, string> = {
-  zh: '同步练怎么用：学习内容和题目、对战怎么玩、规则、技巧、常见问题。',
-  en: 'How Chapter Practice works: what to learn, how the battle mode works, its rules, tips and FAQ.',
+  zh: '同步练-对战版怎么玩：答对人教版课本的题就得分，谁先答对 8 题谁赢——对战怎么玩、游戏规则、技巧、学习内容和题目、常见问题。',
+  en: 'How Chapter Practice · Battle works: answer PEP textbook questions to score, first to 8 wins — how the battle works, rules, tips, what to learn and FAQ.',
 }
 
 /** 「一年级数学 26 个知识点、二年级数学 29 个知识点」 */
@@ -66,37 +66,6 @@ export function helpSections(lang: Lang): HelpSection[] {
   const games = SKINS.length
   if (lang === 'en') {
     return [
-      {
-        id: 'learn',
-        icon: '📚',
-        title: 'What to learn & the questions',
-        blocks: [
-          {
-            kind: 'p',
-            text: `Questions follow the units of the current PEP (People's Education Press) textbooks for primary school Chinese, math and English, grades 1–6. Available now: ${coverage('en')}. More grades and subjects are being added.`,
-          },
-          {
-            kind: 'p',
-            text: 'Questions are not copied from a bank: every round of 8 is generated for the topic at textbook difficulty. An unfinished round continues next time with the same questions; a finished round gets a check mark and the next visit starts a new one.',
-          },
-          {
-            kind: 'list',
-            items: [
-              'Number pad: type the answer, ⌫ deletes, ✓ submits.',
-              'Four choices: tap one card to answer.',
-              'Visual aids in the question: ten-frames, objects, clock faces, money, shapes, number lines, rulers, column arithmetic, line-ups and more.',
-            ],
-          },
-          {
-            kind: 'p',
-            text: 'Every Chinese character carries pinyin, each question is read aloud when it appears, and 🔊 reads it again. A wrong answer shows and reads the correct one, with a demonstration where a visual aid applies (making ten and breaking ten are animated). No timer, no penalty, no leaderboard.',
-          },
-          {
-            kind: 'p',
-            text: 'Free, no ads, no account. Progress is stored only in this browser. Switch between 中文 and English at the top; questions, pinyin and speech follow.',
-          },
-        ],
-      },
       {
         id: 'play',
         icon: '⚔️',
@@ -161,6 +130,37 @@ export function helpSections(lang: Lang): HelpSection[] {
         ],
       },
       {
+        id: 'learn',
+        icon: '📚',
+        title: 'What to learn & the questions',
+        blocks: [
+          {
+            kind: 'p',
+            text: `Battles and practice share one set of questions, generated from the units of the current PEP (People's Education Press) textbooks for primary school Chinese, math and English, grades 1–6 — every point in a battle is a textbook question. Available now: ${coverage('en')}. More grades and subjects are being added.`,
+          },
+          {
+            kind: 'p',
+            text: 'Questions are not copied from a bank: every round of 8 is generated for the topic at textbook difficulty. An unfinished round continues next time with the same questions; a finished round gets a check mark and the next visit starts a new one.',
+          },
+          {
+            kind: 'list',
+            items: [
+              'Number pad: type the answer, ⌫ deletes, ✓ submits.',
+              'Four choices: tap one card to answer.',
+              'Visual aids in the question: ten-frames, objects, clock faces, money, shapes, number lines, rulers, column arithmetic, line-ups and more.',
+            ],
+          },
+          {
+            kind: 'p',
+            text: 'Every Chinese character carries pinyin, each question is read aloud when it appears, and 🔊 reads it again. A wrong answer shows and reads the correct one, with a demonstration where a visual aid applies (making ten and breaking ten are animated). No timer, no penalty, no leaderboard.',
+          },
+          {
+            kind: 'p',
+            text: 'Free, no ads, no account. Progress is stored only in this browser. Switch between 中文 and English at the top; questions, pinyin and speech follow.',
+          },
+        ],
+      },
+      {
         id: 'faq',
         icon: '❓',
         title: 'FAQ',
@@ -191,37 +191,6 @@ export function helpSections(lang: Lang): HelpSection[] {
     ]
   }
   return [
-    {
-      id: 'learn',
-      icon: '📚',
-      title: '学习内容与题目',
-      blocks: [
-        {
-          kind: 'p',
-          text: `同步练按现行人教版教材（2022 版课标新教材）的单元出题，覆盖小学一到六年级的语文、数学、英语。现在可练的是${coverage('zh')}，其它年级和学科陆续补充。`,
-        },
-        {
-          kind: 'p',
-          text: '题目不是从题库里抄来的，而是每次按知识点随机生成：一轮 8 题，难度按课本要求。同一轮没做完，下次进来接着做同一组题；做完一轮打勾，再进去就是新的一轮。',
-        },
-        {
-          kind: 'list',
-          items: [
-            '数字键盘：填一个数，打错用 ⌫ 删掉，按 ✓ 提交。',
-            '四选一：点一张卡片就算作答。',
-            '题干配教具：十格阵、实物图、钟面、人民币、图形、数轴、尺子、竖式、排队等，看得见就更容易懂。',
-          ],
-        },
-        {
-          kind: 'p',
-          text: '每个汉字都标拼音，进题自动朗读，题干下方的 🔊 可以再听一遍。答错会读出并显示正确答案，有教具的知识点会演示一遍（凑十法、破十法有动画）；不计时、不扣分、没有排行。',
-        },
-        {
-          kind: 'p',
-          text: '免费、无广告、不用注册；进度只存在这台设备的浏览器里。顶部可以切换中文 / English，题目、拼音、朗读都跟着切。',
-        },
-      ],
-    },
     {
       id: 'play',
       icon: '⚔️',
@@ -282,6 +251,37 @@ export function helpSections(lang: Lang): HelpSection[] {
             '先在练习模式把这个知识点做熟，再去对战更有把握。',
             '把网站装到平板 / 手机的主屏幕，全屏打开、没有网也能玩。',
           ],
+        },
+      ],
+    },
+    {
+      id: 'learn',
+      icon: '📚',
+      title: '学习内容与题目',
+      blocks: [
+        {
+          kind: 'p',
+          text: `对战和练习用的是同一套题：按现行人教版教材（2022 版课标新教材）的单元出，覆盖小学一到六年级的语文、数学、英语——对战里的每一分都是一道课本题。现在可练、可对战的是${coverage('zh')}，其它年级和学科陆续补充。`,
+        },
+        {
+          kind: 'p',
+          text: '题目不是从题库里抄来的，而是每次按知识点随机生成：一轮 8 题，难度按课本要求。同一轮没做完，下次进来接着做同一组题；做完一轮打勾，再进去就是新的一轮。',
+        },
+        {
+          kind: 'list',
+          items: [
+            '数字键盘：填一个数，打错用 ⌫ 删掉，按 ✓ 提交。',
+            '四选一：点一张卡片就算作答。',
+            '题干配教具：十格阵、实物图、钟面、人民币、图形、数轴、尺子、竖式、排队等，看得见就更容易懂。',
+          ],
+        },
+        {
+          kind: 'p',
+          text: '每个汉字都标拼音，进题自动朗读，题干下方的 🔊 可以再听一遍。答错会读出并显示正确答案，有教具的知识点会演示一遍（凑十法、破十法有动画）；不计时、不扣分、没有排行。',
+        },
+        {
+          kind: 'p',
+          text: '免费、无广告、不用注册；进度只存在这台设备的浏览器里。顶部可以切换中文 / English，题目、拼音、朗读都跟着切。',
         },
       ],
     },

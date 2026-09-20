@@ -3,10 +3,10 @@ import { SKINS } from '@/battle/skins'
 import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '../content'
 
 describe('帮助页内容（F17）', () => {
-  it('中英文各五节，顺序固定，每节都有内容；学习内容一节把上线的知识点数写进去', () => {
+  it('中英文各五节，顺序固定（对战在前）；每节都有内容；学习内容一节把上线的知识点数写进去', () => {
     for (const lang of ['zh', 'en'] as const) {
       const secs = helpSections(lang)
-      expect(secs.map((s) => s.id)).toEqual(['learn', 'play', 'rules', 'tips', 'faq'])
+      expect(secs.map((s) => s.id)).toEqual(['play', 'rules', 'tips', 'learn', 'faq'])
       for (const s of secs) {
         expect(s.title.length).toBeGreaterThan(1)
         expect(s.blocks.length).toBeGreaterThan(0)
@@ -14,7 +14,7 @@ describe('帮助页内容（F17）', () => {
       expect(HELP_TITLE[lang].length).toBeGreaterThan(1)
       expect(HELP_LEAD[lang].length).toBeGreaterThan(10)
     }
-    const learn = helpSections('zh')[0]!
+    const learn = helpSections('zh').find((s) => s.id === 'learn')!
     const first = learn.blocks[0]!
     expect(first.kind).toBe('p')
     if (first.kind === 'p') expect(first.text).toContain('一年级数学 26 个知识点')

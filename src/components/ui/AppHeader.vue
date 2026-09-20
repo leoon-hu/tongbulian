@@ -8,6 +8,7 @@ import RubyText from '@/components/ui/RubyText.vue'
 
 // 全局顶部栏：品牌标题 + 「🔑 加入对战」（B19，口令是全局的，不挂在某个知识点的对战页上）+ 主页 / 声音 / 语言切换。显示在每个页面上方（学科无关；竞技场里不显示）。
 // 品牌名在首页是 <h1>（首页没有别的一级标题，搜索引擎按它认页面），子页的一级标题是 PageHeader 里的页名。
+// 品牌画成「同步练」+ 主色药丸「对战版」（F3，2026-09-21 对战版定位）；<title> 用的完整名 brand.title 在 App.vue。
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
@@ -18,9 +19,12 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
 <template>
   <header class="app-header">
     <RouterLink class="brand" to="/">
-      <span class="brand-icon">📝</span>
+      <span class="brand-icon">⚔️</span>
       <span class="brand-text">
-        <component :is="titleTag" class="brand-title">{{ ui('brand.title') }}</component>
+        <component :is="titleTag" class="brand-title">
+          <span class="brand-name">{{ ui('brand.name') }}</span>
+          <span class="brand-badge">{{ ui('brand.edition') }}</span>
+        </component>
         <span class="brand-sub">{{ ui('brand.tagline') }}</span>
       </span>
     </RouterLink>
@@ -70,9 +74,24 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
   flex-direction: column;
 }
 .brand-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: var(--fs-xl);
   font-weight: 800;
   line-height: 1.2;
+}
+/* 「对战版」药丸：主色实底白字，比品牌名小一号 */
+.brand-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--c-primary);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 .brand-sub {
   color: var(--c-text-light);

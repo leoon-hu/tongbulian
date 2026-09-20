@@ -4,9 +4,12 @@ import type { SubjectMeta } from '@/types/models'
 import { SUBJECTS, liveCourses } from '@/engine/catalog'
 import { t, ui } from '@/engine/i18n'
 import InstallBar from '@/components/ui/InstallBar.vue'
+import RubyText from '@/components/ui/RubyText.vue'
 import { SISTER_SITES } from '@/engine/sites'
+import { SKINS } from '@/battle/skins'
 
 // 顶层选择页：选学科。soon 学科显示占位「敬请期待」，不可进入。
+// 标题上方一条对战 hero（F1，2026-09-21 对战版定位）：七种游戏的图标 + 一句带拼音的话，静态、不出声、不可点。
 // 底部一行给家长（也给搜索引擎）的说明 + 各上线课程的知识点清单链接：清单是构建时生成的静态页
 // <学科>/<年级>/（见 src/seo），普通链接、不走路由；再下面一行「更多应用」链到同一作者的另外三个站（新窗口打开）。
 const router = useRouter()
@@ -21,6 +24,10 @@ function tapSubject(sub: SubjectMeta): void {
   <div class="picker">
     <!-- 安装提示条（F16）：没装到主屏幕时从第一次打开就在首页顶上，标题之上 -->
     <InstallBar />
+    <section class="hero" aria-label="battle">
+      <span class="hero-icons" aria-hidden="true"><span v-for="s in SKINS" :key="s.id">{{ s.icon }}</span></span>
+      <p class="hero-line"><RubyText :text="{ k: 'battle.hero' }" /></p>
+    </section>
     <h2 class="picker-title">{{ ui('chooser.pickSubject') }}</h2>
     <div class="grid">
       <button
@@ -55,6 +62,31 @@ function tapSubject(sub: SubjectMeta): void {
 </template>
 
 <style scoped>
+.hero {
+  margin: 12px 0 4px;
+  padding: 14px 16px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  border: 2px solid var(--c-primary);
+  text-align: center;
+}
+.hero-icons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 30px;
+  line-height: 1.2;
+}
+.hero-line {
+  margin: 8px auto 0;
+  max-width: 24em;
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--c-primary-dark);
+  /* 手机上折成两行时让两行均分（不要「赢！」单独一行） */
+  text-wrap: balance;
+}
 .about-help {
   margin: 4px 0 8px;
 }

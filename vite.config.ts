@@ -51,9 +51,9 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         includeManifestIcons: false,
         manifest: {
-          name: '同步练 · 人教版小学同步练习',
-          short_name: '同步练',
-          description: '按人教版教材单元随机出题的小学同步练习，汉字标拼音、题目自动朗读',
+          name: '同步练-对战版 · 课本知识点对战学习',
+          short_name: '同步练-对战版',
+          description: '把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢；也能一个人练，汉字标拼音、题目自动朗读',
           lang: 'zh-CN',
           start_url: './',
           scope: './',

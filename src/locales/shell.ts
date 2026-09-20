@@ -1,12 +1,14 @@
 // 应用外壳的界面词条：品牌、目录、导航、进度、练习结算。与具体学科无关。
 // 各学科的题目 / 选项 / 教具文案不放这里，由内容包通过 registerDict 注册。
-// 品牌名只在这里（brand.*）和 index.html 的 <title> 出现。
+// 品牌名只在这里（brand.*）和 index.html 的 <title> 出现：brand.title 是完整名（<title> 用），顶部栏画成 brand.name + 药丸 brand.edition。
 import type { Dict } from '@/engine/i18n'
 
 export const SHELL_ZH: Dict = {
   // 品牌 / 目录 / 导航
-  'brand.title': '同步练',
-  'brand.tagline': '人教版 · 一章一练',
+  'brand.title': '同步练-对战版',
+  'brand.name': '同步练',
+  'brand.edition': '对战版',
+  'brand.tagline': '课本知识点 · 对战赢积分',
   'nav.home': '主页',
   'nav.soundOn': '声音：开',
   'nav.soundOff': '声音：关',
@@ -29,9 +31,11 @@ export const SHELL_ZH: Dict = {
   // 学期分册（年级无关，年级信息在页头/面包屑体现）
   'sem.1': '上册',
   'sem.2': '下册',
+  // 首页「选择学科」上方的对战 hero（F1）：七种游戏图标 + 一句带拼音的话，静态、不出声
+  'battle.hero': '答对课本题就得分，谁先答对 8 题谁赢！',
   // 首页底部给家长的一句说明 + 各年级知识点清单（静态页）的链接
-  'home.about': '按人教版教材单元随机出题；汉字标拼音、题目自动朗读；免费、无广告、离线可用。',
-  'help.link': '❓ 帮助与说明：学习内容、对战玩法、规则、技巧、常见问题',
+  'home.about': '把人教版课本的知识点测验变成游戏积分：打机器人、两人一台或各用各的设备，谁先答对 8 题谁赢；也能一个人安静地练。汉字标拼音、题目自动朗读；免费、无广告、离线可用。',
+  'help.link': '❓ 帮助与说明：对战玩法、规则、技巧、学习内容、常见问题',
   'help.howto': '❓ 怎么玩',
   'home.topics': '{name}知识点清单',
   // 首页底部「更多应用」：同一作者另外三个站（名单在 engine/sites.ts），静态页页脚也用
@@ -226,6 +230,7 @@ export const SHELL_PINYIN: Record<string, string> = {
   'summary.retry': 'zài liàn yí cì',
   'summary.backMap': 'huí dào dì tú',
   // 对战与皮肤名
+  'battle.hero': 'dá duì kè běn tí jiù dé fēn shuí xiān dá duì tí shuí yíng',
   'battle.title': 'duì zhàn',
   'battle.enter': 'zhǎo rén duì zhàn',
   'battle.who': 'gēn shuí dǎ',
@@ -356,8 +361,10 @@ export const SHELL_PINYIN: Record<string, string> = {
 }
 
 export const SHELL_EN: Dict = {
-  'brand.title': 'Chapter Practice',
-  'brand.tagline': 'PEP textbooks, one chapter at a time',
+  'brand.title': 'Chapter Practice · Battle',
+  'brand.name': 'Chapter Practice',
+  'brand.edition': 'Battle',
+  'brand.tagline': 'Textbook quizzes · score to win',
   'nav.home': 'Home',
   'nav.soundOn': 'Sound: on',
   'nav.soundOff': 'Sound: off',
@@ -378,8 +385,9 @@ export const SHELL_EN: Dict = {
   'course.name': '{grade} {subject}',
   'sem.1': 'Term 1',
   'sem.2': 'Term 2',
-  'home.about': 'Random questions by PEP textbook unit; pinyin on every character, every question read aloud; free, no ads, works offline.',
-  'help.link': '❓ Help & guide: what to learn, how the battle works, rules, tips, FAQ',
+  'battle.hero': 'Answer textbook questions to score — first to 8 wins!',
+  'home.about': 'PEP textbook quizzes turned into game points: play the robot, two on one tablet or one device each, first to 8 wins; or practise quietly on your own. Pinyin on every character, every question read aloud; free, no ads, works offline.',
+  'help.link': '❓ Help & guide: how the battle works, rules, tips, what to learn, FAQ',
   'help.howto': '❓ How to play',
   'home.topics': '{name} topic list',
   'sites.more': 'More apps',

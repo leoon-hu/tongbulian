@@ -36,17 +36,20 @@ const html = `<!doctype html>
   @font-face { font-family: 'Andika'; src: url('${fonts}/andika-400-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+1E00-1EFF; }
   html, body { margin: 0; width: ${W}px; height: ${H}px; overflow: hidden; }
   body { background: #fdf6ec; color: #3d2c1e; font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif; display: flex; align-items: center; justify-content: space-between; padding: 0 72px; box-sizing: border-box; }
-  .left { display: flex; flex-direction: column; gap: 22px; max-width: 640px; }
+  .left { display: flex; flex-direction: column; gap: 22px; max-width: 660px; }
   .brand { display: flex; align-items: center; gap: 26px; }
   .icon { width: 128px; height: 128px; border-radius: 30px; background: #ff8a3d; color: #fff; font-size: 78px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(242, 105, 29, 0.28); }
-  .name { font-size: 84px; font-weight: 800; line-height: 1; }
+  .name { font-size: 76px; font-weight: 800; line-height: 1; display: flex; align-items: center; gap: 18px; }
+  .badge { font-size: 34px; padding: 6px 22px; border-radius: 999px; background: #ff8a3d; color: #fff; }
   .tagline { font-size: 34px; color: #8a7a6d; margin-top: 12px; font-weight: 600; }
   ul { list-style: none; margin: 8px 0 0; padding: 0; font-size: 28px; font-weight: 600; line-height: 1.8; white-space: nowrap; }
   li::before { content: '✓'; color: #3ecf8e; font-weight: 800; margin-right: 12px; }
-  .card { width: 400px; padding: 34px 36px 30px; border-radius: 34px; background: #fff; box-shadow: 0 14px 36px rgba(61, 44, 30, 0.14); text-align: center; }
+  .card { width: 400px; padding: 26px 36px 30px; border-radius: 34px; background: #fff; box-shadow: 0 14px 36px rgba(61, 44, 30, 0.14); text-align: center; }
+  .score { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 8px; font-size: 40px; font-weight: 800; }
+  .score .red { color: #e8453c; } .score .blue { color: #2f80ed; } .score .vs { font-size: 30px; color: #8a7a6d; }
   .card ruby { font-size: 30px; font-weight: 700; line-height: 2.1; }
   .card rt { font-family: 'Andika', sans-serif; font-size: 0.55em; font-weight: 400; color: #8a7a6d; padding: 0 0.15em; }
-  .expr { font-size: 74px; font-weight: 800; letter-spacing: 6px; margin: 6px 0 22px; }
+  .expr { font-size: 64px; font-weight: 800; letter-spacing: 4px; margin: 2px 0 16px; white-space: nowrap; }
   .frame { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 300px; margin: 0 auto; padding: 8px; border: 4px solid #3d2c1e; border-radius: 12px; }
   .cell { height: 48px; display: flex; align-items: center; justify-content: center; }
   .dot { width: 36px; height: 36px; border-radius: 50%; background: #ff8a3d; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.12); }
@@ -55,14 +58,16 @@ const html = `<!doctype html>
 </style></head>
 <body>
   <div class="left">
-    <div class="brand"><div class="icon">练</div><div><div class="name">同步练</div><div class="tagline">人教版小学同步练习</div></div></div>
+    <div class="brand"><div class="icon">练</div><div><div class="name">同步练<span class="badge">对战版</span></div><div class="tagline">课本知识点测验 = 游戏积分</div></div></div>
     <ul>
-      <li>${meta.grades}数学 ${meta.kpCount} 个知识点</li>
-      <li>按单元随机出题，汉字标拼音、自动朗读</li>
-      <li>免费、无广告、离线可用</li>
+      <li>答对课本题就得分，谁先答对 8 题谁赢</li>
+      <li>打机器人 · 两人一台 · 扫码多设备组队</li>
+      <li>人教版${meta.grades}数学 ${meta.kpCount} 个知识点</li>
+      <li>汉字标拼音、自动朗读；免费、离线可用</li>
     </ul>
   </div>
   <div class="card">
+    <div class="score"><span class="red">🔴 5</span><span class="vs">:</span><span class="blue">3 🔵</span></div>
     <div><ruby>一<rt>yí</rt>共<rt>gòng</rt>有<rt>yǒu</rt>多<rt>duō</rt>少<rt>shao</rt>个<rt>ge</rt>？</ruby></div>
     <div class="expr">9 + 5 = ?</div>
     <div class="frame">${'<div class="cell"><div class="dot"></div></div>'.repeat(9)}<div class="cell"></div></div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 根组件：全局顶部栏（每页都有）+ 路由出口。页面切换时只对内容做淡入淡出。
 // 同时按当前学科切换主题皮肤（data-theme 驱动 styles/themes.css），<html lang> 跟随界面语言，
-// <title> 跟随页面（首页用 index.html 里的完整标题，子页「知识点 · 一年级数学 · 同步练」）。
+// <title> 跟随页面（首页用 index.html 里的完整标题，子页「知识点 · 一年级数学 · 同步练-对战版」，品牌用完整名 brand.title）。
 import { computed, onMounted, watch } from 'vue'
 import { HELP_TITLE } from '@/help/content'
 import { useRoute } from 'vue-router'

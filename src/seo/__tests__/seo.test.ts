@@ -39,7 +39,8 @@ describe('SEO 静态页', () => {
     const total = liveCourses().reduce((n, lc) => n + lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).length, 0)
     expect(m.kpCount).toBe(total)
     expect(m.grades).toBe('一年级、二年级')
-    expect(m.title).toContain('同步练')
+    expect(m.title).toContain('同步练-对战版')
+    expect(m.description).toContain('谁先答对 8 题谁赢')
     expect(m.description).toContain(`一年级数学 26 个知识点`)
     expect(m.description.length).toBeLessThan(160)
   })
@@ -60,7 +61,7 @@ describe('SEO 静态页', () => {
 
   it('每页有标题、描述、canonical 与 JSON-LD，没有残留占位符', () => {
     for (const p of pages) {
-      expect(p.html).toMatch(/<title>[^<]+ · 同步练<\/title>/)
+      expect(p.html).toMatch(/<title>[^<]+ · 同步练-对战版<\/title>/)
       expect(p.html).toMatch(/<meta name="description" content="[^"]{30,}" \/>/)
       expect(p.html).toContain(`<link rel="canonical" href="${SITE}/${p.path}" />`)
       expect(p.html).toContain(`<meta property="og:image" content="${SITE}/og.png" />`)
@@ -82,7 +83,7 @@ describe('SEO 静态页', () => {
     expect(robotsTxt(SITE)).toContain(`Sitemap: ${SITE}/sitemap.xml`)
   })
 
-  it('目录页链到每个知识点页与应用里的地图；知识点页链回目录页与应用里的练习', () => {
+  it('目录页链到每个知识点页与应用里的地图；知识点页链回目录页、应用里的练习与对战设置页', () => {
     for (const lc of liveCourses()) {
       const course = byPath.get(coursePath(lc.course))!
       expect(course.html).toContain(`href="../../#/s/${lc.course.subjectId}/g/${lc.course.gradeId}"`)
@@ -90,6 +91,7 @@ describe('SEO 静态页', () => {
         expect(course.html).toContain(`href="${kp.id}.html"`)
         const page = byPath.get(kpPath(lc.course, kp))!
         expect(page.html).toContain(`href="../../#/s/${lc.course.subjectId}/g/${lc.course.gradeId}/practice/${kp.id}"`)
+        expect(page.html).toContain(`<a class="cta" href="../../#/battle/new/${kp.id}">⚔️ 打一局：${kp.title}</a>`)
         expect(page.html).toContain('href="./"')
         expect(page.html).toContain(`<h1>${kp.icon} ${kp.title}</h1>`)
       }

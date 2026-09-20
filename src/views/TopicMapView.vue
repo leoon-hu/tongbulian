@@ -204,9 +204,13 @@ function tapNode(kp: KnowledgePoint): void {
 .tab.battle {
   flex: none;
   margin-left: auto;
+  /* 关着也带主色描边（内阴影，不改高度）：对战版一眼能找到开关（F3） */
+  box-shadow: var(--shadow-card), inset 0 0 0 2px var(--c-primary);
+  color: var(--c-primary-dark);
 }
 .tab.battle.active {
   background: var(--c-primary);
+  box-shadow: var(--shadow-card);
   color: #fff;
 }
 .unit {

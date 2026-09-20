@@ -68,7 +68,8 @@ describe('App 集成冒烟', () => {
   it('首页：品牌名是唯一的 <h1>，底部有各上线课程的知识点清单链接（静态页地址）与另外三个站的链接；子页标题跟随页面', async () => {
     const w = await mountAt('/')
     expect(w.findAll('h1')).toHaveLength(1)
-    expect(w.find('h1').text()).toBe('同步练')
+    expect(w.find('h1').text()).toBe('同步练对战版') // 品牌名 + 「对战版」药丸（两个 span 之间的换行被压掉）
+    expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('footer.about .about-links a')
     expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单'])
@@ -81,13 +82,13 @@ describe('App 集成冒烟', () => {
 
     const map = await mountAt(MAP)
     expect(map.findAll('h1')).toHaveLength(1)
-    expect(document.title).toBe('一年级数学 · 同步练')
+    expect(document.title).toBe('一年级数学 · 同步练-对战版')
     map.unmount()
     const p = await mountAt(practice('s1-05-carry-add'))
-    expect(document.title).toBe('凑十法 · 一年级数学 · 同步练')
+    expect(document.title).toBe('凑十法 · 一年级数学 · 同步练-对战版')
     setLang('en')
     await flushPromises()
-    expect(document.title).toBe('Make-Ten Addition · Grade 1 Math · Chapter Practice')
+    expect(document.title).toBe('Make-Ten Addition · Grade 1 Math · Chapter Practice · Battle')
     p.unmount()
   })
 
@@ -1114,7 +1115,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
 })
 
 describe('帮助页（F17）', () => {
-  it('首页页脚链到帮助页；帮助页五节都在、规则一节列出每种游戏；切英文标题跟着换；标题栏是「帮助与说明 · 同步练」', async () => {
+  it('首页页脚链到帮助页；帮助页五节都在、对战一节在前、规则一节列出每种游戏；切英文标题跟着换；标题栏是「帮助与说明 · 同步练-对战版」', async () => {
     const w = await mountAt('/')
     const link = w.find('.about-help a')
     expect(link.exists()).toBe(true)
@@ -1124,15 +1125,16 @@ describe('帮助页（F17）', () => {
     await flushPromises()
     const text = shown(w)
     for (const t of ['学习内容与题目', '对战怎么玩', '游戏规则', '游戏技巧', '常见问题']) expect(text).toContain(t)
+    expect(text.indexOf('对战怎么玩')).toBeLessThan(text.indexOf('学习内容与题目'))
     expect(w.findAll('.game')).toHaveLength(SKINS.length)
     expect(text).toContain('谁先答对 8 题谁赢')
     expect(text).toContain('火箭就升高一段')
-    expect(document.title).toBe('帮助与说明 · 同步练')
+    expect(document.title).toBe('帮助与说明 · 同步练-对战版')
     setLang('en')
     await flushPromises()
     expect(shown(w)).toContain('Rules')
     expect(shown(w)).not.toContain('游戏规则')
-    expect(document.title).toBe('Help & guide · Chapter Practice')
+    expect(document.title).toBe('Help & guide · Chapter Practice · Battle')
     w.unmount()
   })
 

@@ -17,8 +17,10 @@ import { SISTER_SITES } from '@/engine/sites'
 import { SKINS } from '@/battle/skins'
 import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
 
-export const SITE_NAME = '同步练'
-export const SITE_TAGLINE = '人教版小学同步练习'
+export const SITE_NAME = '同步练-对战版'
+export const SITE_TAGLINE = '课本知识点对战学习'
+/** 一句话定位（2026-09-21 用户定），入口页 / 静态页 / 分享图共用 */
+export const SITE_PITCH = '把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢'
 /** 每个知识点页上示例题的数量：三档难度各几道 */
 export const SAMPLES_PER_TIER = 2
 
@@ -62,6 +64,8 @@ export const HELP_PATH = 'help/'
 const HELP_ROOT = '../'
 const appMap = (c: Course): string => `${ROOT}#/s/${c.subjectId}/g/${c.gradeId}`
 const appPractice = (c: Course, kp: KnowledgePoint): string => `${appMap(c)}/practice/${kp.id}`
+/** 对战设置页（选跟谁打）：知识点页的主按钮深链到这里 */
+const appBattle = (kp: KnowledgePoint): string => `${ROOT}#/battle/new/${kp.id}`
 
 // ── 示例题：固定种子，三档难度各取几道不重复的题 ─────────────────────────
 
@@ -158,6 +162,7 @@ p { margin: 0 0 10px; }
 .lead { color: #5c4a3a; }
 .cta { display: inline-block; margin: 8px 0 4px; padding: 14px 28px; border-radius: 999px; background: #ff8a3d; color: #fff; font-weight: 800; font-size: 18px; text-decoration: none; box-shadow: 0 4px 12px rgba(61, 44, 30, 0.12); }
 .cta:active { transform: scale(0.97); }
+.cta.secondary { background: #fff; color: #f2691d; box-shadow: inset 0 0 0 2px #ffb27a; margin-left: 10px; }
 .note { font-size: 14px; color: #8a7a6d; }
 ul.topics { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
 ul.topics li a, ul.topics li span { display: block; padding: 10px 14px; border-radius: 14px; background: #fff; color: inherit; text-decoration: none; box-shadow: 0 2px 8px rgba(61, 44, 30, 0.06); }
@@ -258,8 +263,8 @@ ${STYLE}
 ${body}
     </main>
     <footer>
-      <p>${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，每个汉字标拼音、每道题自动朗读；免费、无广告、不用注册，添加到主屏幕后没有网也能用。</p>
-      <p><a href="${root}">打开${SITE_NAME}</a> · <a href="${root}${HELP_PATH}">帮助与说明</a>（学习内容、对战玩法、规则、技巧、常见问题）</p>
+      <p>${SITE_NAME}：${SITE_PITCH}——打机器人、两人一台或各用各的设备，也能一个人安静地练；题目按人教版教材单元随机出，每个汉字标拼音、每道题自动朗读；免费、无广告、不用注册，添加到主屏幕后没有网也能用。</p>
+      <p><a href="${root}">打开${SITE_NAME}</a> · <a href="${root}${HELP_PATH}">帮助与说明</a>（对战玩法、规则、技巧、学习内容、常见问题）</p>
       <p>${sisterLinks()}</p>
     </footer>
   </body>
@@ -280,14 +285,14 @@ function coursePage(lc: LiveCourse, siteUrl: string): string {
   const { course, name } = lc
   const kps = liveKps(course)
   const units = course.units.filter((u) => kpsOfUnit(course, u.id).some((kp) => getGenerator(kp.id)))
-  const title = `${name}同步练习 · 人教版上下册 ${units.length} 个单元 ${kps.length} 个知识点在线练`
-  const description = `人教版${name}（2022 版课标新教材）的同步练习：上册、下册共 ${units.length} 个单元、${kps.length} 个知识点，每个知识点按教材随机出题、一轮 8 题，汉字标拼音、题目自动朗读，答错有教具演示；免费、无广告、可离线。`
+  const title = `${name}知识点对战游戏与同步练习 · 人教版上下册 ${units.length} 个单元 ${kps.length} 个知识点`
+  const description = `人教版${name}（2022 版课标新教材）上册、下册共 ${units.length} 个单元、${kps.length} 个知识点，每个都能对战也能练：答对课本题得分，谁先答对 8 题谁赢，打机器人、两人一台或多设备扫码组队；按教材随机出题，汉字标拼音、题目自动朗读，答错有教具演示；免费、无广告、可离线。`
   const sems = ([1, 2] as const).map((s) => ({ s, units: units.filter((u) => u.semester === s) })).filter((x) => x.units.length)
   const body = `
-    <h1>${esc(name)} · 人教版同步练习</h1>
+    <h1>${esc(name)} · 人教版知识点对战与练习</h1>
     <p class="lead">${esc(description)}</p>
-    <a class="cta" href="${appMap(course)}">打开${esc(name)}练习地图</a>
-    <p class="note">在应用里选单元、点知识点就开始练；下面每个知识点的链接里有几道示例题。</p>
+    <a class="cta" href="${appMap(course)}">打开${esc(name)}地图</a>
+    <p class="note">在地图上打开「⚔️ 对战」再点知识点就能打一局；直接点知识点是安静地练。下面每个知识点的链接里有几道示例题。</p>
 ${sems
   .map(
     ({ s, units: us }) => `
@@ -318,7 +323,7 @@ ${kpsOfUnit(course, u.id)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: `${name} · 人教版同步练习`,
+    name: `${name} · 人教版知识点对战与练习`,
     description,
     inLanguage: 'zh-CN',
     isPartOf: webApp(siteUrl),
@@ -351,15 +356,15 @@ function kpPage(lc: LiveCourse, kp: KnowledgePoint, siteUrl: string): string {
   const unit = course.units.find((u) => u.id === kp.unitId)!
   const sem = semName(unit.semester)
   const where = `人教版${name}${sem}${unitLabel(unit)}`
-  const title = `${kp.title}练习题 · ${where}`
-  const description = `${where}的知识点「${kp.title}」在线同步练习：程序随机出题、一轮 8 题，汉字标拼音、题目自动朗读，答错显示正确答案并用教具演示；免费、无广告、可离线。附示例题目与答案。`
+  const title = `${kp.title}对战游戏与练习题 · ${where}`
+  const description = `${where}的知识点「${kp.title}」：答对课本题得分的对战游戏（打机器人、两人一台或多设备组队，谁先答对 8 题谁赢）与在线同步练习，程序随机出题，汉字标拼音、题目自动朗读，答错用教具演示；免费、无广告、可离线。附示例题目与答案。`
   const samples = sampleQuestions(kp.id).map(questionText)
   const siblings = kpsOfUnit(course, unit.id).filter((k) => getGenerator(k.id))
   const body = `
     <h1>${kp.icon} ${esc(kp.title)}</h1>
-    <p class="lead">${esc(where)}的知识点「${esc(kp.title)}」。程序按课本要求随机出题，每轮 8 题，做完打勾；每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己练；答错显示正确答案${kp.questionTypes.includes('arith') ? '并演示算法' : '并用教具演示'}，不计时、不扣分。</p>
-    <a class="cta" href="${appPractice(course, kp)}">开始练习：${esc(kp.title)}</a>
-    <p class="note">用数字键盘或四选一卡片作答，在手机、平板、电脑的浏览器里直接用，添加到主屏幕后离线也能练。</p>
+    <p class="lead">${esc(where)}的知识点「${esc(kp.title)}」。可以打一局：答对一题得 1 分，谁先答对 8 题谁赢，打机器人、两人一台平板，或者每人一台设备扫码组队，${SKINS.length} 种游戏画面跟着比分走；也可以安静地练：每轮 8 题，做完打勾。题目都按课本要求随机出，每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错显示正确答案${kp.questionTypes.includes('arith') ? '并演示算法' : '并用教具演示'}，不计时、不扣分。</p>
+    <p><a class="cta" href="${appBattle(kp)}">⚔️ 打一局：${esc(kp.title)}</a><a class="cta secondary" href="${appPractice(course, kp)}">安静地练</a></p>
+    <p class="note">用数字键盘或四选一卡片作答，在手机、平板、电脑的浏览器里直接用；添加到主屏幕后离线也能练、也能打机器人和两人一台。</p>
     <h2>示例题目（每次练习都是随机生成的新题）</h2>
     <ol class="samples">
 ${samples
@@ -397,10 +402,10 @@ ${siblings
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LearningResource',
-    name: `${kp.title}练习题`,
+    name: `${kp.title}对战游戏与练习题`,
     description,
     inLanguage: 'zh-CN',
-    learningResourceType: '同步练习',
+    learningResourceType: '对战游戏与同步练习',
     educationalLevel: `小学${zh(lc.grade.title)}`,
     educationalUse: 'practice',
     audience: { '@type': 'EducationalAudience', educationalRole: 'student' },
@@ -427,8 +432,8 @@ ${siblings
 function helpPage(siteUrl: string): string {
   const sections = helpSections('zh')
   const games = helpGames('zh')
-  const title = `${HELP_TITLE.zh}：学习内容、对战玩法、规则、技巧与常见问题`
-  const description = `${SITE_NAME}${HELP_LEAD.zh}对战模式：同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢；打机器人、两人一台，或者各用各的设备进同一个房间，${games.length} 种游戏画面。`
+  const title = `${HELP_TITLE.zh}：对战玩法、规则、技巧、学习内容与常见问题`
+  const description = `${HELP_LEAD.zh}同一个知识点的课本题，红队和蓝队各答各的；打机器人、两人一台，或者各用各的设备扫码进同一个房间，${games.length} 种游戏画面跟着比分走。`
   const render = (b: ReturnType<typeof helpSections>[number]['blocks'][number]): string => {
     switch (b.kind) {
       case 'p':
@@ -457,7 +462,7 @@ ${s.blocks.map(render).join('\n')}
     </section>`,
   )
   .join('')}
-    <h2>去练习</h2>
+    <h2>去对战、去练习</h2>
     <p class="links">${liveCourses()
       .map((o) => `<a href="${HELP_ROOT}${coursePath(o.course)}">${esc(o.name)}</a>`)
       .join('')}<a href="${HELP_ROOT}">${SITE_NAME}首页</a></p>`
@@ -535,11 +540,16 @@ export function homeMeta(): { title: string; description: string; ogDescription:
   const subjects = [...new Set(lcs.map((lc) => zh(lc.subject.title)))].join('、')
   const list = lcs.map((lc) => `${lc.name} ${liveKps(lc.course).length} 个知识点`).join('、')
   return {
-    title: `${SITE_NAME} · 人教版小学${subjects}同步练习（${grades}，带拼音和朗读）`,
-    description: `${SITE_NAME}：按人教版教材单元随机出题的小学同步练习，${list}可练；每个汉字标拼音、每道题自动朗读，答错有教具演示；还有对战模式，打机器人、两人一台或各用各的设备比谁先答对 8 题；免费、无广告、不用注册、可离线使用。`,
-    ogDescription: `按人教版教材单元随机出题，${list}；汉字标拼音、题目自动朗读，还能对战；免费、可离线。`,
+    title: `${SITE_NAME} · 人教版小学${subjects}课本知识点对战游戏（${grades}，带拼音和朗读）`,
+    description: `${SITE_NAME}：儿童互动对战学习——${SITE_PITCH}；打机器人、两人一台或多设备扫码组队，${SKINS.length} 种游戏画面；${list}，也能一个人练；汉字标拼音、题目自动朗读；免费、无广告、可离线。`,
+    ogDescription: `${SITE_PITCH}：打机器人、两人一台或多设备组队，${SKINS.length} 种游戏画面；${list}；带拼音和朗读，免费、可离线。`,
     keywords: [
       SITE_NAME,
+      '同步练',
+      '儿童对战学习',
+      '小学数学对战游戏',
+      '课本知识点游戏',
+      '寓教于乐',
       '小学数学练习',
       ...lcs.map((lc) => `${lc.name}练习题`),
       '人教版',
@@ -567,7 +577,7 @@ export function homeHead(): string {
     '@type': 'WebApplication',
     url: '__SITE_URL__/',
     name: SITE_NAME,
-    alternateName: 'Chapter Practice',
+    alternateName: 'Chapter Practice · Battle',
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'Any',
     browserRequirements: 'Requires JavaScript',
@@ -575,7 +585,7 @@ export function homeHead(): string {
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
     audience: { '@type': 'EducationalAudience', educationalRole: 'student' },
-    featureList: `人教版${m.grades}数学 ${m.kpCount} 个知识点随机出题；汉字标拼音；题目自动朗读；答错教具演示；对战模式（打机器人 / 两人一台 / 多设备房间，${SKINS.length} 种实时绘图的游戏画面）；中英文切换；离线可用；可添加到主屏幕`,
+    featureList: `课本知识点测验变成游戏积分，谁先答对 8 题谁赢；对战模式（打机器人 / 两人一台 / 多设备房间，${SKINS.length} 种实时绘图的游戏画面）；人教版${m.grades}数学 ${m.kpCount} 个知识点随机出题，也能单独练；汉字标拼音；题目自动朗读；答错教具演示；中英文切换；离线可用；可添加到主屏幕`,
     description: m.ogDescription,
   }
   // JSON-LD 一行一个键：没配置 SITE_URL 时构建插件会把含 __SITE_URL__ 的那一行整行删掉，其余仍是合法 JSON
@@ -605,19 +615,19 @@ export function homeBody(): string {
       const units = lc.course.units.filter((u) => kpsOfUnit(lc.course, u.id).some((kp) => getGenerator(kp.id)))
       return `        <h2>${esc(lc.name)}（上下册 ${units.length} 个单元、${kps.length} 个知识点）</h2>
         <p>${esc(kps.map((kp) => kp.title).join('，'))}。</p>
-        <p><a href="./${coursePath(lc.course)}">查看${esc(lc.name)}全部知识点与示例题 →</a></p>`
+        <p><a href="./${coursePath(lc.course)}">查看${esc(lc.name)}全部知识点、示例题与对战入口 →</a></p>`
     })
     .join('\n')
   return `      <main class="prerender">
         <h1>${SITE_NAME} · ${SITE_TAGLINE}</h1>
         <p>
-          按现行人教版教材（2022 版课标新教材）的单元随机出题：一到六年级，语文、数学、英语。每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己练；答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示。免费、无广告、不用注册，添加到主屏幕后没有网也能用。现在${esc(m.grades)}数学共 ${m.kpCount} 个知识点可练。
+          儿童互动对战学习：${SITE_PITCH}——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出：一到六年级，语文、数学、英语；练的是课本，玩的是游戏。每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示。免费、无广告、不用注册，添加到主屏幕后没有网也能用。现在${esc(m.grades)}数学共 ${m.kpCount} 个知识点可对战、可练。
         </p>
+        <h2>对战怎么玩</h2>
+        <p>同一个知识点的课本题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），可以两个人一台平板左右分屏，也可以每人一台设备扫码进同一个房间（两队各最多 6 人，还能观战）；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。不想比的时候，直接点知识点就是一份安静的同步练习：一轮 8 题，做完打勾。</p>
 ${sections}
         <p>其它年级和${esc(soon.join('、'))}陆续补充。</p>
-        <h2>对战模式</h2>
-        <p>同一个知识点的题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），可以两个人一台平板左右分屏，也可以每人一台设备扫码进同一个房间（两队各最多 6 人，还能观战）；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。</p>
-        <p><a href="./${HELP_PATH}">帮助与说明：学习内容、对战玩法、规则、技巧、常见问题 →</a></p>
+        <p><a href="./${HELP_PATH}">帮助与说明：对战玩法、规则、技巧、学习内容、常见问题 →</a></p>
         <p>${sisterLinks()}</p>
       </main>`
 }
