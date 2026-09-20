@@ -1,6 +1,6 @@
 /**
  * 多设备房间的客户端状态（需求 B13–B25，2026-09-20 用户定的极简流程）：连中继服务、拿整份房间快照；
- * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / lookup / input / answer / rematch / next / leave / ping。
+ * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / lookup / team（建房的设备自己上场）/ input / answer / rematch / next / leave / ping。
  * 比赛部分交给 stores/battle（syncOnline / onRemoteEvent），竞技场页不知道自己在哪种模式下（B41）。
  */
 import { computed, ref } from 'vue'
@@ -141,6 +141,11 @@ export const useRoomStore = defineStore('room', () => {
     errorTimer = null
   }
 
+  /** 建房的设备自己上场（B20）：进红队 / 蓝队；两队都有人服务器就自动开始 */
+  function setTeam(role: Role): void {
+    client?.send({ type: 'team', role })
+  }
+
   /** 离开房间：告诉服务器释放座位、断开连接；比赛状态也清掉 */
   function leave(): void {
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible)
@@ -173,6 +178,7 @@ export const useRoomStore = defineStore('room', () => {
     enter,
     create,
     lookup,
+    setTeam,
     leave,
     /** 给测试：直接喂一份快照 / 事件（不经网络） */
     _feed: { onState, onEvent, setError },

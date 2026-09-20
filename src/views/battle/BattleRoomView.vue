@@ -2,6 +2,7 @@
 // 多设备房间（需求 B13–B25，2026-09-20 用户定的极简流程）：
 //   建房的设备只观战、算主持人，页面上只有三个二维码（红队 / 蓝队 / 观战，各带链接与「复制」）和一句说明；
 //   扫码进来的人先看「三方连接状态」窗口；红蓝两队都有人在线时服务器自动开始 → 竞技场（Arena）→ 结果。
+//   一队有人进来后，建房的设备也能点「以另一队进入」自己上场，或「以观战方进入」到状态窗口只看（B20）。
 // 房间的一切状态都来自服务器的快照（stores/room），这里只画；比赛部分由 stores/battle 的线上模式承接。
 // 模板只能有一个根元素、根上不能放 HTML 注释：App 的 <Transition mode="out-in"> 只给单根做过渡，多根（开发模式保留注释也算）会让过渡卡住、下一页空白。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -101,6 +102,14 @@ async function copy(url: string): Promise<void> {
 }
 
 const membersOf = (team: Team): Member[] => room.teamMembers(team)
+/** 已经有人在线的那一队（B20：有了才出现「以另一队进入 / 以观战方进入」）；两队都有人时比赛已经自动开始，不会在这页 */
+const joinedSide = computed<Team | undefined>(() => TEAMS.find((t) => membersOf(t).some((m) => m.online)))
+const canEnter = (t: Team): boolean => !!joinedSide.value && joinedSide.value !== t && !membersOf(t).some((m) => m.online)
+/** 建房的设备点了「以观战方进入」：离开二维码页到状态窗口（角色仍是观战），「显示二维码」回来 */
+const entered = ref(false)
+function enterTeam(t: Team): void {
+  room.setTeam(t)
+}
 /** 这个身份的口令（B19），三位一组好念 */
 const passOf = (t: Role): string => {
   const p = snap.value?.passcodes?.[t] ?? ''
@@ -146,7 +155,7 @@ onBeforeUnmount(() => {
     <p v-else-if="toast" class="netbar" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
   </template>
 
-  <div v-else-if="myRole === 'watch'" class="codes-page">
+  <div v-else-if="myRole === 'watch' && !entered" class="codes-page">
     <PageHeader :back="mapPath">
       <template #title>
         <span class="kp-icon">⚔️</span>
@@ -156,18 +165,22 @@ onBeforeUnmount(() => {
     <p v-if="room.status === 'reconnecting'" class="netbar inline">📶 <RubyText :text="{ k: 'room.reconnecting' }" /></p>
     <p v-if="toast" class="toast" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
     <p class="scan-hint"><RubyText :text="{ k: 'room.scan' }" /></p>
+    <p v-if="joinedSide" class="enter-hint"><RubyText :text="{ k: `room.enter.hint.${joinedSide}` }" /></p>
     <div class="codes">
       <section v-for="t in TEAMS" :key="t" class="code-card" :class="t">
         <h2 class="code-title"><span>{{ t === 'red' ? '🔴' : '🔵' }}</span><RubyText :text="{ k: `battle.team.${t}` }" /></h2>
+        <p class="pass"><RubyText :text="{ k: 'room.pass' }" /><b>{{ passOf(t) }}</b></p>
         <div class="qr-wrap">
           <img v-if="qrs[t]" :src="qrs[t]" :alt="ui(`battle.team.${t}`)" />
           <div v-else class="qr-empty">…</div>
         </div>
         <code class="url">{{ linkOf(t) }}</code>
-        <p class="pass"><RubyText :text="{ k: 'room.pass' }" /><b>{{ passOf(t) }}</b></p>
-        <button type="button" class="chip" :class="{ done: copied === linkOf(t) }" @click="copy(linkOf(t))">
-          <RubyText :text="{ k: copied === linkOf(t) ? 'room.copied' : 'room.copy' }" />
-        </button>
+        <div class="chips">
+          <button type="button" class="chip copy" :class="{ done: copied === linkOf(t) }" @click="copy(linkOf(t))">
+            <RubyText :text="{ k: copied === linkOf(t) ? 'room.copied' : 'room.copy' }" />
+          </button>
+          <button v-if="canEnter(t)" type="button" class="chip enter" @click="enterTeam(t)"><RubyText :text="{ k: `room.enter.${t}` }" /></button>
+        </div>
         <p class="who" :class="{ some: membersOf(t).length }">
           <template v-if="membersOf(t).length">✓ <RubyText :text="{ k: 'room.joined' }" />：{{ names(membersOf(t)) }}</template>
           <template v-else><span class="dots" aria-hidden="true"><i /><i /><i /></span> <RubyText :text="{ k: 'room.waiting' }" /></template>
@@ -176,15 +189,18 @@ onBeforeUnmount(() => {
     </div>
     <section class="code-card watch">
       <h2 class="code-title"><span>👀</span><RubyText :text="{ k: 'room.watch' }" /></h2>
+      <p class="pass"><RubyText :text="{ k: 'room.pass' }" /><b>{{ passOf('watch') }}</b></p>
       <div class="qr-wrap">
         <img v-if="qrs.watch" :src="qrs.watch" :alt="ui('room.watch')" />
         <div v-else class="qr-empty">…</div>
       </div>
       <code class="url">{{ linkOf('watch') }}</code>
-      <p class="pass"><RubyText :text="{ k: 'room.pass' }" /><b>{{ passOf('watch') }}</b></p>
-      <button type="button" class="chip" :class="{ done: copied === linkOf('watch') }" @click="copy(linkOf('watch'))">
-        <RubyText :text="{ k: copied === linkOf('watch') ? 'room.copied' : 'room.copy' }" />
-      </button>
+      <div class="chips">
+        <button type="button" class="chip copy" :class="{ done: copied === linkOf('watch') }" @click="copy(linkOf('watch'))">
+          <RubyText :text="{ k: copied === linkOf('watch') ? 'room.copied' : 'room.copy' }" />
+        </button>
+        <button v-if="joinedSide" type="button" class="chip enter" @click="entered = true"><RubyText :text="{ k: 'room.enter.watch' }" /></button>
+      </div>
       <p class="who">{{ ui('room.watchers', { n: room.watchers.length }) }}</p>
     </section>
     <div class="bar">
@@ -210,7 +226,10 @@ onBeforeUnmount(() => {
         <span class="side-who">{{ ui('room.watchers', { n: room.watchers.length }) }}</span>
       </li>
     </ul>
-    <button type="button" class="chip leave" @click="leave"><RubyText :text="{ k: 'room.leave' }" /></button>
+    <div class="chips">
+      <button v-if="myRole === 'watch'" type="button" class="chip codes-btn" @click="entered = false"><RubyText :text="{ k: 'room.showCodes' }" /></button>
+      <button type="button" class="chip leave" @click="leave"><RubyText :text="{ k: 'room.leave' }" /></button>
+    </div>
   </div>
   </div>
 </template>
@@ -347,6 +366,34 @@ onBeforeUnmount(() => {
 }
 .chip.done {
   background: #fff3e6;
+  color: var(--c-primary-dark);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+/* 「以红队 / 蓝队进入」「以观战方进入」（B20）：实心、队色 */
+.chip.enter {
+  background: var(--c-primary);
+  color: #fff;
+}
+.code-card.red .chip.enter {
+  background: var(--c-red);
+}
+.code-card.blue .chip.enter {
+  background: var(--c-blue);
+}
+.enter-hint {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #fff3e6;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.7;
+  text-align: center;
   color: var(--c-primary-dark);
 }
 /* ── 二维码页（建房的设备） ── */

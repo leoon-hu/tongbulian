@@ -682,11 +682,27 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(w.find('.more-toggle').exists()).toBe(false)
     expect(w.find('.skins').exists()).toBe(false)
 
-    // 红队扫码进来：码下面写谁进了；蓝队还没人，不开始
+    expect(w.find('.chip.enter').exists()).toBe(false) // 还没人进来：没有「以 X 队进入」
+    expect(w.find('.enter-hint').exists()).toBe(false)
+    expect(shown(w.find('.code-card.red .chip.copy'))).toContain('复制链接')
+    const redHtml = w.find('.code-card.red').html()
+    expect(redHtml.indexOf('class="pass"')).toBeLessThan(redHtml.indexOf('qr-wrap')) // 口令在二维码上方
+    // 红队扫码进来：码下面写谁进了；蓝队还没人，不开始；蓝队卡与观战卡出现进入键、红队卡没有、说明写红队已进入
     r = join(r, { clientId: 'rrrrrr', name: '小猫', t: 'red', version: 'v1' }, 2500).room
     push()
     await settle()
     expect(shown(w.find('.code-card.red .who'))).toContain('小猫')
+    expect(w.find('.code-card.red .chip.enter').exists()).toBe(false)
+    expect(shown(w.find('.code-card.blue .chip.enter'))).toContain('以蓝队进入')
+    expect(shown(w.find('.code-card.watch .chip.enter'))).toContain('以观战方进入')
+    expect(shown(w.find('.enter-hint'))).toContain('红队已进入')
+    // 以观战方进入：到连接状态窗口（自己仍是观战），「显示二维码」回来
+    await w.find('.code-card.watch .chip.enter').trigger('click')
+    expect(w.find('.codes-page').exists()).toBe(false)
+    expect(w.find('.wait').exists()).toBe(true)
+    expect(shown(w.find('.sides li.red'))).toContain('小猫')
+    await w.find('.wait .chip.codes-btn').trigger('click')
+    expect(w.find('.codes-page').exists()).toBe(true)
     expect(autoStart(r, 2600, seeds).room).toBe(r)
     expect(w.find('.arena').exists()).toBe(false)
     // 蓝队进来：服务器自动开始
@@ -763,6 +779,48 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(ws.closed).toBe(true)
     expect(battle.state).toBeNull()
     expect(w.find('.app-header').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('建房的设备自己上场（B20）：红队进来后点「以蓝队进入」→ 发 team → 两队齐了自动开始 → 本机只有蓝队那行可操作、不是观战', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
+    const w = await mountAt(`/battle/new/${KP}`)
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    room.useFactory((url) => new FakeWs(url))
+    const me = battle.prefs.clientId
+    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.start-btn').trigger('click')
+    const ws = FakeWs.last()
+    ws.open()
+    let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
+    const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    push()
+    await until(pathIs(`/battle/${CODE}`))
+    r = join(r, { clientId: 'rrrrrr', name: '小猫', t: 'red', version: 'v1' }, 2500).room
+    push()
+    await settle()
+    ws.sent.length = 0
+    await w.find('.code-card.blue .chip.enter').trigger('click')
+    expect(ws.msgs).toEqual([{ type: 'team', role: 'blue' }])
+    r = apply(r, me, { type: 'team', role: 'blue' }, 3000, seeds).room
+    const auto = autoStart(r, 3100, seeds)
+    expect(auto.room.match?.phase).toBe('countdown')
+    r = auto.room
+    for (const e of auto.effects) if (e.type === 'event') ws.receive({ type: 'event', e: e.e })
+    push()
+    await settle()
+    expect(w.find('.codes-page').exists()).toBe(false)
+    expect(w.find('.countdown').exists()).toBe(true)
+    r = tick(r, 3100 + COUNTDOWN_MS).room
+    ws.receive({ type: 'event', e: { type: 'go' } })
+    push()
+    await settle()
+    expect(w.findAll('.row.operable')).toHaveLength(1)
+    expect(w.find('.team.blue .me-tag').exists()).toBe(true)
+    expect(w.find('.bar .watching').exists()).toBe(false)
+    expect(battle.state!.players.map((p) => [p.id, p.team]).sort()).toEqual([[me, 'blue'], ['rrrrrr', 'red']].sort()) // 参赛者按进房顺序：建房的在前
     w.unmount()
   })
 
