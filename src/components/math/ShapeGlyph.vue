@@ -3,9 +3,11 @@ import { computed } from 'vue'
 import type { ShapeKind } from '@/types/models'
 
 /**
- * 单个图形，全部用 CSS 绘制（不用 emoji）：
+ * 单个图形，自己画（不用 emoji）：
  * - 每个图形都是「一个」整体，数图形时不会被拆成多个（曾用 🧱 砖块 emoji 会显示成两块，导致数错）。
- * - 立体图形按棱、面比例准确：正方体各棱相等、长方体明显细长、圆柱有上底椭圆、球带高光。
+ * - 正方体 / 长方体用 SVG 按教材的斜二测画法：正面是真正的正方形 / 长方形，往后的棱 45° 画一半长，三面明暗 + 描边
+ *   （2026-09-20 用户说 CSS 3D 版「不太像正方体」：那版正面是歪的平行四边形、没有棱，改成这样）；
+ *   圆柱有上底椭圆、球带高光，平面图形用 CSS。
  */
 const props = withDefaults(defineProps<{ shape: ShapeKind; size?: number }>(), { size: 72 })
 
@@ -26,29 +28,50 @@ const isCylinder = computed(() => props.shape === 'cylinder')
 const isSphere = computed(() => props.shape === 'sphere')
 const isFlat = computed(() => props.shape in FLAT_COLOR)
 
-// 长方体的正面明显比正方体细长
+/**
+ * 斜二测的三个面（多边形顶点）：正面 a × h，深 d 的棱按 45°、一半长画成 r = d / 2 / √2 的水平与垂直位移。
+ * 正方体三棱相等；长方体的正面明显比正方体细长。
+ */
 const box = computed(() => {
   const s = props.size
-  return props.shape === 'cube'
-    ? { w: s * 0.58, h: s * 0.58, d: s * 0.5 }
-    : { w: s * 0.86, h: s * 0.44, d: s * 0.36 }
+  const cube = props.shape === 'cube'
+  const a = cube ? s * 0.6 : s * 0.8
+  const h = cube ? a : s * 0.4
+  const d = cube ? a : s * 0.5
+  const r = (d / 2) * Math.SQRT1_2
+  const x0 = 0
+  const y0 = r
+  const pt = (x: number, y: number): string => `${x.toFixed(1)},${y.toFixed(1)}`
+  const stroke = Math.max(1.5, s / 48)
+  return {
+    width: a + r,
+    height: h + r,
+    stroke,
+    front: [pt(x0, y0), pt(x0 + a, y0), pt(x0 + a, y0 + h), pt(x0, y0 + h)].join(' '),
+    top: [pt(x0, y0), pt(x0 + r, y0 - r), pt(x0 + a + r, y0 - r), pt(x0 + a, y0)].join(' '),
+    right: [pt(x0 + a, y0), pt(x0 + a + r, y0 - r), pt(x0 + a + r, y0 + h - r), pt(x0 + a, y0 + h)].join(' '),
+  }
 })
-const boxVars = computed(() => ({
-  '--w': `${box.value.w}px`,
-  '--h': `${box.value.h}px`,
-  '--d': `${box.value.d}px`,
-  width: `${box.value.w}px`,
-  height: `${box.value.h}px`,
-}))
+const boxView = computed(() => {
+  const m = box.value.stroke
+  return `${-m} ${-m} ${box.value.width + m * 2} ${box.value.height + m * 2}`
+})
 </script>
 
 <template>
   <div class="glyph">
-    <!-- 正方体 / 长方体：三面立体盒子 -->
-    <span v-if="isBox" class="box3d" :style="boxVars">
-      <span class="bface bfront" />
-      <span class="bface btop" />
-      <span class="bface bright" />
+    <!-- 正方体 / 长方体：斜二测画法的三个面 + 描边 -->
+    <span v-if="isBox" class="box3d" :class="shape">
+      <svg :width="box.width + box.stroke * 2" :height="box.height + box.stroke * 2" :viewBox="boxView" aria-hidden="true">
+        <polygon class="bface btop" :points="box.top" />
+        <polygon class="bface bright" :points="box.right" />
+        <polygon class="bface bfront" :points="box.front" />
+        <g class="bedges" :stroke-width="box.stroke">
+          <polygon :points="box.front" />
+          <polygon :points="box.top" />
+          <polygon :points="box.right" />
+        </g>
+      </svg>
     </span>
 
     <!-- 圆柱 -->
@@ -85,37 +108,28 @@ const boxVars = computed(() => ({
   align-items: center;
 }
 
-/* ── 立体盒子（正方体/长方体）：正交投影的三个可见面 ── */
+/* ── 立体盒子（正方体/长方体）：斜二测的三个可见面，正面亮、顶面更亮、右面暗，棱描边 ── */
 .box3d {
-  position: relative;
-  transform-style: preserve-3d;
-  transform: rotateX(-24deg) rotateY(-34deg);
-  margin: calc(var(--d) * 0.5);
+  display: inline-flex;
+  line-height: 0;
 }
-.bface {
-  position: absolute;
-  left: 0;
-  top: 0;
+.box3d svg {
+  display: block;
+  overflow: visible;
 }
 .bfront {
-  width: var(--w);
-  height: var(--h);
-  background: #ffb887;
-  transform: translateZ(calc(var(--d) / 2));
+  fill: #ffb887;
 }
 .btop {
-  width: var(--w);
-  height: var(--d);
-  top: calc(var(--h) / 2 - var(--d) / 2);
-  background: #ffd9b0;
-  transform: rotateX(90deg) translateZ(calc(var(--h) / 2));
+  fill: #ffd9b0;
 }
 .bright {
-  width: var(--d);
-  height: var(--h);
-  left: calc(var(--w) / 2 - var(--d) / 2);
-  background: #ec7a2c;
-  transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
+  fill: #e9772a;
+}
+.bedges {
+  fill: none;
+  stroke: #7a3e12;
+  stroke-linejoin: round;
 }
 
 /* ── 圆柱 ── */
