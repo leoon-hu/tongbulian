@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { RELOAD_KEY, UPDATE_WAIT_MS, alreadyReloaded, reloadForNewVersion } from '../update'
+import { RELOAD_KEY, UPDATE_CHECK_MS, UPDATE_WAIT_MS, alreadyReloaded, reloadForNewVersion } from '../update'
 
 function mem(): Pick<Storage, 'getItem' | 'setItem'> {
   const m = new Map<string, string>()
@@ -31,14 +31,14 @@ describe('页面版本旧了自己更新重载（B43）', () => {
       getRegistration: vi.fn(async () => reg),
     } as unknown as ServiceWorkerContainer
     const reload = vi.fn()
-    let waited = 0
-    const never = (ms: number): Promise<void> => new Promise(() => void (waited = ms))
+    const waited: number[] = []
+    const never = (ms: number): Promise<void> => new Promise(() => void waited.push(ms))
     const p = reloadForNewVersion({ build: 'a1', storage: mem(), sw, reload, wait: never })
     await tick()
     await tick()
     expect(reg.update).toHaveBeenCalledTimes(1)
     expect(reload).not.toHaveBeenCalled()
-    expect(waited).toBe(UPDATE_WAIT_MS)
+    expect(waited).toEqual([UPDATE_WAIT_MS, UPDATE_CHECK_MS])
     for (const fn of listeners.controllerchange ?? []) fn()
     expect(await p).toBe(true)
     expect(reload).toHaveBeenCalledTimes(1)
@@ -60,5 +60,12 @@ describe('页面版本旧了自己更新重载（B43）', () => {
     const reload4 = vi.fn()
     expect(await reloadForNewVersion({ build: 'a4', storage: mem(), sw: sw4, reload: reload4, wait: never })).toBe(true)
     expect(reload4).toHaveBeenCalledTimes(1)
+    // update() 一直不返回（旧 SW 还在装首次预缓存，线上撞过）：等 UPDATE_CHECK_MS 就不等它，接着等接管 / 总期限，到了照样重载
+    const reg5 = { installing: {}, waiting: null, update: vi.fn(() => new Promise<void>(() => {})) }
+    const sw5 = { addEventListener: () => {}, getRegistration: vi.fn(async () => reg5) } as unknown as ServiceWorkerContainer
+    const reload5 = vi.fn()
+    const wait5 = (ms: number): Promise<void> => (ms === UPDATE_CHECK_MS || ms === UPDATE_WAIT_MS ? Promise.resolve() : new Promise(() => {}))
+    expect(await reloadForNewVersion({ build: 'a5', storage: mem(), sw: sw5, reload: reload5, wait: wait5 })).toBe(true)
+    expect(reload5).toHaveBeenCalledTimes(1)
   })
 })

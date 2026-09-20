@@ -10,8 +10,10 @@ export const RELOAD_KEY = 'tongbulian:reloaded'
 /** 重载后接着建房（值 = kpId）/ 接着用口令进房（值 = 口令） */
 export const AUTOCREATE_KEY = 'tongbulian:autocreate'
 export const AUTOJOIN_KEY = 'tongbulian:autojoin'
-/** 等新版本 Service Worker 接管最多这么久，到了也重载 */
+/** 从开始到重载最多这么久：等新版本 Service Worker 接管，到了也重载 */
 export const UPDATE_WAIT_MS = 20_000
+/** registration.update() 最多等这么久：旧 SW 还在装（首次预缓存几 MB）时它会等装完才返回，别跟着死等 */
+export const UPDATE_CHECK_MS = 3000
 
 export interface UpdateDeps {
   build: string
@@ -78,17 +80,19 @@ export async function reloadForNewVersion(deps: UpdateDeps = defaultDeps()): Pro
   }
   const sw = deps.sw
   if (sw) {
+    // 整个过程有个总期限：到了不管新版本装没装好都重载（重载后没接管的话页面会从网络拿最新的）
+    const deadline = deps.wait(UPDATE_WAIT_MS)
     const controlled = new Promise<void>((resolve) => sw.addEventListener('controllerchange', () => resolve(), { once: true }))
-    let pending = false
     try {
-      const reg = await sw.getRegistration()
-      await reg?.update()
-      pending = !!(reg?.installing || reg?.waiting)
+      const reg = await Promise.race([sw.getRegistration(), deadline.then(() => undefined)])
+      if (reg) {
+        await Promise.race([reg.update().catch(() => undefined), deps.wait(UPDATE_CHECK_MS)])
+        // 有新版本在装（或已装好等着）：等它接管再重载，预缓存要下载一会儿
+        if (reg.installing || reg.waiting) await Promise.race([controlled, deadline])
+      }
     } catch {
       /* 拿不到注册就直接重载 */
     }
-    // 找到了新版本：等它装好接管再重载（预缓存要下载一会儿），最多等 UPDATE_WAIT_MS
-    if (pending) await Promise.race([controlled, deps.wait(UPDATE_WAIT_MS)])
   }
   deps.reload()
   return true
