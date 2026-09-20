@@ -13,7 +13,7 @@ import { createRng, getGenerator } from '@/engine'
 import { SUBJECTS, kpsOfUnit, liveCourses as catalogCourses } from '@/engine/catalog'
 import { translate } from '@/engine/i18n'
 import { answerLabel } from '@/engine/answer'
-import { SISTER_SITES } from '@/engine/sites'
+import { AUTHOR_CONTACT, REPO_URL, SISTER_SITES } from '@/engine/sites'
 import { SKINS } from '@/battle/skins'
 import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
 
@@ -183,6 +183,8 @@ ol.samples > li::before { content: counter(q); position: absolute; left: 14px; t
 .links a { color: #f2691d; font-weight: 700; text-decoration: none; }
 footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #f0e6d8; font-size: 14px; color: #8a7a6d; }
 footer a { color: inherit; }
+.contact summary { cursor: pointer; font-weight: 700; }
+.contact img { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: 12px; background: #fff; }
 `.trim()
 
 interface PageMeta {
@@ -206,12 +208,28 @@ function absoluteTags(siteUrl: string, path: string): string {
   ].join('\n    ')
 }
 
+/** 页脚 / 入口页的「开源」一句 + GitHub 链接（engine/sites.ts 的 REPO_URL），与首页底部同一句（open.claim 词条） */
+function openSourceLine(): string {
+  return `${esc(zh({ k: 'open.claim' }))}<a href="${REPO_URL}">${esc(zh({ k: 'open.repo' }))}</a>`
+}
+
 /** 页脚 / 入口页的「更多应用」一行：同一作者的另外三个站（engine/sites.ts），中文文案 */
 function sisterLinks(): string {
   const links = SISTER_SITES.map(
     (site) => `<a href="${site.url}">${esc(zh({ k: `sites.${site.id}` }))}</a>（${esc(zh({ k: `sites.${site.id}.desc` }))}）`,
   )
   return `${esc(zh({ k: 'sites.more' }))}：${links.join('、')}`
+}
+
+/**
+ * 页脚 / 入口页的「联系站长」：折叠着的站长微信二维码（engine/sites.ts 的 AUTHOR_CONTACT），不跑 JS 也能展开。
+ * 尺寸写在属性上（200 宽、按原图比例算高），入口页的静态简介没有这份样式也不会撑满一屏。
+ */
+function contactBlock(root: string): string {
+  const src = `${root}${AUTHOR_CONTACT.qr}`
+  const w = 200
+  const h = Math.round((w * AUTHOR_CONTACT.qrHeight) / AUTHOR_CONTACT.qrWidth)
+  return `<details class="contact"><summary>${esc(zh({ k: 'contact.link' }))}</summary><p>${esc(zh({ k: 'contact.hint' }))}</p><img src="${src}" alt="${esc(zh({ k: 'contact.alt' }))}" width="${w}" height="${h}" loading="lazy" /></details>`
 }
 
 function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string): string {
@@ -265,7 +283,9 @@ ${body}
     <footer>
       <p>${SITE_NAME}：${SITE_PITCH}——打机器人、两人一台或各用各的设备，也能一个人安静地练；题目按人教版教材单元随机出，每个汉字标拼音、每道题自动朗读；免费、无广告、不用注册，添加到主屏幕后没有网也能用。</p>
       <p><a href="${root}">打开${SITE_NAME}</a> · <a href="${root}${HELP_PATH}">帮助与说明</a>（对战玩法、规则、技巧、学习内容、常见问题）</p>
+      <p>${openSourceLine()}</p>
       <p>${sisterLinks()}</p>
+      ${contactBlock(root)}
     </footer>
   </body>
 </html>
@@ -445,7 +465,7 @@ function helpPage(siteUrl: string): string {
       case 'games':
         return `    <ul class="topics">\n${games.map((g) => `      <li><span>${g.icon} ${esc(g.name)}</span><br />${esc(g.rule)}</li>`).join('\n')}\n    </ul>`
       case 'faq':
-        return b.items.map((i) => `    <h3>${esc(i.q)}</h3>\n    <p>${esc(i.a)}</p>`).join('\n')
+        return b.items.map((i) => `    <h3>${esc(i.q)}</h3>\n    <p>${esc(i.a)}${i.link ? ` <a href="${i.link.url}">${esc(i.link.text)}</a>` : ''}</p>`).join('\n')
     }
   }
   const body = `
@@ -484,7 +504,7 @@ ${s.blocks.map(render).join('\n')}
       mainEntity: faq.items.map((i) => ({
         '@type': 'Question',
         name: i.q,
-        acceptedAnswer: { '@type': 'Answer', text: i.a },
+        acceptedAnswer: { '@type': 'Answer', text: i.link ? `${i.a}${i.link.text} ${i.link.url}` : i.a },
       })),
     })
   }
@@ -628,7 +648,9 @@ export function homeBody(): string {
 ${sections}
         <p>其它年级和${esc(soon.join('、'))}陆续补充。</p>
         <p><a href="./${HELP_PATH}">帮助与说明：对战玩法、规则、技巧、学习内容、常见问题 →</a></p>
+        <p>${openSourceLine()}</p>
         <p>${sisterLinks()}</p>
+        ${contactBlock('./')}
       </main>`
 }
 

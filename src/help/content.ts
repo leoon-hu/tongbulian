@@ -8,6 +8,7 @@ import { getGenerator } from '@/engine'
 import { liveCourses } from '@/engine/catalog'
 import { translate } from '@/engine/i18n'
 import { SKINS, finishKey, ruleKey } from '@/battle/skins'
+import { REPO_URL } from '@/engine/sites'
 
 export type HelpBlock =
   | { kind: 'p'; text: string }
@@ -15,7 +16,8 @@ export type HelpBlock =
   | { kind: 'steps'; items: string[] }
   /** 每种游戏一行：图标、名字、开场规则句、结束语 */
   | { kind: 'games' }
-  | { kind: 'faq'; items: { q: string; a: string }[] }
+  /** link：答案后面跟一个链接（新窗口打开），比如开源仓库 */
+  | { kind: 'faq'; items: { q: string; a: string; link?: { text: string; url: string } }[] }
 
 export type HelpSectionId = 'learn' | 'play' | 'rules' | 'tips' | 'faq'
 
@@ -183,7 +185,11 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
               { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the battle setup page; the right-hand name for two-on-one-device is there too.' },
               { q: 'Why no Chinese / English / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
-              { q: 'Does it cost anything? Any ads?', a: 'Free, no ads, no account; the code is open source.' },
+              {
+                q: 'Does it cost anything? Any ads? Is it safe?',
+                a: 'Free, no ads, no account, no personal data collected; progress stays in this device\'s browser. All code is open source under MIT, so anyone can inspect it or host their own copy:',
+                link: { text: 'source on GitHub', url: REPO_URL },
+              },
             ],
           },
         ],
@@ -308,7 +314,11 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
             { q: '想改名字？', a: '在对战设置页页头的「⚙️ 配置」里改，两人一台的右边名字也在那里。' },
             { q: '为什么还没有语文 / 英语 / 三年级？', a: '内容按年级逐个做，陆续补充。' },
-            { q: '收费吗？有广告吗？', a: '免费、无广告、不用注册，代码开源。' },
+            {
+              q: '收费吗？有广告吗？安全吗？',
+              a: '免费、无广告、不用注册、不收集个人信息，学习记录只存在这台设备的浏览器里。代码全部以 MIT 许可开源，谁都能查、也能自己部署一套：',
+              link: { text: 'GitHub 上的源码', url: REPO_URL },
+            },
           ],
         },
       ],

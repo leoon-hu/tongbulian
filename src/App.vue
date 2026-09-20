@@ -7,14 +7,17 @@ import { HELP_TITLE } from '@/help/content'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/ui/AppHeader.vue'
 import JoinSheet from '@/components/battle/JoinSheet.vue'
+import SharePanel from '@/components/ui/SharePanel.vue'
 import { AUTOJOIN_KEY } from '@/engine/update'
 import { setupSwUpdates } from '@/engine/sw'
 import { courseOfKp, findKp, getCourse, getGrade, getSubject } from '@/engine/catalog'
 import { kpTitle, lang, t, ui } from '@/engine/i18n'
 import { useRoomStore } from '@/stores/room'
+import { useShareStore } from '@/stores/share'
 
 const route = useRoute()
 const room = useRoomStore()
+const shareStore = useShareStore()
 // 输口令时页面因版本旧了自动重载：重载后自动打开「加入对战」面板接着进（B43）
 onMounted(() => {
   try {
@@ -90,6 +93,8 @@ watch(
 <template>
   <AppHeader v-if="!isArena" />
   <JoinSheet v-if="room.joinOpen" @close="room.joinOpen = false" />
+  <!-- 「分享给朋友」在没有系统分享面板的环境下弹的面板（F1），哪一页发起都在这里画 -->
+  <SharePanel v-if="shareStore.panel" />
   <!-- 按路径作 key：同一视图换参数（如地图切年级）时重新挂载，视图里的 setup 逻辑不用再监听参数 -->
   <main>
     <router-view v-slot="{ Component }">

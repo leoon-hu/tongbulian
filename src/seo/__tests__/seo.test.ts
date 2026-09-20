@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { getGenerator } from '@/engine'
 import { allCourses, liveCourses as catalogCourses } from '@/engine/catalog'
-import { SISTER_SITES } from '@/engine/sites'
+import { REPO_URL, SISTER_SITES } from '@/engine/sites'
 import { translate } from '@/engine/i18n'
 import { SKINS } from '@/battle/skins'
 import {
@@ -72,6 +72,12 @@ describe('SEO 静态页', () => {
       expect(data[0]!['@type']).toBe('BreadcrumbList')
       // 页脚「更多应用」链到另外三个站
       for (const site of SISTER_SITES) expect(p.html).toContain(`<a href="${site.url}">`)
+      // 页脚「开源」一句链到源码仓库
+      expect(p.html).toContain(`<a href="${REPO_URL}">GitHub 源码</a>`)
+      // 页脚「联系站长」折叠着站长微信二维码，图片路径按页面深度回到站点根
+      const root = '../'.repeat(p.path.split('/').length - 1)
+      expect(p.html).toContain(`<details class="contact"><summary>联系站长</summary>`)
+      expect(p.html).toContain(`<img src="${root}wechat-qrcode.jpg" alt="站长微信二维码" width="200" height="274"`)
     }
   })
 

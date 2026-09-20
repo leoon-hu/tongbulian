@@ -68,7 +68,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,png,woff2,json,mp3}'],
+          globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,json,mp3}'],
           // 子目录里的 html 是给搜索引擎的静态页（<学科>/<年级>/…），og.png 是分享图，
           // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网）：都不进离线包
           globIgnores: ['*/**/*.html', 'og.png', '**/qrcode-*.js'],

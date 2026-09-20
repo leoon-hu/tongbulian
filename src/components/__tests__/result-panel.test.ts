@@ -1,13 +1,15 @@
 // @vitest-environment happy-dom
 // 结果页（B9）：三种模式一样——下一章最大 + 再来一局 + 不玩了；本册最后一个知识点没有下一章、写「打完啦」
-import { afterEach, describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import '@/content/math/grade1'
 import { setLang, ui } from '@/engine/i18n'
 import { nextKp } from '@/engine/catalog'
 import { createMatch, startMatch } from '@/battle/match'
 import type { MatchState } from '@/battle/protocol'
 import ResultPanel from '@/components/battle/ResultPanel.vue'
+import { useShareStore } from '@/stores/share'
 
 /** 上册倒数第二个知识点：「下一章」= s1-05-carry-add（上册最后一个） */
 const KP = 's1-04-simple-addsub'
@@ -33,6 +35,11 @@ function ended(): MatchState {
   )
   return { ...m, phase: 'ended', winner: 'red', score: { red: 8, blue: 3 }, startedAt: 1000, endedAt: 9000 }
 }
+
+// 结果页的「分享战绩」用 stores/share
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
 
 afterEach(() => {
   setLang('zh')
@@ -60,6 +67,15 @@ describe('结果页按钮（B9）', () => {
     expect(w.emitted('rematch')).toHaveLength(1)
     await btns[2]!.trigger('click')
     expect(w.emitted('quit')).toHaveLength(1)
+    // 「分享战绩」（F1）：小字按钮，分享的是这一局的知识点、比分、谁赢了；测试环境没有 navigator.share → 面板拿到那段话
+    const share = w.find('.share-btn')
+    expect(shown(share)).toContain('分享战绩')
+    await share.trigger('click')
+    await flushPromises()
+    const panel = useShareStore().panel
+    expect(panel?.message).toContain(ui(`kp.${KP}`))
+    expect(panel?.message).toContain('8 : 3')
+    expect(panel?.message).toContain('红队赢啦')
   })
 
   it('本册最后一个知识点：没有下一章、写「这一册都打完啦」，再来一局回到绿色，仍有不玩了', () => {

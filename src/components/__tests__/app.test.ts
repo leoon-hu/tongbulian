@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
@@ -8,7 +9,7 @@ import AnswerPanel from '@/components/practice/AnswerPanel.vue'
 import { setLang, ui } from '@/engine/i18n'
 import { SKINS, chapterSkin, skinById } from '@/battle/skins'
 import { liveCourses, nextKp } from '@/engine/catalog'
-import { SISTER_SITES } from '@/engine/sites'
+import { REPO_URL, SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
 import { useInstallStore } from '@/stores/install'
 import { useBattleStore } from '@/stores/battle'
@@ -78,6 +79,30 @@ describe('App 集成冒烟', () => {
     expect(sites.map((a) => a.attributes('href'))).toEqual(SISTER_SITES.map((s) => s.url))
     expect(sites.map((a) => a.attributes('target'))).toEqual(['_blank', '_blank', '_blank'])
     expect(sites.map((a) => a.text())).toEqual(['AI加词背单词', '拼音学习机拼音点读、拼读、测验', '识字卡片2–4 岁看图听音认知卡片'])
+    // 「开源」一句 + 三个动作：GitHub 源码是链接（新窗口），分享 / 联系站长是按钮
+    expect(w.find('footer.about .about-open').text()).toContain('代码全部开源')
+    const repo = w.find('footer.about .about-actions a')
+    expect(repo.attributes('href')).toBe(REPO_URL)
+    expect(repo.attributes('target')).toBe('_blank')
+    // 「分享给朋友」：测试环境没有 navigator.share → 复制一段话并弹面板（jsdom 没有剪贴板，面板里写「把下面这段话发给朋友」）
+    await w.find('footer.about .share-btn').trigger('click')
+    await flushPromises()
+    const shareDialog = document.querySelector('[role="dialog"][aria-label="分享给朋友"]')
+    expect(shareDialog?.querySelector('pre')?.textContent).toContain('同步练-对战版')
+    expect(shareDialog?.querySelector('pre')?.textContent).toMatch(/https?:\/\//)
+    ;(shareDialog?.querySelector('button.ghost') as HTMLButtonElement).click()
+    await nextTick()
+    expect(document.querySelector('[role="dialog"][aria-label="分享给朋友"]')).toBeNull()
+    // 「联系站长」是按钮不是链接：点了弹站长微信二维码的面板，「知道了」关掉
+    const contact = w.find('footer.about .contact-btn')
+    expect(contact.text()).toBe('联系站长')
+    expect(document.querySelector('[role="dialog"] img')).toBeNull()
+    await contact.trigger('click')
+    const qr = document.querySelector<HTMLImageElement>('[role="dialog"] img')
+    expect(qr?.getAttribute('src')).toMatch(/wechat-qrcode\.jpg$/)
+    ;(document.querySelector('[role="dialog"] button') as HTMLButtonElement).click()
+    await nextTick()
+    expect(document.querySelector('[role="dialog"] img')).toBeNull()
     w.unmount()
 
     const map = await mountAt(MAP)

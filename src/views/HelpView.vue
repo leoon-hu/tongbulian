@@ -46,7 +46,7 @@ watch(() => route.hash, jump)
         <dl v-else-if="b.kind === 'faq'" class="faq">
           <template v-for="(item, j) in b.items" :key="j">
             <dt>{{ item.q }}</dt>
-            <dd>{{ item.a }}</dd>
+            <dd>{{ item.a }}<template v-if="item.link"> <a :href="item.link.url" target="_blank" rel="noopener">{{ item.link.text }} ↗</a></template></dd>
           </template>
         </dl>
       </template>

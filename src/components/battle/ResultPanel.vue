@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import type { MatchState, Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
 import { ui } from '@/engine/i18n'
+import { useShareStore } from '@/stores/share'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
@@ -19,6 +20,14 @@ const winner = computed<Team>(() => props.state.winner ?? 'red')
 const loser = computed<Team>(() => (winner.value === 'red' ? 'blue' : 'red'))
 const elapsed = computed(() => formatElapsed(elapsedMs(props.state, Date.now())))
 const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ? ui('battle.robot') : p.name)
+
+/** 「分享战绩」（F1「开源与分享」）：这一局的知识点、比分、谁赢了 + 站点链接；有系统分享面板直接弹，否则复制一段话 */
+const shareStore = useShareStore()
+function shareResult(): void {
+  void shareStore.share(
+    ui('share.result', { kp: ui(`kp.${props.state.kpId}`), red: props.state.score.red, blue: props.state.score.blue, winner: ui(`battle.team.${winner.value}`) }),
+  )
+}
 </script>
 
 <template>
@@ -44,6 +53,7 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
       <BigButton :color="next ? 'blue' : 'green'" class="rematch-btn" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
       <BigButton color="ghost" class="quit-btn" @click="emit('quit')"><RubyText :text="{ k: 'battle.quit' }" /></BigButton>
     </div>
+    <button type="button" class="share-btn" @click="shareResult">📣 <RubyText :text="{ k: 'battle.share' }" /></button>
   </div>
 </template>
 
@@ -146,5 +156,15 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
   to {
     transform: scale(1) rotate(0);
   }
+}
+.share-btn {
+  margin-top: 2px;
+  padding: 8px 12px;
+  background: none;
+  color: var(--c-text-light);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 </style>
