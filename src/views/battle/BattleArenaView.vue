@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// 单设备竞技场的路由页（打机器人 / 两人一台）：刷新或直接打开地址时开一局，然后交给 Arena；退出回地图、换游戏回设置页。
+// 单设备竞技场的路由页（打机器人 / 两人一台）：刷新或直接打开地址时开一局，然后交给 Arena；退出 / 不玩了回地图。
+// 「下一章」：同样的人、同一模式换成本册下一个知识点接着打——地址换成新知识点，但 App 给这个路由的 key 固定，视图不重挂、竞技场不重开、全屏不退。
 // 模板单根（.arena-page 壳，退出时 state 变 null 也留着）、根上不放 HTML 注释：App 的 <Transition> 只给单根做过渡
 import { onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -32,9 +33,10 @@ function exit(): void {
   router.push(mapPath)
 }
 
-function changeSkin(): void {
-  store.leave()
-  router.push(setupPath)
+/** 下一章（B9）：换知识点重新开一局（游戏按那一章排到的），地址跟着换但不重挂载 */
+function nextChapter(next: string): void {
+  store.startLocal({ kpId: next, mode })
+  void router.replace({ path: `/battle/local/${next}`, query: { mode } })
 }
 
 onBeforeUnmount(() => store.leave())
@@ -42,7 +44,7 @@ onBeforeUnmount(() => store.leave())
 
 <template>
   <div class="arena-page">
-    <Arena v-if="store.state" @exit="exit" @change-skin="changeSkin" />
+    <Arena v-if="store.state" @exit="exit" @next="nextChapter" />
   </div>
 </template>
 

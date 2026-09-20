@@ -118,7 +118,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with "play again" (same people and game, new questions), "change game" and "leave". In a room everyone sees the same three buttons, "next chapter", "play again" and "stop playing", and whoever taps first decides for all: "next chapter" moves the same room on to the next topic in this book (with that chapter\'s game), with no new room or rescanning, all the way to the last topic; "stop playing" closes the room and everyone returns to the map.',
+            text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with the same three buttons in every mode: "next chapter" (on to the next topic in this book with that chapter\'s game, all the way to the last topic), "play again" (same people and game, new questions) and "stop playing" (back to the map). In a room everyone sees the same three, and whoever taps first decides for all: "next chapter" moves the same room on with no new room or rescanning; "stop playing" closes the room and everyone returns to the map. To pick a different game, use Settings on the setup page.',
           },
         ],
       },
@@ -243,7 +243,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；可以「再来一局」（同样的人和游戏，换一组题）、「换个游戏」或「退出」。「各用各的」时三个角色看到的都是「下一章」「再来一局」「不玩了」三个键，谁先点就按谁的、大家一起变：「下一章」在同一个房间接着打这一册的下一个知识点（游戏也换成那一章的），不用重新建房、重新扫码，可以一直打到这一册最后一个知识点；「不玩了」关掉房间，大家一起回地图。',
+          text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；三种模式都是「下一章」「再来一局」「不玩了」三个键：「下一章」接着打这一册的下一个知识点（游戏也换成那一章的），可以一直打到这一册最后一个知识点；「再来一局」同样的人和游戏换一组题；「不玩了」回地图。「各用各的」时三个角色看到的一样，谁先点就按谁的、大家一起变：「下一章」在同一个房间换，不用重新建房、重新扫码；「不玩了」关掉房间，大家一起回地图。想换游戏，在设置页的「⚙️ 配置」里选。',
         },
       ],
     },

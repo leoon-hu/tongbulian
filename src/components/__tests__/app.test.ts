@@ -516,6 +516,60 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     w.unmount()
   })
 
+  it('打机器人打完：结果页「下一章」→ 同样的人换到本册下一个知识点接着打（竞技场不重挂、地址跟着换、游戏按那一章排定）；「不玩了」回地图', async () => {
+    fakeTimers()
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
+    const FIRST = 's1-04-simple-addsub'
+    const w = await mountAt(`/battle/local/${FIRST}?mode=ai`)
+    await settle()
+    const store = useBattleStore()
+    expect(store.state?.kpId).toBe(FIRST)
+    store.beginPlay()
+    await settle()
+    const arenaEl = w.find('.arena').element
+    for (let i = 0; i < 8; i++) {
+      store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
+      vi.advanceTimersByTime(1500)
+    }
+    await settle()
+    expect(store.state!.phase).toBe('ended')
+    vi.advanceTimersByTime(2100)
+    await settle()
+    expect(w.find('.result').exists()).toBe(true)
+    expect(w.findAll('.result .big-btn')).toHaveLength(3) // 下一章 / 再来一局 / 不玩了，与房间里一样
+    expect(shown(w.find('.result'))).not.toContain('换个游戏')
+    expect(shown(w.find('.result .next-hint'))).toContain(ui('kp.s1-05-carry-add'))
+    await w.find('.result .next-btn').trigger('click')
+    await until(pathIs('/battle/local/s1-05-carry-add'))
+    expect(router.currentRoute.value.query.mode).toBe('ai')
+    expect(store.state?.kpId).toBe('s1-05-carry-add')
+    expect(store.state?.phase).toBe('countdown')
+    expect(store.state?.skin).toBe(chapterSkin('s1-05-carry-add'))
+    expect(store.state?.players.map((p) => [p.name, p.kind])).toEqual([
+      ['小兔', 'human'],
+      ['', 'ai'],
+    ])
+    expect(w.find('.arena').element).toBe(arenaEl) // 没重挂载：全屏、游戏宿主都还在
+    expect(w.find('.result').exists()).toBe(false)
+    expect(w.find('.countdown').exists()).toBe(true)
+    // 打到底：最后一个知识点没有「下一章」，「不玩了」回地图
+    store.beginPlay()
+    await settle()
+    for (let i = 0; i < 8; i++) {
+      store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
+      vi.advanceTimersByTime(1500)
+    }
+    await settle()
+    vi.advanceTimersByTime(2100)
+    await settle()
+    expect(w.find('.result .next-btn').exists()).toBe(false)
+    expect(shown(w.find('.result .next-hint'))).toContain('打完啦')
+    await w.find('.result .quit-btn').trigger('click')
+    await until(pathIs(MAP))
+    expect(store.state).toBeNull()
+    w.unmount()
+  })
+
   it('两人同屏：左右各一个可操作的区域，红队答对 8 题出结果页，「再来一局」重新倒数', async () => {
     fakeTimers()
     localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: 'tug' }))

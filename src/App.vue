@@ -94,7 +94,8 @@ watch(
   <main>
     <router-view v-slot="{ Component }">
       <Transition name="route" mode="out-in">
-        <component :is="Component" :key="route.path" />
+        <!-- 同一视图换参数整个重挂载；单设备竞技场例外：「下一章」换知识点时要留着竞技场（全屏、游戏宿主），key 固定 -->
+        <component :is="Component" :key="route.name === 'battle-local' ? 'battle-local' : route.path" />
       </Transition>
     </router-view>
   </main>

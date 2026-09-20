@@ -28,7 +28,7 @@ import RubyText from '@/components/ui/RubyText.vue'
 /** 到 8 分后先播胜利动画，再出结果页（B6） */
 const RESULT_DELAY_MS = 2000
 
-const emit = defineEmits<{ exit: []; changeSkin: [] }>()
+const emit = defineEmits<{ exit: []; next: [kpId: string] }>()
 
 const store = useBattleStore()
 const settings = useSettingsStore()
@@ -71,11 +71,19 @@ const myTeam = computed<Team | null>(() => {
 })
 /** 只观战的设备（多设备里建房的那台 / 扫观战码的）：顶栏标一下 */
 const watching = computed(() => store.mode === 'online' && store.operable.length === 0)
-/** 线上结果页的「下一章」（B9）：本册目录里的下一个知识点；null = 已是最后一个；单设备不传（undefined，结果页没有这个键） */
-const nextKpId = computed<string | null | undefined>(() => (store.mode === 'online' && state.value ? nextKp(state.value.kpId) : undefined))
+/** 结果页的「下一章」（B9，三种模式都有）：本册目录里的下一个知识点；null = 已是最后一个 */
+const nextKpId = computed<string | null>(() => (state.value ? nextKp(state.value.kpId) : null))
 function goNext(): void {
   const id = nextKpId.value
-  if (id) store.nextChapter(id, chapterSkin(id))
+  if (!id) return
+  // 线上发给服务器（谁先点算谁的）；单设备由路由页换知识点接着打（竞技场不重开、全屏不退）
+  if (store.mode === 'online') store.nextChapter(id, chapterSkin(id))
+  else emit('next', id)
+}
+/** 结果页的「不玩了」：线上让服务器关房间、大家一起回地图；单设备直接退出回地图 */
+function quit(): void {
+  if (store.mode === 'online') store.quit()
+  else exit()
 }
 
 // ── 计时 ──
@@ -215,17 +223,7 @@ onBeforeUnmount(() => {
     <Callout :callout="store.callout" />
     <Countdown v-if="phase === 'countdown'" :rule="store.intro && state ? ruleKey(state.skin) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
-    <ResultPanel
-      v-if="showResult"
-      :state="state"
-      :online="store.mode === 'online'"
-      :next="nextKpId"
-      @rematch="store.rematch()"
-      @next="goNext"
-      @quit="store.quit()"
-      @change-skin="emit('changeSkin')"
-      @exit="exit"
-    />
+    <ResultPanel v-if="showResult" :state="state" :next="nextKpId" @rematch="store.rematch()" @next="goNext" @quit="quit" />
 
     <div v-if="confirming" class="confirm-mask" @click.self="confirming = false">
       <div class="confirm" role="dialog">
