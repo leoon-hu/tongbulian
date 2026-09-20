@@ -2,12 +2,13 @@
 // 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）→ 开始；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」的面板里，页面默认不展示；
 // 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来（输口令进房的「🔑 加入对战」在全局顶栏，不在这里）。
 // 选中哪张「跟谁打」的卡，卡下面出一行对应的说明（B27）
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
 import { courseOfKp } from '@/engine/catalog'
 import { kpTitleKey, ui } from '@/engine/i18n'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
+import { AUTOCREATE_KEY, remember, takeIntent } from '@/engine/update'
 import { chapterSkin, resolveSkin } from '@/battle/skins'
 import { useBattleStore, type BattleMode, type LocalMode } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
@@ -81,12 +82,37 @@ watch(
   () => room.error,
   (e) => {
     if (creating.value && e && FATAL_ERRORS.includes(e)) {
+      if (e === 'version' && room.updating) {
+        // 本页版本旧了：页面正在自己更新重载（B43），重载后接着建房；按钮先写「正在更新…」
+        remember(AUTOCREATE_KEY, kpId)
+        if (createTimer) clearTimeout(createTimer)
+        createTimer = null
+        return
+      }
       stopCreating()
       room.leave()
       roomError.value = e
     }
   },
 )
+// 自动更新没成功（同版本已重载过）：按平常的错误处理
+watch(
+  () => room.updating,
+  (u) => {
+    if (!u && creating.value && room.error === 'version') {
+      stopCreating()
+      room.leave()
+      roomError.value = 'version'
+    }
+  },
+)
+onMounted(() => {
+  // 上一次点「建房间」时页面更新重载了：接着建（B43）
+  if (takeIntent(AUTOCREATE_KEY) === kpId && online.value) {
+    mode.value = 'online'
+    createRoom()
+  }
+})
 function createRoom(): void {
   if (creating.value) return
   roomError.value = null
@@ -164,7 +190,7 @@ function start(): void {
 
     <div class="start">
       <BigButton color="green" class="start-btn" :disabled="creating" @click="start">
-        <RubyText :text="{ k: mode === 'online' ? (creating ? 'room.connecting' : 'room.create') : 'battle.start' }" />
+        <RubyText :text="{ k: mode === 'online' ? (creating ? (room.updating ? 'room.updating' : 'room.connecting') : 'room.create') : 'battle.start' }" />
       </BigButton>
       <p v-if="roomError" class="room-error" role="alert">
         <RubyText :text="{ k: roomError === 'connect' ? 'room.connect.slow' : `room.error.${roomError}` }" />

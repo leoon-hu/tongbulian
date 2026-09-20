@@ -176,7 +176,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               },
               {
                 q: 'Can\'t connect or join a room on own devices?',
-                a: 'It needs a network and the battle service: when the page is opened from file:// or the host has no relay service, that option is greyed out, and you get a hint if it cannot connect. A wrong link or a closed room (empty for 10 minutes or 3 hours old) shows a message; on "different version" refresh and open the link again; one device counts as one player, so a second tab in the same browser replaces the first (use a private window or another browser to try two players on one computer); anyone who joins after the match started can only watch until the next round.',
+                a: 'It needs a network and the battle service: when the page is opened from file:// or the host has no relay service, that option is greyed out, and you get a hint if it cannot connect. A wrong link or a closed room (empty for 10 minutes or 3 hours old) shows a message; an outdated page updates itself and joins again, and only if it says the automatic update failed do you need to refresh and open the link again; one device counts as one player, so a second tab in the same browser replaces the first (use a private window or another browser to try two players on one computer); anyone who joins after the match started can only watch until the next round.',
               },
               { q: 'Where is progress stored? Can it be lost?', a: 'Only in this device\'s browser; nothing is uploaded and devices do not sync. Clearing browser data clears it.' },
               { q: 'Do questions repeat?', a: 'They are generated randomly, so almost never. An unfinished round continues with the same questions; a finished one gets new ones.' },
@@ -301,7 +301,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             },
             {
               q: '「各用各的」连不上、进不去房间？',
-              a: '要有网络和对战服务：用 file:// 打开或托管方没有中继服务时这一项是灰的，连不上会提示检查网络。链接错了、房间已关闭（没人 10 分钟或建了 3 小时）都会提示；提示「版本不一样」就刷新页面再从链接进；一台设备只算一个人，同一个浏览器再开一个标签页会顶掉先开的（想在一台电脑上试两个人，用无痕窗口或另一个浏览器）；比赛已经开始才进来的人只能先观战，再来一局 / 下一章时再进队。',
+              a: '要有网络和对战服务：用 file:// 打开或托管方没有中继服务时这一项是灰的，连不上会提示检查网络。链接错了、房间已关闭（没人 10 分钟或建了 3 小时）都会提示；页面版本旧了会自己更新再进、不用管，万一提示「自动更新没成功」就刷新一下再进；一台设备只算一个人，同一个浏览器再开一个标签页会顶掉先开的（想在一台电脑上试两个人，用无痕窗口或另一个浏览器）；比赛已经开始才进来的人只能先观战，再来一局 / 下一章时再进队。',
             },
             { q: '进度存在哪里？会不会丢？', a: '只存在这台设备的浏览器里，不上传，换设备不同步；清了浏览器数据就没了。' },
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },

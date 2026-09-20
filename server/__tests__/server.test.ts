@@ -178,6 +178,30 @@ describe('中继服务（B41–B46）', () => {
     b.close()
   })
 
+  it('服务器有版本时（B43）：hello 的版本不一致直接回 version（建房 / 查口令都进不了），一致的照常', async () => {
+    const vs = await createBattleServer({ port: 0, version: 'v7', log: () => {} })
+    try {
+      const old = new Client(vs.port)
+      await old.open()
+      old.send({ type: 'hello', clientId: 'old001', name: '旧页面', version: 'v1' })
+      const e = await old.wait((m) => m.type === 'error')
+      expect(e.type === 'error' && e.error).toBe('version')
+      old.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+      const e2 = await old.wait((m) => m.type === 'error')
+      expect(e2.type === 'error' && e2.error).toBe('bad') // 没通过 hello，不算登记
+      const fresh = new Client(vs.port)
+      await fresh.open()
+      fresh.send({ type: 'hello', clientId: 'new001', name: '新页面', version: 'v7' })
+      fresh.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+      const created = await fresh.state()
+      expect(created.room.code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/)
+      old.close()
+      fresh.close()
+    } finally {
+      await vs.close()
+    }
+  })
+
   it('没先 hello 就发别的 → bad；超过 4 KB 的消息被断开', async () => {
     const x = new Client(server.port)
     await x.open()

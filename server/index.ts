@@ -43,6 +43,8 @@ export interface BattleServerOptions {
   log?: (line: string) => void
   /** 心跳 / 交接 / GC 的间隔（测试注入短一点） */
   sweepMs?: number
+  /** 当前版本（B43）：hello 的版本不一致就回 version，页面会自己更新重载；不传 = 不检查（测试） */
+  version?: string
 }
 
 export interface BattleServer {
@@ -143,6 +145,11 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
   function onHello(c: Conn, msg: Extract<ClientMsg, { type: 'hello' }>): void {
     if (typeof msg.clientId !== 'string' || !/^[A-Za-z0-9_-]{6,40}$/.test(msg.clientId) || typeof msg.version !== 'string') {
       fail(c.ws, 'bad')
+      return
+    }
+    // 页面是缓存的旧版本（出题代码不一样）：直接告诉它，它会自己更新重载再来（B43）；不算登记，之后发什么都是 bad
+    if (opts.version && msg.version.slice(0, 40) !== opts.version) {
+      fail(c.ws, 'version')
       return
     }
     c.clientId = msg.clientId
@@ -308,7 +315,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     wss.once('listening', () => {
       const addr = wss.address()
       const port = typeof addr === 'object' && addr ? addr.port : (opts.port ?? 8787)
-      log(`对战中继服务：ws://${opts.host ?? '127.0.0.1'}:${port}/ws`)
+      log(`对战中继服务：ws://${opts.host ?? '127.0.0.1'}:${port}/ws（版本 ${opts.version ?? '不限'}）`)
       resolve({
         wss,
         rooms,
@@ -327,7 +334,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
 // 直接运行（node dist-server/battle.mjs）就起服务；被 import（测试）时不起
 const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : ''
 if (import.meta.url === entry) {
-  createBattleServer({ port: Number(process.env.PORT ?? 8787), host: process.env.HOST ?? '127.0.0.1' }).catch((e: unknown) => {
+  createBattleServer({ port: Number(process.env.PORT ?? 8787), host: process.env.HOST ?? '127.0.0.1', version: __BUILD__ }).catch((e: unknown) => {
     console.error(e)
     process.exit(1)
   })

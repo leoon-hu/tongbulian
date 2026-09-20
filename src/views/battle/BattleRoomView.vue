@@ -139,6 +139,12 @@ onBeforeUnmount(() => {
   <div class="room-page">
   <NameSheet v-if="asking" @save="saveName" @close="leave" />
 
+  <div v-else-if="fatal === 'version' && room.updating" class="room-msg">
+    <p class="big">🔄</p>
+    <p class="text"><RubyText :text="{ k: 'room.updating' }" /></p>
+    <p class="dots big-dots" aria-hidden="true"><i /><i /><i /></p>
+  </div>
+
   <div v-else-if="fatal" class="room-msg">
     <p class="big">😶</p>
     <p class="text"><RubyText :text="{ k: `room.error.${fatal}` }" /></p>

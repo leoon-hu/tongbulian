@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia } from 'pinia'
+import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import App from '@/App.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
@@ -16,6 +16,9 @@ import { useRoomStore } from '@/stores/room'
 import { COUNTDOWN_MS } from '@/battle/match'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
 import { apply, autoStart, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
+import { AUTOCREATE_KEY, AUTOJOIN_KEY, reloadForNewVersion } from '@/engine/update'
+
+vi.mock('@/engine/update', async (orig) => ({ ...(await orig<typeof import('@/engine/update')>()), reloadForNewVersion: vi.fn(async () => true) }))
 // 对战的三个视图是按需加载的：先静态导入一次，路由里的 import() 就不用在用例中途等模块转换
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
@@ -39,8 +42,11 @@ const MAP = '/s/math/g/g1'
 const practice = (kpId: string): string => `${MAP}/practice/${kpId}`
 
 /** 挂载完整应用（App + 路由 + Pinia + localStorage），验证集成无运行时错误。 */
-async function mountAt(path: string) {
+async function mountAt(path: string, before?: () => void) {
   const pinia = createPinia()
+  // 挂载前要先动 store 的（比如装假 socket，页面一挂就连）：先把这份 pinia 设成当前的
+  setActivePinia(pinia)
+  before?.()
   await router.replace(path)
   await router.isReady()
   const wrapper = mount(App, { global: { plugins: [router, pinia] } })
@@ -822,6 +828,64 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(ws.closed).toBe(true)
     expect(battle.state).toBeNull()
     expect(w.find('.app-header').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('页面版本旧了（B43）：打开房间链接收到 version → 显示「正在更新到新版本」并自动重载，不出「刷新一下」；建房时遇到 → 记下重载后接着建房，重载后设置页自动建房；输口令时遇到 → 重载后自动打开面板接着进', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
+    const reload = vi.mocked(reloadForNewVersion)
+    reload.mockClear()
+    const fake = (): void => useRoomStore().useFactory((url) => new FakeWs(url))
+    // ① 房间链接（有名字：一挂就连）
+    let w = await mountAt(`/battle/${CODE}?t=red`, fake)
+    let room = useRoomStore()
+    await settle()
+    let ws = FakeWs.last()
+    ws.open()
+    ws.receive({ type: 'error', error: 'version' })
+    await settle()
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(shown(w.find('.room-msg'))).toContain('正在更新到新版本')
+    expect(shown(w.find('.room-msg'))).not.toContain('刷新')
+    w.unmount()
+    // ② 建房
+    w = await mountAt(`/battle/new/${KP}`)
+    room = useRoomStore()
+    room.useFactory((url) => new FakeWs(url))
+    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.start-btn').trigger('click')
+    ws = FakeWs.last()
+    ws.open()
+    ws.receive({ type: 'error', error: 'version' })
+    await settle()
+    expect(sessionStorage.getItem(AUTOCREATE_KEY)).toBe(KP)
+    expect(shown(w.find('.start-btn'))).toContain('正在更新')
+    expect(w.find('.room-error').exists()).toBe(false)
+    vi.advanceTimersByTime(9000) // 建房超时不再触发
+    await settle()
+    expect(w.find('.room-error').exists()).toBe(false)
+    w.unmount()
+    // 重载后：设置页自动建房
+    w = await mountAt(`/battle/new/${KP}`, fake)
+    room = useRoomStore()
+    await settle()
+    expect(sessionStorage.getItem(AUTOCREATE_KEY)).toBeNull()
+    ws = FakeWs.last()
+    ws.open()
+    expect(ws.msgs.map((m) => m.type)).toEqual(['hello', 'create'])
+    w.unmount()
+    // ③ 口令：重载后自动打开面板、用记下的口令接着查
+    sessionStorage.setItem(AUTOJOIN_KEY, '654321')
+    w = await mountAt('/', fake)
+    room = useRoomStore()
+    await settle()
+    expect(w.find('.join-sheet').exists()).toBe(true)
+    expect(sessionStorage.getItem(AUTOJOIN_KEY)).toBeNull()
+    ws = FakeWs.last()
+    ws.open()
+    expect(ws.msgs.map((m) => m.type)).toEqual(['hello', 'lookup'])
+    expect(ws.msgs[1]).toEqual({ type: 'lookup', pass: '654321' })
     w.unmount()
   })
 

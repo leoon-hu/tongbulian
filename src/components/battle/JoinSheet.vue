@@ -5,6 +5,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ui } from '@/engine/i18n'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
+import { AUTOJOIN_KEY, remember, takeIntent } from '@/engine/update'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
@@ -22,7 +23,15 @@ const busy = ref(false)
 const error = ref<string | null>(null)
 let timer: ReturnType<typeof setTimeout> | null = null
 const input = ref<HTMLInputElement | null>(null)
-onMounted(() => input.value?.focus())
+onMounted(() => {
+  input.value?.focus()
+  // 上一次输口令时页面更新重载了：接着用那个口令进（B43）
+  const pending = takeIntent(AUTOJOIN_KEY)
+  if (pending && /^[1-9][0-9]{5}$/.test(pending)) {
+    value.value = pending
+    submit()
+  }
+})
 
 /** 只留数字、最多 6 位（手机数字键盘也可能输进空格 / 横线） */
 function onInput(e: Event): void {
@@ -66,9 +75,28 @@ watch(
   () => room.error,
   (e) => {
     if (busy.value && e && FATAL_ERRORS.includes(e)) {
+      if (e === 'version' && room.updating) {
+        // 本页版本旧了：页面正在自己更新重载（B43），重载后接着用这个口令进
+        remember(AUTOJOIN_KEY, value.value)
+        if (timer) clearTimeout(timer)
+        timer = null
+        error.value = 'room.updating'
+        return
+      }
       stop()
       room.leave()
       error.value = e === 'noRoom' ? 'room.join.wrong' : `room.error.${e}`
+    }
+  },
+)
+// 自动更新没成功（同版本已重载过）：按平常的错误处理
+watch(
+  () => room.updating,
+  (u) => {
+    if (!u && busy.value && room.error === 'version') {
+      stop()
+      room.leave()
+      error.value = 'room.error.version'
     }
   },
 )

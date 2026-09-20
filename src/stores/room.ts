@@ -8,6 +8,7 @@ import { defineStore } from 'pinia'
 import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
 import { useBattleStore } from './battle'
+import { reloadForNewVersion } from '@/engine/update'
 
 /** 这些错误进不了 / 待不下去房间，页面要换成提示 */
 export const FATAL_ERRORS: readonly RoomError[] = ['noRoom', 'closed', 'replaced', 'version', 'full', 'busy']
@@ -25,6 +26,8 @@ export const useRoomStore = defineStore('room', () => {
   const found = ref<{ code: string; t: Role } | null>(null)
   /** 全局「加入对战」面板开着（顶栏按钮打开，App 渲染 JoinSheet） */
   const joinOpen = ref(false)
+  /** 页面版本旧了，正在更新并重载（B43）：页面显示「正在更新…」；重载没成功（同版本已试过）会变回 false，错误照常显示 */
+  const updating = ref(false)
   let client: RoomClient | null = null
   let errorTimer: ReturnType<typeof setTimeout> | null = null
   /** 测试可注入假的 WebSocket */
@@ -49,6 +52,13 @@ export const useRoomStore = defineStore('room', () => {
     error.value = e
     if (errorTimer) clearTimeout(errorTimer)
     errorTimer = null
+    if (e === 'version' && !updating.value) {
+      // 本页出题代码的版本旧了：自己更新重载，不让用户刷新（B43）
+      updating.value = true
+      void reloadForNewVersion().then((did) => {
+        if (!did) updating.value = false
+      })
+    }
     if (!FATAL_ERRORS.includes(e)) {
       errorTimer = setTimeout(() => {
         if (error.value === e) error.value = null
@@ -137,6 +147,7 @@ export const useRoomStore = defineStore('room', () => {
     error.value = null
     code.value = null
     found.value = null
+    updating.value = false
     if (errorTimer) clearTimeout(errorTimer)
     errorTimer = null
   }
@@ -167,6 +178,7 @@ export const useRoomStore = defineStore('room', () => {
     code,
     found,
     joinOpen,
+    updating,
     available,
     me,
     isHost,

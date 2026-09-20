@@ -1,4 +1,3 @@
-import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
@@ -6,6 +5,7 @@ import { defineConfig } from 'vitest/config'
 import { loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import { compatId } from './scripts/lib/build-id.mjs'
 
 /**
  * index.html 里需要绝对地址的标签（canonical / og:url / og:image / JSON-LD 的 url）：地址来自本机 .env 的 SITE_URL
@@ -33,19 +33,11 @@ function siteMeta(siteUrl: string): Plugin {
   }
 }
 
-/** 构建版本（B43）：git 短 hash，没有 git 就用时间戳；多设备房间要求所有人同一个版本 */
-function buildId(): string {
-  try {
-    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || String(Date.now())
-  } catch {
-    return String(Date.now())
-  }
-}
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    define: { __BUILD__: JSON.stringify(buildId()) },
+    // 对战版本（B43）：出题相关源码的哈希（scripts/lib/build-id.mjs），中继服务用同一个；只改界面不算新版本
+    define: { __BUILD__: JSON.stringify(compatId()) },
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev，B46）
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev 起在 8787；BATTLE_PORT 可改，方便另起一份测试）
     server: { proxy: { '/ws': { target: `ws://127.0.0.1:${process.env.BATTLE_PORT ?? 8787}`, ws: true } } },

@@ -10,6 +10,9 @@ import { nextKp } from '@/engine/catalog'
 import { chapterSkin } from '@/battle/skins'
 import { ANSWER_WAIT_MS, FEEDBACK_RIGHT_MS, useBattleStore } from '../battle'
 import { useRoomStore } from '../room'
+import { reloadForNewVersion } from '@/engine/update'
+
+vi.mock('@/engine/update', async (orig) => ({ ...(await orig<typeof import('@/engine/update')>()), reloadForNewVersion: vi.fn(async () => true) }))
 
 /** 上册倒数第二个知识点：「下一章」还有下一个（s1-05-carry-add 是最后一个） */
 const KP = 's1-04-simple-addsub'
@@ -109,6 +112,34 @@ describe('房间 store（B19–B25）', () => {
     expect(room.code).toBe(CODE)
     expect(room.isHost).toBe(true)
     expect(room.me?.role).toBe('watch') // 建房的设备只观战
+  })
+
+  it('版本旧了（B43）：收到 version 就标 updating 并自己更新重载；重载不了（同版本试过）就 updating 归 false、错误留着', async () => {
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    battle.setName('me', '小兔')
+    room.useFactory((url) => new FakeWs(url))
+    const reload = vi.mocked(reloadForNewVersion)
+    reload.mockClear()
+    room.enter(CODE, 'red')
+    const ws = FakeWs.last()
+    ws.open()
+    ws.receive({ type: 'error', error: 'version' })
+    expect(room.error).toBe('version')
+    expect(room.updating).toBe(true)
+    expect(reload).toHaveBeenCalledTimes(1)
+    await Promise.resolve()
+    expect(room.updating).toBe(true) // 返回 true：页面马上重载，保持「正在更新」
+    room.leave()
+    reload.mockResolvedValueOnce(false)
+    room.enter(CODE, 'red')
+    FakeWs.last().open()
+    FakeWs.last().receive({ type: 'error', error: 'version' })
+    expect(room.updating).toBe(true)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(room.updating).toBe(false)
+    expect(room.error).toBe('version')
   })
 
   it('口令（B19）：lookup 连上先 hello（不带房间号）再发 lookup；found 进 room.found；不认识的口令是致命错误留着', () => {

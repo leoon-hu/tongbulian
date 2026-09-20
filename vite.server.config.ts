@@ -2,6 +2,7 @@
 // 服务器上不用 npm install，`node battle.mjs` 就能跑。协议与比赛状态机从 src/battle/ 共用（@ 别名）。
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
+import { compatId } from './scripts/lib/build-id.mjs'
 
 export default defineConfig({
   resolve: {
@@ -9,7 +10,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  define: { __BUILD__: JSON.stringify('server') },
+  // 与网站同一个版本号（B43）：服务器据此拒绝版本旧了的页面，让它自己更新
+  define: { __BUILD__: JSON.stringify(compatId()) },
   build: {
     ssr: 'server/index.ts',
     outDir: 'dist-server',
