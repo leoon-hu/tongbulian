@@ -8,6 +8,7 @@ import { useRoute } from 'vue-router'
 import AppHeader from '@/components/ui/AppHeader.vue'
 import JoinSheet from '@/components/battle/JoinSheet.vue'
 import { AUTOJOIN_KEY } from '@/engine/update'
+import { setupSwUpdates } from '@/engine/sw'
 import { courseOfKp, findKp, getCourse, getGrade, getSubject } from '@/engine/catalog'
 import { kpTitle, lang, t, ui } from '@/engine/i18n'
 import { useRoomStore } from '@/stores/room'
@@ -27,6 +28,11 @@ onMounted(() => {
 const isBattle = computed(() => route.path.startsWith('/battle/'))
 /** 竞技场（B28）不放全局顶栏，省高度；房间页在比赛进行中也是竞技场 */
 const isArena = computed(() => route.name === 'battle-local' || (route.name === 'battle-room' && room.inMatch))
+// 新版本装好接管后自己重载（B43）：不在对战里马上换，在对战里等退出竞技场再换
+const swUpdates = setupSwUpdates(() => isArena.value || room.inMatch)
+watch(isArena, (v) => {
+  if (!v) swUpdates.flush()
+})
 function battleInfo() {
   const kpId = isBattle.value ? (typeof route.params.kpId === 'string' ? route.params.kpId : room.snapshot?.kpId) : undefined
   return kpId ? courseOfKp(kpId) : undefined
