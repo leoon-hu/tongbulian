@@ -77,6 +77,8 @@ export interface Callout {
 }
 
 function randomId(): string {
+  // 设备的身份就是这个 id（服务器只把它的哈希给别人看，B45a）：能用加密随机数就用，猜不到
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6)
 }
 

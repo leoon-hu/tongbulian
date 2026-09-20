@@ -143,12 +143,18 @@ export class RoomClient {
       } catch {
         return
       }
+      // 服务器是自己的，但坏掉的一条也别让整页抛错：形状不对就丢掉
+      if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return
       if (msg.type === 'state') {
+        if (!msg.room || typeof msg.room !== 'object' || typeof msg.you !== 'string' || !Array.isArray(msg.room.members)) return
         this.code = msg.room.code
         this.opts.onState(msg.room, msg.you, msg.now)
-      } else if (msg.type === 'event') this.opts.onEvent(msg.e)
-      else if (msg.type === 'found') this.opts.onFound?.(msg.code, msg.t)
-      else if (msg.type === 'error') {
+      } else if (msg.type === 'event') {
+        if (msg.e && typeof msg.e === 'object' && typeof msg.e.type === 'string') this.opts.onEvent(msg.e)
+      } else if (msg.type === 'found') {
+        if (typeof msg.code === 'string' && typeof msg.t === 'string') this.opts.onFound?.(msg.code, msg.t)
+      } else if (msg.type === 'error') {
+        if (typeof msg.error !== 'string') return
         // 被顶掉 / 房间没了 / 版本不对：不再重连
         if (msg.error === 'replaced' || msg.error === 'closed' || msg.error === 'noRoom' || msg.error === 'version') {
           this.closedByUs = true

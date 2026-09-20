@@ -4,10 +4,13 @@
  * 生产：nginx 把 wss://<域名>/ws 反代到这里（默认 127.0.0.1:8787）；开发：Vite 把 /ws 代理过来。
  * 运行：node dist-server/battle.mjs（npm run build:server 打成单文件，含 ws）。环境变量 PORT / HOST。
  */
+import { createHash, randomBytes } from 'node:crypto'
+import type { IncomingMessage } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, RoomError, ServerMsg } from '@/battle/protocol'
-import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isPasscode, join, makeCode, makePasscodes, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
+import { cleanName } from '@/battle/names'
+import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
 
 export const MAX_ROOMS = 500
 export const MAX_MSG_BYTES = 4096
@@ -15,22 +18,47 @@ export const RATE_PER_SEC = 20
 export const HEARTBEAT_MS = 60_000
 /** 一个连接口令连错几次就断开（口令只有 90 万种，别让人一直猜；B19） */
 export const MAX_BAD_PASS = 5
+/** 同一个 IP 在 BAD_PASS_WINDOW_MS 里口令连错这么多次：之后一段时间查口令一律回 busy（换连接也没用；B45a） */
+export const MAX_BAD_PASS_PER_IP = 30
+/** 整个服务在 BAD_PASS_WINDOW_MS 里口令错这么多次：所有人的查口令都回 busy（分布式猜口令的兜底） */
+export const MAX_BAD_PASS_GLOBAL = 300
+export const BAD_PASS_WINDOW_MS = 10 * 60 * 1000
+/** 连接数上限（B45a）：整个服务 / 同一个 IP（一个教室几十台 iPad 走同一个出口，别卡太小） */
+export const MAX_CONNS = 2000
+export const MAX_CONNS_PER_IP = 100
 export const BROADCAST_MS = 100
 /** 心跳 / 交接 / GC 的检查间隔（测试可注入） */
 export const SWEEP_MS = 10_000
 
 interface Conn {
   ws: WebSocket
+  /** 对外的身份（clientId 的哈希）：快照里的 members / players 用它，客户端拿到的 you 也是它 */
   clientId: string | null
   name: string
   version: string
   code: string | null
+  ip: string
   lastSeen: number
   /** 限流：这一秒收了几条 */
   windowStart: number
   count: number
   /** 口令连错了几次 */
   badPass: number
+}
+
+/** 一个时间窗里的计数（口令错几次） */
+interface Window {
+  start: number
+  count: number
+}
+
+/**
+ * 客户端的 IP：只有 nginx 会连到这个服务（127.0.0.1），nginx 前面又只有 Cloudflare，所以这几个头可信；
+ * 都没有（本机开发、测试）就用 socket 的地址。
+ */
+export function clientIp(req: Pick<IncomingMessage, 'headers' | 'socket'>): string {
+  const pick = (v: string | string[] | undefined): string => (Array.isArray(v) ? v[0] : v)?.split(',')[0]?.trim() ?? ''
+  return pick(req.headers['x-real-ip']) || pick(req.headers['cf-connecting-ip']) || pick(req.headers['x-forwarded-for']) || req.socket.remoteAddress || '?'
 }
 
 export interface BattleServerOptions {
@@ -45,6 +73,11 @@ export interface BattleServerOptions {
   sweepMs?: number
   /** 当前版本（B43）：hello 的版本不一致就回 version，页面会自己更新重载；不传 = 不检查（测试） */
   version?: string
+  /**
+   * 允许的页面来源（Origin 头，如 https://tongbulian.jiaci.app；B45a）：不在名单里的握手直接拒绝（403），
+   * 别的网站不能借用这个服务。不传 = 不检查（本机开发、测试）。
+   */
+  origins?: readonly string[]
 }
 
 export interface BattleServer {
@@ -62,6 +95,38 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
   const rooms = new Map<string, Room>()
   const conns = new Set<Conn>()
   const pendingFlush = new Set<string>()
+  /** 每个 IP 当前的连接数 / 口令错误计数（B45a） */
+  const connsByIp = new Map<string, number>()
+  const badPassByIp = new Map<string, Window>()
+  const badPassGlobal: Window = { start: 0, count: 0 }
+  /**
+   * 对外身份 = clientId 的哈希（B45a）：clientId 是设备自己的秘密，只在 hello 里出现；快照里给大家看的是哈希，
+   * 别人拿不到你的 clientId，也就不能冒充你重连、把你顶掉。盐每次启动随机，房间本来也不跨重启。
+   */
+  const salt = randomBytes(16)
+  const publicId = (clientId: string): string => createHash('sha256').update(salt).update(clientId).digest('base64url').slice(0, 16)
+
+  /** 时间窗计数：过了窗口就归零，再 +1；返回加完后的数 */
+  function bump(w: Window, t: number): number {
+    if (t - w.start >= BAD_PASS_WINDOW_MS) {
+      w.start = t
+      w.count = 0
+    }
+    return ++w.count
+  }
+  function noteBadPass(ip: string, t: number): void {
+    let w = badPassByIp.get(ip)
+    if (!w) badPassByIp.set(ip, (w = { start: t, count: 0 }))
+    bump(w, t)
+    bump(badPassGlobal, t)
+  }
+  /** 这个 IP（或整个服务）口令错太多，暂时不给查 */
+  function passBlocked(ip: string, t: number): boolean {
+    const w = badPassByIp.get(ip)
+    const ipHit = !!w && t - w.start < BAD_PASS_WINDOW_MS && w.count >= MAX_BAD_PASS_PER_IP
+    const all = t - badPassGlobal.start < BAD_PASS_WINDOW_MS && badPassGlobal.count >= MAX_BAD_PASS_GLOBAL
+    return ipHit || all
+  }
 
   function send(ws: WebSocket, msg: ServerMsg): void {
     if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg))
@@ -152,8 +217,10 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       fail(c.ws, 'version')
       return
     }
-    c.clientId = msg.clientId
-    c.name = typeof msg.name === 'string' ? msg.name : ''
+    // 同一条连接又 hello 一次（换身份）：先把原来的座位标掉线，别留一个永远在线的幽灵
+    if (c.code) leaveRoom(c, false)
+    c.clientId = publicId(msg.clientId)
+    c.name = typeof msg.name === 'string' ? cleanName(msg.name) : ''
     c.version = msg.version.slice(0, 40)
     if (msg.code === undefined) return
     if (!isCode(msg.code)) {
@@ -190,7 +257,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       fail(c.ws, 'bad')
       return
     }
-    if (typeof msg.kpId !== 'string' || !msg.kpId || msg.kpId.length > 64 || typeof msg.skin !== 'string' || !msg.skin || msg.skin.length > 32) {
+    if (!isKpId(msg.kpId) || !isSkinId(msg.skin)) {
       fail(c.ws, 'bad')
       return
     }
@@ -210,10 +277,18 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     send(c.ws, { type: 'state', room: snapshot(room), you: c.clientId, now: now() })
   }
 
-  /** 口令换房间号与身份（B19）：不认识就 noRoom，连错 MAX_BAD_PASS 次断开 */
+  /**
+   * 口令换房间号与身份（B19）：不认识就 noRoom，连错 MAX_BAD_PASS 次断开；
+   * 同一个 IP 换着连接猜、或者很多 IP 一起猜，超过窗口里的次数就一律回 busy（B45a）
+   */
   function onLookup(c: Conn, msg: Extract<ClientMsg, { type: 'lookup' }>): void {
     if (!c.clientId) {
       fail(c.ws, 'bad')
+      return
+    }
+    const t = now()
+    if (passBlocked(c.ip, t)) {
+      fail(c.ws, 'busy')
       return
     }
     const hit = isPasscode(msg.pass) ? findByPasscode(rooms.values(), msg.pass) : undefined
@@ -221,6 +296,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       send(c.ws, { type: 'found', code: hit.code, t: hit.t })
       return
     }
+    noteBadPass(c.ip, t)
     fail(c.ws, 'noRoom')
     if (++c.badPass >= MAX_BAD_PASS) c.ws.close(4002, 'too many tries')
   }
@@ -277,11 +353,30 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     commit(c.code, apply(room, c.clientId, msg, t, seed))
   }
 
-  const wss = new WebSocketServer({ host: opts.host ?? '127.0.0.1', port: opts.port ?? 8787, path: '/ws', maxPayload: MAX_MSG_BYTES })
+  /** 握手就拒掉的：来源不在名单里、连接太多（B45a） */
+  function admit(req: IncomingMessage): boolean {
+    if (opts.origins) {
+      const origin = req.headers.origin
+      if (typeof origin !== 'string' || !opts.origins.includes(origin)) return false
+    }
+    if (conns.size >= MAX_CONNS) return false
+    if ((connsByIp.get(clientIp(req)) ?? 0) >= MAX_CONNS_PER_IP) return false
+    return true
+  }
 
-  wss.on('connection', (ws) => {
-    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, lastSeen: now(), windowStart: now(), count: 0, badPass: 0 }
+  const wss = new WebSocketServer({
+    host: opts.host ?? '127.0.0.1',
+    port: opts.port ?? 8787,
+    path: '/ws',
+    maxPayload: MAX_MSG_BYTES,
+    verifyClient: (info: { req: IncomingMessage }) => admit(info.req),
+  })
+
+  wss.on('connection', (ws, req) => {
+    const ip = clientIp(req)
+    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, badPass: 0 }
     conns.add(c)
+    connsByIp.set(ip, (connsByIp.get(ip) ?? 0) + 1)
     ws.on('message', (data, isBinary) => {
       if (isBinary) {
         ws.close(1003, 'text only')
@@ -291,6 +386,9 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     })
     ws.on('close', () => {
       conns.delete(c)
+      const n = (connsByIp.get(ip) ?? 1) - 1
+      if (n > 0) connsByIp.set(ip, n)
+      else connsByIp.delete(ip)
       leaveRoom(c, false)
     })
     ws.on('error', () => {
@@ -298,10 +396,11 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     })
   })
 
-  // 心跳（B44）：60 秒没消息就当掉线；主持人掉线太久交接（B22）；房间 GC（B19）
+  // 心跳（B44）：60 秒没消息就当掉线；主持人掉线太久交接（B22）；房间 GC（B19）；过期的口令错误计数清掉
   const heartbeat = setInterval(() => {
     const t = now()
     for (const c of conns) if (t - c.lastSeen > HEARTBEAT_MS) c.ws.terminate()
+    for (const [ip, w] of badPassByIp) if (t - w.start >= BAD_PASS_WINDOW_MS) badPassByIp.delete(ip)
     for (const [code, room] of rooms) {
       const handover = reassignHost(room, t)
       if (handover.room !== room) commit(code, handover)
@@ -315,7 +414,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     wss.once('listening', () => {
       const addr = wss.address()
       const port = typeof addr === 'object' && addr ? addr.port : (opts.port ?? 8787)
-      log(`对战中继服务：ws://${opts.host ?? '127.0.0.1'}:${port}/ws（版本 ${opts.version ?? '不限'}）`)
+      log(`对战中继服务：ws://${opts.host ?? '127.0.0.1'}:${port}/ws（版本 ${opts.version ?? '不限'}，来源 ${opts.origins?.join(' ') ?? '不限'}）`)
       resolve({
         wss,
         rooms,
@@ -331,10 +430,20 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
   })
 }
 
-// 直接运行（node dist-server/battle.mjs）就起服务；被 import（测试）时不起
+// 直接运行（node dist-server/battle.mjs）就起服务；被 import（测试）时不起。
+// 环境变量：PORT / HOST；ALLOWED_ORIGINS = 允许的页面来源，逗号分隔（如 https://tongbulian.jiaci.app），不设就不限
 const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : ''
 if (import.meta.url === entry) {
-  createBattleServer({ port: Number(process.env.PORT ?? 8787), host: process.env.HOST ?? '127.0.0.1', version: __BUILD__ }).catch((e: unknown) => {
+  const origins = (process.env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+  createBattleServer({
+    port: Number(process.env.PORT ?? 8787),
+    host: process.env.HOST ?? '127.0.0.1',
+    version: __BUILD__,
+    origins: origins.length ? origins : undefined,
+  }).catch((e: unknown) => {
     console.error(e)
     process.exit(1)
   })

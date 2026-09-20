@@ -158,7 +158,8 @@ npm run battle:dev     # 打包并在本机 127.0.0.1:8787 起中继服务（dev
 - **安装提示**：没从主屏幕打开时，首页顶上有一条「安装 同步练」提示（给家长看的，不出声、不遮按钮）：Android / 电脑 Chrome、Edge 点「安装」直接弹系统安装框；iPhone / iPad 点「怎么做」看步骤（Safari 分享 → 添加到主屏幕）；微信 / QQ 里教先在浏览器打开。关掉 3 天后再提示，装好了不再出现；电脑上只在能一键安装时提示。逻辑在 `src/engine/install.ts`（可单测）+ `src/stores/install.ts`，画在 `components/ui/InstallBar.vue`。
 - **搜索引擎**：应用是 hash 路由，搜索引擎只看得到根地址，所以构建前 `scripts/seo.mjs`（`prebuild` / `predev` 自动跑）按目录生成一套不用 JS 的静态页放进 `public/`：每个上线课程一张目录页（`math/g1/`）、每个知识点一张（`math/g1/s1-05-carry-add.html`：介绍、固定种子生成的示例题含选项与答案、同单元其它知识点、「开始练习」深链到应用）、帮助页一张（`help/`，常见问题带 FAQPage 结构化数据），都带标题 / 描述 / canonical / Open Graph / 面包屑 JSON-LD，页脚互相链接。入口页 `index.html` 的标题、描述、JSON-LD 与应用挂载前的静态简介也由同一份目录生成（写在 `<!-- seo:head -->` / `<!-- seo:body -->` 两段标记之间，别手改，有测试保证与目录一致）。页面文案在 `src/seo/site.ts`。
 - 构建时若本机 `.env` 里有 `SITE_URL=https://你的域名`，页面会带上 canonical / Open Graph 的绝对地址，并生成 `robots.txt` 与列出全部静态页的 `sitemap.xml`；没有就不带（页面照常可用）。分享图 `public/og.png`（1200×630）由 `npm run og` 渲染。静态页与分享图不进离线包；托管时最好让未命中的地址直接 404（不要回退到 `index.html`，会被搜索引擎当成软 404）。
-- **对战中继服务**（只有「各用各的」需要）：`npm run build:server` 打成单文件 `dist-server/battle.mjs`，用 Node 跑（`PORT` / `HOST` 环境变量，默认 127.0.0.1:8787），托管方把同源的 `/ws` 反向代理到它（要放行 WebSocket 升级）。网站与服务要用同一次构建：连接时核对出题相关源码的哈希，旧页面遇到新服务会自动更新重载。没有它网站照常可用，只是那张卡置灰。
+- **对战中继服务**（只有「各用各的」需要）：`npm run build:server` 打成单文件 `dist-server/battle.mjs`，用 Node 跑（`PORT` / `HOST` 环境变量，默认 127.0.0.1:8787；`ALLOWED_ORIGINS=https://你的域名` 只接受本站页面的连接，逗号分隔可以多个），托管方把同源的 `/ws` 反向代理到它（要放行 WebSocket 升级，并传 `X-Real-IP` 或 `X-Forwarded-For`——按 IP 限制连接数与猜口令用）。网站与服务要用同一次构建：连接时核对出题相关源码的哈希，旧页面遇到新服务会自动更新重载。没有它网站照常可用，只是那张卡置灰。
+- **安全**：纯静态、无账号、无 cookie，不存别人的数据。别人发来的文字（昵称、正在输入的内容）一律当纯文本渲染；设备身份只在连接时发给服务器，服务器给别人看的是它的哈希（拿不到别人的身份就冒充不了）；服务有消息大小 / 频率 / 连接数 / 猜口令次数的限制；建议托管时加一条 Content-Security-Policy（脚本、样式、字体、音频、图片只从本站取，图片另加 `data:` 给二维码，`connect-src` 加本站的 `wss://`，`frame-ancestors 'none'`），本项目线上就是这样配的。客户端判分、服务器不复算（家庭游戏不防作弊）。
 
 ## 技术栈
 
@@ -240,7 +241,7 @@ vite.server.config.ts        把 server/ 打成单文件 dist-server/battle.mjs
 - **知识点 id 全局唯一**（生成器注册表是全局 Map），新年级用不同前缀。
 - **引擎不认识内容**：`@/engine` 不导出 catalog，目录相关从 `@/engine/catalog` 导入；内容包只依赖 `@/engine` 与 `@/types`。
 - **皮肤靠 `<html data-theme>`**：`App.vue` 按当前学科切换，颜色全走 CSS 变量。
-- **对战与内容解耦**：游戏只吃 `{ red, blue, target, phase, winner, lastPoint }` 和瞬时事件，不认识题目；题目流由 `(kpId, seed, 序号)` 确定，所以对手 / 观战 / 重连都能复现同一道题，中继服务不用传题；比赛状态机是纯函数，单设备在页面里跑，多设备时同一份跑在中继服务上（服务器只管房间、座位、谁答到第几题、比分与胜负，客户端判分后报结果；服务器发整份房间快照，每房间每秒最多 10 次，瞬时事件单独发）。
+- **对战与内容解耦**：游戏只吃 `{ red, blue, target, phase, winner, lastPoint }` 和瞬时事件，不认识题目；题目流由 `(kpId, seed, 序号)` 确定，所以对手 / 观战 / 重连都能复现同一道题，中继服务不用传题；比赛状态机是纯函数，单设备在页面里跑，多设备时同一份跑在中继服务上（服务器只管房间、座位、谁答到第几题、比分与胜负，客户端判分后报结果；服务器发整份房间快照，每房间每秒最多 10 次，瞬时事件单独发；快照里的身份都是设备 id 的哈希）。页面收到不认识的知识点当「没有这个房间」、不认识的皮肤退到这一章排到的游戏，不会因为建房者乱填而整页出错。
 - **游戏与页面隔离**：canvas 游戏实现 `battle/game/contract.ts` 的 `GameModule`，由 `GameHost` 装进竞技场的固定盒子里；游戏没有 CSS、不接触摸（`pointer-events: none`）、不出声、拿不到 store / 路由 / DOM，按需加载，加载失败或抛错自动换保底画面（两条队色进度条）。`arena-isolation.test.ts` 用每种游戏挂载竞技场，断言盒子之外的 DOM 完全一致。新游戏 = `battle/games/<id>/` 一个目录（model / render / index）+ 注册表一行 + 词条。
 
 ### 加一个年级（例：三年级数学）

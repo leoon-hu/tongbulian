@@ -142,6 +142,31 @@ describe('房间 store（B19–B25）', () => {
     expect(room.error).toBe('version')
   })
 
+  it('快照里的知识点这个页面没有生成器（建房者乱填的 / 版本不同；B45a）：当没有这个房间，断开、不进竞技场', () => {
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    battle.setName('me', '小兔')
+    room.useFactory((url) => new FakeWs(url))
+    room.enter(CODE, 'red')
+    const ws = FakeWs.last()
+    ws.open()
+    const me = battle.prefs.clientId
+    const r = createRoom({ code: CODE, kpId: 'no-such-kp', skin: 'race', host: { clientId: HOST, name: '主持' }, version: 'v1', now: 1000 })
+    ws.receive({ type: 'state', room: snapshot(join(r, { clientId: me, name: '小兔', t: 'red', version: 'v1' }, 2000).room), you: me, now: 3000 })
+    expect(room.snapshot).toBeNull()
+    expect(room.error).toBe('noRoom')
+    expect(battle.state).toBeNull()
+    expect(ws.closed).toBe(true)
+    // 皮肤 id 不认识则不拒：竞技场退到这一章排到的游戏（Arena 里处理），这里快照照常进来
+    const r2 = createRoom({ code: CODE, kpId: KP, skin: 'no-such-skin', host: { clientId: HOST, name: '主持' }, version: 'v1', now: 1000 })
+    room.enter(CODE, 'red')
+    const ws2 = FakeWs.last()
+    ws2.open()
+    ws2.receive({ type: 'state', room: snapshot(join(r2, { clientId: me, name: '小兔', t: 'red', version: 'v1' }, 2000).room), you: me, now: 3000 })
+    expect(room.snapshot?.skin).toBe('no-such-skin')
+    expect(room.error).toBeNull()
+  })
+
   it('口令（B19）：lookup 连上先 hello（不带房间号）再发 lookup；found 进 room.found；不认识的口令是致命错误留着', () => {
     const room = useRoomStore()
     const battle = useBattleStore()

@@ -7,7 +7,7 @@ import { createPinia } from 'pinia'
 import router from '@/router'
 import App from '@/App.vue'
 import { setLang } from '@/engine/i18n'
-import { SKINS, type SkinMeta } from '@/battle/skins'
+import { SKINS, chapterSkin, skinById, type SkinMeta } from '@/battle/skins'
 import { createFallbackGame } from '@/battle/game/fallback'
 import { useBattleStore } from '@/stores/battle'
 import '@/views/battle/BattleArenaView.vue'
@@ -26,7 +26,7 @@ async function settle(): Promise<void> {
 }
 
 /** 挂载竞技场并换成指定皮肤的固定种子对局，返回盒子之外的 DOM（盒子内容清空）与盒子本身的属性 */
-async function snapshot(skin: SkinMeta): Promise<{ outside: string; strip: string; host: boolean }> {
+async function snapshot(skin: SkinMeta, stateSkin?: string): Promise<{ outside: string; strip: string; host: boolean }> {
   localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: skin.id }))
   const pinia = createPinia()
   await router.replace(`/battle/local/${KP}?mode=duo`)
@@ -35,6 +35,8 @@ async function snapshot(skin: SkinMeta): Promise<{ outside: string; strip: strin
   await settle()
   const store = useBattleStore()
   store.startLocal({ kpId: KP, mode: 'duo', skin: skin.id, seeds: SEEDS, now: 1000 })
+  // 多设备时比赛状态整份来自服务器快照，皮肤 id 是建房者填的：这里直接改状态里的 id 模拟
+  if (stateSkin !== undefined) store.state = { ...store.state!, skin: stateSkin }
   store.beginPlay(2000)
   await settle()
   const arena = w.find('.arena').element.cloneNode(true) as HTMLElement
@@ -84,5 +86,15 @@ describe('竞技场隔离（B34a ⑦）', () => {
     } finally {
       skin.game = saved
     }
+  })
+
+  it('比赛状态里的皮肤 id 不认识（多设备时来自建房者，服务器只透传；B45a）：退到这一章排到的游戏，盒子之外一模一样', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    const chapter = skinById(chapterSkin(KP))!
+    const real = await snapshot(chapter)
+    const fake = await snapshot(chapter, 'no-such-skin')
+    expect(fake.host).toBe(true)
+    expect(fake.outside).toBe(real.outside)
+    expect(fake.strip).toBe(real.strip)
   })
 })

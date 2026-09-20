@@ -47,6 +47,17 @@ export function makeCode(random: () => number = Math.random): string {
 export function isCode(v: unknown): v is string {
   return typeof v === 'string' && /^[A-HJ-NP-Z2-9]{6}$/.test(v)
 }
+/** 知识点 id / 皮肤 id 的样子（服务器不认识目录，只认格式；客户端收到不认识的会自己处理） */
+export function isKpId(v: unknown): v is string {
+  return typeof v === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(v)
+}
+export function isSkinId(v: unknown): v is string {
+  return typeof v === 'string' && /^[a-z0-9][a-z0-9-]{0,31}$/.test(v)
+}
+/** 正在输入的内容 / 答了什么：只留可见字符、最多 32 个 */
+export function cleanInput(v: string): string {
+  return v.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029]/g, '').slice(0, 32)
+}
 
 const ROLES: readonly Role[] = ['red', 'blue', 'watch']
 
@@ -289,9 +300,7 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
       if (!room.match || room.match.phase !== 'ended') return { room, effects: [] }
       let target = base
       if (msg.type === 'next') {
-        if (typeof msg.kpId !== 'string' || !msg.kpId || msg.kpId.length > 64 || typeof msg.skin !== 'string' || !msg.skin || msg.skin.length > 32) {
-          return { room, effects: [err(from, 'bad')] }
-        }
+        if (!isKpId(msg.kpId) || !isSkinId(msg.skin)) return { room, effects: [err(from, 'bad')] }
         target = { ...base, kpId: msg.kpId, skin: msg.skin }
       }
       const ps = participants(room)
@@ -311,7 +320,7 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
     }
     case 'skin': {
       if (!isHost) return { room, effects: [err(from, 'notHost')] }
-      if (typeof msg.skin !== 'string' || !msg.skin || msg.skin.length > 32 || inMatch(room)) return { room, effects: [err(from, 'bad')] }
+      if (!isSkinId(msg.skin) || inMatch(room)) return { room, effects: [err(from, 'bad')] }
       return { room: { ...base, skin: msg.skin }, effects: [{ type: 'broadcast' }] }
     }
     case 'lock': {
@@ -321,14 +330,15 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
     }
     case 'input': {
       if (!room.match || room.match.phase !== 'playing' || typeof msg.input !== 'string') return { room, effects: [] }
-      const match = setInput(room.match, from, msg.input.slice(0, 32))
+      const match = setInput(room.match, from, cleanInput(msg.input))
       if (match === room.match) return { room, effects: [] }
       return { room: { ...base, match }, effects: [{ type: 'broadcast' }] }
     }
     case 'answer': {
       if (!room.match || room.match.phase !== 'playing') return { room, effects: [err(from, 'bad')] }
       if (typeof msg.index !== 'number' || typeof msg.given !== 'string') return { room, effects: [err(from, 'bad')] }
-      const res = answer(room.match, from, msg.index, !!msg.correct, msg.given.slice(0, 32), now)
+      if (!Number.isInteger(msg.index) || msg.index < 0) return { room, effects: [err(from, 'bad')] }
+      const res = answer(room.match, from, msg.index, !!msg.correct, cleanInput(msg.given), now)
       if (res.state === room.match) return { room, effects: [err(from, 'bad')] }
       return { room: { ...base, match: res.state }, effects: [{ type: 'broadcast' }, ...res.events.map((e): Effect => ({ type: 'event', e }))] }
     }

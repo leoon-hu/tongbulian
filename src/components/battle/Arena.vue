@@ -40,7 +40,8 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 
 const state = computed(() => store.state)
 const phase = computed(() => state.value?.phase)
-const skin = computed(() => (state.value ? skinById(state.value.skin) : undefined))
+/** 皮肤 id 来自建房者（服务器只透传）：不认识的就用这一章排到的游戏，别让竞技场没有画面 */
+const skin = computed(() => (state.value ? (skinById(state.value.skin) ?? skinById(chapterSkin(state.value.kpId))) : undefined))
 /** 游戏只拿这份快照（B34）：与皮肤 props 同一个类型 */
 const skinProps = computed(() => {
   const s = state.value
@@ -120,7 +121,7 @@ watch(
     showResult.value = false
     const winner = state.value?.winner
     if (p === 'ended' && winner) {
-      const id = state.value?.skin ?? ''
+      const id = skin.value?.id ?? ''
       endTimers.push(
         setTimeout(
           () => say([...phraseSpeech({ k: `battle.win.${winner}` }, lang.value), ...phraseSpeech({ k: finishKey(id) }, lang.value)], lang.value),
@@ -225,7 +226,7 @@ onBeforeUnmount(() => {
     </div>
 
     <Callout :callout="store.callout" />
-    <Countdown v-if="phase === 'countdown'" :rule="store.intro && state ? ruleKey(state.skin) : null" @done="store.beginPlay()" />
+    <Countdown v-if="phase === 'countdown'" :rule="store.intro && skin ? ruleKey(skin.id) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
     <ResultPanel v-if="showResult" :state="state" :next="nextKpId" @rematch="store.rematch()" @next="goNext" @quit="quit" />
 

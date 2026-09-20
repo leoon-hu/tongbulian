@@ -5,6 +5,7 @@
  */
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { hasGenerator } from '@/engine'
 import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
 import { useBattleStore } from './battle'
@@ -67,6 +68,14 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   function onState(room: RoomSnapshot, me: string, serverNow?: number): void {
+    // 服务器不认识目录，只透传建房者给的知识点 id（B41）：这个页面没有这个知识点的生成器（别人乱填的、或者版本不同）
+    // 就当没有这个房间——不然进了竞技场出题时会抛错、整页空白
+    if (!hasGenerator(room.kpId)) {
+      client?.close()
+      client = null
+      setError('noRoom')
+      return
+    }
     snapshot.value = room
     you.value = me
     code.value = room.code

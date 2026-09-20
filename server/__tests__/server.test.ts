@@ -1,15 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import WebSocket from 'ws'
 import type { ClientMsg, ServerMsg } from '@/battle/protocol'
-import { MAX_BAD_PASS, createBattleServer, type BattleServer } from '../index'
+import { MAX_BAD_PASS, MAX_BAD_PASS_PER_IP, MAX_CONNS_PER_IP, clientIp, createBattleServer, type BattleServer } from '../index'
 
 /** 一个测试客户端：收到的消息排队，按条件等 */
 class Client {
   ws: WebSocket
   inbox: ServerMsg[] = []
   private waiters: { test: (m: ServerMsg) => boolean; resolve: (m: ServerMsg) => void }[] = []
-  constructor(port: number) {
-    this.ws = new WebSocket(`ws://127.0.0.1:${port}/ws`)
+  constructor(port: number, headers: Record<string, string> = {}) {
+    this.ws = new WebSocket(`ws://127.0.0.1:${port}/ws`, { headers })
     this.ws.on('message', (d) => {
       const m = JSON.parse(d.toString()) as ServerMsg
       this.inbox.push(m)
@@ -75,8 +75,12 @@ describe('中继服务（B41–B46）', () => {
     const created = await a.state()
     const code = created.room.code
     expect(code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/)
-    expect(created.you).toBe('aaaaaa')
-    expect(created.room.hostId).toBe('aaaaaa')
+    // 对外身份是 clientId 的哈希（B45a）：快照里看不到 clientId 本身，别人拿不到就冒充不了
+    const A = created.you
+    expect(A).toMatch(/^[A-Za-z0-9_-]{16}$/)
+    expect(A).not.toBe('aaaaaa')
+    expect(JSON.stringify(created)).not.toContain('aaaaaa')
+    expect(created.room.hostId).toBe(A)
     expect(server.rooms.size).toBe(1)
     expect(Object.values(created.room.passcodes).every((p) => /^[1-9][0-9]{5}$/.test(p))).toBe(true)
 
@@ -96,9 +100,10 @@ describe('中继服务（B41–B46）', () => {
 
     b.send({ type: 'hello', clientId: 'bbbbbb', name: '小虎', version: 'v1', code, t: 'blue' })
     const joinedB = await b.state()
+    const B = joinedB.you
     expect(joinedB.room.members.map((m) => [m.clientId, m.role])).toEqual([
-      ['aaaaaa', 'watch'],
-      ['bbbbbb', 'blue'],
+      [A, 'watch'],
+      [B, 'blue'],
     ])
     // 主持人自己也进红队：两队都有人了，服务器自动开始（B21）
     a.send({ type: 'team', role: 'red' })
@@ -130,9 +135,21 @@ describe('中继服务（B41–B46）', () => {
     await b2.open()
     b2.send({ type: 'hello', clientId: 'bbbbbb', name: '小虎', version: 'v1', code, t: 'red' })
     const back = await b2.state()
-    expect(back.room.members.find((m) => m.clientId === 'bbbbbb')!.role).toBe('blue')
+    expect(back.you).toBe(B)
+    expect(back.room.members.find((m) => m.clientId === B)!.role).toBe('blue')
     const replaced = await b.wait((m) => m.type === 'error')
     expect(replaced.type === 'error' && replaced.error).toBe('replaced')
+    // 拿着快照里的公开身份冒充别人（B45a）：那不是 clientId，进来只是另一个新成员，顶不掉 b2
+    const fake = new Client(server.port)
+    await fake.open()
+    fake.send({ type: 'hello', clientId: B.replace(/[^A-Za-z0-9_-]/g, 'x').padEnd(6, 'x'), name: '冒充', version: 'v1', code, t: 'watch' })
+    const fakeIn = await fake.state()
+    expect(fakeIn.you).not.toBe(B)
+    expect(fakeIn.room.members.filter((m) => m.clientId === B)).toHaveLength(1)
+    expect(fakeIn.room.members.find((m) => m.clientId === B)!.online).toBe(true)
+    fake.send({ type: 'leave' })
+    await a.state((s) => s.room.members.length === 2 && s.room.members.every((m) => m.clientId === A || m.clientId === B))
+    fake.close()
 
     const c = new Client(server.port)
     await c.open()
@@ -144,6 +161,14 @@ describe('中继服务（B41–B46）', () => {
     expect(none.type === 'error' && none.error).toBe('noRoom')
     c.send({ type: 'ping' })
     await c.wait((m) => m.type === 'pong')
+    // 知识点 / 皮肤 id 只认格式（B45a）：带路径、大写、太长的都 bad
+    c.send({ type: 'hello', clientId: 'cccccc', name: '路人', version: 'v1' })
+    c.send({ type: 'create', kpId: '../etc', skin: 'race' })
+    const badKp = await c.wait((m) => m.type === 'error')
+    expect(badKp.type === 'error' && badKp.error).toBe('bad')
+    c.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'Race<b>' })
+    const badSkin = await c.wait((m) => m.type === 'error')
+    expect(badSkin.type === 'error' && badSkin.error).toBe('bad')
 
     b2.send({ type: 'leave' })
     await a.state((s) => s.room.members.length === 1)
@@ -197,6 +222,98 @@ describe('中继服务（B41–B46）', () => {
       expect(created.room.code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/)
       old.close()
       fresh.close()
+    } finally {
+      await vs.close()
+    }
+  })
+
+  it('来源名单（B45a）：设了 origins 的服务只接受名单里的 Origin，别的握手直接被拒；没设就不限', async () => {
+    const vs = await createBattleServer({ port: 0, origins: ['https://tongbulian.example'], log: () => {} })
+    try {
+      const ok = new Client(vs.port, { origin: 'https://tongbulian.example' })
+      await ok.open()
+      ok.send({ type: 'ping' })
+      await ok.wait((m) => m.type === 'pong')
+      ok.close()
+      for (const headers of [{ origin: 'https://evil.example' }, {} as Record<string, string>]) {
+        const bad = new Client(vs.port, headers)
+        const rejected = await new Promise<boolean>((r) => {
+          bad.ws.once('unexpected-response', () => r(true))
+          bad.ws.once('error', () => r(true))
+          bad.ws.once('open', () => r(false))
+        })
+        expect(rejected).toBe(true)
+      }
+    } finally {
+      await vs.close()
+    }
+    const any = new Client(server.port, { origin: 'https://whatever.example' })
+    await any.open()
+    any.close()
+  })
+
+  it('同一个 IP 的连接数上限（B45a）：超过 MAX_CONNS_PER_IP 的握手被拒，断开后又能连；IP 从代理头取', async () => {
+    const ip = { 'x-real-ip': '203.0.113.9' }
+    const held: Client[] = []
+    for (let i = 0; i < MAX_CONNS_PER_IP; i++) held.push(new Client(server.port, ip))
+    await Promise.all(held.map((c) => c.open()))
+    const extra = new Client(server.port, ip)
+    const rejected = await new Promise<boolean>((r) => {
+      extra.ws.once('unexpected-response', () => r(true))
+      extra.ws.once('error', () => r(true))
+      extra.ws.once('open', () => r(false))
+    })
+    expect(rejected).toBe(true)
+    // 别的 IP 不受影响
+    const other = new Client(server.port, { 'x-real-ip': '203.0.113.10' })
+    await other.open()
+    other.close()
+    const closedOne = new Promise<void>((r) => held[0]!.ws.once('close', () => r()))
+    held[0]!.close()
+    await closedOne
+    await new Promise((r) => setTimeout(r, 20))
+    const again = new Client(server.port, ip)
+    await again.open()
+    again.close()
+    for (const c of held.slice(1)) c.close()
+    expect(clientIp({ headers: { 'x-forwarded-for': '198.51.100.7, 10.0.0.1' }, socket: { remoteAddress: '127.0.0.1' } as never })).toBe('198.51.100.7')
+    expect(clientIp({ headers: { 'cf-connecting-ip': '198.51.100.8' }, socket: { remoteAddress: '127.0.0.1' } as never })).toBe('198.51.100.8')
+    expect(clientIp({ headers: {}, socket: { remoteAddress: '127.0.0.1' } as never })).toBe('127.0.0.1')
+  })
+
+  it('猜口令（B45a）：同一个 IP 换着连接猜，错满 MAX_BAD_PASS_PER_IP 次后一律 busy，别的 IP 照常', async () => {
+    const vs = await createBattleServer({ port: 0, log: () => {} })
+    try {
+      const ip = { 'x-real-ip': '203.0.113.99' }
+      let tried = 0
+      let pass = 200000
+      while (tried < MAX_BAD_PASS_PER_IP) {
+        const g = new Client(vs.port, ip)
+        await g.open()
+        g.send({ type: 'hello', clientId: `guess${tried}`, name: '猜', version: 'v1' })
+        const closed = new Promise<void>((r) => g.ws.once('close', () => r()))
+        for (let i = 0; i < MAX_BAD_PASS && tried < MAX_BAD_PASS_PER_IP; i++, tried++) {
+          g.send({ type: 'lookup', pass: String(pass++) })
+          const e = await g.wait((m) => m.type === 'error')
+          expect(e.type === 'error' && e.error).toBe('noRoom')
+        }
+        if (tried % MAX_BAD_PASS === 0) await closed
+        else g.close()
+      }
+      const blocked = new Client(vs.port, ip)
+      await blocked.open()
+      blocked.send({ type: 'hello', clientId: 'guessed', name: '猜', version: 'v1' })
+      blocked.send({ type: 'lookup', pass: '123456' })
+      const e = await blocked.wait((m) => m.type === 'error')
+      expect(e.type === 'error' && e.error).toBe('busy')
+      blocked.close()
+      const other = new Client(vs.port, { 'x-real-ip': '203.0.113.100' })
+      await other.open()
+      other.send({ type: 'hello', clientId: 'honest', name: '正常', version: 'v1' })
+      other.send({ type: 'lookup', pass: '123456' })
+      const e2 = await other.wait((m) => m.type === 'error')
+      expect(e2.type === 'error' && e2.error).toBe('noRoom')
+      other.close()
     } finally {
       await vs.close()
     }
