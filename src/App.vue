@@ -6,6 +6,7 @@ import { computed, watch } from 'vue'
 import { HELP_TITLE } from '@/help/content'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/ui/AppHeader.vue'
+import JoinSheet from '@/components/battle/JoinSheet.vue'
 import { courseOfKp, findKp, getCourse, getGrade, getSubject } from '@/engine/catalog'
 import { kpTitle, lang, t, ui } from '@/engine/i18n'
 import { useRoomStore } from '@/stores/room'
@@ -73,6 +74,7 @@ watch(
 
 <template>
   <AppHeader v-if="!isArena" />
+  <JoinSheet v-if="room.joinOpen" @close="room.joinOpen = false" />
   <!-- 按路径作 key：同一视图换参数（如地图切年级）时重新挂载，视图里的 setup 逻辑不用再监听参数 -->
   <main>
     <router-view v-slot="{ Component }">

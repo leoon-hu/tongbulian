@@ -646,7 +646,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(online.attributes('disabled')).toBeUndefined()
     await online.trigger('click')
     expect(shown(w.find('.start-btn'))).toContain('建房间')
-    expect(w.find('.join').exists()).toBe(false) // 没有「输入房间号加入」
+    expect(w.find('.setup .join').exists()).toBe(false) // 没有「输入房间号加入」（顶栏的「加入对战」不算）
     await w.find('.start-btn').trigger('click')
     const ws = FakeWs.last()
     ws.open()
@@ -766,16 +766,17 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w.unmount()
   })
 
-  it('设置页「🔑 加入对战」→ 输 6 位口令（只收数字）→ 口令不对提示 → 对的口令服务器回房间号与身份 → 以那个身份进房看到连接状态窗口', async () => {
+  it('全局顶栏「🔑 加入对战」（首页就有，设置页页头没有）→ 输 6 位口令（只收数字）→ 口令不对提示 → 对的口令服务器回房间号与身份 → 以那个身份进房看到连接状态窗口', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
-    const w = await mountAt(`/battle/new/${KP}`)
+    const w = await mountAt('/')
     const room = useRoomStore()
     const battle = useBattleStore()
     room.useFactory((url) => new FakeWs(url))
     const me = battle.prefs.clientId
-    expect(w.find('.join-btn').attributes('disabled')).toBeUndefined()
-    await w.find('.join-btn').trigger('click')
+    expect(w.find('.join-btn').exists()).toBe(false)
+    expect(shown(w.find('.app-header .nav-btn.join'))).toContain('加入对战')
+    await w.find('.app-header .nav-btn.join').trigger('click')
     expect(w.find('.join-sheet').exists()).toBe(true)
     const input = w.find('.join-sheet input')
     await input.setValue('12ab34')
@@ -913,6 +914,19 @@ describe('帮助页（F17）', () => {
     expect(shown(w)).toContain('Rules')
     expect(shown(w)).not.toContain('游戏规则')
     expect(document.title).toBe('Help & guide · Chapter Practice')
+    w.unmount()
+  })
+
+  it('设置页「跟谁打」：选中哪张卡，下面出一行对应的说明；页头没有「加入对战」（它在全局顶栏）', async () => {
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
+    const w = await mountAt('/battle/new/s1-05-carry-add')
+    expect(shown(w.find('.mode-desc'))).toContain('机器人有自己的题')
+    await w.findAll('.mode')[1]!.trigger('click')
+    expect(shown(w.find('.mode-desc'))).toContain('一台平板横着放')
+    await w.findAll('.mode')[2]!.trigger('click')
+    expect(shown(w.find('.mode-desc'))).toContain('输口令')
+    expect(w.find('.page-header .join-btn').exists()).toBe(false)
+    expect(w.find('.app-header .nav-btn.join').exists()).toBe(true)
     w.unmount()
   })
 

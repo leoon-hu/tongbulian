@@ -21,8 +21,10 @@ export const useRoomStore = defineStore('room', () => {
   const error = ref<RoomError | null>(null)
   /** 想进的房间号（连上前就有，页面显示用） */
   const code = ref<string | null>(null)
-  /** 口令查到的房间号与身份（B19）：设置页看到它就跳到房间页 */
+  /** 口令查到的房间号与身份（B19）：「加入对战」面板看到它就跳到房间页 */
   const found = ref<{ code: string; t: Role } | null>(null)
+  /** 全局「加入对战」面板开着（顶栏按钮打开，App 渲染 JoinSheet） */
+  const joinOpen = ref(false)
   let client: RoomClient | null = null
   let errorTimer: ReturnType<typeof setTimeout> | null = null
   /** 测试可注入假的 WebSocket */
@@ -120,7 +122,7 @@ export const useRoomStore = defineStore('room', () => {
     c.send({ type: 'create', kpId, skin })
   }
 
-  /** 设置页「加入对战」：连上后拿口令换房间号与身份（found），再由页面按链接的方式进房 */
+  /** 「加入对战」面板：连上后拿口令换房间号与身份（found），再由面板按链接的方式进房 */
   function lookup(pass: string): void {
     reset()
     const c = makeClient()
@@ -159,6 +161,7 @@ export const useRoomStore = defineStore('room', () => {
     error,
     code,
     found,
+    joinOpen,
     available,
     me,
     isHost,

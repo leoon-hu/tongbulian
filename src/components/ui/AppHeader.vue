@@ -3,12 +3,15 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ui } from '@/engine/i18n'
 import { useSettingsStore } from '@/stores/settings'
+import { useRoomStore } from '@/stores/room'
+import RubyText from '@/components/ui/RubyText.vue'
 
-// 全局顶部栏：品牌标题 + 主页 / 语言切换。显示在每个页面上方（学科无关）。
+// 全局顶部栏：品牌标题 + 「🔑 加入对战」（B19，口令是全局的，不挂在某个知识点的对战页上）+ 主页 / 声音 / 语言切换。显示在每个页面上方（学科无关；竞技场里不显示）。
 // 品牌名在首页是 <h1>（首页没有别的一级标题，搜索引擎按它认页面），子页的一级标题是 PageHeader 里的页名。
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
+const room = useRoomStore()
 const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
 </script>
 
@@ -22,6 +25,7 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
       </span>
     </RouterLink>
     <div class="nav">
+      <button v-if="room.available" type="button" class="nav-btn join" @click="room.joinOpen = true">🔑 <RubyText :text="{ k: 'room.join' }" /></button>
       <button class="nav-btn home" @click="router.push('/')" :aria-label="ui('nav.home')">🏠</button>
       <button
         class="nav-btn sound"
@@ -98,5 +102,18 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
   font-size: var(--fs-md);
   font-weight: 800;
   color: var(--c-primary-dark);
+}
+/* 「🔑 加入对战」：药丸形，带注音 */
+.nav-btn.join {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--c-text);
+  white-space: nowrap;
 }
 </style>

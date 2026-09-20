@@ -1,15 +1,26 @@
 <script setup lang="ts">
-// 「加入对战」面板（B19 / B27）：输 6 位数字口令，以口令对应的身份进房；口令由建房的设备显示在各自的二维码下面（红队 / 蓝队 / 观战各一个）
-import { onMounted, ref } from 'vue'
+// 全局「加入对战」面板（B19）：顶栏的「🔑 加入对战」打开（App 渲染，任何页面都能用——口令是全局的，不挂在某个知识点的对战页上）。
+// 输 6 位数字口令 → room.lookup → 服务器回 found（房间号 + 身份）→ 按链接的方式进房；口令不对 / 连不上留在面板里提示。
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ui } from '@/engine/i18n'
+import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
-/** busy = 正在查口令；error = 要显示的词条键（口令不对 / 连不上） */
-const props = defineProps<{ busy?: boolean; error?: string | null }>()
-const emit = defineEmits<{ join: [pass: string]; close: [] }>()
+/** 查口令超过这么久没回音：提示连不上（与建房一样） */
+const LOOKUP_TIMEOUT_MS = 8000
+
+const emit = defineEmits<{ close: [] }>()
+const room = useRoomStore()
+const route = useRoute()
+const router = useRouter()
 
 const value = ref('')
+const busy = ref(false)
+/** 面板里要显示的错误词条键 */
+const error = ref<string | null>(null)
+let timer: ReturnType<typeof setTimeout> | null = null
 const input = ref<HTMLInputElement | null>(null)
 onMounted(() => input.value?.focus())
 
@@ -19,9 +30,53 @@ function onInput(e: Event): void {
   value.value = el.value.replace(/\D/g, '').slice(0, 6)
   el.value = value.value
 }
-function submit(): void {
-  if (value.value.length === 6 && !props.busy) emit('join', value.value)
+function stop(): void {
+  busy.value = false
+  if (timer) clearTimeout(timer)
+  timer = null
 }
+function submit(): void {
+  if (value.value.length !== 6 || busy.value) return
+  error.value = null
+  busy.value = true
+  // 已经在某个房间里（二维码页 / 连接状态窗口）：先离开那个房间，释放座位
+  if (room.snapshot) room.leave()
+  room.lookup(value.value)
+  timer = setTimeout(() => {
+    if (!busy.value) return
+    stop()
+    room.leave()
+    error.value = 'room.connect.slow'
+  }, LOOKUP_TIMEOUT_MS)
+}
+watch(
+  () => room.found,
+  (f) => {
+    if (!busy.value || !f) return
+    stop()
+    const path = `/battle/${f.code}`
+    // 同一个地址（正在这个房间里又输了它的口令）不会重挂载房间页，直接进
+    const same = route.path === path
+    void router.push({ path, query: { t: f.t } })
+    if (same) room.enter(f.code, f.t)
+    emit('close')
+  },
+)
+watch(
+  () => room.error,
+  (e) => {
+    if (busy.value && e && FATAL_ERRORS.includes(e)) {
+      stop()
+      room.leave()
+      error.value = e === 'noRoom' ? 'room.join.wrong' : `room.error.${e}`
+    }
+  },
+)
+onBeforeUnmount(() => {
+  // 关掉面板时还在查：断开
+  if (busy.value) room.leave()
+  stop()
+})
 </script>
 
 <template>
