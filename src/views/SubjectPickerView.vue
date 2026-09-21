@@ -87,9 +87,10 @@ function tapSubject(sub: SubjectMeta): void {
 }
 .hero-icons {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  font-size: 30px;
+  gap: 4px 6px;
+  font-size: 26px;
   line-height: 1.2;
 }
 .hero-line {
