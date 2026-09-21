@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
+import '@/content/math/grade2'
 import { createRng } from '@/engine'
 import { stubCanvas, stubCtx } from '../game/__tests__/stub'
 import type { Phase, Team } from '../protocol'
 import { RANDOM_SKIN, SKINS, chapterSkin, ratio, resolveSkin, skinById } from '../skins'
-import { getCourse, nextKp, volumeKps } from '@/engine/catalog'
+import { chapterIndex, getCourse, nextKp, volumeKps } from '@/engine/catalog'
 
 describe('皮肤注册表（B34–B36）', () => {
   it('每种皮肤有 id / 图标 / 位置 / 类别，id 唯一；random 与不认识的 id 都落到真实皮肤', () => {
@@ -44,16 +45,28 @@ describe('皮肤注册表（B34–B36）', () => {
 })
 
 describe('按章节的游戏（B36）', () => {
-  it('每册的知识点按目录顺序轮流对应一个游戏，排完从头再排，下一册重新排起', () => {
+  it('一个年级的知识点按目录顺序轮流对应一个游戏：上册从第一个游戏排起，下册接着上册排到的下一个继续轮，排完从头再排；换年级从头排', () => {
     const games = SKINS.map((s) => s.id)
     const course = getCourse('math', 'g1')!
     const sem = (kp: { unitId: string }) => course.units.find((u) => u.id === kp.unitId)!.semester
     const first = course.knowledgePoints.filter((kp) => sem(kp) === 1)
     const second = course.knowledgePoints.filter((kp) => sem(kp) === 2)
-    expect(first.length).toBeGreaterThan(games.length)
+    expect(first.length).toBeGreaterThan(0)
+    expect(second.length).toBeGreaterThan(0)
+    first.forEach((kp, i) => expect(chapterIndex(kp.id)).toBe(i))
+    second.forEach((kp, i) => expect(chapterIndex(kp.id)).toBe(first.length + i))
     first.forEach((kp, i) => expect(chapterSkin(kp.id)).toBe(games[i % games.length]))
-    second.forEach((kp, i) => expect(chapterSkin(kp.id)).toBe(games[i % games.length]))
+    second.forEach((kp, i) => expect(chapterSkin(kp.id)).toBe(games[(first.length + i) % games.length]))
     expect(chapterSkin(first[0]!.id)).toBe(games[0])
+    expect(chapterSkin(second[0]!.id)).toBe(games[first.length % games.length])
+    // 一年级 26 个知识点比 20 种游戏多：一个年级打下来每种游戏都排得到
+    const used = new Set([...first, ...second].map((kp) => chapterSkin(kp.id)))
+    expect(used.size).toBe(Math.min(games.length, first.length + second.length))
+    // 二年级重新从第一个游戏排起
+    const g2 = getCourse('math', 'g2')!
+    expect(chapterIndex(g2.knowledgePoints[0]!.id)).toBe(0)
+    expect(chapterSkin(g2.knowledgePoints[0]!.id)).toBe(games[0])
+    expect(chapterIndex('nope')).toBe(-1)
     expect(chapterSkin('nope')).toBe(games[0])
   })
 

@@ -32,6 +32,13 @@ const SHOTS = [
     "path": "#/s/math/g/g1"
   },
   {
+    "name": "entry",
+    "path": "#/s/math/g/g1",
+    "steps": [
+      { "tap": ".node.open", "after": 700 }
+    ]
+  },
+  {
     "name": "practice",
     "path": "#/s/math/g/g1/practice/s1-05-carry-add"
   },
@@ -104,8 +111,12 @@ await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceSc
 await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
 await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
 await send("Page.addScriptToEvaluateOnNewDocument", { source: INIT });
+// 只截几张：npm run screenshots -- map entry（不带参数就全截）
+const only = process.argv.slice(2);
+const wanted = only.length ? SHOTS.filter((s) => only.includes(s.name)) : SHOTS;
+if (only.length && wanted.length !== only.length) throw new Error("没有这张截图：" + only.filter((n) => !SHOTS.some((s) => s.name === n)).join(" "));
 try {
-  for (const s of SHOTS) {
+  for (const s of wanted) {
     // 每张可以指定自己的尺寸（对战竞技场要横屏）
     const [w, h, scale] = [s.w ?? W, s.h ?? H, s.scale ?? SCALE];
     await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: scale, mobile: true, screenOrientation: { type: w > h ? "landscapePrimary" : "portraitPrimary", angle: w > h ? 90 : 0 } });

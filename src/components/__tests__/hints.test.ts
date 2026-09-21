@@ -7,10 +7,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import App from '@/App.vue'
 import { setLang } from '@/engine/i18n'
-import { sayKeys } from '@/engine/voice'
+import { hush, sayKeys } from '@/engine/voice'
 import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
+import { useVoiceStore } from '@/stores/voice'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
+import { fakePeerDeps, fakeStream } from '@/battle/__tests__/fake-rtc'
 import { createRoom, join, snapshot, type Room } from '../../../server/room'
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
@@ -61,6 +63,23 @@ afterEach(() => {
   FakeWs.reset()
   localStorage.clear()
   setLang('zh')
+})
+
+describe('知识点地图', () => {
+  it('点知识点弹出的「自己练，还是对战？」面板打开就读这一句；✕ 关掉停声', async () => {
+    const w = await mountAt('/s/math/g/g1')
+    expect(spoken()).toEqual([])
+    await w.find('.node.open').trigger('click')
+    await settle()
+    expect(spoken()).toEqual([['entry.ask']])
+    vi.mocked(hush).mockClear()
+    await w.find('.entry-sheet .close').trigger('click')
+    await settle()
+    expect(hush).toHaveBeenCalled()
+    expect(w.find('.entry-sheet').exists()).toBe(false)
+    expect(spoken()).toEqual([['entry.ask']])
+    w.unmount()
+  })
 })
 
 describe('对战设置页', () => {
@@ -196,6 +215,41 @@ describe('多设备房间', () => {
     await settle()
     expect(lastSpoken()).toEqual(['room.join.wrong'])
     await until(() => !!w.find('.join-sheet .error').exists())
+    w.unmount()
+  })
+
+  it('语音（B57）：点 🎤 开了读「语音开了」、关了读「语音关了」；拒绝权限读「没有拿到麦克风的权限」', async () => {
+    const w = await mountAt(`/battle/${CODE}?t=red`, () => {
+      named()
+      useRoomStore().useFactory((url) => new FakeWs(url))
+      useVoiceStore().useDeps({ getUserMedia: async () => fakeStream(), supported: () => true, peer: fakePeerDeps() })
+    })
+    const battle = useBattleStore()
+    const ws = FakeWs.last()
+    ws.open()
+    const me = battle.prefs.clientId
+    let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: 'hhhhhh', name: '主持' }, version: 'v1', now: 1000 })
+    r = join(r, { clientId: me, name: '小兔', t: 'red', version: 'v1' }, 2000).room
+    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    await settle()
+    expect(lastSpoken()).toEqual(['room.wait.title', 'room.wait.sub'])
+    await w.find('.wait .mic-btn').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['mic.on'])
+    await w.find('.wait .mic-btn').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['mic.off'])
+    useVoiceStore().useDeps({
+      getUserMedia: async () => {
+        throw new Error('NotAllowedError')
+      },
+      supported: () => true,
+      peer: fakePeerDeps(),
+    })
+    await w.find('.wait .mic-btn').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['mic.denied'])
+    expect(w.find('.wait .voice-msg').exists()).toBe(true)
     w.unmount()
   })
 })

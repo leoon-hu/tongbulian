@@ -49,6 +49,22 @@ export function audioContext(): AudioContext | null {
   return ensureContext()
 }
 
+/** 压低时的音量倍数（对战语音里别人说话时朗读让一让，B57） */
+export const DUCK_LEVEL = 0.45
+let ducked = false
+function applyGain(): void {
+  if (!ctx || !gain) return
+  const v = settings.volume * (ducked ? DUCK_LEVEL : 1)
+  if (typeof gain.gain.setTargetAtTime === 'function') gain.gain.setTargetAtTime(v, ctx.currentTime, 0.05)
+  else gain.gain.value = v
+}
+/** 别人说话时压低朗读（只压走共享增益的朗读片段，对战音效不走它）；on = false 恢复 */
+export function duckAudio(on: boolean): void {
+  if (ducked === on) return
+  ducked = on
+  applyGain()
+}
+
 /** 在用户手势里调用（每次触摸都可以调，很便宜）：恢复 AudioContext、解锁 <audio> 元素池 */
 export function unlockAudio(): void {
   if (!inBrowser) return

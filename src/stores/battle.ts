@@ -127,9 +127,6 @@ export const useBattleStore = defineStore('battle', () => {
   // 同步写回：改完名字马上落盘（设置页改完就跳转，别让它排在下一帧后面）
   watch(prefs, savePrefs, { deep: true, flush: 'sync' })
 
-  /** 地图上的「⚔️ 对战」开关（B26），只在本次会话里记 */
-  const mapMode = ref(false)
-
   const state = ref<MatchState | null>(null)
   const mode = ref<BattleMode | null>(null)
   /** 线上模式：我是谁、主持人是谁 */
@@ -507,7 +504,6 @@ export const useBattleStore = defineStore('battle', () => {
 
   return {
     prefs,
-    mapMode,
     state,
     mode,
     operable,

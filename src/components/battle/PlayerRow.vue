@@ -5,6 +5,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Question } from '@/types/models'
 import type { Player } from '@/battle/protocol'
 import type { Feedback } from '@/stores/battle'
+import type { VoiceMark } from '@/stores/voice'
 import { answerLabel } from '@/engine/answer'
 import { lang, ui } from '@/engine/i18n'
 import { questionSpeech } from '@/engine/speech'
@@ -28,6 +29,8 @@ const props = defineProps<{
   compact?: boolean
   /** 不能操作的行盖一层半透明遮罩（本机是参赛的时候）：'theirs' 对方、'mate' 队友 */
   masked?: 'theirs' | 'mate' | null
+  /** 名字旁的 🎤（多设备开了语音才有，B57）：开着 / 正在说话 */
+  voice?: VoiceMark | null
 }>()
 const emit = defineEmits<{ answer: [given: unknown]; input: [value: string] }>()
 
@@ -127,6 +130,7 @@ onBeforeUnmount(() => {
   <div class="row" :class="[player.team, { operable, offline: !player.online }]">
     <div class="row-head">
       <span v-if="!solo" class="name">{{ displayName }}</span>
+      <span v-if="voice" class="mic" :class="{ talking: voice === 'talking' }" :title="ui('mic.btn.on')" aria-hidden="true">🎤</span>
       <span class="stats">{{ ui('battle.stats', { n: player.index, m: player.correct }) }}</span>
       <span v-if="player.streak >= 2" :key="player.streak" class="streak" :title="ui('battle.streakBadge')">🔥 ×{{ player.streak }}</span>
       <span v-if="!player.online" class="off">📶 <RubyText :text="{ k: 'room.offline' }" /></span>
@@ -271,6 +275,30 @@ onBeforeUnmount(() => {
   font-weight: 900;
   color: var(--c-primary-dark);
   animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* 开了语音的人名字旁的 🎤（B57）：说话时脉动 */
+.mic {
+  flex: none;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  opacity: 0.6;
+}
+.mic.talking {
+  opacity: 1;
+  animation: mic 0.5s ease-in-out infinite alternate;
+}
+@keyframes mic {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mic.talking {
+    animation: none;
+  }
 }
 .row-body {
   position: relative;

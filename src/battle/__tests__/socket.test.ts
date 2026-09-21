@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RoomSnapshot } from '@/battle/protocol'
+import type { IceServer, RoomSnapshot, RtcSignal, ServerMsg } from '@/battle/protocol'
 import { BACKOFF_MS, PING_MS, RoomClient, socketUrl, type RoomClientOptions, type SocketStatus } from '../socket'
 import { FakeWs } from './fake-socket'
 
@@ -169,5 +169,28 @@ describe('RoomClient（B23 / B42 / B44）', () => {
     c.close()
     vi.advanceTimersByTime(60_000)
     expect(tries).toBe(2)
+  })
+})
+
+describe('语音信令（B57）', () => {
+  it('rtc / turn 各自回调，形状不对的丢掉；ICE 清单只留合法的、ttl 非正数当 0', () => {
+    const rtc: [string, RtcSignal][] = []
+    const turn: [IceServer[], number][] = []
+    const { c } = client({ onRtc: (f, d) => rtc.push([f, d]), onTurn: (l, t) => turn.push([l, t]) })
+    c.connect('ABC234')
+    const ws = FakeWs.last()
+    ws.open()
+    ws.receive({ type: 'rtc', from: 'bbbb', data: { sdp: { type: 'offer', sdp: 'o' } } })
+    ws.receive({ type: 'rtc', from: 'bbbb', data: { nope: 1 } } as unknown as ServerMsg)
+    ws.receive({ type: 'rtc', from: 5, data: { candidates: [] } } as unknown as ServerMsg)
+    ws.receive({ type: 'turn', iceServers: [{ urls: 'stun:x' }, { bad: 1 }], ttl: 100 } as unknown as ServerMsg)
+    ws.receive({ type: 'turn', iceServers: 'x', ttl: -1 } as unknown as ServerMsg)
+    expect(rtc).toEqual([['bbbb', { sdp: { type: 'offer', sdp: 'o' } }]])
+    expect(turn).toEqual([
+      [[{ urls: ['stun:x'] }], 100],
+      [[], 0],
+    ])
+    c.send({ type: 'rtc', to: 'bbbb', data: { candidates: [] } })
+    expect(ws.msgs.at(-1)).toEqual({ type: 'rtc', to: 'bbbb', data: { candidates: [] } })
   })
 })

@@ -88,6 +88,8 @@ export interface Member {
   /** 掉线的时刻（在线时没有）；主持人掉线超过 HOST_GRACE_MS 才交接（B22） */
   offlineAt?: number
   joinedAt: number
+  /** 开了麦克风（B57）：别人据此知道要不要跟他建语音连接、画 🎤；离开清掉，掉线保留 */
+  voice: boolean
 }
 
 /** 整份房间快照（B42：任何变化都发整份） */
@@ -128,6 +130,12 @@ export type ClientMsg =
   | { type: 'answer'; index: number; given: string; correct: boolean }
   | { type: 'leave' }
   | { type: 'ping' }
+  /** 语音（B57）：开 / 关麦克风，进快照 members[].voice */
+  | { type: 'voice'; on: boolean }
+  /** 语音信令（B57）：转给同房间在线的 to（对外身份），服务器只看形状、不看内容 */
+  | { type: 'rtc'; to: string; data: RtcSignal }
+  /** 要一份 ICE 服务器清单（B57）：服务器配了 TURN 就带临时凭据，否则只有 STUN */
+  | { type: 'turn' }
 
 export type RoomError =
   | 'noRoom' // 房间不存在（或已关闭）
@@ -149,3 +157,26 @@ export type ServerMsg =
   | { type: 'error'; error: RoomError }
   | { type: 'found'; code: string; t: Role }
   | { type: 'pong' }
+  /** 语音信令（B57）：from 是对方的对外身份 */
+  | { type: 'rtc'; from: string; data: RtcSignal }
+  /** ICE 服务器清单（B57）；ttl 秒（临时凭据的有效期，只有 STUN 时为 0） */
+  | { type: 'turn'; iceServers: IceServer[]; ttl: number }
+
+// ── 语音通话（B57）：信令经服务器转发、音频点对点 ─────────────────────────────────────────────
+
+/** 一条 ICE 候选（RTCIceCandidateInit 的三个字段） */
+export interface RtcCandidate {
+  candidate: string
+  sdpMid: string | null
+  sdpMLineIndex: number | null
+}
+
+/** 信令内容：一份 SDP（offer / answer）或一批候选（客户端每 100 ms 攒一包） */
+export type RtcSignal = { sdp: { type: 'offer' | 'answer'; sdp: string } } | { candidates: RtcCandidate[] }
+
+/** ICE 服务器（RTCIceServer 的子集；TURN 的带临时用户名与口令） */
+export interface IceServer {
+  urls: string | string[]
+  username?: string
+  credential?: string
+}

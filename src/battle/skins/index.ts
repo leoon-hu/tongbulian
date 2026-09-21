@@ -5,7 +5,7 @@
  * 新游戏 = games/<id>/ 一个目录 + 这里加一行 + 词条 skin.<id>。
  */
 import type { RNG } from '@/engine'
-import { volumeKps } from '@/engine/catalog'
+import { chapterIndex } from '@/engine/catalog'
 import type { GameLoader, GameState } from '../game/contract'
 
 /** 所有皮肤组件的 props = 游戏的比分快照（同一份类型） */
@@ -25,7 +25,7 @@ export interface SkinMeta {
 }
 
 /** 有专属开场规则句 / 结束语的皮肤（B39）；没有的用 default */
-const PHRASED = new Set(['race', 'car', 'rocket', 'balloon', 'swim', 'ladder', 'dig', 'fish', 'tower', 'tug', 'ice'])
+const PHRASED = new Set(['race', 'car', 'rocket', 'balloon', 'swim', 'ladder', 'dig', 'fish', 'tower', 'flower', 'egg', 'bubble', 'fruit', 'stars', 'puzzle', 'tug', 'seesaw', 'flag', 'ice', 'castle'])
 
 export function phraseSkin(id: string): string {
   return PHRASED.has(id) ? id : 'default'
@@ -109,6 +109,48 @@ export const SKINS: readonly SkinMeta[] = [
     game: () => import('../games/tower').then((m) => m.createTowerGame),
   },
   {
+    id: 'flower',
+    icon: '🌱',
+    slot: 'center',
+    kind: 'grow',
+    game: () => import('../games/flower').then((m) => m.createFlowerGame),
+  },
+  {
+    id: 'egg',
+    icon: '🐣',
+    slot: 'center',
+    kind: 'grow',
+    game: () => import('../games/egg').then((m) => m.createEggGame),
+  },
+  {
+    id: 'bubble',
+    icon: '🫧',
+    slot: 'center',
+    kind: 'grow',
+    game: () => import('../games/bubble').then((m) => m.createBubbleGame),
+  },
+  {
+    id: 'fruit',
+    icon: '🍎',
+    slot: 'center',
+    kind: 'grow',
+    game: () => import('../games/fruit').then((m) => m.createFruitGame),
+  },
+  {
+    id: 'stars',
+    icon: '⭐',
+    slot: 'top',
+    kind: 'grow',
+    game: () => import('../games/stars').then((m) => m.createStarsGame),
+  },
+  {
+    id: 'puzzle',
+    icon: '🧩',
+    slot: 'center',
+    kind: 'grow',
+    game: () => import('../games/puzzle').then((m) => m.createPuzzleGame),
+  },
+  {
     id: 'tug',
     icon: '🪢',
     slot: 'top',
@@ -116,11 +158,32 @@ export const SKINS: readonly SkinMeta[] = [
     game: () => import('../games/tug').then((m) => m.createTugGame),
   },
   {
+    id: 'seesaw',
+    icon: '⚖️',
+    slot: 'top',
+    kind: 'tug',
+    game: () => import('../games/seesaw').then((m) => m.createSeesawGame),
+  },
+  {
+    id: 'flag',
+    icon: '🚩',
+    slot: 'top',
+    kind: 'tug',
+    game: () => import('../games/flag').then((m) => m.createFlagGame),
+  },
+  {
     id: 'ice',
     icon: '🧊',
     slot: 'center',
     kind: 'consume',
     game: () => import('../games/ice').then((m) => m.createIceGame),
+  },
+  {
+    id: 'castle',
+    icon: '🏰',
+    slot: 'center',
+    kind: 'consume',
+    game: () => import('../games/castle').then((m) => m.createCastleGame),
   },
 ]
 
@@ -130,14 +193,12 @@ export function skinById(id: string): SkinMeta | undefined {
 
 
 /**
- * 「按章节」：这个知识点在它那一册里排第几（目录顺序，含 ☆ 单元），第 i 个用第 i 个游戏，排完从头再排；
- * 下一册重新从第一个游戏排起。不在目录里的知识点用第一个游戏。
+ * 「按章节」：这个知识点在它那门课程里排第几（上册按目录顺序排完接着排下册，含 ☆ 单元），第 i 个用注册表的第 i 个游戏，
+ * 排完从头再排；下册接着上册排到的下一个游戏继续轮（2026-09-21 用户定），换年级重新从第一个游戏排起。不在目录里的知识点用第一个游戏。
  */
 export function chapterSkin(kpId: string): string {
-  const games = SKINS
-  const list = volumeKps(kpId)
-  const i = Math.max(0, list.findIndex((kp) => kp.id === kpId))
-  return games[i % games.length]!.id
+  const i = Math.max(0, chapterIndex(kpId))
+  return SKINS[i % SKINS.length]!.id
 }
 
 /** 把选的皮肤 id 落实成一个真实皮肤：random 或不认识的 id 随机挑 */

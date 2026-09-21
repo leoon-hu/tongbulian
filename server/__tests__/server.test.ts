@@ -329,4 +329,122 @@ describe('中继服务（B41–B46）', () => {
     x.ws.send('x'.repeat(5000))
     expect(await closed).toBeGreaterThan(1000)
   })
+
+  it('语音（B57）：voice 进快照并随 leave 清；rtc 只转给同房间在线的目标（带 from、内容原样，≤ 16 KB 也收），别的房间的人 / 不认识的 / 自己 / 掉线的都丢掉不报错，形状不对才 bad；turn 只给在房间里的连接，没配 TURN 回只有 STUN 的清单', async () => {
+    const a = new Client(server.port)
+    const b = new Client(server.port)
+    const x = new Client(server.port)
+    await Promise.all([a.open(), b.open(), x.open()])
+    a.send({ type: 'hello', clientId: 'voice-a', name: '甲', version: 'v1' })
+    a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const created = await a.state()
+    const code = created.room.code
+    const A = created.you
+    b.send({ type: 'hello', clientId: 'voice-b', name: '乙', version: 'v1', code, t: 'blue' })
+    const B = (await b.state()).you
+    x.send({ type: 'hello', clientId: 'voice-x', name: '丙', version: 'v1' })
+    x.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const X = (await x.state()).you
+
+    a.send({ type: 'voice', on: true })
+    const withVoice = await b.state((s) => s.room.members.find((m) => m.clientId === A)?.voice === true)
+    expect(withVoice.room.members.find((m) => m.clientId === B)?.voice).toBe(false)
+
+    const bigSdp = 'v=0\r\n' + 'a=candidate:x'.repeat(500)
+    expect(bigSdp.length).toBeGreaterThan(4096)
+    a.send({ type: 'rtc', to: B, data: { sdp: { type: 'offer', sdp: bigSdp } } })
+    const relayed = await b.wait((m) => m.type === 'rtc')
+    expect(relayed).toEqual({ type: 'rtc', from: A, data: { sdp: { type: 'offer', sdp: bigSdp } } })
+    b.send({ type: 'rtc', to: A, data: { candidates: [{ candidate: 'c', sdpMid: '0', sdpMLineIndex: 0 }] } })
+    expect(await a.wait((m) => m.type === 'rtc')).toEqual({ type: 'rtc', from: B, data: { candidates: [{ candidate: 'c', sdpMid: '0', sdpMLineIndex: 0 }] } })
+
+    // 别的房间的人 / 不认识的 / 自己：丢掉不报错（用 ping → pong 当栅栏）
+    a.send({ type: 'rtc', to: X, data: { candidates: [] } })
+    a.send({ type: 'rtc', to: 'nobody', data: { candidates: [] } })
+    a.send({ type: 'rtc', to: A, data: { candidates: [] } })
+    a.send({ type: 'ping' })
+    await a.wait((m) => m.type === 'pong')
+    expect(x.inbox.filter((m) => m.type === 'rtc')).toEqual([])
+    expect(a.inbox.filter((m) => m.type === 'rtc' || m.type === 'error')).toEqual([])
+    // 形状不对：bad
+    a.send({ type: 'rtc', to: B, data: { nope: 1 } as never })
+    const bad = await a.wait((m) => m.type === 'error')
+    expect(bad.type === 'error' && bad.error).toBe('bad')
+    // 超过 16 KB：断开
+    const y = new Client(server.port)
+    await y.open()
+    const yClosed = new Promise<number>((r) => y.ws.once('close', (c) => r(c)))
+    y.ws.send(JSON.stringify({ type: 'rtc', to: B, data: { sdp: { type: 'offer', sdp: 'x'.repeat(17000) } } }))
+    expect(await yClosed).toBeGreaterThan(1000)
+
+    // turn：没配 TURN → 只有 STUN；没进房间的连接要不到
+    a.send({ type: 'turn' })
+    const turn = await a.wait((m) => m.type === 'turn')
+    expect(turn).toEqual({ type: 'turn', iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }], ttl: 0 })
+    const z = new Client(server.port)
+    await z.open()
+    z.send({ type: 'hello', clientId: 'voice-z', name: '丁', version: 'v1' })
+    z.send({ type: 'turn' })
+    const zErr = await z.wait((m) => m.type === 'error')
+    expect(zErr.type === 'error' && zErr.error).toBe('bad')
+
+    // 掉线的目标不转；离开清掉 voice
+    b.close()
+    await a.state((s) => s.room.members.find((m) => m.clientId === B)?.online === false)
+    a.send({ type: 'rtc', to: B, data: { candidates: [] } })
+    a.send({ type: 'leave' })
+    a.close()
+    x.close()
+    z.close()
+    y.close()
+  })
+
+  it('turn 配了提供方（B57）：回它给的清单与 ttl、全服务缓存一份（提供方只调一次）；提供方失败就退到 STUN', async () => {
+    let calls = 0
+    const s2 = await createBattleServer({
+      port: 0,
+      log: () => {},
+      turn: async () => {
+        calls += 1
+        if (calls > 1) throw new Error('boom')
+        return { iceServers: [{ urls: ['turn:t.example:3478?transport=udp'], username: 'u', credential: 'c' }], ttl: 7200 }
+      },
+    })
+    try {
+      const a = new Client(s2.port)
+      const b = new Client(s2.port)
+      await Promise.all([a.open(), b.open()])
+      a.send({ type: 'hello', clientId: 'turn-a', name: '甲', version: 'v1' })
+      a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+      const code = (await a.state()).room.code
+      b.send({ type: 'hello', clientId: 'turn-b', name: '乙', version: 'v1', code, t: 'blue' })
+      await b.state()
+      a.send({ type: 'turn' })
+      b.send({ type: 'turn' })
+      const ta = await a.wait((m) => m.type === 'turn')
+      const tb = await b.wait((m) => m.type === 'turn')
+      const expected = { type: 'turn', iceServers: [{ urls: ['turn:t.example:3478?transport=udp'], username: 'u', credential: 'c' }], ttl: 7200 }
+      expect(ta).toEqual(expected)
+      expect(tb).toEqual(expected)
+      expect(calls).toBe(1)
+      a.close()
+      b.close()
+    } finally {
+      await s2.close()
+    }
+    // 提供方一直失败：退到 STUN
+    const s3 = await createBattleServer({ port: 0, log: () => {}, turn: async () => null })
+    try {
+      const a = new Client(s3.port)
+      await a.open()
+      a.send({ type: 'hello', clientId: 'turn-c', name: '甲', version: 'v1' })
+      a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+      await a.state()
+      a.send({ type: 'turn' })
+      expect(await a.wait((m) => m.type === 'turn')).toEqual({ type: 'turn', iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }], ttl: 0 })
+      a.close()
+    } finally {
+      await s3.close()
+    }
+  })
 })

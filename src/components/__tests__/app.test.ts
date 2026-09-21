@@ -14,8 +14,10 @@ import { coursePath } from '@/seo/site'
 import { useInstallStore } from '@/stores/install'
 import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
+import { useVoiceStore } from '@/stores/voice'
 import { COUNTDOWN_MS } from '@/battle/match'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
+import { FakePc, fakePeerDeps, fakeStream } from '@/battle/__tests__/fake-rtc'
 import { apply, autoStart, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
 import { AUTOCREATE_KEY, AUTOJOIN_KEY, reloadForNewVersion } from '@/engine/update'
 
@@ -201,14 +203,27 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('任意知识点点一下就直接进入练习（已无锁）', async () => {
+  it('点知识点弹出「自己练，还是对战？」：✕ 关掉留在地图，选「自己练」进练习页（没有解锁；页签行没有对战开关）', async () => {
     const w = await mountAt(MAP)
-    // 已去除解锁：地图上不再出现 🔒
+    // 已去除解锁：地图上不再出现 🔒；也没有「⚔️ 对战」开关了（B26）
     expect(shown(w)).not.toContain('🔒')
+    expect(w.find('.tab.battle').exists()).toBe(false)
     const nodes = w.findAll('button.node')
     expect(nodes.length).toBeGreaterThan(1)
-    // 旧版需前置星才解锁的第 2 个知识点，现在应直接进入练习（无确认弹层）
+    expect(w.find('.entry-sheet').exists()).toBe(false)
     await nodes[1]!.trigger('click')
+    await flushPromises()
+    const sheet = w.find('.entry-sheet')
+    expect(sheet.exists()).toBe(true)
+    expect(shown(sheet)).toContain('自己练')
+    expect(shown(sheet)).toContain('对战模式')
+    await sheet.find('.close').trigger('click')
+    await flushPromises()
+    expect(w.find('.entry-sheet').exists()).toBe(false)
+    expect(router.currentRoute.value.path).toBe(MAP)
+    await nodes[1]!.trigger('click')
+    await flushPromises()
+    await w.find('.entry-btn.practice').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(router.currentRoute.value.path).toContain('/practice/')
@@ -483,12 +498,12 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     vi.useRealTimers()
   })
 
-  it('地图上的「⚔️ 对战」开关 → 设置页只有三张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；没名字点开始才问，问完直接进竞技场（无全局顶栏、标题带「对战」）', async () => {
+  it('地图上点知识点 → 面板里选「⚔️ 对战模式」→ 设置页只有三张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；没名字点开始才问，问完直接进竞技场（无全局顶栏、标题带「对战」）', async () => {
     const w = await mountAt(MAP)
-    const toggle = w.find('.tab.battle')
-    expect(toggle.exists()).toBe(true)
-    await toggle.trigger('click')
     await w.find('.node.open').trigger('click')
+    await flushPromises()
+    expect(shown(w.find('.entry-sheet'))).toContain('对战模式')
+    await w.find('.entry-btn.battle').trigger('click')
     await until(pathIs('/battle/new/s1-00-count'))
     expect(shown(w)).toContain('跟谁打')
     expect(document.title).toContain('对战')
@@ -685,10 +700,9 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     w.unmount()
   })
 
-  it('练习页页头的 ⚔️ 进对战设置页；没有名字时直接打开竞技场地址会退回设置页', async () => {
+  it('练习页页头没有 ⚔️ 了（入口只在地图的选择面板）；没有名字时直接打开竞技场地址会退回设置页', async () => {
     const w = await mountAt(practice(KP))
-    await w.find('.battle-btn').trigger('click')
-    await until(pathIs(`/battle/new/${KP}`))
+    expect(w.find('.battle-btn').exists()).toBe(false)
     w.unmount()
 
     const w2 = await mountAt(`/battle/local/${KP}?mode=duo`)
@@ -1136,6 +1150,90 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await w.find('.room-msg .big-btn').trigger('click')
     await until(pathIs(MAP))
     w.unmount()
+  })
+
+  it('语音（B57）：连接状态窗口有 🎤 与「一个屋子里就不用开」，点了才申请麦克风 → 发 voice:true 与 turn → 对方开了麦就建连接发 offer、名单里带 🎤；进竞技场顶栏也有 🎤、自己那行名字旁有 🎤；关掉发 voice:false 断连接；单设备竞技场没有 🎤', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    FakePc.reset()
+    const stream = fakeStream()
+    const w = await mountAt(`/battle/${CODE}?t=red`, () => {
+      // 身份定成 aaaaaa：比主持人 hhhhhh 小，语音连接由我发 offer
+      localStorage.setItem(BATTLE_KEY, JSON.stringify({ clientId: 'aaaaaa', names: { me: '小兔', left: '', right: '' } }))
+      useRoomStore().useFactory((url) => new FakeWs(url))
+      useVoiceStore().useDeps({ getUserMedia: async () => stream, supported: () => true, peer: fakePeerDeps() })
+    })
+    const battle = useBattleStore()
+    const ws = FakeWs.last()
+    ws.open()
+    const me = battle.prefs.clientId
+    expect(me).toBe('aaaaaa')
+    let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: 'hhhhhh', name: '主持' }, version: 'v1', now: 1000 })
+    r = join(r, { clientId: me, name: '小兔', t: 'red', version: 'v1' }, 2000).room
+    const push = (): void => ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    push()
+    await settle()
+    expect(w.find('.wait .mic-btn').exists()).toBe(true)
+    expect(w.find('.wait .mic-btn.on').exists()).toBe(false)
+    expect(shown(w.find('.wait .voice-hint'))).toContain('一个屋子里')
+    expect(ws.msgs.filter((m) => m.type === 'voice' || m.type === 'turn')).toEqual([])
+
+    await w.find('.wait .mic-btn').trigger('click')
+    await settle()
+    expect(ws.msgs.filter((m) => m.type === 'voice')).toEqual([{ type: 'voice', on: true }])
+    expect(ws.msgs.some((m) => m.type === 'turn')).toBe(true)
+    expect(w.find('.wait .mic-btn.on').exists()).toBe(true)
+    // 建连接前先等 ICE 清单：服务器回 turn（这里没配 TURN，只有 STUN）才建；我开了麦就向房间里所有人建连接，主持人没开麦也收得到（只收）
+    expect(FakePc.all).toHaveLength(0)
+    ws.receive({ type: 'turn', iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }], ttl: 0 })
+    await settle()
+    expect(FakePc.all).toHaveLength(1)
+    expect(ws.msgs.find((m) => m.type === 'rtc')).toMatchObject({ type: 'rtc', to: 'hhhhhh', data: { sdp: { type: 'offer' } } })
+    r = apply(r, me, { type: 'voice', on: true }, 2100, seeds).room
+    push()
+    await settle()
+    expect(shown(w.find('.sides li.red'))).toContain('🎤')
+    expect(shown(w.find('.sides li.watch'))).not.toContain('🎤')
+    expect(FakePc.all).toHaveLength(1) // 快照没变什么，连接留着
+
+    // 主持人也开了麦（都开着、aaaaaa < hhhhhh 还是我发）：这一对的配置变了，整条重建；他的 answer 回来进新连接
+    r = apply(r, 'hhhhhh', { type: 'voice', on: true }, 2500, seeds).room
+    push()
+    await settle()
+    expect(FakePc.all).toHaveLength(2)
+    expect(FakePc.all[0]!.closed).toBe(true)
+    expect(ws.msgs.filter((m) => m.type === 'rtc')).toHaveLength(2)
+    ws.receive({ type: 'rtc', from: 'hhhhhh', data: { sdp: { type: 'answer', sdp: 'a' } } })
+    await settle()
+    expect(FakePc.last().remote?.type).toBe('answer')
+
+    // 蓝队进来（没开麦）自动开始 → 我也向他建一条；竞技场：顶栏 🎤 开着，我这行名字旁有 🎤，蓝队没有
+    r = join(r, { clientId: 'bbbbbb', name: '小虎', t: 'blue', version: 'v1' }, 2600).room
+    const auto = autoStart(r, 3000, seeds)
+    r = auto.room
+    for (const e of auto.effects) if (e.type === 'event') ws.receive({ type: 'event', e: e.e })
+    push()
+    await settle()
+    expect(FakePc.all).toHaveLength(3)
+    expect(ws.msgs.filter((m) => m.type === 'rtc').at(-1)).toMatchObject({ type: 'rtc', to: 'bbbbbb', data: { sdp: { type: 'offer' } } })
+    expect(w.find('.arena').exists()).toBe(true)
+    expect(w.find('.arena .bar .mic-btn.on').exists()).toBe(true)
+    expect(w.find('.team.red .row .mic').exists()).toBe(true)
+    expect(w.find('.team.blue .row .mic').exists()).toBe(false)
+
+    await w.find('.arena .bar .mic-btn').trigger('click')
+    await settle()
+    expect(ws.msgs.filter((m) => m.type === 'voice').at(-1)).toEqual({ type: 'voice', on: false })
+    // 关了麦：我发的连接都关掉（主持人还开着麦，会重建一条只收的给我）
+    expect(FakePc.all.every((pc) => pc.closed)).toBe(true)
+    expect(stream.stopped).toBe(1)
+    expect(w.find('.arena .bar .mic-btn.on').exists()).toBe(false)
+    expect(w.find('.team.red .row .mic').exists()).toBe(false)
+    w.unmount()
+
+    const w2 = await mountAt(`/battle/local/${KP}?mode=ai`)
+    expect(w2.find('.arena').exists()).toBe(true)
+    expect(w2.find('.mic-btn').exists()).toBe(false)
+    w2.unmount()
   })
 })
 

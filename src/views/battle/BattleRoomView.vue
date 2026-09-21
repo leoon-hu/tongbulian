@@ -15,8 +15,10 @@ import { hush, sayKeys } from '@/engine/voice'
 import type { Member, Role, Team } from '@/battle/protocol'
 import { useBattleStore } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
+import { useVoiceStore } from '@/stores/voice'
 import Arena from '@/components/battle/Arena.vue'
 import NameSheet from '@/components/battle/NameSheet.vue'
+import VoiceButton from '@/components/battle/VoiceButton.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
@@ -28,6 +30,12 @@ const route = useRoute()
 const router = useRouter()
 const room = useRoomStore()
 const battle = useBattleStore()
+const voice = useVoiceStore()
+// 开发时把 room / voice store 挂到 window 上：语音联调脚本（npm run voice:check）看连接状态与音量
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  ;(window as unknown as { __room?: unknown; __voice?: unknown }).__room = room
+  ;(window as unknown as { __room?: unknown; __voice?: unknown }).__voice = voice
+}
 
 const code = String(route.params.code)
 const ROLES: readonly Role[] = ['red', 'blue', 'watch']
@@ -117,8 +125,8 @@ const passOf = (t: Role): string => {
   const p = snap.value?.passcodes?.[t] ?? ''
   return p ? `${p.slice(0, 3)} ${p.slice(3)}` : ''
 }
-/** 名单文字：自己后面标「（我）」 */
-const names = (ms: Member[]): string => ms.map((m) => (m.clientId === room.you ? `${m.name}（${ui('room.me')}）` : m.name)).join('、')
+/** 名单文字：自己后面标「（我）」，开了语音的带 🎤（B57） */
+const names = (ms: Member[]): string => ms.map((m) => `${m.clientId === room.you ? `${m.name}（${ui('room.me')}）` : m.name}${m.voice ? ' 🎤' : ''}`).join('、')
 
 // ── 提示语朗读（B39a）：当前画面上的那几句，画面换了就读新的；同一画面不重复读 ──
 const hint = computed<string[] | null>(() => {
@@ -239,6 +247,7 @@ onBeforeUnmount(() => {
       <p class="who">{{ ui('room.watchers', { n: room.watchers.length }) }}</p>
     </section>
     <div class="bar">
+      <VoiceButton hint />
       <button type="button" class="chip leave" @click="leave"><RubyText :text="{ k: 'room.leave' }" /></button>
     </div>
   </div>
@@ -261,6 +270,7 @@ onBeforeUnmount(() => {
         <span class="side-who">{{ ui('room.watchers', { n: room.watchers.length }) }}</span>
       </li>
     </ul>
+    <VoiceButton hint />
     <div class="chips">
       <button v-if="myRole === 'watch'" type="button" class="chip codes-btn" @click="entered = false"><RubyText :text="{ k: 'room.showCodes' }" /></button>
       <button type="button" class="chip leave" @click="leave"><RubyText :text="{ k: 'room.leave' }" /></button>
@@ -530,7 +540,9 @@ onBeforeUnmount(() => {
   bottom: 0;
   z-index: 20;
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   background: rgba(253, 246, 236, 0.96);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);

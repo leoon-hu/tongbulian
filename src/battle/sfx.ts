@@ -31,6 +31,15 @@ export type Sfx =
   | 'rung' // 爬梯子：手脚踩上横档的两下
   | 'pick' // 挖宝：镐刨进土里的一下
   | 'reel' // 钓鱼：绕线轮咔啦啦转几下
+  | 'sprout' // 种花：噗地冒出一截
+  | 'peep' // 孵蛋：小鸡叽叽两声
+  | 'bloop' // 吹泡泡：噗噜一声
+  | 'plop' // 摘果子：果子落进篮子噗通一下
+  | 'twinkle' // 点亮星星：叮铃两声
+  | 'snap' // 拼图：咔哒扣上
+  | 'clunk' // 跷跷板：砝码落板咚一下
+  | 'hup' // 抢旗：旗子蹦一格
+  | 'boom' // 拆城堡：开炮 + 砖碎
   | 'sting' // 反超：上行三音
   | 'alert' // 还差一分：嘀嘀 — 嘀
 
@@ -127,6 +136,20 @@ const PATTERNS: Record<Sfx, Pattern> = {
       { f: 1800, at: 0.16, d: 0.14, type: 'sine', gain: 0.4, to: 800 },
     ],
   },
+  boom: { noise: [{ at: 0, d: 0.12, gain: 0.7, f: 300, q: 0.6 }, { at: 0.3, d: 0.1, gain: 0.5, f: 1800, q: 1.2 }], notes: [{ f: 90, at: 0, d: 0.3, type: 'triangle', gain: 0.7, to: 50 }] },
+  hup: { notes: [{ f: 440, at: 0, d: 0.08, type: 'triangle', gain: 0.45, to: 660 }, { f: 660, at: 0.1, d: 0.12, type: 'triangle', gain: 0.4, to: 880 }] },
+  clunk: { notes: [{ f: 200, at: 0, d: 0.14, type: 'triangle', gain: 0.7, to: 120 }, { f: 320, at: 0.16, d: 0.08, type: 'triangle', gain: 0.35, to: 200 }], noise: [{ at: 0, d: 0.05, gain: 0.3, f: 900, q: 1 }] },
+  snap: { notes: [{ f: 720, at: 0, d: 0.07, type: 'triangle', gain: 0.5, to: 480 }], noise: [{ at: 0, d: 0.03, gain: 0.5, f: 2400, q: 1.5 }] },
+  twinkle: { notes: [{ f: 1320, at: 0, d: 0.1, type: 'sine', gain: 0.4, to: 1760 }, { f: 1760, at: 0.11, d: 0.16, type: 'sine', gain: 0.4, to: 2200 }] },
+  plop: { notes: [{ f: 260, at: 0, d: 0.1, type: 'triangle', gain: 0.6, to: 170 }, { f: 420, at: 0.13, d: 0.08, type: 'triangle', gain: 0.4, to: 300 }], noise: [{ at: 0, d: 0.05, gain: 0.2, f: 800, q: 1 }] },
+  bloop: { notes: [{ f: 380, at: 0, d: 0.16, type: 'sine', gain: 0.45, to: 760 }, { f: 900, at: 0.14, d: 0.06, type: 'sine', gain: 0.25, to: 600 }] },
+  peep: {
+    notes: [
+      { f: 1900, at: 0, d: 0.08, type: 'sine', gain: 0.45, to: 2400 },
+      { f: 2000, at: 0.12, d: 0.1, type: 'sine', gain: 0.45, to: 2600 },
+    ],
+  },
+  sprout: { notes: [{ f: 260, at: 0, d: 0.22, type: 'sine', gain: 0.5, to: 640 }], noise: [{ at: 0, d: 0.1, gain: 0.15, f: 1200, q: 1 }] },
   reel: {
     noise: [
       { at: 0, d: 0.04, gain: 0.45, f: 2400, q: 2 },
@@ -187,8 +210,17 @@ const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
   ladder: { score: ['rung'], streak: ['rung', 'whoosh'], win: ['fireworks', 'cheer'] },
   dig: { score: ['pick'], streak: ['pick', 'whoosh'], win: ['fireworks', 'cheer'] },
   fish: { score: ['reel'], streak: ['reel', 'whoosh'], win: ['splash', 'cheer'] },
+  flower: { score: ['sprout'], streak: ['sprout', 'whoosh'], win: ['fireworks', 'cheer'] },
+  egg: { score: ['crack'], streak: ['crack', 'whoosh'], win: ['peep', 'cheer'] },
+  bubble: { score: ['bloop'], streak: ['bloop', 'whoosh'], win: ['fireworks', 'cheer'] },
+  fruit: { score: ['plop'], streak: ['plop', 'whoosh'], win: ['fireworks', 'cheer'] },
+  stars: { score: ['twinkle'], streak: ['twinkle', 'whoosh'], win: ['fireworks', 'cheer'] },
+  puzzle: { score: ['snap'], streak: ['snap', 'whoosh'], win: ['fireworks', 'cheer'] },
   tower: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
   tug: { score: ['heave'], streak: ['heave', 'whoosh'] },
+  seesaw: { score: ['clunk'], streak: ['clunk', 'whoosh'], win: ['thud', 'cheer'] },
+  flag: { score: ['hup'], streak: ['hup', 'whoosh'], win: ['fireworks', 'cheer'] },
+  castle: { score: ['boom'], streak: ['boom', 'crack'], win: ['thud', 'fireworks', 'cheer'] },
   ice: { score: ['crack', 'drip'], streak: ['crack', 'drip'], win: ['splash', 'cheer'] },
 }
 

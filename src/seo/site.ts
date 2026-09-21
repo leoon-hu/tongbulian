@@ -313,7 +313,7 @@ function coursePage(lc: LiveCourse, siteUrl: string, analytics: AnalyticsConfig 
     <h1>${esc(name)} · 人教版知识点对战与练习</h1>
     <p class="lead">${esc(description)}</p>
     <a class="cta" href="${appMap(course)}">打开${esc(name)}地图</a>
-    <p class="note">在地图上打开「⚔️ 对战」再点知识点就能打一局；直接点知识点是安静地练。下面每个知识点的链接里有几道示例题。</p>
+    <p class="note">在地图上点一个知识点，选「对战模式」就能打一局，选「自己练」就是安静地练。下面每个知识点的链接里有几道示例题。</p>
 ${sems
   .map(
     ({ s, units: us }) => `

@@ -6,13 +6,12 @@ import { ROUND_SIZE, hasGenerator } from '@/engine'
 import { getCourse, getSubject, kpsOfUnit } from '@/engine/catalog'
 import { kpTitle, ui, unitTitle } from '@/engine/i18n'
 import { useProgressStore } from '@/stores/progress'
-import { useBattleStore } from '@/stores/battle'
+import EntrySheet from '@/components/ui/EntrySheet.vue'
 
 // 某「学科×年级」的知识点地图。无效课程回顶层。
 const route = useRoute()
 const router = useRouter()
 const progress = useProgressStore()
-const battle = useBattleStore()
 
 const subjectId = computed(() => String(route.params.subjectId))
 const gradeId = computed(() => String(route.params.gradeId))
@@ -50,11 +49,22 @@ function statusOf(kp: KnowledgePoint): NodeStatus {
 
 const SEGMENTS = Array.from({ length: ROUND_SIZE }, (_, i) => i)
 
-// 「⚔️ 对战」开关（B26）开着时点知识点进对战设置页，否则进练习页
+// 点知识点先弹出「自己练，还是对战？」（B26）：选了才跳练习页 / 对战设置页
+const picking = ref<KnowledgePoint | null>(null)
+
 function tapNode(kp: KnowledgePoint): void {
   if (statusOf(kp) !== 'open') return
-  if (battle.mapMode) router.push(`/battle/new/${kp.id}`)
-  else router.push(`/s/${subjectId.value}/g/${gradeId.value}/practice/${kp.id}`)
+  picking.value = kp
+}
+
+function goPractice(): void {
+  const kp = picking.value
+  if (kp) router.push(`/s/${subjectId.value}/g/${gradeId.value}/practice/${kp.id}`)
+}
+
+function goBattle(): void {
+  const kp = picking.value
+  if (kp) router.push(`/battle/new/${kp.id}`)
 }
 </script>
 
@@ -68,26 +78,15 @@ function tapNode(kp: KnowledgePoint): void {
       </div>
     </header>
 
-    <nav class="tabs">
-      <template v-if="semesters.length > 1">
-        <button
-          v-for="sem in semesters"
-          :key="sem.semester"
-          class="tab"
-          :class="{ active: sem.semester === activeSem }"
-          @click="activeSem = sem.semester"
-        >
-          {{ ui('sem.' + sem.semester) }}
-        </button>
-      </template>
+    <nav v-if="semesters.length > 1" class="tabs">
       <button
-        type="button"
-        class="tab battle"
-        :class="{ active: battle.mapMode }"
-        :aria-pressed="battle.mapMode"
-        @click="battle.mapMode = !battle.mapMode"
+        v-for="sem in semesters"
+        :key="sem.semester"
+        class="tab"
+        :class="{ active: sem.semester === activeSem }"
+        @click="activeSem = sem.semester"
       >
-        ⚔️ {{ ui('battle.title') }}
+        {{ ui('sem.' + sem.semester) }}
       </button>
     </nav>
 
@@ -142,6 +141,8 @@ function tapNode(kp: KnowledgePoint): void {
         </div>
       </div>
     </section>
+
+    <EntrySheet v-if="picking" :kp="picking" @practice="goPractice" @battle="goBattle" @close="picking = null" />
   </div>
 </template>
 
@@ -200,18 +201,6 @@ function tapNode(kp: KnowledgePoint): void {
 .tab.active {
   background: var(--grad-node);
   color: var(--c-text);
-}
-.tab.battle {
-  flex: none;
-  margin-left: auto;
-  /* 关着也带主色描边（内阴影，不改高度）：对战版一眼能找到开关（F3） */
-  box-shadow: var(--shadow-card), inset 0 0 0 2px var(--c-primary);
-  color: var(--c-primary-dark);
-}
-.tab.battle.active {
-  background: var(--c-primary);
-  box-shadow: var(--shadow-card);
-  color: #fff;
 }
 .unit {
   background: var(--c-card);

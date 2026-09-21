@@ -133,6 +133,7 @@ export function createRoom(opts: {
     ready: false,
     online: true,
     joinedAt: opts.now,
+    voice: false,
   }
   return {
     code: opts.code,
@@ -177,7 +178,7 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
       }
     }
   }
-  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now }
+  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now, voice: false }
   const next: Room = { ...room, members: [...room.members, member], lastActive: now }
   return error ? { room: next, error } : { room: next }
 }
@@ -348,9 +349,18 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
       if (from === room.hostId) next = { ...next, hostId: nextHost({ ...next, hostId: '' }) }
       return { room: next, effects: [{ type: 'broadcast' }] }
     }
+    case 'voice': {
+      // 开 / 关麦克风（B57）：进快照，大家据此知道要不要跟他建语音连接；重复的不广播
+      const on = !!msg.on
+      if (me.voice === on) return { room, effects: [] }
+      return { room: members((m) => ({ ...m, voice: on })), effects: [{ type: 'broadcast' }] }
+    }
     case 'ping':
     case 'hello':
     case 'create':
+    // 信令与 ICE 清单（B57）由网络层处理（不改房间状态），不会到这里
+    case 'rtc':
+    case 'turn':
       return { room: base, effects: [] }
     default:
       return { room, effects: [err(from, 'bad')] }

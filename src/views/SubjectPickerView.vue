@@ -19,6 +19,9 @@ import { SKINS } from '@/battle/skins'
 // 分享给朋友（系统分享面板或复制一段话）、联系站长（弹站长微信二维码）——都是家长自己点开的，不出声不注音。
 const router = useRouter()
 const courses = liveCourses()
+// 游戏图标分两排：宽屏两排并成一行，手机上放不下就成上下均分的两排（不会一排 8 个、一排 1 个）
+const half = Math.ceil(SKINS.length / 2)
+const iconRows = [SKINS.slice(0, half), SKINS.slice(half)]
 const contactOpen = ref(false)
 const shareStore = useShareStore()
 
@@ -32,7 +35,7 @@ function tapSubject(sub: SubjectMeta): void {
     <!-- 安装提示条（F16）：没装到主屏幕时从第一次打开就在首页顶上，标题之上 -->
     <InstallBar />
     <section class="hero" aria-label="battle">
-      <span class="hero-icons" aria-hidden="true"><span v-for="s in SKINS" :key="s.id">{{ s.icon }}</span></span>
+      <span class="hero-icons" aria-hidden="true"><span v-for="(row, r) in iconRows" :key="r" class="hero-row"><span v-for="s in row" :key="s.id">{{ s.icon }}</span></span></span>
       <p class="hero-line"><RubyText :text="{ k: 'battle.hero' }" /></p>
     </section>
     <h2 class="picker-title">{{ ui('chooser.pickSubject') }}</h2>
@@ -93,11 +96,18 @@ function tapSubject(sub: SubjectMeta): void {
   font-size: 26px;
   line-height: 1.2;
 }
+.hero-row {
+  display: flex;
+  gap: 6px;
+}
 /* 手机上图标小一号，十来个也能排在一行 */
 @media (max-width: 420px) {
   .hero-icons {
     gap: 3px 4px;
     font-size: 22px;
+  }
+  .hero-row {
+    gap: 4px;
   }
 }
 .hero-line {

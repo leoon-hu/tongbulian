@@ -68,6 +68,24 @@ export function volumeKps(kpId: string): KnowledgePoint[] {
   return info.course.knowledgePoints.filter((kp) => semesterOf(kp.unitId) === sem)
 }
 
+/**
+ * 这个知识点在它那门课程里排第几（0 起）：上册按目录顺序数完接着数下册（含 ☆ 单元）；不在目录里 → -1。
+ * 对战「按章节排游戏」用它——下册接着上册排到的下一个游戏继续轮（B36，2026-09-21 定），换年级重新从头排。
+ */
+export function chapterIndex(kpId: string): number {
+  const info = courseOfKp(kpId)
+  if (!info) return -1
+  const semesterOf = (unitId: string): number => info.course.units.find((u) => u.id === unitId)?.semester ?? 0
+  const sem = semesterOf(info.kp.unitId)
+  let n = 0
+  for (const kp of info.course.knowledgePoints) {
+    const s = semesterOf(kp.unitId)
+    if (s === sem && kp.id === kpId) return n
+    if (s <= sem) n++
+  }
+  return -1
+}
+
 /** 本册目录里的下一个知识点（对战结果页「下一章」，B9）；已是最后一个 / 不在目录里 → null */
 export function nextKp(kpId: string): string | null {
   const list = volumeKps(kpId)

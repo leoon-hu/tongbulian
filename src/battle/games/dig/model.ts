@@ -184,6 +184,10 @@ export class DigModel {
     // 晚进来的观战者：已经结束的局直接把胜方的宝箱画成开着的
     if (s.phase === 'ended' && s.winner) {
       const i = s.winner === 'red' ? 0 : 1
+      if (this.opened[1 - i]) {
+        this.opened[1 - i] = false
+        this.chestOpen[1 - i]!.set(0)
+      }
       const d = this.diggers[i]!
       if (!this.opened[i] && d.pos.done) this.openChest(i)
     }

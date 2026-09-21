@@ -19,6 +19,7 @@
     "audio": "node scripts/collect-speech.mjs && python3 scripts/build-audio.py",
     "battle:survey": "node scripts/battle-survey.mjs",
     "game:survey": "node scripts/game-survey.mjs",
+    "voice:check": "node scripts/voice-check.mjs",
     "build:server": "vite build --config vite.server.config.ts",
     "battle:dev": "npm run build:server && node dist-server/battle.mjs"
   },

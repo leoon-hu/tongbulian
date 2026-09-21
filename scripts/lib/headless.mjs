@@ -23,12 +23,13 @@ export async function waitForServer(base) {
   throw new Error("dev server 没起来：" + base);
 }
 
-export async function launchChrome({ width = 1024, height = 768 } = {}) {
+/** extraArgs：额外的启动参数（语音联调要 --use-fake-device-for-media-capture --use-fake-ui-for-media-stream 给假麦克风、自动允许权限） */
+export async function launchChrome({ width = 1024, height = 768, extraArgs = [] } = {}) {
   const profile = mkdtempSync(join(tmpdir(), "headless-"));
   const port = 9700 + Math.floor(Math.random() * 200);
   const chrome = spawn(
     CH,
-    [`--remote-debugging-port=${port}`, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--autoplay-policy=no-user-gesture-required", `--window-size=${width},${height}`, "--no-first-run", `--user-data-dir=${profile}`, "about:blank"],
+    [`--remote-debugging-port=${port}`, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--autoplay-policy=no-user-gesture-required", `--window-size=${width},${height}`, "--no-first-run", `--user-data-dir=${profile}`, ...extraArgs, "about:blank"],
     { stdio: "ignore" },
   );
   async function json(u) {

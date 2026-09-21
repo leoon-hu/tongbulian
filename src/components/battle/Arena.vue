@@ -14,8 +14,10 @@ import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
 import { nextKp } from '@/engine/catalog'
 import { useBattleStore } from '@/stores/battle'
 import { useSettingsStore } from '@/stores/settings'
+import { useVoiceStore } from '@/stores/voice'
 import type { RowData } from '@/components/battle/rows'
 import TeamPanel from '@/components/battle/TeamPanel.vue'
+import VoiceButton from '@/components/battle/VoiceButton.vue'
 import GameSlot from '@/components/battle/GameSlot.vue'
 import Countdown from '@/components/battle/Countdown.vue'
 import ResultPanel from '@/components/battle/ResultPanel.vue'
@@ -32,6 +34,7 @@ const emit = defineEmits<{ exit: []; next: [kpId: string] }>()
 
 const store = useBattleStore()
 const settings = useSettingsStore()
+const voice = useVoiceStore()
 
 // 开发时把 store 挂到 window 上，截图脚本可以直接摆出某个比分 / 弹出提示 / 胜利画面来核对布局
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -56,7 +59,8 @@ function rowsOf(team: Team): RowData[] {
   return teamPlayers(s, team).map((player) => {
     const feedback = store.pending[player.id] ?? null
     const question = feedback ? feedback.question : s.phase === 'playing' || s.phase === 'ended' ? store.questionOf(player) : null
-    return { player, question, feedback }
+    // 名字旁的 🎤（B57）：只有多设备房间才有语音
+    return { player, question, feedback, voice: store.mode === 'online' ? voice.markOf(player.id) : null }
   })
 }
 const redRows = computed(() => rowsOf('red'))
@@ -178,6 +182,8 @@ onBeforeUnmount(() => {
       <button type="button" class="bar-btn" :aria-label="ui('battle.exit')" @click="confirming = true">✕</button>
       <span class="clock" aria-live="off">{{ elapsed }}</span>
       <span v-if="watching" class="watching">👀 <RubyText :text="{ k: 'battle.watching' }" /></span>
+      <!-- 🎤 开 / 关语音（B57）：只有多设备房间有 -->
+      <VoiceButton v-if="store.mode === 'online'" round />
       <button
         type="button"
         class="bar-btn"
@@ -366,6 +372,13 @@ onBeforeUnmount(() => {
 .arena.compact .bar-btn {
   width: 36px;
   height: 36px;
+  font-size: 16px;
+}
+.arena.compact :deep(.round .mic-btn) {
+  width: 36px;
+  height: 36px;
+}
+.arena.compact :deep(.round .mic-icon) {
   font-size: 16px;
 }
 .arena.compact .strip.top {

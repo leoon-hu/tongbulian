@@ -3,7 +3,8 @@
  * 断线自动重连（1、2、4、8 秒退避，一直试），重连后用同一个 clientId 再 hello 进原房间接回座位；
  * 每 25 秒 ping（Cloudflare 代理 100 秒空闲会断）。WebSocket 与计时器可注入，node 里能测。
  */
-import type { ArenaEvent, ClientMsg, Role, RoomError, RoomSnapshot, ServerMsg } from './protocol'
+import type { ArenaEvent, ClientMsg, IceServer, Role, RoomError, RoomSnapshot, RtcSignal, ServerMsg } from './protocol'
+import { cleanIceServers, isRtcSignal } from './voice'
 
 export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed'
 
@@ -37,6 +38,10 @@ export interface RoomClientOptions {
   onStatus(status: SocketStatus): void
   /** 口令查到的房间号与身份（B19） */
   onFound?(code: string, t: Role): void
+  /** 语音信令（B57）：from 是对方的对外身份 */
+  onRtc?(from: string, data: RtcSignal): void
+  /** ICE 服务器清单（B57） */
+  onTurn?(iceServers: IceServer[], ttl: number): void
   /** 可注入的 WebSocket（测试用假的） */
   factory?: (url: string) => SocketLike
 }
@@ -153,6 +158,10 @@ export class RoomClient {
         if (msg.e && typeof msg.e === 'object' && typeof msg.e.type === 'string') this.opts.onEvent(msg.e)
       } else if (msg.type === 'found') {
         if (typeof msg.code === 'string' && typeof msg.t === 'string') this.opts.onFound?.(msg.code, msg.t)
+      } else if (msg.type === 'rtc') {
+        if (typeof msg.from === 'string' && isRtcSignal(msg.data)) this.opts.onRtc?.(msg.from, msg.data)
+      } else if (msg.type === 'turn') {
+        this.opts.onTurn?.(cleanIceServers(msg.iceServers), typeof msg.ttl === 'number' && msg.ttl > 0 ? msg.ttl : 0)
       } else if (msg.type === 'error') {
         if (typeof msg.error !== 'string') return
         // 被顶掉 / 房间没了 / 版本不对：不再重连

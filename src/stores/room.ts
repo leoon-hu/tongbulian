@@ -9,6 +9,7 @@ import { hasGenerator } from '@/engine'
 import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
 import { useBattleStore } from './battle'
+import { useVoiceStore } from './voice'
 import { reloadForNewVersion } from '@/engine/update'
 
 /** 这些错误进不了 / 待不下去房间，页面要换成提示 */
@@ -16,6 +17,7 @@ export const FATAL_ERRORS: readonly RoomError[] = ['noRoom', 'closed', 'replaced
 
 export const useRoomStore = defineStore('room', () => {
   const battle = useBattleStore()
+  const voice = useVoiceStore()
   const snapshot = ref<RoomSnapshot | null>(null)
   const you = ref('')
   const status = ref<SocketStatus>('idle')
@@ -80,6 +82,7 @@ export const useRoomStore = defineStore('room', () => {
     you.value = me
     code.value = room.code
     battle.syncOnline(room, me, serverNow)
+    voice.onSnapshot(room, me)
   }
 
   function onEvent(e: ArenaEvent): void {
@@ -111,16 +114,22 @@ export const useRoomStore = defineStore('room', () => {
       onEvent,
       onError: setError,
       onStatus: (s) => {
+        const was = status.value
         status.value = s
+        // 断线后重新连上（接回座位）：语音再报一次开麦（B57）
+        if (s === 'open' && was === 'reconnecting') voice.onReconnected()
       },
       onFound: (roomCode, t) => {
         found.value = { code: roomCode, t }
       },
+      onRtc: (from, data) => voice.onSignal(from, data),
+      onTurn: (iceServers, ttl) => voice.onTurn(iceServers, ttl),
       factory,
     })
     battle.startOnline({
       send: (msg) => client?.send(msg),
     })
+    voice.attach({ send: (msg) => client?.send(msg) })
     return client
   }
 
@@ -151,6 +160,8 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   function reset(): void {
+    // 换房间 / 离开：语音先关掉（麦克风释放、连接断开），新房间里要再点一次 🎤（B57）
+    voice.leave()
     snapshot.value = null
     you.value = ''
     error.value = null

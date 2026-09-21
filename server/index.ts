@@ -8,13 +8,21 @@ import { createHash, randomBytes } from 'node:crypto'
 import type { IncomingMessage } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
-import type { ClientMsg, RoomError, ServerMsg } from '@/battle/protocol'
+import type { ClientMsg, IceServer, RoomError, ServerMsg } from '@/battle/protocol'
 import { cleanName } from '@/battle/names'
+import { DEFAULT_ICE_SERVERS, cleanIceServers, isRtcSignal } from '@/battle/voice'
 import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
 
 export const MAX_ROOMS = 500
 export const MAX_MSG_BYTES = 4096
+/** 语音信令 rtc 单独放宽（B57）：SDP 常有 2–4 KB */
+export const MAX_RTC_BYTES = 16384
 export const RATE_PER_SEC = 20
+/** TURN 临时凭据的有效期（秒）与提前多久换新（B57） */
+export const TURN_TTL_S = 7200
+export const TURN_MARGIN_MS = 10 * 60 * 1000
+/** 取凭据失败后隔多久再试 */
+export const TURN_RETRY_MS = 60 * 1000
 export const HEARTBEAT_MS = 60_000
 /** 一个连接口令连错几次就断开（口令只有 90 万种，别让人一直猜；B19） */
 export const MAX_BAD_PASS = 5
@@ -61,10 +69,38 @@ export function clientIp(req: Pick<IncomingMessage, 'headers' | 'socket'>): stri
   return pick(req.headers['x-real-ip']) || pick(req.headers['cf-connecting-ip']) || pick(req.headers['x-forwarded-for']) || req.socket.remoteAddress || '?'
 }
 
+export interface TurnInfo {
+  iceServers: IceServer[]
+  /** 凭据有效期（秒） */
+  ttl: number
+}
+/** 取一份带临时凭据的 ICE 服务器清单；取不到返回 null（客户端退到只有 STUN） */
+export type TurnProvider = () => Promise<TurnInfo | null>
+
+/**
+ * Cloudflare Realtime TURN（B57）：用长期的 TURN 密钥向 Cloudflare 换一份 TURN_TTL_S 秒有效的临时凭据
+ * （接口 generate-ice-servers 直接返回可喂给 RTCPeerConnection 的 iceServers）。密钥只在服务器上，页面拿到的只是临时凭据。
+ */
+export function cloudflareTurn(keyId: string, token: string, fetchFn: typeof fetch = fetch): TurnProvider {
+  return async () => {
+    const res = await fetchFn(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ ttl: TURN_TTL_S }),
+    })
+    if (!res.ok) return null
+    const body = (await res.json()) as { iceServers?: unknown }
+    const iceServers = cleanIceServers(Array.isArray(body.iceServers) ? body.iceServers : [body.iceServers])
+    return iceServers.length ? { iceServers, ttl: TURN_TTL_S } : null
+  }
+}
+
 export interface BattleServerOptions {
   port?: number
   host?: string
   now?: () => number
+  /** 语音的 TURN 凭据来源（B57）：不传 = 只给 STUN */
+  turn?: TurnProvider
   /** 倒数到点的定时（测试可注入） */
   schedule?: (fn: () => void, ms: number) => void
   seed?: () => number
@@ -301,6 +337,52 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     if (++c.badPass >= MAX_BAD_PASS) c.ws.close(4002, 'too many tries')
   }
 
+  // ── 语音（B57）：信令只转发、ICE 清单按需取 ──
+
+  /** 临时凭据的缓存（全服务一份，过期前 TURN_MARGIN_MS 换新）；取失败记下时间，TURN_RETRY_MS 内不再试 */
+  let turnCache: { until: number; info: TurnInfo } | null = null
+  let turnFailedAt = 0
+  let turnInflight: Promise<TurnInfo | null> | null = null
+  const stunOnly = (): TurnInfo => ({ iceServers: DEFAULT_ICE_SERVERS.map((s) => ({ ...s })), ttl: 0 })
+  async function getTurn(): Promise<TurnInfo> {
+    if (!opts.turn) return stunOnly()
+    const t = now()
+    if (turnCache && t < turnCache.until - TURN_MARGIN_MS) return turnCache.info
+    if (t - turnFailedAt < TURN_RETRY_MS) return stunOnly()
+    if (!turnInflight) {
+      turnInflight = opts
+        .turn()
+        .catch(() => null)
+        .then((info) => {
+          turnInflight = null
+          if (info) turnCache = { until: now() + info.ttl * 1000, info }
+          else turnFailedAt = now()
+          return info
+        })
+    }
+    const info = await turnInflight
+    return info ?? stunOnly()
+  }
+  function onTurn(c: Conn): void {
+    // 只给在房间里的连接（别让人白拿凭据）
+    if (!c.clientId || !c.code) {
+      fail(c.ws, 'bad')
+      return
+    }
+    void getTurn().then((info) => send(c.ws, { type: 'turn', iceServers: info.iceServers, ttl: info.ttl }))
+  }
+  /** 转给同房间在线的目标；目标不在（离开了 / 别的房间的人 / 自己）就丢掉不报错，形状不对才报 bad */
+  function onRtc(c: Conn, room: Room, msg: Extract<ClientMsg, { type: 'rtc' }>): void {
+    if (typeof msg.to !== 'string' || !isRtcSignal(msg.data)) {
+      fail(c.ws, 'bad')
+      return
+    }
+    if (msg.to === c.clientId) return
+    const target = room.members.find((m) => m.clientId === msg.to)
+    if (!target || !target.online) return
+    for (const other of connsOf(room.code)) if (other.clientId === msg.to) send(other.ws, { type: 'rtc', from: c.clientId!, data: msg.data })
+  }
+
   function onMessage(c: Conn, data: string): void {
     const t = now()
     c.lastSeen = t
@@ -309,15 +391,23 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       c.count = 0
     }
     if (++c.count > RATE_PER_SEC) return
+    // 普通消息 ≤ MAX_MSG_BYTES（B45）；只有语音信令 rtc 可以到 MAX_RTC_BYTES（ws 层的 maxPayload）
+    const big = data.length > MAX_MSG_BYTES
     let msg: ClientMsg
     try {
       msg = JSON.parse(data) as ClientMsg
     } catch {
-      fail(c.ws, 'bad')
+      if (big) c.ws.close(1009, 'too big')
+      else fail(c.ws, 'bad')
       return
     }
     if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') {
-      fail(c.ws, 'bad')
+      if (big) c.ws.close(1009, 'too big')
+      else fail(c.ws, 'bad')
+      return
+    }
+    if (big && msg.type !== 'rtc') {
+      c.ws.close(1009, 'too big')
       return
     }
     if (msg.type === 'ping') {
@@ -350,6 +440,14 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       leaveRoom(c, true)
       return
     }
+    if (msg.type === 'rtc') {
+      onRtc(c, room, msg)
+      return
+    }
+    if (msg.type === 'turn') {
+      onTurn(c)
+      return
+    }
     commit(c.code, apply(room, c.clientId, msg, t, seed))
   }
 
@@ -368,7 +466,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     host: opts.host ?? '127.0.0.1',
     port: opts.port ?? 8787,
     path: '/ws',
-    maxPayload: MAX_MSG_BYTES,
+    maxPayload: MAX_RTC_BYTES,
     verifyClient: (info: { req: IncomingMessage }) => admit(info.req),
   })
 
@@ -414,7 +512,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     wss.once('listening', () => {
       const addr = wss.address()
       const port = typeof addr === 'object' && addr ? addr.port : (opts.port ?? 8787)
-      log(`对战中继服务：ws://${opts.host ?? '127.0.0.1'}:${port}/ws（版本 ${opts.version ?? '不限'}，来源 ${opts.origins?.join(' ') ?? '不限'}）`)
+      log(`对战中继服务：ws://${opts.host ?? '127.0.0.1'}:${port}/ws（版本 ${opts.version ?? '不限'}，来源 ${opts.origins?.join(' ') ?? '不限'}，语音 TURN ${opts.turn ? '已配置' : '未配置、只 STUN'}）`)
       resolve({
         wss,
         rooms,
@@ -431,18 +529,22 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
 }
 
 // 直接运行（node dist-server/battle.mjs）就起服务；被 import（测试）时不起。
-// 环境变量：PORT / HOST；ALLOWED_ORIGINS = 允许的页面来源，逗号分隔（如 https://tongbulian.jiaci.app），不设就不限
+// 环境变量：PORT / HOST；ALLOWED_ORIGINS = 允许的页面来源，逗号分隔（如 https://tongbulian.jiaci.app），不设就不限；
+// TURN_KEY_ID / TURN_KEY_TOKEN = Cloudflare Realtime TURN 的密钥（语音穿透用，B57），两个都设了才向 Cloudflare 取临时凭据，不设只给 STUN
 const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : ''
 if (import.meta.url === entry) {
   const origins = (process.env.ALLOWED_ORIGINS ?? '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean)
+  const turnId = process.env.TURN_KEY_ID?.trim()
+  const turnToken = process.env.TURN_KEY_TOKEN?.trim()
   createBattleServer({
     port: Number(process.env.PORT ?? 8787),
     host: process.env.HOST ?? '127.0.0.1',
     version: __BUILD__,
     origins: origins.length ? origins : undefined,
+    turn: turnId && turnToken ? cloudflareTurn(turnId, turnToken) : undefined,
   }).catch((e: unknown) => {
     console.error(e)
     process.exit(1)

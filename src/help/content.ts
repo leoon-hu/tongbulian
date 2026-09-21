@@ -76,9 +76,9 @@ export function helpSections(lang: Lang): HelpSection[] {
           {
             kind: 'steps',
             items: [
-              'Enter: turn on "⚔️ Battle" at the top right of the topic map, then tap a topic; or tap ⚔️ in the header of a practice page.',
+              'Enter: tap a topic on the topic map and choose "⚔️ Battle mode" in the pop-up ("📖 Practice alone" is quiet practice).',
               'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: one person taps "Create room" and gets three QR codes on screen — red team, blue team and watch, each with a link to copy; red players scan the red code, blue players the blue one, onlookers the watch one; if scanning is awkward, tap "🔑 Join a battle" in the top bar and type that role\'s 6-digit passcode (shown under each code); the match starts by itself once both teams are in; the device that created the room can also tap "Join as red/blue" to play once one team is in, otherwise it just watches; up to 6 per team).',
-              `Games follow the chapter: the topics in a volume take turns through the ${games} game scenes, so a new chapter means a new game; to switch for this match only (or 🎲 random), use ⚙️ Settings in the header — next time it goes back to the chapter's game.`,
+              `Games follow the chapter: a grade's topics take turns through the ${games} game scenes from the first topic of volume 1, carrying on into volume 2, so a new chapter means a new game; to switch for this match only (or 🎲 random), use ⚙️ Settings in the header — next time it goes back to the chapter's game.`,
               'The first time you tap Start you are asked for a name; pick a ready-made one. It is not asked again; names and the robot speed are under ⚙️ Settings.',
               'Start: the first time this device plays a game, it explains the rule in one sentence (not repeated within a day), then "Ready… 3, 2, 1, go!" and both sides get their first question.',
             ],
@@ -86,6 +86,10 @@ export function helpSections(lang: Lang): HelpSection[] {
           {
             kind: 'p',
             text: 'The arena is always landscape: red team on the left, blue team on the right, the game scene across the top or in the middle. Each player has a row: the question on top (tap it or 🔊 to hear it again), the number pad or choice cards below. A phone held upright asks you to turn it sideways. Your team\'s header carries a "me" tag, rows you cannot operate are dimmed with a translucent mask that says "Theirs" or "Teammate", and a watch-only device shows "👀 Watching" in the top bar.',
+          },
+          {
+            kind: 'p',
+            text: 'In "own devices" you can talk to each other: everyone in the room automatically hears whoever has their mic on, nothing to tap. To speak, tap 🎤 (in the waiting window, at the bottom of the QR page and in the arena top bar); the browser asks for the microphone only then, and a second tap turns it off while you keep hearing the others. A 🎤 next to a name means that person\'s mic is on and it pulses while they talk; up to 4 people can have the mic on at once. Two devices in the same room will howl, so leave it off there.',
           },
           {
             kind: 'p',
@@ -177,6 +181,10 @@ export function helpSections(lang: Lang): HelpSection[] {
                 a: 'Use the install bar at the top of the home page ("Install" or "How"). On iPhone and iPad open it in Safari, tap Share → Add to Home Screen. Once installed, practice and battles work without internet.',
               },
               {
+                q: 'Can\'t hear the other side, or the mic will not turn on?',
+                a: 'First look for a 🎤 next to their name: no icon means their mic is off. If it is on and you still hear nothing, read the note under 🎤: "Connecting voice" means wait a few seconds; "Voice can\'t reach the other side" usually means neither network allows a direct connection (for example both on mobile data), try Wi-Fi; "No microphone permission" means allow the microphone for this site in the browser settings; WeChat cannot use the microphone, open the link in the system browser. On iPhone the first sound may need one more tap on the screen.',
+              },
+              {
                 q: 'Can\'t connect or join a room on own devices?',
                 a: 'It needs a network and the battle service: when the page is opened from file:// or the host has no relay service, that option is greyed out, and you get a hint if it cannot connect. A wrong link or a closed room (empty for 10 minutes or 3 hours old) shows a message; an outdated page updates itself and joins again, and only if it says the automatic update failed do you need to refresh and open the link again; one device counts as one player, so a second tab in the same browser replaces the first (use a private window or another browser to try two players on one computer); anyone who joins after the match started can only watch until the next round.',
               },
@@ -205,9 +213,9 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'steps',
           items: [
-            '进入：知识点地图右上角打开「⚔️ 对战」，再点一个知识点；或者在练习页页头点 ⚔️。',
+            '进入：在知识点地图上点一个知识点，弹出「自己练，还是对战？」，选「⚔️ 对战模式」（选「📖 自己练」就是安静地练）。',
             '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：一个人点「建房间」，屏幕上出三个二维码——红队、蓝队、观战，各带链接可以复制；红队的人扫红队码、蓝队的人扫蓝队码，看热闹的扫观战码；不方便扫码就点顶栏的「🔑 加入对战」，输那个身份的 6 位口令（每个码下面写着）；两队都有人进来就自动开始，建房的那台默认只看，一队有人后也可以点「以另一队进入」自己上场；每队最多 6 人）。',
-            `游戏按章节排定：一册里的知识点轮流用 ${games} 种游戏画面，换章节就换游戏；想这一次换一种或「🎲 随机」，在页头「⚙️ 配置」里选，只算这一次，下次又回到章节的游戏。`,
+            `游戏按章节排定：一个年级的知识点从上册第一个起轮流用 ${games} 种游戏画面，下册接着上册排到的继续轮，换章节就换游戏；想这一次换一种或「🎲 随机」，在页头「⚙️ 配置」里选，只算这一次，下次又回到章节的游戏。`,
             '第一次点「开始」会问名字，点一个现成的就行，以后不再问；改名字、机器人快慢也在「⚙️ 配置」里。',
             '开始：这台设备第一次玩这个游戏会先讲一句规则（一天内不重复），然后「预备…3、2、1，开始！」，两边同时拿到第一题。',
           ],
@@ -215,6 +223,10 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'p',
           text: '竞技场一律横向：左边红队、右边蓝队，游戏画面在上方横条或左右之间的竖条。每人一行：上面是题目（点一下或点 🔊 再听一遍），下面是数字键盘或选项卡。自己那一队的队名条上标着「我」，不能操作的行蒙着一层半透明遮罩、写着「对方」或「队友」；只观战的设备顶栏写「👀 观战中」。手机竖着拿会提示横过来。',
+        },
+        {
+          kind: 'p',
+          text: '「各用各的」时可以说话：房间里每个人自动能听到开了麦的人说话，不用点什么。想说话就点 🎤（连接状态窗口、二维码页底部、竞技场顶栏都有），点了才会向浏览器要麦克风，再点一下关掉、还能继续听；名字旁有 🎤 就是这个人开着麦，他说话时会一闪一闪；一个房间最多 4 个人同时开麦。两台设备在同一个屋子里会啸叫，不用开。',
         },
         {
           kind: 'p',
@@ -304,6 +316,10 @@ export function helpSections(lang: Lang): HelpSection[] {
             {
               q: '怎么装到平板 / 手机上离线用？',
               a: '首页顶部的安装提示条点「安装」或「怎么做」；iPhone / iPad 用 Safari 打开，点分享 → 添加到主屏幕。装好后没有网也能练和对战。',
+            },
+            {
+              q: '语音听不到对方，或者开不了麦？',
+              a: '先看名字旁有没有 🎤：没有就是对方没开麦。开了还听不到，看 🎤 下面的提示：「语音连接中」等几秒；「语音连不上对方」多半是两边的网络都不给直连（比如都用手机流量），换个 WiFi 试试；「没有拿到麦克风的权限」去浏览器设置里允许本站用麦克风；微信里打不开麦克风，用系统自带的浏览器打开链接。iPhone 上第一次收到声音可能要再点一下屏幕。',
             },
             {
               q: '「各用各的」连不上、进不去房间？',

@@ -289,3 +289,31 @@ describe('房间状态机（B13–B25、B41–B45）', () => {
     expect(apply(room(), 'nobody', { type: 'ready', ready: true }, T0).effects).toEqual([{ type: 'error', to: 'nobody', error: 'bad' }])
   })
 })
+
+describe('语音（B57）', () => {
+  it('voice 开 / 关进成员的 voice 并广播、重复不广播；新加入的人默认关；掉线保留、离开就没了；rtc / turn 到状态机是空操作', () => {
+    let r = joined(joined(room(), 'r1', 'red'), 'b1', 'blue')
+    expect(r.members.every((m) => m.voice === false)).toBe(true)
+    const res = apply(r, 'r1', { type: 'voice', on: true }, T0 + 10, seeds)
+    expect(res.effects).toEqual([{ type: 'broadcast' }])
+    r = res.room
+    expect(r.members.find((m) => m.clientId === 'r1')!.voice).toBe(true)
+    expect(snapshot(r).members.find((m) => m.clientId === 'r1')!.voice).toBe(true)
+    expect(apply(r, 'r1', { type: 'voice', on: true }, T0 + 10, seeds).effects).toEqual([])
+    r = setOnline(r, 'r1', false, T0 + 20).room
+    expect(r.members.find((m) => m.clientId === 'r1')!.voice).toBe(true)
+    r = setOnline(r, 'r1', true, T0 + 30).room
+    r = ok(r, 'r1', { type: 'voice', on: false })
+    expect(r.members.find((m) => m.clientId === 'r1')!.voice).toBe(false)
+    r = ok(r, 'b1', { type: 'voice', on: true })
+    r = ok(r, 'b1', { type: 'leave' })
+    expect(r.members.find((m) => m.clientId === 'b1')).toBeUndefined()
+    expect(apply(r, 'r1', { type: 'turn' }, T0 + 40, seeds).effects).toEqual([])
+    expect(apply(r, 'r1', { type: 'rtc', to: 'host01', data: { candidates: [] } }, T0 + 40, seeds).effects).toEqual([])
+    // 比赛中也能开关（不影响比赛）
+    let p = playing()
+    p = ok(p, 'red001', { type: 'voice', on: true })
+    expect(p.match?.phase).toBe('playing')
+    expect(p.members.find((m) => m.clientId === 'red001')!.voice).toBe(true)
+  })
+})
