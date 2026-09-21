@@ -27,6 +27,7 @@ export type Sfx =
   | 'burner' // 热气球：烧嘴呼的一下
   | 'heave' // 拔河：嘿哟一使劲
   | 'drip' // 融冰：水滴
+  | 'stroke' // 游泳：哗啦一划
   | 'sting' // 反超：上行三音
   | 'alert' // 还差一分：嘀嘀 — 嘀
 
@@ -123,6 +124,7 @@ const PATTERNS: Record<Sfx, Pattern> = {
       { f: 1800, at: 0.16, d: 0.14, type: 'sine', gain: 0.4, to: 800 },
     ],
   },
+  stroke: { noise: [{ at: 0, d: 0.16, gain: 0.5, f: 2600, q: 0.8 }, { at: 0.14, d: 0.12, gain: 0.3, f: 1800, q: 1 }], notes: [{ f: 420, at: 0, d: 0.12, type: 'sine', gain: 0.25, to: 180 }] },
   sting: {
     notes: [
       { f: 660, at: 0, d: 0.12, type: 'triangle', gain: 0.5 },
@@ -158,6 +160,7 @@ const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
   car: { score: ['vroom'], streak: ['nitro'] },
   rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
   balloon: { score: ['burner'], streak: ['burner'] },
+  swim: { score: ['stroke'], streak: ['stroke', 'whoosh'], win: ['splash', 'cheer'] },
   tower: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
   tug: { score: ['heave'], streak: ['heave', 'whoosh'] },
   ice: { score: ['crack', 'drip'], streak: ['crack', 'drip'], win: ['splash', 'cheer'] },

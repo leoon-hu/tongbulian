@@ -25,7 +25,7 @@ export interface SkinMeta {
 }
 
 /** 有专属开场规则句 / 结束语的皮肤（B39）；没有的用 default */
-const PHRASED = new Set(['race', 'car', 'rocket', 'balloon', 'tower', 'tug', 'ice'])
+const PHRASED = new Set(['race', 'car', 'rocket', 'balloon', 'swim', 'tower', 'tug', 'ice'])
 
 export function phraseSkin(id: string): string {
   return PHRASED.has(id) ? id : 'default'
@@ -72,6 +72,13 @@ export const SKINS: readonly SkinMeta[] = [
     slot: 'center',
     kind: 'race',
     game: () => import('../games/balloon').then((m) => m.createBalloonGame),
+  },
+  {
+    id: 'swim',
+    icon: '🏊',
+    slot: 'top',
+    kind: 'race',
+    game: () => import('../games/swim').then((m) => m.createSwimGame),
   },
   {
     id: 'tower',

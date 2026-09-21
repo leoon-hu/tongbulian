@@ -14,7 +14,7 @@ const outDir = new URL("../screenshots/survey", import.meta.url).pathname;
 mkdirSync(outDir, { recursive: true });
 const only = process.argv[2];
 const KP = "s1-05-carry-add";
-const SKINS = ["race", "car", "rocket", "balloon", "tower", "tug", "ice"].filter((s) => !only || s === only);
+const SKINS = ["race", "car", "rocket", "balloon", "swim", "tower", "tug", "ice"].filter((s) => !only || s === only);
 const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, aiLevel: "mid" });
 const HIDE = "(()=>{const s=document.createElement('style');s.textContent='.countdown,.victory,.result,.callout,.confirm-mask{display:none!important}';document.head.appendChild(s);return 'ok'})()";
 
