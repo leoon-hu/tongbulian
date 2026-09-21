@@ -8,7 +8,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path'
 import { createServer, createServerModuleRunner, loadEnv } from 'vite'
 
-const siteUrl = (loadEnv('production', process.cwd(), '').SITE_URL ?? '').replace(/\/+$/, '')
+const env = loadEnv('production', process.cwd(), '')
+const siteUrl = (env.SITE_URL ?? '').replace(/\/+$/, '')
 const publicDir = 'public'
 
 const server = await createServer({
@@ -19,13 +20,15 @@ const server = await createServer({
 try {
   const runner = createServerModuleRunner(server.environments.ssr)
   const seo = await runner.import('/src/seo/site.ts')
+  // 访问统计标签（需求 N7）：.env 配了 VITE_UMAMI_* 才写进静态页，与 vite.config.ts 写进 index.html 的是同一行
+  const analytics = (await runner.import('/src/engine/analytics.ts')).analyticsConfig(env)
 
   const index = readFileSync('index.html', 'utf8')
   const next = seo.applyHome(index)
   if (next !== index) writeFileSync('index.html', next)
 
   for (const dir of seo.STATIC_DIRS) rmSync(join(publicDir, dir), { recursive: true, force: true })
-  const pages = seo.staticPages(siteUrl)
+  const pages = seo.staticPages(siteUrl, analytics)
   for (const p of pages) {
     const file = join(publicDir, p.file)
     mkdirSync(dirname(file), { recursive: true })
@@ -37,7 +40,8 @@ try {
 
   console.log(
     `SEO：静态页 ${pages.length} 张、robots.txt${siteUrl ? '、sitemap.xml' : ''} → public/；index.html ${next !== index ? '已更新' : '未变'}` +
-      (siteUrl ? `；站点 ${siteUrl}` : '（没设 SITE_URL：不生成 sitemap 与绝对地址）'),
+      (siteUrl ? `；站点 ${siteUrl}` : '（没设 SITE_URL：不生成 sitemap 与绝对地址）') +
+      (analytics ? '；含访问统计标签' : ''),
   )
 } finally {
   await server.close()

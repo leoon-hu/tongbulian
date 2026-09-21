@@ -14,6 +14,7 @@ import { SUBJECTS, kpsOfUnit, liveCourses as catalogCourses } from '@/engine/cat
 import { translate } from '@/engine/i18n'
 import { answerLabel } from '@/engine/answer'
 import { AUTHOR_CONTACT, REPO_URL, SISTER_SITES } from '@/engine/sites'
+import { type AnalyticsConfig, analyticsTag } from '@/engine/analytics'
 import { SKINS } from '@/battle/skins'
 import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
 
@@ -232,7 +233,7 @@ function contactBlock(root: string): string {
   return `<details class="contact"><summary>${esc(zh({ k: 'contact.link' }))}</summary><p>${esc(zh({ k: 'contact.hint' }))}</p><img src="${src}" alt="${esc(zh({ k: 'contact.alt' }))}" width="${w}" height="${h}" loading="lazy" /></details>`
 }
 
-function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string): string {
+function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string, analytics: AnalyticsConfig | null): string {
   const fullTitle = `${meta.title} · ${SITE_NAME}`
   // 回站点根的相对路径按页面深度算：<学科>/<年级>/ 下两层是 ../../，help/ 下一层是 ../
   const root = '../'.repeat(meta.path.split('/').length - 1)
@@ -267,7 +268,7 @@ function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: st
     <meta property="og:locale" content="zh_CN" />
     <meta name="twitter:card" content="summary_large_image" />
     ${absoluteTags(siteUrl, meta.path)}
-    <script type="application/ld+json">${JSON.stringify([breadcrumb, ...meta.jsonLd])}</script>
+    <script type="application/ld+json">${JSON.stringify([breadcrumb, ...meta.jsonLd])}</script>${analytics ? `\n    ${analyticsTag(analytics)}` : ''}
     <style>
 ${STYLE}
     </style>
@@ -301,7 +302,7 @@ const webApp = (siteUrl: string): Record<string, unknown> => ({
 
 // ── 课程页：<学科>/<年级>/ ──────────────────────────────────────────────
 
-function coursePage(lc: LiveCourse, siteUrl: string): string {
+function coursePage(lc: LiveCourse, siteUrl: string, analytics: AnalyticsConfig | null): string {
   const { course, name } = lc
   const kps = liveKps(course)
   const units = course.units.filter((u) => kpsOfUnit(course, u.id).some((kp) => getGenerator(kp.id)))
@@ -366,12 +367,13 @@ ${kpsOfUnit(course, u.id)
     siteUrl,
     [{ href: ROOT, text: SITE_NAME }, { text: name }],
     body,
+    analytics,
   )
 }
 
 // ── 知识点页：<学科>/<年级>/<知识点 id>.html ─────────────────────────────
 
-function kpPage(lc: LiveCourse, kp: KnowledgePoint, siteUrl: string): string {
+function kpPage(lc: LiveCourse, kp: KnowledgePoint, siteUrl: string, analytics: AnalyticsConfig | null): string {
   const { course, name } = lc
   const unit = course.units.find((u) => u.id === kp.unitId)!
   const sem = semName(unit.semester)
@@ -443,13 +445,14 @@ ${siblings
       { text: kp.title },
     ],
     body,
+    analytics,
   )
 }
 
 // ── 帮助页：help/ ────────────────────────────────────────────────────────
 
 /** 帮助页（需求 F17）：和应用里的帮助页同一份内容，只有中文；常见问题以 FAQPage 结构化数据给搜索引擎 */
-function helpPage(siteUrl: string): string {
+function helpPage(siteUrl: string, analytics: AnalyticsConfig | null): string {
   const sections = helpSections('zh')
   const games = helpGames('zh')
   const title = `${HELP_TITLE.zh}：对战玩法、规则、技巧、学习内容与常见问题`
@@ -508,7 +511,7 @@ ${s.blocks.map(render).join('\n')}
       })),
     })
   }
-  return page({ path: HELP_PATH, title, description, jsonLd }, siteUrl, [{ href: HELP_ROOT, text: SITE_NAME }, { text: HELP_TITLE.zh }], body)
+  return page({ path: HELP_PATH, title, description, jsonLd }, siteUrl, [{ href: HELP_ROOT, text: SITE_NAME }, { text: HELP_TITLE.zh }], body, analytics)
 }
 
 // ── 全部静态页 + robots / sitemap ──────────────────────────────────────
@@ -521,15 +524,16 @@ export interface StaticPage {
   html: string
 }
 
-export function staticPages(siteUrl: string): StaticPage[] {
+/** analytics：访问统计标签（需求 N7），构建脚本按 .env 算出来传进来；null = 不加 */
+export function staticPages(siteUrl: string, analytics: AnalyticsConfig | null = null): StaticPage[] {
   const out: StaticPage[] = []
   for (const lc of liveCourses()) {
-    out.push({ file: `${coursePath(lc.course)}index.html`, path: coursePath(lc.course), html: coursePage(lc, siteUrl) })
+    out.push({ file: `${coursePath(lc.course)}index.html`, path: coursePath(lc.course), html: coursePage(lc, siteUrl, analytics) })
     for (const kp of liveKps(lc.course)) {
-      out.push({ file: kpPath(lc.course, kp), path: kpPath(lc.course, kp), html: kpPage(lc, kp, siteUrl) })
+      out.push({ file: kpPath(lc.course, kp), path: kpPath(lc.course, kp), html: kpPage(lc, kp, siteUrl, analytics) })
     }
   }
-  out.push({ file: `${HELP_PATH}index.html`, path: HELP_PATH, html: helpPage(siteUrl) })
+  out.push({ file: `${HELP_PATH}index.html`, path: HELP_PATH, html: helpPage(siteUrl, analytics) })
   return out
 }
 

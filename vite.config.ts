@@ -6,6 +6,7 @@ import { loadEnv, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import { compatId } from './scripts/lib/build-id.mjs'
+import { analyticsAttrs, analyticsConfig } from './src/engine/analytics'
 
 /**
  * index.html 里需要绝对地址的标签（canonical / og:url / og:image / JSON-LD 的 url）：地址来自本机 .env 的 SITE_URL
@@ -33,6 +34,19 @@ function siteMeta(siteUrl: string): Plugin {
   }
 }
 
+/**
+ * 访问统计标签（需求 N7，engine/analytics.ts）：.env 里 VITE_UMAMI_SCRIPT / VITE_UMAMI_WEBSITE_ID 都有时，正式构建把
+ * 一行 <script defer> 写进 index.html 的 <head>；dev 不加，没配置什么都不加。静态 SEO 页的同一行由 scripts/seo.mjs 写。
+ */
+function analyticsTag(env: Record<string, string>): Plugin {
+  const cfg = analyticsConfig(env)
+  return {
+    name: 'analytics-tag',
+    apply: 'build',
+    transformIndexHtml: () => (cfg ? [{ tag: 'script', attrs: analyticsAttrs(cfg), injectTo: 'head' }] : []),
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
@@ -46,6 +60,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       siteMeta(env.SITE_URL ?? ''),
+      analyticsTag(env),
       // PWA：「添加到主屏幕」后离线可用。页面 + 字体 + 全部朗读片段（约 4 MB）首次打开时预缓存
       VitePWA({
         registerType: 'autoUpdate',

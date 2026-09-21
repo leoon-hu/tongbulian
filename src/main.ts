@@ -5,6 +5,7 @@ import App from '@/App.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useInstallStore } from '@/stores/install'
 import { unlockAudio } from '@/engine/audio'
+import { trackBackNavigation } from '@/engine/analytics'
 import '@/styles/tokens.css'
 import '@/styles/themes.css'
 import '@/styles/base.css'
@@ -21,3 +22,5 @@ useSettingsStore()
 useInstallStore().setup()
 app.use(router)
 app.mount('#app')
+// 访问统计（N7）：返回键那一下 tracker 自己不记，这里补；没加统计标签时什么都不做
+trackBackNavigation()
