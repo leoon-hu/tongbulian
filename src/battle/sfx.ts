@@ -29,6 +29,7 @@ export type Sfx =
   | 'drip' // 融冰：水滴
   | 'stroke' // 游泳：哗啦一划
   | 'rung' // 爬梯子：手脚踩上横档的两下
+  | 'pick' // 挖宝：镐刨进土里的一下
   | 'sting' // 反超：上行三音
   | 'alert' // 还差一分：嘀嘀 — 嘀
 
@@ -125,6 +126,7 @@ const PATTERNS: Record<Sfx, Pattern> = {
       { f: 1800, at: 0.16, d: 0.14, type: 'sine', gain: 0.4, to: 800 },
     ],
   },
+  pick: { notes: [{ f: 1500, at: 0, d: 0.05, type: 'triangle', gain: 0.35, to: 900 }], noise: [{ at: 0, d: 0.07, gain: 0.6, f: 900, q: 0.8 }, { at: 0.05, d: 0.16, gain: 0.35, f: 350, q: 0.7 }] },
   rung: {
     notes: [
       { f: 330, at: 0, d: 0.07, type: 'triangle', gain: 0.55, to: 300 },
@@ -173,6 +175,7 @@ const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
   balloon: { score: ['burner'], streak: ['burner'] },
   swim: { score: ['stroke'], streak: ['stroke', 'whoosh'], win: ['splash', 'cheer'] },
   ladder: { score: ['rung'], streak: ['rung', 'whoosh'], win: ['fireworks', 'cheer'] },
+  dig: { score: ['pick'], streak: ['pick', 'whoosh'], win: ['fireworks', 'cheer'] },
   tower: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
   tug: { score: ['heave'], streak: ['heave', 'whoosh'] },
   ice: { score: ['crack', 'drip'], streak: ['crack', 'drip'], win: ['splash', 'cheer'] },
