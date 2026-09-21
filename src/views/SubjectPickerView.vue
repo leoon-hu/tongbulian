@@ -93,6 +93,13 @@ function tapSubject(sub: SubjectMeta): void {
   font-size: 26px;
   line-height: 1.2;
 }
+/* 手机上图标小一号，十来个也能排在一行 */
+@media (max-width: 420px) {
+  .hero-icons {
+    gap: 3px 4px;
+    font-size: 22px;
+  }
+}
 .hero-line {
   margin: 8px auto 0;
   max-width: 24em;

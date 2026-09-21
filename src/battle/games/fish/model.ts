@@ -1,0 +1,461 @@
+/**
+ * 钓鱼的纯模型（需求 B36l）：快照 + 事件 + 时间 → 场景数据（两条鱼的深度与姿势、钓竿的弯与绕线轮、浮漂、云、水草、气泡、杂鱼、粒子）。
+ * 不碰 canvas，随机数可注种子，node 里可测；渲染在 render.ts。
+ */
+import type { RNG } from '@/engine'
+import type { Team } from '@/battle/protocol'
+import type { GameEvent, GameState } from '@/battle/game/contract'
+import { ParticlePool } from '@/battle/game/engine/particles'
+import { Racer } from '@/battle/game/engine/racer'
+import { Decay, advancePhase } from '@/battle/game/engine/rig'
+import { clamp, ease, Tween } from '@/battle/game/engine/tween'
+import { rodGeometry, type AnglerKind, type RodGeometry } from '@/battle/game/sprites/fish'
+
+export interface FishGeometry {
+  W: number
+  H: number
+  compact: boolean
+  /** 相对 150px 宽的缩放 */
+  k: number
+  /** 两条鱼的 x（红左蓝右，在竿尖下面） */
+  laneX: [number, number]
+  /** 两个钓鱼人的原点 x（坐在码头边）与朝向 */
+  anglerX: [number, number]
+  facing: [1, -1]
+  /** 钓鱼人的坐高 */
+  size: number
+  /** 鱼的身长 */
+  fishS: number
+  /** 码头面 y、板厚、水面 y、沙地顶 y */
+  dockY: number
+  plankH: number
+  waterY: number
+  bottomY: number
+  /** 两段码头：左段 0…dockEnd[0]、右段 dockEnd[1]…W */
+  dockEnd: [number, number]
+  /** 鱼在最深处（0 分）与快到水面（8 分）时的 y */
+  y0: number
+  y8: number
+  pitch: number
+  /** 赢了鱼被举到手里的位置（举过头顶） */
+  handY: number
+}
+
+export function layoutFish(W: number, H: number, compact: boolean): FishGeometry {
+  const k = W / 150
+  const size = compact ? Math.min(22, W * 0.24) : 34 * k
+  const fishS = compact ? Math.min(22, W * 0.25) : 32 * k
+  const skyH = compact ? 8 : 34 * k
+  const dockY = skyH + size * 1.15
+  const plankH = Math.max(3, 5 * k)
+  const waterY = dockY + plankH + 4 * k
+  const bottomY = H - (compact ? 6 : 12 * k)
+  const laneX: [number, number] = [W * 0.27, W * 0.73]
+  const reach = 0.73 * size
+  const y0 = bottomY - fishS * 0.6
+  const y8 = waterY + fishS * 0.8
+  return {
+    W,
+    H,
+    compact,
+    k,
+    laneX,
+    anglerX: [laneX[0] - reach, laneX[1] + reach],
+    facing: [1, -1],
+    size,
+    fishS,
+    dockY,
+    plankH,
+    waterY,
+    bottomY,
+    dockEnd: [laneX[0] - fishS * 0.55, laneX[1] + fishS * 0.55],
+    y0,
+    y8,
+    pitch: (y0 - y8) / 8,
+    handY: dockY - size * 1.5,
+  }
+}
+
+export interface Cloud {
+  x: number
+  y: number
+  s: number
+  v: number
+}
+
+export interface Bubble {
+  x: number
+  y: number
+  r: number
+  v: number
+  wob: number
+}
+
+export interface Minnow {
+  x: number
+  y: number
+  v: number
+  wag: number
+}
+
+export interface FishOptions {
+  reducedMotion: boolean
+}
+
+export const REEL_TIME = 0.8
+export const REEL_TIME_REDUCED = 0.3
+export const SPRINT_FROM = 2
+export const CONFETTI_ROUNDS = 3
+export const CONFETTI_GAP = 0.5
+export const CAST_TIME = 0.5
+const BUBBLES = 6
+
+export class FishModel {
+  geo: FishGeometry = layoutFish(150, 700, false)
+  fishes: [Racer, Racer]
+  readonly kinds: [AnglerKind, AnglerKind] = ['cat', 'bear']
+  /** 甩线：0 = 线还在竿尖，1 = 线到鱼嘴 */
+  cast: [Tween, Tween] = [new Tween(1, ease.outQuad), new Tween(1, ease.outQuad)]
+  /** 收线时竿弯一下 */
+  bend: [Decay, Decay] = [new Decay(0.4), new Decay(0.4)]
+  /** 绕线轮的转角 */
+  reel: [number, number] = [0, 0]
+  /** 鱼挣扎 */
+  thrash: [Decay, Decay] = [new Decay(0.5), new Decay(0.5)]
+  /** 头朝上的程度（平滑） */
+  up: [number, number] = [0, 0]
+  /** 还差一分：浮漂发光 */
+  bobberGlow: [Decay, Decay] = [new Decay(1), new Decay(1)]
+  private splashed: [boolean, boolean] = [false, false]
+  private bubbleT: [number, number] = [0, 0]
+  clouds: Cloud[] = []
+  bubbles: Bubble[] = []
+  minnow: Minnow | null = null
+  time = 0
+  phase: GameState['phase'] = 'lobby'
+  winner: Team | null = null
+  target = 8
+  sprint = false
+  particles: ParticlePool
+  quality = 0
+  private nextMinnow = 3
+  private confettiLeft = 0
+  private confettiT = 0
+  private readonly rng: RNG
+  private readonly opts: FishOptions
+
+  constructor(rng: RNG, opts: FishOptions = { reducedMotion: false }) {
+    this.rng = rng
+    this.opts = opts
+    this.particles = new ParticlePool(64, () => rng.next())
+    this.fishes = [new Racer('red', rng), new Racer('blue', rng)]
+    this.layout(150, 700, false)
+  }
+
+  get animated(): boolean {
+    return !this.opts.reducedMotion
+  }
+
+  private get timing() {
+    return { animated: this.animated, moveTime: REEL_TIME, moveTimeReduced: REEL_TIME_REDUCED }
+  }
+
+  layout(W: number, H: number, compact: boolean): void {
+    this.geo = layoutFish(W, H, compact)
+    const g = this.geo
+    for (const f of this.fishes) f.pos.set(this.yFor(f.score, f.mood === 'win'))
+    const n = compact ? 0 : 2
+    this.clouds = Array.from({ length: n }, (_, i) => ({
+      x: (W * (i + 0.5)) / n + (this.rng.next() - 0.5) * 30,
+      y: g.dockY * (0.2 + this.rng.next() * 0.3),
+      s: 7 * (0.8 + this.rng.next() * 0.5),
+      v: 5 * (0.7 + this.rng.next() * 0.6),
+    }))
+    this.bubbles = compact ? [] : Array.from({ length: BUBBLES }, () => this.newBubble(true))
+    this.minnow = null
+  }
+
+  private newBubble(anywhere: boolean): Bubble {
+    const g = this.geo
+    return {
+      x: g.W * (0.08 + this.rng.next() * 0.84),
+      y: anywhere ? g.waterY + (g.bottomY - g.waterY) * this.rng.next() : g.bottomY - 2 * g.k,
+      r: (1.2 + this.rng.next() * 1.6) * g.k,
+      v: (12 + this.rng.next() * 12) * g.k,
+      wob: this.rng.next() * Math.PI * 2,
+    }
+  }
+
+  /** 得 score 分时鱼的 y；赢了被举到手里 */
+  yFor(score: number, won = false): number {
+    const g = this.geo
+    if (won) return g.handY
+    return g.y0 - g.pitch * clamp(score, 0, this.target) * (8 / this.target)
+  }
+
+  fish(team: Team): Racer {
+    return this.fishes[team === 'red' ? 0 : 1]
+  }
+
+  setState(s: GameState): void {
+    this.target = Math.max(1, s.target)
+    const prevPhase = this.phase
+    this.phase = s.phase
+    this.winner = s.winner
+    this.sprint = Math.max(s.red, s.blue) >= this.target - SPRINT_FROM && s.phase !== 'ended'
+    this.fishes.forEach((f, i) => {
+      const forward = f.apply(s, (score, won) => this.yFor(score, won), this.timing)
+      if (forward) {
+        this.bend[i]!.kick(0.7 + f.boost.value * 0.5)
+        this.thrash[i]!.kick(0.7 + f.boost.value * 0.5)
+        this.bubblesFrom(i, 3)
+      }
+      if (f.mood === 'win' && !this.splashed[i]) {
+        this.splashed[i] = true
+        this.splash(i)
+        this.confettiLeft = CONFETTI_ROUNDS - 1
+        this.confettiT = 0
+        this.confetti(f.team)
+      }
+      if (f.mood !== 'win') this.splashed[i] = false
+    })
+    if (prevPhase === 'countdown' && s.phase === 'playing') this.go()
+    if (s.phase === 'countdown' || s.phase === 'lobby') {
+      this.particles.clear()
+      this.confettiLeft = 0
+      for (let i = 0; i < 2; i++) {
+        this.cast[i]!.set(0)
+        this.bobberGlow[i]!.value = 0
+        this.up[i] = 0
+      }
+    }
+  }
+
+  /** 鱼嘴冒的气泡（往上飘） */
+  private bubblesFrom(i: number, n: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const f = this.fishes[i]!
+    this.particles.emit({
+      x: this.xOf(f, i),
+      y: f.pos.value - g.fishS * 0.3,
+      count: n,
+      speed: 25 * g.k,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 0.6,
+      life: 0.9,
+      size: 2 * g.k,
+      colors: ['rgba(255,255,255,0.8)', '#d5f1ff'],
+      gravity: -60 * g.k,
+      drag: 1.5,
+    })
+  }
+
+  private splash(i: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    this.particles.emit({
+      x: g.laneX[i]!,
+      y: g.waterY,
+      count: 16,
+      speed: 120 * g.k,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 0.9,
+      life: 0.7,
+      size: 3 * g.k,
+      colors: ['#ffffff', '#d5f1ff', '#a9dcff'],
+      gravity: 300 * g.k,
+      drag: 1,
+    })
+  }
+
+  private confetti(team: Team): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const colors = team === 'red' ? ['#ff6b6b', '#ffc93c', '#fff', '#ff9b9b'] : ['#4aa3ff', '#ffc93c', '#fff', '#8fc3ff']
+    this.particles.emit({
+      x: g.anglerX[i]! + (this.rng.next() - 0.5) * g.size,
+      y: g.handY - g.size * 0.3,
+      count: 18,
+      speed: 80 * g.k,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 1.3,
+      life: 1.5,
+      size: 3.5 * g.k,
+      colors,
+      shape: 'flake',
+      gravity: 60 * g.k,
+      drag: 1.2,
+    })
+  }
+
+  private go(): void {
+    this.fishes.forEach((f, i) => {
+      f.boost.kick(0.5)
+      this.bend[i]!.kick(0.5)
+      if (this.animated) this.cast[i]!.to(1, CAST_TIME)
+      else this.cast[i]!.set(1)
+    })
+  }
+
+  onEvent(e: GameEvent): void {
+    switch (e.type) {
+      case 'countdown':
+        for (const f of this.fishes) f.setMood('ready')
+        break
+      case 'go':
+        this.go()
+        break
+      case 'point':
+        this.fish(e.team).boost.kick(Math.min(1, (e.streak - 1) * 0.35))
+        break
+      case 'streak': {
+        const i = e.team === 'red' ? 0 : 1
+        this.fish(e.team).boost.kick(1)
+        this.thrash[i]!.kick(1.4)
+        break
+      }
+      case 'lead':
+        this.fish(e.team === 'red' ? 'blue' : 'red').look.kick(1)
+        break
+      case 'nearWin':
+        this.bobberGlow[e.team === 'red' ? 0 : 1]!.kick(1)
+        break
+      case 'finished':
+        // 水花与彩纸在 setState 里跟着胜方的心情放（晚进来的观战者也有）
+        break
+      default:
+        break
+    }
+  }
+
+  degrade(level: number): void {
+    this.quality = level
+    if (level >= 1) this.minnow = null
+    if (level >= 2) this.particles.clear()
+  }
+
+  step(dt: number): void {
+    this.time += dt
+    const g = this.geo
+    const animated = this.animated
+    if (animated && this.quality < 1) {
+      for (const c of this.clouds) {
+        c.x += c.v * dt
+        if (c.x - c.s * 1.2 > g.W) c.x = -c.s * 1.5
+      }
+      if (!g.compact) {
+        for (let i = 0; i < this.bubbles.length; i++) {
+          const b = this.bubbles[i]!
+          b.y -= b.v * dt * (this.sprint ? 1.6 : 1)
+          b.wob += dt * 3
+          if (b.y < g.waterY + b.r) this.bubbles[i] = this.newBubble(false)
+        }
+        if (this.minnow) {
+          this.minnow.x += this.minnow.v * dt
+          this.minnow.wag = advancePhase(this.minnow.wag, dt, 5)
+          if (this.minnow.x < -20 || this.minnow.x > g.W + 20) this.minnow = null
+        } else {
+          this.nextMinnow -= dt
+          if (this.nextMinnow <= 0) {
+            this.nextMinnow = 6 + this.rng.next() * 5
+            const dir = this.rng.next() < 0.5 ? 1 : -1
+            this.minnow = { x: dir > 0 ? -15 : g.W + 15, y: g.waterY + (g.bottomY - g.waterY) * (0.35 + this.rng.next() * 0.45), v: dir * (22 + this.rng.next() * 12) * g.k, wag: 0 }
+          }
+        }
+      }
+    }
+    if (this.confettiLeft > 0 && this.winner) {
+      this.confettiT += dt
+      if (this.confettiT >= CONFETTI_GAP) {
+        this.confettiT = 0
+        this.confettiLeft -= 1
+        this.confetti(this.winner)
+      }
+    }
+    this.fishes.forEach((f, i) => {
+      f.step(dt, 2, animated)
+      this.cast[i]!.step(dt)
+      const bend = this.bend[i]!.step(dt)
+      this.thrash[i]!.step(dt)
+      this.bobberGlow[i]!.step(dt)
+      if (bend > 0.05 && animated) this.reel[i] = advancePhase(this.reel[i]!, dt, 3 * bend)
+      // 头朝上：被线拉着就朝上，一开始 / 输了横着游
+      const target = f.mood === 'lose' ? 0 : f.score === 0 && f.mood !== 'win' ? 0 : 1
+      this.up[i] = this.up[i]! + (target - this.up[i]!) * Math.min(1, dt * 5)
+      // 挣扎时冒泡
+      this.bubbleT[i] = this.bubbleT[i]! + dt
+      if (this.thrash[i]!.value > 0.3 && f.mood !== 'win' && this.bubbleT[i]! > 0.15) {
+        this.bubbleT[i] = 0
+        this.bubblesFrom(i, 1)
+      }
+    })
+    this.particles.step(dt)
+  }
+
+  /** 鱼当前的 x：底下慢慢游动、拉的时候小幅摆、赢了飞到手里 */
+  xOf(f: Racer, i: number): number {
+    const g = this.geo
+    const home = g.laneX[i]!
+    if (f.mood === 'win') {
+      const t = Math.min(1, f.moodT / REEL_TIME)
+      const there = g.anglerX[i]! + g.facing[i]! * g.size * 0.02
+      return home + (there - home) * (1 - Math.pow(1 - t, 3))
+    }
+    if (!this.animated) return home
+    const idle = (1 - this.up[i]!) * Math.sin(this.time * 0.9 + i * 2) * g.fishS * 0.18
+    const wiggle = this.up[i]! * Math.sin(this.time * 6 + i) * g.fishS * 0.04
+    return home + idle + wiggle
+  }
+
+  /** 鱼当前的 y（赢了飞过去时走一道弧） */
+  yOf(f: Racer): number {
+    let y = f.pos.value
+    if (!this.animated) return y
+    if (f.mood === 'win') y -= Math.sin(Math.min(1, f.moodT / REEL_TIME) * Math.PI) * this.geo.size * 0.5
+    else if (f.mood === 'ready' || f.mood === 'lose') y += Math.sin(this.time * 1.5) * this.geo.fishS * 0.06
+    return y
+  }
+
+  thrashOf(f: Racer, i: number): number {
+    if (!this.animated || f.mood === 'win') return 0
+    const base = this.thrash[i]!.value * Math.sin(this.time * 25 + i) * 0.35
+    return base + (this.sprint && f.mood !== 'lose' ? Math.sin(this.time * 12 + i) * 0.08 : 0)
+  }
+
+  /** 鱼线的末端：甩线时从竿尖滑到鱼嘴 */
+  lineEnd(i: number, rod: RodGeometry, fishX: number, fishY: number): { x: number; y: number } {
+    const c = this.cast[i]!.value
+    return { x: rod.tipX + (fishX - rod.tipX) * c, y: rod.tipY + (fishY - rod.tipY) * c }
+  }
+
+  rodOf(i: number): RodGeometry {
+    const g = this.geo
+    const f = this.fishes[i]!
+    return rodGeometry(g.anglerX[i]!, g.dockY - this.liftOf(f), g.size, g.facing[i]!, this.bend[i]!.value, this.laidOf(f))
+  }
+
+  /** 钓鱼人离座的高度（倒数 / 胜利蹦） */
+  liftOf(f: Racer): number {
+    const g = this.geo
+    if (!this.animated) return 0
+    if (f.mood === 'ready') return Math.abs(Math.sin(f.hop)) * g.size * 0.1
+    if (f.mood === 'win') return Math.abs(Math.sin(f.phase)) * g.size * 0.08
+    return 0
+  }
+
+  /** 赢了把竿放平 */
+  laidOf(f: Racer): number {
+    return f.mood === 'win' ? Math.min(1, f.moodT / 0.4) : 0
+  }
+
+  scratchOf(f: Racer): number {
+    return f.mood === 'lose' ? Math.min(1, f.moodT / 0.8) : 0
+  }
+
+  /** 鱼嘴张开：被拉的时候 */
+  mouthOf(f: Racer, i: number): number {
+    return f.mood === 'win' ? 0.6 : Math.min(1, this.thrash[i]!.value)
+  }
+}

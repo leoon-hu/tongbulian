@@ -31,7 +31,7 @@ const FIXED_KEYS = [
   'battle.half.red',
   'battle.half.blue',
   // 开场规则句与结束语（B39）：每种有专属话的皮肤一条 + default
-  ...['default', 'race', 'car', 'rocket', 'balloon', 'swim', 'ladder', 'dig', 'tower', 'tug', 'ice'].flatMap((id) => [`battle.rule.${id}`, `battle.finish.${id}`]),
+  ...['default', 'race', 'car', 'rocket', 'balloon', 'swim', 'ladder', 'dig', 'fish', 'tower', 'tug', 'ice'].flatMap((id) => [`battle.rule.${id}`, `battle.finish.${id}`]),
   // 页面打开 / 切换功能时自动读的提示语（B39a）：设置页「跟谁打」与三种模式的说明、问名字、退出确认，
   // 房间的二维码页说明、「以另一队进入」提示、三方连接状态窗口、输口令面板，以及孩子会看到的错误提示
   'battle.who',
