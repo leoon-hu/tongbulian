@@ -49,8 +49,11 @@ const mood = computed(() => {
   return props.player.input ? '🤖' : '🤔'
 })
 
+/** 读题的排队 key：每行一个（B37）——自己这行再点同一道题不重头来，另一行点了排在后面 */
+const readKey = computed(() => `q:${props.player.id}`)
+/** 点 🔊（B37）：这句必须播完，自己再点、另一方点、弹出提示都不能打断它 */
 function read(): void {
-  if (props.question) say(questionSpeech(props.question, lang.value), lang.value)
+  if (props.question) say(questionSpeech(props.question, lang.value), lang.value, 0, { mode: 'hold', key: readKey.value })
 }
 
 // ── 题干按栏自动缩放：十格阵、排队这些教具有固定尺寸，栏太窄（手机半栏）或太矮（iPad 上方横条占了高度）
@@ -117,7 +120,8 @@ watch(
   () => [props.question?.id, props.feedback === null, props.player.index] as const,
   ([id, free]) => {
     typed.value = ''
-    if (props.autoRead && id && free) say(questionSpeech(props.question!, lang.value), lang.value, 150)
+    // 自动读的排在必须播完的那句后面（点了 🔊 的题读完再读新题），换题了只读最新的
+    if (props.autoRead && id && free) say(questionSpeech(props.question!, lang.value), lang.value, 150, { mode: 'wait', key: readKey.value })
   },
   { immediate: true },
 )

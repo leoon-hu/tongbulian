@@ -7,7 +7,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import App from '@/App.vue'
 import { setLang } from '@/engine/i18n'
-import { hush, sayKeys } from '@/engine/voice'
+import { forget, hush, say, sayKeys } from '@/engine/voice'
 import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
 import { useVoiceStore } from '@/stores/voice'
@@ -23,6 +23,7 @@ vi.mock('@/engine/voice', async (orig) => ({
   say: vi.fn(() => Promise.resolve()),
   sayKeys: vi.fn(() => Promise.resolve()),
   hush: vi.fn(),
+  forget: vi.fn(),
   warmUp: vi.fn(),
 }))
 
@@ -57,6 +58,8 @@ const named = (): void => localStorage.setItem(BATTLE_KEY, JSON.stringify({ name
 
 beforeEach(() => {
   vi.mocked(sayKeys).mockClear()
+  vi.mocked(say).mockClear()
+  vi.mocked(forget).mockClear()
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -121,13 +124,65 @@ describe('对战设置页', () => {
 })
 
 describe('竞技场', () => {
-  it('点 ✕ 弹出退出确认时读「要退出比赛吗？」', async () => {
+  it('点 ✕ 弹出退出确认时读「要退出比赛吗？」（排在读题后面）；「继续比赛」关掉就撤回', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     const w = await mountAt(`/battle/local/${KP}?mode=ai`, named)
     expect(spoken()).toEqual([]) // 竞技场里由倒数 / 读题接手，不读别的提示
     await w.find('.bar-btn').trigger('click')
     await settle()
     expect(lastSpoken()).toEqual(['battle.exit.ask'])
+    expect(vi.mocked(sayKeys).mock.calls.at(-1)![3]).toEqual({ mode: 'wait', key: 'exit' })
+    await w.find('.confirm-actions button').trigger('click')
+    await settle()
+    expect(w.find('.confirm').exists()).toBe(false)
+    expect(forget).toHaveBeenCalledWith('exit')
+    w.unmount()
+  })
+
+  // B37：点 🔊 读题必须播完，自己再点、另一方点都不打断（排在后面）；自动读的也排在它后面；弹出提示不打断
+  it('两人同屏点 🔊：每一行按自己的 key 以「必须播完」的播法读，另一行点了不 hush', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const w = await mountAt(`/battle/local/${KP}?mode=duo`)
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    vi.mocked(say).mockClear()
+    vi.mocked(hush).mockClear()
+    await w.find('.team.red .row.operable .q').trigger('click')
+    await w.find('.team.blue .row.operable .q').trigger('click')
+    await w.find('.team.red .row.operable .q').trigger('click')
+    const calls = vi.mocked(say).mock.calls
+    expect(calls.map((c) => c[3])).toEqual([
+      { mode: 'hold', key: 'q:left' },
+      { mode: 'hold', key: 'q:right' },
+      { mode: 'hold', key: 'q:left' },
+    ])
+    expect(calls[0]![0].length).toBeGreaterThan(0) // 读的是题干
+    expect(hush).not.toHaveBeenCalled()
+    w.unmount()
+  })
+
+  it('打机器人：进题自动读的排在必须播完的后面（wait，按行的 key）；弹出提示 skip；播报 wait', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    const w = await mountAt(`/battle/local/${KP}?mode=ai`, named)
+    const store = useBattleStore()
+    vi.mocked(say).mockClear()
+    store.beginPlay()
+    await settle()
+    const auto = vi.mocked(say).mock.calls.find((c) => c[3]?.key === 'q:left')
+    expect(auto?.[2]).toBe(150)
+    expect(auto?.[3]).toEqual({ mode: 'wait', key: 'q:left' })
+    vi.mocked(say).mockClear()
+    store.callout = { id: 1, key: 'battle.streak', p: { n: 3 }, team: 'red' }
+    await settle()
+    expect(vi.mocked(say).mock.calls.at(-1)![3]).toEqual({ mode: 'skip' })
+    vi.mocked(say).mockClear()
+    store.state = { ...store.state!, phase: 'ended', winner: 'red' }
+    await settle()
+    vi.advanceTimersByTime(1000)
+    await settle()
+    expect(vi.mocked(say).mock.calls.at(-1)![3]).toEqual({ mode: 'wait', key: 'finish' })
     w.unmount()
   })
 })

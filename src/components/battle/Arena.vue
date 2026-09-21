@@ -7,7 +7,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { lang, ui } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
-import { hush, say, sayKeys } from '@/engine/voice'
+import { forget, hush, say, sayKeys } from '@/engine/voice'
 import type { Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
 import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
@@ -106,11 +106,11 @@ watch(
 )
 const elapsed = computed(() => (state.value ? formatElapsed(elapsedMs(state.value, now.value)) : '00:00'))
 
-// ── 弹出提示：朗读（B5a） ──
+// ── 弹出提示：朗读（B5a）；有人点了 🔊 在读题就不读了（B37，屏幕上有字，读题完了再读就过时了） ──
 watch(
   () => store.callout,
   (c) => {
-    if (c) say(phraseSpeech({ k: c.key, p: c.p }, lang.value), lang.value)
+    if (c) say(phraseSpeech({ k: c.key, p: c.p }, lang.value), lang.value, 0, { mode: 'skip' })
   },
 )
 
@@ -128,7 +128,11 @@ watch(
       const id = skin.value?.id ?? ''
       endTimers.push(
         setTimeout(
-          () => say([...phraseSpeech({ k: `battle.win.${winner}` }, lang.value), ...phraseSpeech({ k: finishKey(id) }, lang.value)], lang.value),
+          () =>
+            say([...phraseSpeech({ k: `battle.win.${winner}` }, lang.value), ...phraseSpeech({ k: finishKey(id) }, lang.value)], lang.value, 0, {
+              mode: 'wait', // 有人点了 🔊 在读题就等它读完再播报（B37）
+              key: 'finish',
+            }),
           900,
         ),
       )
@@ -147,9 +151,10 @@ const onCompact = (e: MediaQueryListEvent): void => {
 compactMq?.addEventListener?.('change', onCompact)
 
 const confirming = ref(false)
-// 退出确认框弹出来时读「要退出比赛吗？」（B39a）
+// 退出确认框弹出来时读「要退出比赛吗？」（B39a）；正在读题就排在后面（B37），框关掉了还没轮到就不读了
 watch(confirming, (c) => {
-  if (c) sayKeys(['battle.exit.ask'], lang.value)
+  if (c) sayKeys(['battle.exit.ask'], lang.value, 0, { mode: 'wait', key: 'exit' })
+  else forget('exit')
 })
 
 function exitFullscreen(): void {

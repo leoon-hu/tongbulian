@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 🎤 开 / 关语音（需求 B57）：只在多设备房间里出现。没开是灰的，开着带绿圈、自己说话时脉动；
-// 出错（拒绝权限 / 不支持 / 名额满）在旁边写一句 3 秒消失并朗读，开 / 关也朗读一句（B39a）。
+// 出错（拒绝权限 / 不支持 / 名额满）在旁边写一句 3 秒消失并朗读，开 / 关也朗读一句（B39a；正在读题就排在后面，B37）。
 // round = 竞技场顶栏的圆钮（只有图标，提示挂在按钮下面）；否则是带字的药丸键；hint = 下面写「一个屋子里就不用开」。
 import { computed, watch } from 'vue'
 import { lang, ui } from '@/engine/i18n'
@@ -9,6 +9,8 @@ import { useVoiceStore } from '@/stores/voice'
 import RubyText from '@/components/ui/RubyText.vue'
 
 const props = defineProps<{ round?: boolean; hint?: boolean }>()
+/** 🎤 的几句提示排一个队：正在读题就等它读完，几句连着来只留最新的 */
+const MIC_SAY = { mode: 'wait', key: 'mic' } as const
 const voice = useVoiceStore()
 const label = computed(() => ui(voice.enabled ? 'mic.btn.off' : 'mic.btn.on'))
 /** 按钮下面那一句：出错 > 连不上 / 人太多 > 麦克风暂时没声音 > 连接中 > 「一个屋子里就不用开」 */
@@ -23,19 +25,19 @@ const note = computed<{ key: string; kind: 'error' | 'link' | 'hint' } | null>((
 async function toggle(): Promise<void> {
   const was = voice.enabled
   await voice.toggle()
-  if (voice.enabled !== was) sayKeys([voice.enabled ? 'mic.on' : 'mic.off'], lang.value)
+  if (voice.enabled !== was) sayKeys([voice.enabled ? 'mic.on' : 'mic.off'], lang.value, 0, MIC_SAY)
 }
 watch(
   () => voice.error,
   (e) => {
-    if (e) sayKeys([`mic.${e}`], lang.value)
+    if (e) sayKeys([`mic.${e}`], lang.value, 0, MIC_SAY)
   },
 )
 // 连不上 / 人太多：出现时读一遍
 watch(
   () => voice.link,
   (l) => {
-    if (l === 'failed' || l === 'crowded') sayKeys([`mic.${l}`], lang.value)
+    if (l === 'failed' || l === 'crowded') sayKeys([`mic.${l}`], lang.value, 0, MIC_SAY)
   },
 )
 </script>

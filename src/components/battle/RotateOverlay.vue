@@ -1,9 +1,9 @@
 <script setup lang="ts">
-// 手机竖着拿时盖一层「请把手机横过来」（B30）：横过来自动消失；出现时朗读一次
+// 手机竖着拿时盖一层「请把手机横过来」（B30）：横过来自动消失；出现时朗读一次（正在读题就排在后面，B37；横过来了还没轮到就不读）
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
-import { say } from '@/engine/voice'
+import { forget, say } from '@/engine/voice'
 import RubyText from '@/components/ui/RubyText.vue'
 
 const QUERY = '(orientation: portrait) and (max-width: 640px)'
@@ -17,7 +17,8 @@ onBeforeUnmount(() => mq?.removeEventListener?.('change', onChange))
 watch(
   show,
   (v) => {
-    if (v) say(phraseSpeech({ k: 'battle.rotate' }, lang.value), lang.value, 300)
+    if (v) say(phraseSpeech({ k: 'battle.rotate' }, lang.value), lang.value, 300, { mode: 'wait', key: 'rotate' })
+    else forget('rotate')
   },
   { immediate: true },
 )
