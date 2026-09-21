@@ -8,7 +8,7 @@ export const PINYIN: Record<string, string> = {
   'q.countDots': 'yí gòng yǒu duō shao gè diǎn zi',
   'q.countPicAll': 'kàn tú suàn yi suàn yí gòng yǒu duō shao gè',
   'q.decompose': 'kě yǐ fēn chéng hé jǐ',
-  'q.breakTenHint': 'shí gé zhèn mǎn wài miàn hái yǒu jǐ gè yì qǐ jiǎn yi jiǎn',
+  'q.breakTenHint': 'xiān cóng shí gé zhèn lǐ ná zǒu gè shèng xià de hé wài miàn de yí gòng yǒu jǐ gè',
   'q.whichMore': 'nǎ ge duō ne',
   'q.fillCompare': 'bǐ yi bǐ tián huò',
   'q.countAll': 'shǔ yi shǔ yí gòng yǒu jǐ gè',

@@ -98,7 +98,7 @@ export function stemText(part: StemPart): string {
     case 'expr':
       return part.expr
     case 'tenframe':
-      return `（十格阵：${part.filled} 个${part.extra ? `，另有 ${part.extra} 个` : ''}）`
+      return `（十格阵：${part.filled} 个${part.taken ? `，划掉 ${part.taken} 个` : ''}${part.extra ? `，另有 ${part.extra} 个` : ''}）`
     case 'objects':
       return icons(part.icon, part.count)
     case 'scatter':

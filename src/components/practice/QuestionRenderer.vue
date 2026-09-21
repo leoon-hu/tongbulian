@@ -33,6 +33,7 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean }>(), { wit
         v-else-if="part.kind === 'tenframe'"
         :filled="part.filled"
         :extra="part.extra ?? 0"
+        :taken="part.taken ?? 0"
       />
       <CountingObjects
         v-else-if="part.kind === 'objects'"

@@ -8,6 +8,7 @@ import RubyText from '@/components/ui/RubyText.vue'
  * - 展示：filled 个橙点在格内，extra 个蓝点在格外
  * - mode='add' 演示凑十：蓝点逐个移入格内直到满 10，同步显示算式讲解
  * - mode='sub' 演示破十：格子从满 10 起，逐个拿走 remove 个，剩下的加外面的
+ * - taken：静态地把格里最后 taken 个点画成「划掉」（淡色 + ✕），破十法的题干用（先从 10 里拿走几个，剩下的亮着）
  */
 const props = withDefaults(
   defineProps<{
@@ -17,10 +18,12 @@ const props = withDefaults(
     mode?: 'add' | 'sub'
     /** 破十时从格内拿走的个数 */
     remove?: number
+    /** 题干里已经划掉的个数（画成淡色 + ✕，不动画） */
+    taken?: number
     /** 挂载后自动播放动画（答错讲解用） */
     autoDemo?: boolean
   }>(),
-  { extra: 0, mode: 'add', remove: 0, autoDemo: false },
+  { extra: 0, mode: 'add', remove: 0, taken: 0, autoDemo: false },
 )
 
 const frameCount = ref(clampFrame(props.filled))
@@ -102,6 +105,10 @@ function playSub(): void {
 }
 
 const cells = computed(() => Array.from({ length: 10 }, (_, i) => i < frameCount.value))
+/** 第 i 格的点是不是划掉的：从最后一格往前数 taken 个 */
+function isTaken(i: number): boolean {
+  return props.taken > 0 && i >= frameCount.value - props.taken
+}
 
 onUnmounted(stopTimers)
 
@@ -116,9 +123,9 @@ if (props.autoDemo) {
   <div class="tenframe">
     <div class="row">
       <div class="frame">
-        <div v-for="(isFilled, i) in cells" :key="i" class="cell">
+        <div v-for="(isFilled, i) in cells" :key="i" class="cell" :class="{ taken: isFilled && isTaken(i) }">
           <Transition name="dot">
-            <span v-if="isFilled" class="dot orange" />
+            <span v-if="isFilled" class="dot orange" :class="{ taken: isTaken(i) }" />
           </Transition>
         </div>
       </div>
@@ -151,6 +158,7 @@ if (props.autoDemo) {
   background: var(--c-card);
 }
 .cell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,6 +176,19 @@ if (props.autoDemo) {
 }
 .dot.blue {
   background: radial-gradient(circle at 35% 30%, #9fceff, #2f7fd6);
+}
+/* 划掉的点：点淡下去，✕ 画在格子上（不随点一起变淡），课本里「拿走」的画法 */
+.dot.taken {
+  opacity: 0.3;
+}
+.cell.taken::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  opacity: 0.8;
+  background:
+    linear-gradient(45deg, transparent 44%, var(--c-text) 44%, var(--c-text) 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, var(--c-text) 44%, var(--c-text) 56%, transparent 56%);
 }
 .extras {
   display: grid;

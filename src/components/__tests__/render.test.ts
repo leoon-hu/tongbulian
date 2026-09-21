@@ -54,6 +54,25 @@ describe('题目渲染冒烟测试（每个知识点用真实题目挂载）', (
   }
 })
 
+describe('十格阵的划掉（回归：QuestionRenderer 必须转发 tenframe 的 taken）', () => {
+  it('破十法带图的题：格里划掉减数那几个点、剩下的亮着，外面是个位', () => {
+    const gen = getGenerator('s2-02-borrow-sub')!
+    let checked = 0
+    for (let seed = 1; seed <= 60; seed++) {
+      const q = gen(2, createRng(seed))
+      const frame = q.stem.find((p) => p.kind === 'tenframe')
+      if (!frame || frame.kind !== 'tenframe') continue
+      checked += 1
+      const w = mount(QuestionRenderer, { props: { question: q } })
+      expect(w.findAll('.dot.orange.taken')).toHaveLength(frame.taken!)
+      expect(w.findAll('.dot.orange:not(.taken)')).toHaveLength(10 - frame.taken!)
+      expect(w.findAll('.dot.blue')).toHaveLength(frame.extra!)
+      w.unmount()
+    }
+    expect(checked).toBeGreaterThan(5)
+  })
+})
+
 describe('数字键盘的两种布局', () => {
   it('默认 3 × 4：1…9 / ⌫ 0 ✓；wide 两行六键：1 2 3 4 5 ⌫ / 6 7 8 9 0 ✓；hideDisplay 不画显示框', () => {
     const grid = mount(NumPad)

@@ -81,6 +81,31 @@ describe('凑十法生成器 (s1-05-carry-add)', () => {
     expect(checked).toBeGreaterThan(20)
   })
 
+  it('破十法带图的题：格里满 10、划掉的 = 减数、外面的 = 个位，剩下的加外面的 = 答案', () => {
+    const gen = getGenerator('s2-02-borrow-sub')!
+    let checked = 0
+    for (const d of [1, 2, 3] as const) {
+      for (let seed = 1; seed <= 200; seed++) {
+        const q = gen(d, createRng(seed))
+        const frame = q.stem.find((p) => p.kind === 'tenframe')
+        if (!frame || frame.kind !== 'tenframe') continue
+        checked += 1
+        const expr = q.stem.find((p) => p.kind === 'expr')
+        if (!expr || expr.kind !== 'expr') throw new Error('no expr')
+        const [minuend, subtrahend] = expr.expr.replace('= ?', '').split('-').map((s) => parseInt(s.trim(), 10)) as [number, number]
+        expect(frame.filled).toBe(10)
+        expect(frame.taken).toBe(subtrahend)
+        expect(frame.extra).toBe(minuend - 10)
+        expect(10 - frame.taken! + frame.extra!).toBe(minuend - subtrahend)
+        if (q.answer.kind === 'number') expect(q.answer.value).toBe(minuend - subtrahend)
+        const hint = q.stem[0]
+        expect(hint?.kind === 'text' && typeof hint.text === 'object' && hint.text.p?.n).toBe(subtrahend)
+        expect(zh(hint!.kind === 'text' ? hint.text : '')).toContain(`拿走 ${subtrahend} 个`)
+      }
+    }
+    expect(checked).toBeGreaterThan(30)
+  })
+
   it('十格阵题干：filled/extra 与算式一致', () => {
     const gen = getGenerator(KP)!
     let checked = 0

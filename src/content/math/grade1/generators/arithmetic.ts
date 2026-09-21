@@ -222,8 +222,9 @@ function genBorrowSub(d: Difficulty, rng: RNG): Question {
   let type: Question['type'] = 'arith'
   if (usePic) {
     type = 'pic-equation'
-    stem.push({ kind: 'text', text: { k: 'q.breakTenHint' } })
-    stem.push({ kind: 'tenframe', filled: 10, extra: units })
+    // 图要把「减」画出来（2026-09-22 用户说只画 10 + 个位看不明白）：格里划掉减数那几个，只留剩下的亮着，加外面的就是答案
+    stem.push({ kind: 'text', text: { k: 'q.breakTenHint', p: { n: subtrahend } } })
+    stem.push({ kind: 'tenframe', filled: 10, extra: units, taken: subtrahend })
   }
   stem.push({ kind: 'expr', expr: `${minuend} - ${subtrahend} = ?` })
   const q = numberQuestion({

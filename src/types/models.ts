@@ -92,7 +92,7 @@ export type SeqCell =
 export type StemPart =
   | { kind: 'text'; text: LStr }
   | { kind: 'expr'; expr: string }
-  | { kind: 'tenframe'; filled: number; extra?: number }
+  | { kind: 'tenframe'; filled: number; extra?: number; taken?: number } // taken：格里划掉的个数（破十法：拿走的那几个，淡色 + ✕）
   /** 一组同类实物（数数） */
   | { kind: 'objects'; icon: string; count: number }
   /** 一堆混合实物（分类、数指定的一类） */
