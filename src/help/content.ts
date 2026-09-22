@@ -95,6 +95,10 @@ export function helpSections(lang: Lang): HelpSection[] {
             kind: 'p',
             text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with the same three buttons in every mode: "next chapter" (on to the next topic in this book with that chapter\'s game, all the way to the last topic), "play again" (same people and game, new questions) and "stop playing" (back to the map). In a room everyone sees the same three, and whoever taps first decides for all: "next chapter" moves the same room on with no new room or rescanning; "stop playing" closes the room and everyone returns to the map. To pick a different game, use Settings on the setup page.',
           },
+          {
+            kind: 'p',
+            text: 'More ways to play: the top bar has a row of reactions for your team (🔥 😆 😱 😎) that fly across to the other side — the robot answers back, and in "own devices" watchers can cheer too; tap the game scene to poke your character (the train whistles, the tortoise hops…). The robot\'s default speed is "match me": it follows your pace, and it talks. One of your 8 questions is a lucky question (✨): get it right for golden confetti. At 7 : 7 it\'s match point; at 8 the scene zooms in on the winner. Pick your own animal in ⚙️ Settings; play the same topic again to see the chapter record, or race your last run as a 👻 ghost. Background music can be turned off in ⚙️ Settings.',
+          },
         ],
       },
       {
@@ -231,6 +235,10 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'p',
           text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；三种模式都是「下一章」「再来一局」「不玩了」三个键：「下一章」接着打这一册的下一个知识点（游戏也换成那一章的），可以一直打到这一册最后一个知识点；「再来一局」同样的人和游戏换一组题；「不玩了」回地图。「各用各的」时三个角色看到的一样，谁先点就按谁的、大家一起变：「下一章」在同一个房间换，不用重新建房、重新扫码；「不玩了」关掉房间，大家一起回地图。想换游戏，在设置页的「⚙️ 配置」里选。',
+        },
+        {
+          kind: 'p',
+          text: '更多玩法：顶栏有自己队的一排表情 🔥 😆 😱 😎，点了飞到对方那边，机器人会回应，「各用各的」时观战的人也能发；点游戏画面里自己队的角色它会有反应（火车鸣笛、乌龟跳一下……）。机器人快慢默认「跟着你」，还会说话。8 题里有一道幸运题 ✨，答对撒金色彩纸；7 : 7 是决胜题；到 8 分画面会放大对准赢的那一边。「⚙️ 配置」里可以选自己的小动物、关背景音乐；同一个知识点连着打，结果页记本章战绩；打机器人时还可以「👻 跟上次的自己比」。',
         },
       ],
     },
