@@ -7,6 +7,10 @@ import type { MatchEvent, MatchState, Player, Team } from './protocol'
 
 /** 「预备」+ 倒数 3、2、1 + 「开始」的总时长 */
 export const COUNTDOWN_MS = 4400
+/** 幸运题（B65）：每人 8 题里由 seed 定一题——0 起的序号 1…6（第 2–7 题），所有设备算出来一样；答对时发 lucky 事件，分数不变 */
+export function luckyIndexFor(seed: number): number {
+  return 1 + ((Math.imul(seed >>> 0, 0x9e3779b1) >>> 0) % 6)
+}
 /** 连对几题弹出提示（B5a） */
 export const STREAK_MILESTONES: readonly number[] = [3, 5]
 
@@ -124,6 +128,7 @@ export function answer(
       next = { ...next, phase: 'ended', winner: team, endedAt: now }
       events.push({ type: 'finished', winner: team })
     } else {
+      if (index === luckyIndexFor(player.seed)) events.push({ type: 'lucky', team, playerId })
       if (STREAK_MILESTONES.includes(streak)) events.push({ type: 'streak', playerId, team, n: streak })
       if (ahead === team && state.leading !== null && state.leading !== team) events.push({ type: 'lead', team })
       if (score[team] === state.target - 1) events.push({ type: 'nearWin', team })

@@ -59,6 +59,8 @@ export type MatchEvent =
   | { type: 'lead'; team: Team }
   | { type: 'nearWin'; team: Team }
   | { type: 'deuce' }
+  /** 答对了幸运题（B65）：分数照旧 +1，只是多一阵金色彩纸 */
+  | { type: 'lucky'; team: Team; playerId: string }
   | { type: 'half'; team: Team }
   | { type: 'finished'; winner: Team }
 

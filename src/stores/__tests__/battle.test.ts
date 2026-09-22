@@ -10,6 +10,7 @@ import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS } from '@/battle/emotes'
 import { playSfx } from '@/battle/sfx'
 import { apply, createRoom, join, snapshot } from '../../../server/room'
 import { ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, planAnswer } from '@/battle/ai'
+import { luckyIndexFor } from '@/battle/match'
 
 vi.mock('@/battle/ai', async (orig) => {
   const m = await orig<typeof import('@/battle/ai')>()
@@ -155,10 +156,11 @@ describe('事件队列（B34：给游戏宿主用）', () => {
       s.submit('left', correctOf(s.questionOf(left())))
       vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
     }
-    // 第 3 题答对：answered → point → streak 三条都在，序号递增
-    const tail = s.events.slice(-3)
+    // 第 3 题答对：answered → point → streak 三条都在，序号递增（幸运题那一题会多一条 lucky，不看它，B65）
+    const all = s.events.filter((x) => x.e.type !== 'lucky')
+    const tail = all.slice(-3)
     expect(tail.map((x) => x.e.type)).toEqual(['answered', 'point', 'streak'])
-    expect(tail.map((x) => x.seq)).toEqual([tail[0]!.seq, tail[0]!.seq + 1, tail[0]!.seq + 2])
+    expect(tail.map((x) => x.seq).every((v, i, a) => i === 0 || v > a[i - 1]!)).toBe(true)
     // 一直答错不会结束比赛：把队列灌满，只留最近 EVENT_LOG 条，序号继续递增
     for (let i = 0; i < EVENT_LOG + 10; i++) {
       const q = s.questionOf(s.state!.players[1]!)
@@ -385,5 +387,57 @@ describe('决胜题（B62）', () => {
     expect(s.callout).toMatchObject({ key: 'battle.deuce', team: 'both' })
     expect(vi.mocked(playSfx).mock.calls.map((c) => c[0])).toContain('heartbeat')
     expect(s.events.at(-1)?.e.type).toBe('deuce')
+  })
+})
+
+describe('幸运题与本章战绩（B65 / B64）', () => {
+  it('答对幸运题：弹「幸运题！」+ 烟花声 + 金色彩纸（LUCKY_MS 后收）；分数照旧', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.setName('right', '小虎')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    s.beginPlay()
+    const lucky = luckyIndexFor(1)
+    for (let i = 0; i < lucky; i++) {
+      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    expect(s.lucky).toBeNull()
+    vi.mocked(playSfx).mockClear()
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    expect(s.state!.score.red).toBe(lucky + 1)
+    expect(s.lucky).toMatchObject({ team: 'red' })
+    expect(s.callout).toMatchObject({ key: 'battle.lucky', team: 'red' })
+    expect(vi.mocked(playSfx).mock.calls.map((c) => c[0])).toContain('fireworks')
+    vi.advanceTimersByTime(1800)
+    expect(s.lucky).toBeNull()
+  })
+
+  it('本章战绩：同一个知识点连着打几局各赢几局，再来一局接着记；换知识点 / 离开清零', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    const play = (winner: 'left' | 'right'): void => {
+      s.beginPlay()
+      while (s.state!.phase === 'playing') {
+        s.submit(winner, correctOf(s.questionOf(s.state!.players[winner === 'left' ? 0 : 1]!)))
+        vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+      }
+    }
+    s.setName('right', '小虎')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    expect(s.series).toBeNull()
+    play('left')
+    expect(s.series).toEqual({ kpId: KP, wins: { red: 1, blue: 0 } })
+    s.rematch({ left: 3, right: 4 })
+    play('right')
+    s.rematch({ left: 5, right: 6 })
+    play('left')
+    expect(s.series).toEqual({ kpId: KP, wins: { red: 2, blue: 1 } })
+    s.startLocal({ kpId: 's1-04-simple-addsub', mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    expect(s.series).toBeNull()
+    play('right')
+    expect(s.series).toEqual({ kpId: 's1-04-simple-addsub', wins: { red: 0, blue: 1 } })
+    s.leave()
+    expect(s.series).toBeNull()
   })
 })

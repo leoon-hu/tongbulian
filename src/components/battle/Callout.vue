@@ -8,7 +8,7 @@ defineProps<{ callout: Callout | null }>()
 
 <template>
   <Transition name="callout">
-    <div v-if="callout" :key="callout.id" class="callout" :class="callout.team" role="status">
+    <div v-if="callout" :key="callout.id" class="callout" :class="[callout.team, { lucky: callout.key === 'battle.lucky' }]" role="status">
       <RubyText :text="{ k: callout.key, p: callout.p }" />
     </div>
   </Transition>
@@ -39,6 +39,10 @@ defineProps<{ callout: Callout | null }>()
 .callout.blue {
   border-color: var(--c-blue);
   color: var(--c-blue);
+}
+/* 幸运题（B65）：前面带一颗星 */
+.callout.lucky::before {
+  content: '✨ ';
 }
 /* 决胜题（B62）：两队都算，红蓝渐变描边 */
 .callout.both {

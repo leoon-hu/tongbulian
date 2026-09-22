@@ -90,3 +90,21 @@ describe('结果页按钮（B9）', () => {
     setLang('en')
   })
 })
+
+describe('本章战绩（B64）', () => {
+  it('有战绩就在用时下面写「本章战绩：小兔 2 : 1 小虎」，先赢两局的名字旁出 🏆；别的知识点的战绩不显示', async () => {
+    const w = mount(ResultPanel, { props: { state: ended(), next: nextKp(KP), series: { kpId: KP, wins: { red: 2, blue: 1 } } } })
+    await flushPromises()
+    const line = shown(w.find('.series')).replace(/\s+/g, ' ')
+    expect(line).toContain('本章战绩')
+    expect(line).toContain('小兔 🏆 2')
+    expect(line).toContain('1 小虎')
+    await w.setProps({ series: { kpId: KP, wins: { red: 1, blue: 1 } } })
+    expect(shown(w.find('.series'))).not.toContain('🏆')
+    await w.setProps({ series: { kpId: 'other', wins: { red: 3, blue: 0 } } })
+    expect(w.find('.series').exists()).toBe(false)
+    await w.setProps({ series: null })
+    expect(w.find('.series').exists()).toBe(false)
+    w.unmount()
+  })
+})

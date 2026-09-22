@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   COUNTDOWN_MS,
+  luckyIndexFor,
   answer,
   beginPlay,
   canStart,
@@ -54,7 +55,8 @@ describe('比赛状态机（B1–B9）', () => {
       r = answer(m, 'a', i, true, 'x', 2000 + i)
       m = r.state
       expect(m.phase).toBe('playing')
-      expect(r.events.map((e) => e.type)).toEqual(['answered', 'point', ...(extra[i] ?? [])])
+      // 幸运题（B65）那一题会多一条 lucky，这里不看它
+      expect(r.events.map((e) => e.type).filter((t) => t !== 'lucky')).toEqual(['answered', 'point', ...(extra[i] ?? [])])
       expect(findPlayer(m, 'a')!.streak).toBe(i)
     }
     expect(m.score.red).toBe(7)
@@ -171,5 +173,41 @@ describe('决胜题（B62）', () => {
     score('a', 1)
     expect(types.at(-1)).toEqual(['answered', 'point', 'finished'])
     expect(m.winner).toBe('red')
+  })
+})
+
+describe('幸运题（B65）', () => {
+  it('每人由 seed 定一题（0 起 1…6），确定的；答对那一题发 lucky（分数照旧 +1），答错 / 别的题不发', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const i = luckyIndexFor(seed)
+      expect(i).toBeGreaterThanOrEqual(1)
+      expect(i).toBeLessThanOrEqual(6)
+      expect(luckyIndexFor(seed)).toBe(i)
+    }
+    expect(new Set(Array.from({ length: 60 }, (_, s) => luckyIndexFor(s))).size).toBe(6)
+    let m = startMatch(createMatch({ kpId: 's1-05-carry-add', skin: 'race', players: [{ id: 'a', name: 'A', team: 'red' }, { id: 'b', name: 'B', team: 'blue' }] }), { a: 5, b: 9 }, 0)
+    m = beginPlay(m, 100)
+    const lucky = luckyIndexFor(5)
+    const seen: string[][] = []
+    for (let i = 0; i < 7; i++) {
+      const p = m.players.find((x) => x.id === 'a')!
+      const res = answer(m, 'a', p.index, i !== lucky, '1', 200)
+      m = res.state
+      seen.push(res.events.map((e) => e.type))
+    }
+    // 幸运题那一题故意答错：不发 lucky；别的题答对也不发
+    expect(seen.flat()).not.toContain('lucky')
+    m = startMatch(m, { a: 5, b: 9 }, 300)
+    m = beginPlay(m, 400)
+    for (let i = 0; i <= lucky; i++) {
+      const p = m.players.find((x) => x.id === 'a')!
+      const res = answer(m, 'a', p.index, true, '1', 500)
+      m = res.state
+      if (i === lucky) {
+        expect(res.events.map((e) => e.type)).toContain('lucky')
+        expect(res.events.find((e) => e.type === 'lucky')).toEqual({ type: 'lucky', team: 'red', playerId: 'a' })
+      } else expect(res.events.map((e) => e.type)).not.toContain('lucky')
+    }
+    expect(m.score.red).toBe(lucky + 1)
   })
 })

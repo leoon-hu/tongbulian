@@ -11,4 +11,6 @@ export interface RowData {
   voice?: VoiceMark
   /** 机器人正在说的话（B61，词条键）：它那一行冒气泡 */
   say?: string | null
+  /** 正在显示的这道题是幸运题（B65）：题干旁标 ✨ */
+  lucky?: boolean
 }

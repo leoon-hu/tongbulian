@@ -48,6 +48,8 @@ export const CALLOUT_MS = 1600
 export const EVENT_LOG = 64
 /** 点游戏（B59）：两次点按的音效至少隔多久 */
 export const POKE_GAP_MS = 250
+/** 幸运题（B65）：金色彩纸撒多久 */
+export const LUCKY_MS = 1800
 
 const KEY = 'tongbulian:battle'
 
@@ -174,6 +176,11 @@ export const useBattleStore = defineStore('battle', () => {
   let emoteSeq = 0
   const emoteAt: Partial<Record<Role, number>> = {}
   let pokeAt = -Infinity
+  /** 幸运题答对了（B65）：竞技场撒金色彩纸 */
+  const lucky = ref<{ id: number; team: Team } | null>(null)
+  let luckySeq = 0
+  /** 本章战绩（B64）：同一个知识点连着打了几局各赢几局；换知识点 / 离开清零，不存本地 */
+  const series = ref<{ kpId: string; wins: Record<Team, number> } | null>(null)
   /** 机器人正在说的话（B61）：它那一行的气泡 + 朗读由竞技场做 */
   const robotLine = ref<{ id: number; key: string } | null>(null)
   let robotSeq = 0
@@ -245,6 +252,7 @@ export const useBattleStore = defineStore('battle', () => {
     }
     callout.value = null
     emotes.value = []
+    lucky.value = null
     robotLine.value = null
     shownAt.clear()
     humanStats.times = []
@@ -358,9 +366,9 @@ export const useBattleStore = defineStore('battle', () => {
 
   /** 收到比赛事件后的反应（两种模式共用）：入队、音效、弹提示；返回这次弹了什么（答对的反馈窗口要延长） */
   function react(evts: MatchEvent[], skin: string): MatchEvent | null {
-    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 决胜题 > 反超 > 还差一分 > 连对 > 到一半
+    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 决胜题 > 幸运题 > 反超 > 还差一分 > 连对 > 到一半
     let toCall: MatchEvent | null = null
-    const priority: Record<string, number> = { deuce: 4, lead: 3, nearWin: 2, streak: 1, half: 0.5 }
+    const priority: Record<string, number> = { deuce: 4, lucky: 3.5, lead: 3, nearWin: 2, streak: 1, half: 0.5 }
     const sounds = skinSfx(skin, skinById(skin)?.kind)
     for (const e of evts) {
       lastEvent.value = e
@@ -371,18 +379,36 @@ export const useBattleStore = defineStore('battle', () => {
       }
       if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
       if (e.type === 'lead' || e.type === 'nearWin' || e.type === 'deuce') playSfx(calloutSfx(e.type))
+      if (e.type === 'lucky') {
+        // 幸运题（B65）：金色彩纸 + 烟花声，分数不变
+        playSfx('fireworks')
+        const id = ++luckySeq
+        lucky.value = { id, team: e.team }
+        later(
+          timers,
+          () => {
+            if (lucky.value?.id === id) lucky.value = null
+          },
+          LUCKY_MS,
+        )
+      }
       if (e.type === 'finished') {
         clearAll(aiTimers)
         later(timers, () => playSfx('fanfare'), 300)
         sounds.win.forEach((x, i) => later(timers, () => playSfx(x), 500 + i * 250))
+        // 本章战绩（B64）：同一个知识点接着记，换了知识点从头记
+        const kpId = state.value?.kpId ?? ''
+        const cur = series.value && series.value.kpId === kpId ? series.value : { kpId, wins: { red: 0, blue: 0 } }
+        series.value = { kpId, wins: { ...cur.wins, [e.winner]: cur.wins[e.winner] + 1 } }
       }
-      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half' || e.type === 'deuce') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
+      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half' || e.type === 'deuce' || e.type === 'lucky') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
         toCall = e
       }
     }
     if (toCall) {
-      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' | 'deuce' }>
+      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' | 'deuce' | 'lucky' }>
       if (e.type === 'deuce') showCallout('battle.deuce', 'both')
+      else if (e.type === 'lucky') showCallout('battle.lucky', e.team)
       else if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
       else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
@@ -459,6 +485,7 @@ export const useBattleStore = defineStore('battle', () => {
   }): void {
     reset()
     mode.value = opts.mode
+    if (series.value && series.value.kpId !== opts.kpId) series.value = null
     aiLevel = opts.aiLevel ?? prefs.value.aiLevel
     aiRng = createRng(opts.aiSeed)
     // 没指定就用按章节排到的游戏（B36）；设置页的「配置」里换的只影响这一次，不记偏好
@@ -630,6 +657,7 @@ export const useBattleStore = defineStore('battle', () => {
 
   function leave(): void {
     reset()
+    series.value = null
     state.value = null
     mode.value = null
     operable.value = []
@@ -648,6 +676,8 @@ export const useBattleStore = defineStore('battle', () => {
     events,
     callout,
     emotes,
+    lucky,
+    series,
     robotLine,
     intro,
     online,

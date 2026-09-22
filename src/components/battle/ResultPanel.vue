@@ -14,13 +14,31 @@ import RubyText from '@/components/ui/RubyText.vue'
  * next：本册下一个知识点的 id，上面写着下一章是哪个知识点；null = 这一册已是最后一个，没有这个键、写「这一册都打完啦！」。
  * 怎么执行（单设备接着打 / 线上发给服务器）由竞技场决定，这里只发事件。
  */
-const props = defineProps<{ state: MatchState; next: string | null }>()
+const props = defineProps<{
+  state: MatchState
+  next: string | null
+  /** 本章战绩（B64）：同一个知识点连着打的几局各赢几局；null = 没有 */
+  series?: { kpId: string; wins: Record<Team, number> } | null
+}>()
 const emit = defineEmits<{ rematch: []; next: []; quit: [] }>()
 
 const winner = computed<Team>(() => props.state.winner ?? 'red')
 const loser = computed<Team>(() => (winner.value === 'red' ? 'blue' : 'red'))
 const elapsed = computed(() => formatElapsed(elapsedMs(props.state, Date.now())))
 const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ? ui('battle.robot') : p.name)
+/** 战绩里两边的称呼：一个人就是他的名字，多人是队名 */
+function sideName(team: Team): string {
+  const ps = teamPlayers(props.state, team)
+  return ps.length === 1 ? nameOf(ps[0]!) : ui(`battle.team.${team}`)
+}
+/** 先赢两局的那边（B64）：名字旁出 🏆 */
+const seriesLeader = computed<Team | null>(() => {
+  const w = props.series?.wins
+  if (!w) return null
+  if (w.red >= 2 && w.red > w.blue) return 'red'
+  if (w.blue >= 2 && w.blue > w.red) return 'blue'
+  return null
+})
 
 /** 「分享战绩」（F1「开源与分享」）：这一局的知识点、比分、谁赢了 + 站点链接；有系统分享面板直接弹，否则复制一段话 */
 const shareStore = useShareStore()
@@ -44,6 +62,12 @@ function shareResult(): void {
       <span class="red">{{ state.score.red }}</span> : <span class="blue">{{ state.score.blue }}</span>
     </p>
     <p class="time"><RubyText :text="{ k: 'battle.time' }" /> {{ elapsed }}</p>
+    <p v-if="series && series.kpId === state.kpId" class="series">
+      <RubyText :text="{ k: 'battle.series' }" />：
+      <span class="red">{{ sideName('red') }}<template v-if="seriesLeader === 'red'"> 🏆</template> {{ series.wins.red }}</span>
+      :
+      <span class="blue">{{ series.wins.blue }} <template v-if="seriesLeader === 'blue'">🏆 </template>{{ sideName('blue') }}</span>
+    </p>
     <ul class="stats">
       <li v-for="p in state.players" :key="p.id" :class="p.team">
         <span class="who">{{ nameOf(p) }}</span>
@@ -118,6 +142,22 @@ function shareResult(): void {
 .time {
   font-size: var(--fs-md);
   color: var(--c-text-light);
+}
+/* 本章战绩（B64） */
+.series {
+  margin: 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--c-text-light);
+}
+.series .red {
+  color: var(--c-red);
+}
+.series .blue {
+  color: var(--c-blue);
 }
 .stats {
   list-style: none;

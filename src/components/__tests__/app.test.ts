@@ -15,7 +15,7 @@ import { useInstallStore } from '@/stores/install'
 import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
 import { useVoiceStore } from '@/stores/voice'
-import { COUNTDOWN_MS } from '@/battle/match'
+import { COUNTDOWN_MS, luckyIndexFor } from '@/battle/match'
 import { FakeWs } from '@/battle/__tests__/fake-socket'
 import { FakePc, fakePeerDeps, fakeStream } from '@/battle/__tests__/fake-rtc'
 import { apply, autoStart, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
@@ -1470,6 +1470,41 @@ describe('决胜题与终局特写（B62 / B63）', () => {
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(w.find('.arena').classes()).not.toContain('finale')
+    w.unmount()
+  })
+})
+
+describe('幸运题（B65）', () => {
+  const correctOf = (q: { answer: { kind: string; value?: number; choiceId?: string } }): number | string => (q.answer.kind === 'number' ? q.answer.value! : q.answer.choiceId!)
+  it('幸运题那一道题干右上角有 ✨；答对了撒金色彩纸 + 弹「幸运题！」', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const w = await mountAt('/battle/local/s1-04-simple-addsub?mode=duo')
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    await settle()
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    const left = store.state!.players[0]!
+    const lucky = luckyIndexFor(left.seed)
+    expect(w.find('.team.red .lucky-mark').exists()).toBe(lucky === 0)
+    for (let i = 0; i < lucky; i++) {
+      store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
+      vi.advanceTimersByTime(1500)
+      await settle()
+    }
+    expect(w.find('.team.red .lucky-mark').exists()).toBe(true)
+    store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
+    await settle()
+    expect(w.find('.lucky-burst').exists()).toBe(true)
+    expect(w.find('.callout.lucky').exists()).toBe(true)
+    expect(shown(w.find('.callout'))).toContain('幸运题')
+    vi.advanceTimersByTime(2000)
+    await settle()
+    expect(w.find('.lucky-burst').exists()).toBe(false)
+    expect(w.find('.team.red .lucky-mark').exists()).toBe(false)
     w.unmount()
   })
 })
