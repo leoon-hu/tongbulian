@@ -110,12 +110,33 @@ const deuce = computed(() => {
   const s = state.value
   return !!s && s.phase === 'playing' && s.score.red === s.target - 1 && s.score.blue === s.target - 1
 })
-/** 终局特写（B63）：到 8 分后把游戏盒子放大、镜头对准赢的那一边，结果页出来前收回 */
+/** 终局特写（B63）：到 8 分后把游戏盒子放大、镜头对准赢的那一方的角色（游戏自己报位置，每帧跟着它的收尾动作走），结果页出来前收回 */
 const finale = ref(false)
-const finaleOrigin = computed(() => {
+const slotRef = ref<InstanceType<typeof GameSlot> | null>(null)
+const finaleOrigin = ref('50% 50%')
+/** 游戏没报位置时的兜底：横条对准赢的那条道、竖条对准赢的那一列 */
+function fallbackOrigin(): string {
   const w = state.value?.winner ?? 'red'
   if (skin.value?.slot === 'center') return w === 'red' ? '20% 50%' : '80% 50%'
   return w === 'red' ? '50% 20%' : '50% 80%'
+}
+let camFrame = 0
+function trackWinner(): void {
+  camFrame = 0
+  if (!finale.value) return
+  const w = state.value?.winner
+  const f = w ? (slotRef.value?.focusOf(w) ?? null) : null
+  const next = f ? `${Math.round(f.x)}px ${Math.round(f.y)}px` : fallbackOrigin()
+  if (next !== finaleOrigin.value) finaleOrigin.value = next
+  if (typeof requestAnimationFrame === 'function') camFrame = requestAnimationFrame(trackWinner)
+}
+function stopTracking(): void {
+  if (camFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(camFrame)
+  camFrame = 0
+}
+watch(finale, (on) => {
+  stopTracking()
+  if (on) trackWinner()
 })
 /** 哪几队有本机能操作的行（B58）：那一队的表情排才显示——两人一台两排都有，打机器人 / 多设备只有自己那排 */
 const emoteSides = computed<Team[]>(() => {
@@ -260,6 +281,7 @@ function exit(): void {
 onBeforeUnmount(() => {
   if (ticker) clearInterval(ticker)
   endTimers.forEach(clearTimeout)
+  stopTracking()
   compactMq?.removeEventListener?.('change', onCompact)
   stopMusic()
   hush()
@@ -298,7 +320,7 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-if="skin && skin.slot === 'top' && skinProps" class="strip top" :style="{ '--finale-origin': finaleOrigin }">
-      <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="(t, x, y) => store.poke(t, x, y)" />
+      <GameSlot ref="slotRef" :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="(t, x, y) => store.poke(t, x, y)" />
       <CharBubble v-if="store.charLine" :line="store.charLine" />
     </div>
 
@@ -317,7 +339,7 @@ onBeforeUnmount(() => {
         @input="(id, v) => store.setInput(id, v)"
       />
       <div v-if="skin && skin.slot === 'center' && skinProps" class="strip center" :style="{ '--finale-origin': finaleOrigin }">
-        <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="(t, x, y) => store.poke(t, x, y)" />
+        <GameSlot ref="slotRef" :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="(t, x, y) => store.poke(t, x, y)" />
         <CharBubble v-if="store.charLine" :line="store.charLine" />
       </div>
       <TeamPanel

@@ -298,6 +298,12 @@ export class EggModel {
   }
 
   /** 点一下（B59）：蛋晃一晃、母鸡扑一下翅膀 */
+  /** 终局特写（B63）要对准的点：这一队的窝里的蛋（孵出来的小鸡就落在窝边）现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    return { x: g.laneX[i]!, y: g.eggY - g.eggH * 0.3 }
+  }
   poke(team: Team): void {
     const e = this.egg(team)
     const i = team === 'red' ? 0 : 1

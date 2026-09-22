@@ -64,6 +64,9 @@ export function createFruitGame(): GameModule {
     poke(_x, _y, team) {
       model?.poke(team)
     },
+    focus(team) {
+      return model?.focus(team) ?? null
+    },
     resize(w, h, d) {
       width = w
       height = h

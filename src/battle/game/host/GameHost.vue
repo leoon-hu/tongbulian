@@ -236,7 +236,19 @@ onBeforeUnmount(() => {
   }
 })
 
-defineExpose({ status, level })
+/** 终局特写（B63）：问游戏这一队的角色现在在盒子里的哪个点（CSS 像素，夹在盒子内）；游戏没报就 null */
+function focusOf(team: Team): { x: number; y: number } | null {
+  if (!mod?.focus || !info) return null
+  let p: { x: number; y: number } | null = null
+  guard(() => {
+    p = mod!.focus!(team)
+  })
+  const q = p as { x: number; y: number } | null
+  if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.y)) return null
+  return { x: Math.min(info.width, Math.max(0, q.x)), y: Math.min(info.height, Math.max(0, q.y)) }
+}
+
+defineExpose({ status, level, focusOf })
 </script>
 
 <template>

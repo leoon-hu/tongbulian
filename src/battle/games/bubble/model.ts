@@ -308,6 +308,13 @@ export class BubbleModel {
   }
 
   /** 点一下（B59）：鼓腮吹一口、泡泡颤一颤、蹦一下 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const b = this.blowers[i]!
+    return { x: g.laneX[i]!, y: this.cyOf(b) + this.driftOf(b, i) }
+  }
   poke(team: Team): void {
     const b = this.blower(team)
     const i = team === 'red' ? 0 : 1

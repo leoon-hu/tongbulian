@@ -97,7 +97,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'More ways to play: the top bar has a row of reactions for your team (🔥 😆 😱 😎) that fly across to the other side — the robot answers back, and in "own devices" watchers can cheer too; tap the game scene to poke your character (the train whistles, the tortoise hops…) and it says a line of its own. The robot\'s default speed is "match me": it follows your pace, and it talks. At 7 : 7 it\'s match point; at 8 the scene zooms in on the winner. Pick your own animal in ⚙️ Settings; play the same topic again to see the chapter record; the robot also remembers your last run on that topic and starts at that pace. Background music can be turned off in ⚙️ Settings.',
+            text: 'More ways to play: the top bar has a row of reactions for your team (🔥 😆 😱 😎) that fly across to the other side — the robot answers back, and in "own devices" watchers can cheer too; tap the game scene to poke your character (the train whistles, the tortoise hops…) and it says a line of its own. The robot\'s default speed is "match me": it follows your pace, and it talks. At 7 : 7 it\'s match point; at 8 the scene zooms in and follows the winner\'s character. Pick your own animal in ⚙️ Settings; play the same topic again to see the chapter record; the robot also remembers your last run on that topic and starts at that pace. Background music can be turned off in ⚙️ Settings.',
           },
         ],
       },
@@ -238,7 +238,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '更多玩法：顶栏有自己队的一排表情 🔥 😆 😱 😎，点了飞到对方那边，机器人会回应，「各用各的」时观战的人也能发；点游戏画面里自己队的角色它会有反应（火车鸣笛、乌龟跳一下……），还会冒个对话框说一句自己的台词。机器人快慢默认「跟着你」，还会说话。7 : 7 是决胜题；到 8 分画面会放大对准赢的那一边。「⚙️ 配置」里可以选自己的小动物、关背景音乐；同一个知识点连着打，结果页记本章战绩；机器人还记得你上次在这一章的节奏，一开局就按它来。',
+          text: '更多玩法：顶栏有自己队的一排表情 🔥 😆 😱 😎，点了飞到对方那边，机器人会回应，「各用各的」时观战的人也能发；点游戏画面里自己队的角色它会有反应（火车鸣笛、乌龟跳一下……），还会冒个对话框说一句自己的台词。机器人快慢默认「跟着你」，还会说话。7 : 7 是决胜题；到 8 分画面会放大、镜头跟着赢的那个角色。「⚙️ 配置」里可以选自己的小动物、关背景音乐；同一个知识点连着打，结果页记本章战绩；机器人还记得你上次在这一章的节奏，一开局就按它来。',
         },
       ],
     },

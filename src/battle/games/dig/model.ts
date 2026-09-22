@@ -282,6 +282,13 @@ export class DigModel {
   }
 
   /** 点一下（B59）：蹦一下、挥几下镐 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const d = this.diggers[i]!
+    return { x: g.shaftX[i]!, y: d.pos.value - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const d = this.digger(team)
     d.poke.kick(1)

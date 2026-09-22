@@ -366,6 +366,13 @@ export class TrainModel {
   }
 
   /** 点一下（B59）：鸣笛喷汽、烟囱冒一团烟、车身颠一下 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const c = this.trains[i]!
+    return { x: c.pos.value - g.size * 0.6, y: g.laneY[i]! - g.size * 0.35 }
+  }
   poke(team: Team): void {
     const c = this.train(team)
     c.poke.kick(1)

@@ -393,6 +393,13 @@ export class TugModel {
   }
 
   /** 点一下（B59）：那一队使一把劲、蝴蝶结抖一下、蹦一下 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const side = this.sides[i]!
+    return { x: side.members[0]!.x.value, y: g.groundY - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const side = this.side(team)
     side.strain.kick(0.8)

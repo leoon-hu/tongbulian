@@ -302,6 +302,13 @@ export class RaceModel {
   }
 
   /** 点一下（B59）：跳一下、蹬一下腿 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const r = this.runners[i]!
+    return { x: r.x.value, y: g.laneY[i]! + g.laneH * 0.95 - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const r = this.runner(team)
     r.boost.kick(0.5)

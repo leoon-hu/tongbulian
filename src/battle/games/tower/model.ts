@@ -343,6 +343,13 @@ export class TowerModel {
   }
 
   /** 点一下（B59）：工人蹦一下、举手 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const tw = this.towers[i]!
+    return { x: g.colX[i]!, y: tw.builderY.value - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const t = this.tower(team)
     t.hop.kick(1)

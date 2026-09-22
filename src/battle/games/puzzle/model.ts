@@ -300,6 +300,12 @@ export class PuzzleModel {
   }
 
   /** 点一下（B59）：蹦一下、板子闪一下 */
+  /** 终局特写（B63）要对准的点：这一队的这一队的拼图板中心现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    return { x: g.boardX + g.boardW / 2, y: g.boardTop[i]! + g.boardH / 2 }
+  }
   poke(team: Team): void {
     const kid = this.kid(team)
     kid.poke.kick(1)

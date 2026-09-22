@@ -339,6 +339,15 @@ export class CastleModel {
   }
 
   /** 点一下（B59）：炮口冒一股烟、炮身后坐、小动物蹦一下 */
+  /** 终局特写（B63）要对准的点：这一队的炮台上的守卫（塔塌了就在地上）现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const dir = i === 0 ? 1 : -1
+    const down = this.collapsed[i] && this.topY[i]!.done
+    const floorY = down ? g.groundY : this.topY[i]!.value - g.topH
+    return { x: g.towerX[i]! - dir * g.brickW * 0.2, y: floorY - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const gd = this.guard(team)
     const i = team === 'red' ? 0 : 1

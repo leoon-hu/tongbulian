@@ -282,6 +282,14 @@ export class StarsModel {
   }
 
   /** 点一下（B59）：挥一下魔法棒、蹦一下 */
+  /** 终局特写（B63）要对准的点：这一队的这一排星星的中心（连成星座时整排都在）现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const pts = g.stars[i]!
+    const n = Math.max(1, pts.length)
+    return { x: pts.reduce((s, p) => s + p.x, 0) / n, y: pts.reduce((s, p) => s + p.y, 0) / n }
+  }
   poke(team: Team): void {
     const kid = this.kid(team)
     kid.poke.kick(1)

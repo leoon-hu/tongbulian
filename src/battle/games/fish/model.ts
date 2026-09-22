@@ -335,6 +335,12 @@ export class FishModel {
   }
 
   /** 点一下（B59）：鱼扑腾几下、竿弯一下、钓鱼人蹦一下 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const i = team === 'red' ? 0 : 1
+    const f = this.fishes[i]!
+    return { x: this.xOf(f, i), y: this.yOf(f) }
+  }
   poke(team: Team): void {
     const f = this.fish(team)
     const i = team === 'red' ? 0 : 1

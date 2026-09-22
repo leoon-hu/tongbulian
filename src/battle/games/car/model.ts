@@ -249,6 +249,13 @@ export class CarModel {
   }
 
   /** 点一下（B59）：颠一下、轰一脚油门冒尾气 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const c = this.cars[i]!
+    return { x: c.pos.value, y: g.laneY[i]! - g.size * 0.3 }
+  }
   poke(team: Team): void {
     const c = this.car(team)
     c.poke.kick(1)

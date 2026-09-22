@@ -312,6 +312,13 @@ export class FlowerModel {
   }
 
   /** 点一下（B59）：浇一下水、花盆蹦一下 */
+  /** 终局特写（B63）要对准的点：这一队的花现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const tip = this.tip(i)
+    return { x: tip.x, y: tip.y - g.bloomR * 0.3 }
+  }
   poke(team: Team): void {
     const p = this.plant(team)
     p.poke.kick(1)

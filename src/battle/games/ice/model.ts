@@ -364,6 +364,13 @@ export class IceModel {
   }
 
   /** 点一下（B59）：企鹅拍翅膀、蹦一下，冰晃一晃 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const side = this.sides[i]!
+    return { x: g.colX[i]!, y: this.penguinY(side) - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const side = this.side(team)
     side.flap.kick(1)

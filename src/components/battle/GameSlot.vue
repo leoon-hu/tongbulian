@@ -4,6 +4,7 @@
 import type { GameState } from '@/battle/game/contract'
 import type { SeqEvent, Team } from '@/battle/protocol'
 import type { SkinMeta } from '@/battle/skins'
+import { ref } from 'vue'
 import GameHost from '@/battle/game/host/GameHost.vue'
 
 const props = defineProps<{
@@ -18,8 +19,14 @@ function sideOf(x: number, y: number, w: number, h: number): Team {
   const byX = props.meta.slot === 'center' || props.meta.kind === 'tug'
   return byX ? (x < w / 2 ? 'red' : 'blue') : y < h / 2 ? 'red' : 'blue'
 }
+
+const host = ref<InstanceType<typeof GameHost> | null>(null)
+defineExpose({
+  /** 终局特写（B63）：这一队的角色现在在盒子里的位置，游戏没报就 null */
+  focusOf: (team: Team): { x: number; y: number } | null => host.value?.focusOf(team) ?? null,
+})
 </script>
 
 <template>
-  <GameHost :key="meta.id" :load="meta.game" :state="state" :events="events" :compact="compact" :side-of="sideOf" @poke="(t, x, y) => emit('poke', t, x, y)" />
+  <GameHost ref="host" :key="meta.id" :load="meta.game" :state="state" :events="events" :compact="compact" :side-of="sideOf" @poke="(t, x, y) => emit('poke', t, x, y)" />
 </template>

@@ -245,6 +245,17 @@ export class FlagModel {
   }
 
   /** 点一下（B59）：蹦一下、城堡的旗帜飘一下 */
+  /** 终局特写（B63）要对准的点：这一队的胜方跟着飞向城堡的旗子，另一方是自己城堡的塔顶现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    if (this.winner === team) {
+      const f = this.flagAt()
+      return { x: f.x, y: f.y }
+    }
+    const top = g.towerTop[i]!
+    return { x: top.x, y: top.y }
+  }
   poke(team: Team): void {
     const i = team === 'red' ? 0 : 1
     this.jump[i]!.kick(1)

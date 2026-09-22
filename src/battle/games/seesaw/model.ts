@@ -279,6 +279,14 @@ export class SeesawModel {
   }
 
   /** 点一下（B59）：那一头颠一下、板子抖一抖 */
+  /** 终局特写（B63）要对准的点：这一队的板头上的骑手（板坐标转回盒子坐标）现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const a = this.angle()
+    const s = g.seat[i]!
+    return { x: g.pivotX + s * Math.cos(a), y: g.pivotY + s * Math.sin(a) - g.size * 0.6 }
+  }
   poke(team: Team): void {
     this.bump[team === 'red' ? 0 : 1]!.kick(1)
     this.shake.kick(0.6)

@@ -296,6 +296,13 @@ export class LadderModel {
   }
 
   /** 点一下（B59）：在梯子上蹦一下、梯子晃一晃 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const c = this.climbers[i]!
+    return { x: this.xOf(c, i), y: c.pos.value - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const c = this.climber(team)
     c.poke.kick(1)

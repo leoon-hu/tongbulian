@@ -244,6 +244,13 @@ export class BalloonModel {
   }
 
   /** 点一下（B59）：烧嘴喷一下火、乘客挥手、往上一浮 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const b = this.balloons[i]!
+    return { x: g.colX[i]!, y: this.yOf(b) - g.size * 0.6 }
+  }
   poke(team: Team): void {
     const b = this.balloon(team)
     const i = team === 'red' ? 0 : 1

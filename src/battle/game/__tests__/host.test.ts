@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import type { SeqEvent } from '@/battle/protocol'
+import type { SeqEvent, Team } from '@/battle/protocol'
 import type { GameFactory, GameModule, GameState } from '../contract'
 import GameHost from '../host/GameHost.vue'
 import GameSlot from '@/components/battle/GameSlot.vue'
@@ -38,10 +38,15 @@ function spyGame(opts: { throwIn?: keyof GameModule } = {}) {
     resume: () => calls.push('resume'),
     destroy: () => calls.push('destroy'),
     poke: (x, y, team) => calls.push(`poke:${team}:${Math.round(x)},${Math.round(y)}`),
+    focus: (team) => {
+      boom('focus')
+      return team === 'red' ? { x: -5, y: 3 } : { x: 9999, y: 0.5 }
+    },
   }
   const factory: GameFactory = () => mod
   return { calls, events, load: () => Promise.resolve(factory) }
 }
+type Exposed = { focusOf: (team: Team) => { x: number; y: number } | null }
 
 afterEach(() => {
   vi.useRealTimers()
@@ -238,5 +243,47 @@ describe('点一下游戏（B59）', () => {
       expect(sideOf(x, y, W, H), `${meta.slot}/${meta.kind} (${x},${y})`).toBe(team)
       w.unmount()
     }
+  })
+})
+
+describe('终局特写（B63）', () => {
+  it('focusOf 把游戏报的位置夹在盒子里（happy-dom 里盒子量出来是 1 × 1）；游戏没实现就 null；报位置时抛错 → 换保底画面', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = spyGame()
+    const w = mount(GameHost, { props: { load: spy.load, state: state(), events: [] } })
+    await flushPromises()
+    await flushPromises()
+    const vm = w.vm as unknown as Exposed
+    expect(vm.focusOf('red')).toEqual({ x: 0, y: 1 })
+    expect(vm.focusOf('blue')).toEqual({ x: 1, y: 0.5 })
+    w.unmount()
+
+    const bare = spyGame()
+    const w2 = mount(GameHost, {
+      props: {
+        load: () =>
+          bare.load().then((f) => () => {
+            const m = f()
+            delete m.focus
+            return m
+          }),
+        state: state(),
+        events: [],
+      },
+    })
+    await flushPromises()
+    await flushPromises()
+    expect((w2.vm as unknown as Exposed).focusOf('red')).toBeNull()
+    w2.unmount()
+
+    const bad = spyGame({ throwIn: 'focus' })
+    const w3 = mount(GameHost, { props: { load: bad.load, state: state(), events: [] } })
+    await flushPromises()
+    await flushPromises()
+    expect((w3.vm as unknown as Exposed).focusOf('red')).toBeNull()
+    await flushPromises()
+    expect(w3.find('.game-host').attributes('data-status')).toBe('fallback')
+    expect(warn).toHaveBeenCalled()
+    w3.unmount()
   })
 })

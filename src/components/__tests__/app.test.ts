@@ -1466,8 +1466,8 @@ describe('决胜题与终局特写（B62 / B63）', () => {
     vi.advanceTimersByTime(600)
     await settle()
     expect(w.find('.arena').classes()).toContain('finale')
-    const slot = skinById(chapterSkin('s1-04-simple-addsub'))!.slot // 横条对准下面那条道，竖条对准右边那一列
-    expect(w.find('.strip').attributes('style')).toContain(slot === 'top' ? '--finale-origin: 50% 80%' : '--finale-origin: 80% 50%')
+    // 镜头对准游戏报的蓝队角色位置（盒子里的像素；happy-dom 量不到尺寸，盒子是 1 × 1，位置被夹在里面）
+    expect(w.find('.strip').attributes('style')).toMatch(/--finale-origin: \d+px \d+px/)
     expect(w.find('.result').exists()).toBe(false)
     vi.advanceTimersByTime(2500)
     await settle()

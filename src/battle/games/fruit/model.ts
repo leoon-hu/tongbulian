@@ -389,6 +389,12 @@ export class FruitModel {
   }
 
   /** 点一下（B59）：蹦一下、树晃一晃 */
+  /** 终局特写（B63）要对准的点：这一队的篮子现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    return { x: g.basketX[i]!, y: g.groundY - g.basketH * 0.5 }
+  }
   poke(team: Team): void {
     this.jump[team === 'red' ? 0 : 1]!.kick(1)
     this.shake.kick(0.8)

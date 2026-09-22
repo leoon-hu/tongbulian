@@ -316,6 +316,13 @@ export class RocketModel {
   }
 
   /** 点一下（B59）：喷一口大火、往上蹿一下 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const r = this.rockets[i]!
+    return { x: g.colX[i]! + this.xOffset(r), y: this.yOf(r) - g.size * 0.5 }
+  }
   poke(team: Team): void {
     const r = this.rocket(team)
     r.burst.kick(1.2)

@@ -44,6 +44,23 @@ describe('皮肤注册表（B34–B36）', () => {
       mod.poke!(10, 10, 'red')
       mod.poke!(140, 690, 'blue')
       for (let i = 0; i < 10; i++) mod.tick(1 / 60)
+      // 终局特写（B63）：每种游戏都报胜方角色的位置，收尾动作里也在盒子附近（种花的花在 700px 高的柱子里摆到盒子外 45px；宿主再夹进盒子）
+      expect(typeof mod.focus).toBe('function')
+      const W = meta.slot === 'top' ? 1000 : 150
+      const H = meta.slot === 'top' ? 120 : 700
+      for (const winner of ['red', 'blue'] as const) {
+        mod.setState({ red: winner === 'red' ? 8 : 3, blue: winner === 'blue' ? 8 : 3, target: 8, phase: 'ended', winner, lastPoint: winner })
+        mod.onEvent({ type: 'finished', winner })
+        for (let i = 0; i < 120; i++) {
+          mod.tick(1 / 60)
+          const f = mod.focus!(winner)!
+          expect(f).not.toBeNull()
+          expect(f.x).toBeGreaterThanOrEqual(-W * 0.35)
+          expect(f.x).toBeLessThanOrEqual(W * 1.35)
+          expect(f.y).toBeGreaterThanOrEqual(-H * 0.1)
+          expect(f.y).toBeLessThanOrEqual(H * 1.1)
+        }
+      }
       mod.destroy()
     })
   }

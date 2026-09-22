@@ -270,6 +270,13 @@ export class SwimModel {
   }
 
   /** 点一下（B59）：跳出水面一下、划快几下 */
+  /** 终局特写（B63）要对准的点：这一队的角色现在在盒子里的位置 */
+  focus(team: Team): { x: number; y: number } {
+    const g = this.geo
+    const i = team === 'red' ? 0 : 1
+    const sw = this.swimmers[i]!
+    return { x: this.xOf(sw, i), y: g.laneY[i]! }
+  }
   poke(team: Team): void {
     const sw = this.swimmer(team)
     sw.poke.kick(1)
