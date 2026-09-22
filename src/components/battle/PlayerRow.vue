@@ -70,6 +70,9 @@ const MIN_ZOOM = 0.5
 /** 紧凑版的作答栏也按栏高缩放（--azoom）：四行数字键盘在 375px 高的手机上也整格放得下，不裁底边、不滚动（2026-09-20 用户截图） */
 const aZoom = ref(1)
 const MIN_AZOOM = 0.7
+/** 缩放只取 0.05 一档：任意小数的 zoom 会让文字发虚，而且尺寸每差一像素就重算一次会一直抖（2026-09-22 用户报「题目抖动、模糊」） */
+const ZOOM_STEP = 20
+const quantize = (z: number): number => Math.floor(z * ZOOM_STEP) / ZOOM_STEP
 function fitAnswer(body: HTMLElement): void {
   if (!props.compact) {
     aZoom.value = 1
@@ -79,9 +82,12 @@ function fitAnswer(body: HTMLElement): void {
   // 面板本身被栏高压住（max-height），原始高度看它的 scrollHeight（元素自己坐标系里的尺寸，不受 zoom 影响）
   const natural = panel ? Math.max(panel.scrollHeight, panel.offsetHeight) : 0
   const avail = body.clientHeight
-  aZoom.value = natural > 0 && avail > 0 ? Math.max(MIN_AZOOM, Math.min(1, Math.floor((avail / natural) * 100) / 100)) : 1
+  const next = natural > 0 && avail > 0 ? Math.max(MIN_AZOOM, Math.min(1, quantize(avail / natural))) : 1
+  if (next !== aZoom.value) aZoom.value = next
 }
 function fitQuestion(): void {
+  // 反馈窗口里不重算：答完题作答区换成对错、高度一变，题干不该跟着跳一下
+  if (props.feedback) return
   const q = qEl.value
   const stem = q?.querySelector<HTMLElement>('.stem')
   const body = q?.parentElement
@@ -101,7 +107,20 @@ function fitQuestion(): void {
   let z = max
   if (naturalW > 0 && availW > 0) z = Math.min(z, (availW - 4) / naturalW)
   if (naturalH > 0 && availH > 0) z = Math.min(z, availH / naturalH)
-  qZoom.value = Math.max(MIN_ZOOM, Math.floor(z * 100) / 100)
+  const next = Math.max(MIN_ZOOM, quantize(z))
+  if (next !== qZoom.value) qZoom.value = next
+}
+/** ResizeObserver 一帧里可能报好几次（邻居重排、字号变化）：并成一次，下一帧再量 */
+let fitPending = false
+function scheduleFit(): void {
+  if (fitPending) return
+  fitPending = true
+  const run = (): void => {
+    fitPending = false
+    fitQuestion()
+  }
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+  else setTimeout(run, 0)
 }
 let ro: ResizeObserver | null = null
 onMounted(fitQuestion)
@@ -110,7 +129,7 @@ watch(qEl, (el) => {
   ro?.disconnect()
   ro = null
   if (typeof ResizeObserver !== 'undefined' && el) {
-    ro = new ResizeObserver(() => fitQuestion())
+    ro = new ResizeObserver(scheduleFit)
     ro.observe(el)
   }
 })

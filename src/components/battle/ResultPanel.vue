@@ -346,19 +346,20 @@ function shareResult(): void {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
   gap: 8px;
 }
+/* 每张卡自己裁掉溢出：教具（几十个 emoji 的一排、十格阵）在窄卡里放不下时不能漫到页面上（2026-09-22 用户截图） */
 .wrong-item {
-  flex: 1 1 260px;
-  max-width: 320px;
+  min-width: 0;
   padding: 6px 10px;
   border-radius: var(--radius-md);
   background: var(--c-card);
   border: 2px solid var(--c-line);
   cursor: pointer;
+  overflow: hidden;
 }
 .wrong-item.red {
   border-color: #ffb8b8;
@@ -373,6 +374,29 @@ function shareResult(): void {
 }
 .wrong-q {
   zoom: 0.6;
+  max-height: 230px;
+  overflow: hidden;
+}
+/* 题干里的每一部分都不许比卡宽；一排排的东西可以换行 */
+.wrong-q :deep(.stem) {
+  max-width: 100%;
+}
+.wrong-q :deep(.stem > *) {
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* 一排排的实物图：CountingObjects 的字号是内联的、宽度上限 420px，CompareRows 的格子是固定 40px 的网格——在窄卡里都再缩一档，一排 12 个也放得下 */
+.wrong-q :deep(.objects) {
+  font-size: 22px !important;
+  gap: 4px 6px;
+  max-width: 100%;
+}
+.wrong-q :deep(.compare) {
+  zoom: 0.6;
+  max-width: 100%;
+  overflow: hidden;
 }
 .wrong-ans {
   margin: 4px 0 0;
