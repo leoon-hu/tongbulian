@@ -317,3 +317,47 @@ describe('语音（B57）', () => {
     expect(p.members.find((m) => m.clientId === 'red001')!.voice).toBe(true)
   })
 })
+
+describe('自我保护（N6 ⑨）', () => {
+  it('说话名额：第 5 个开麦不进快照也不报错；刷新回来的人 voice 清零', () => {
+    let r = room()
+    for (const id of ['a', 'b', 'c', 'd', 'e']) r = joined(r, id, 'watch')
+    for (const id of ['a', 'b', 'c', 'd']) r = ok(r, id, { type: 'voice', on: true })
+    const res = apply(r, 'e', { type: 'voice', on: true }, T0 + 10, seeds)
+    expect(res.effects).toEqual([])
+    expect(res.room.members.filter((m) => m.voice)).toHaveLength(4)
+    // a 刷新页面重连：座位上的麦克风跟着关掉，e 就能开了
+    r = join(r, { clientId: 'a', name: 'a', version: V }, T0 + 20).room
+    expect(r.members.find((m) => m.clientId === 'a')!.voice).toBe(false)
+    expect(ok(r, 'e', { type: 'voice', on: true }).members.find((m) => m.clientId === 'e')!.voice).toBe(true)
+  })
+
+  it('比赛中离开又回来的选手接回原来的队，不会以观战身份继续答题', () => {
+    let r = playing()
+    r = ok(r, 'red001', { type: 'leave' })
+    expect(r.members.find((m) => m.clientId === 'red001')).toBeUndefined()
+    const back = join(r, { clientId: 'red001', name: '回来了', t: 'watch', version: V }, T0 + 50)
+    expect(back.error).toBeUndefined()
+    expect(back.room.members.find((m) => m.clientId === 'red001')!.role).toBe('red')
+    expect(back.room.match!.players.find((p) => p.id === 'red001')!.online).toBe(true)
+  })
+
+  it('一局的作答次数有上限：超过 MATCH_MAX_ANSWERS 报 bad', () => {
+    let r = playing()
+    const p = () => r.match!.players.find((x) => x.id === 'red001')!
+    r = { ...r, match: { ...r.match!, players: r.match!.players.map((x) => (x.id === 'red001' ? { ...x, index: 400 } : x)) } }
+    expect(errorOf(r, 'red001', { type: 'answer', index: p().index, given: '1', correct: false })).toBe('bad')
+  })
+
+  it('房间号与口令默认用加密随机数（注入的 random 仍可复现）', () => {
+    const seq = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
+    let i = 0
+    const rnd = () => seq[i++ % seq.length]!
+    const first = makeCode(rnd)
+    i = 0
+    expect(makeCode(rnd)).toBe(first)
+    const codes = new Set(Array.from({ length: 50 }, () => makeCode()))
+    expect(codes.size).toBeGreaterThan(45)
+    expect(isPasscode(makePasscode())).toBe(true)
+  })
+})

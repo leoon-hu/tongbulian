@@ -3,12 +3,14 @@
  * - 数字 0–100 与中文的「两」：题目里的数都在这个范围
  * - 外壳固定句：正确答案是 / 鼓励语 / 结算 / 对战的开始与胜负播报 / 页面打开时自动读的提示语
  * - 每个知识点用固定种子跑三档难度各 CORPUS_SEEDS 题，题干与答案的片段全部收进来
- * 种子固定，所以结果是确定的；模板改了、生成器改了，这里的集合跟着变，测试会提醒重跑 npm run audio。
+ * - 并成一条的短语（「有14个」「比小猪」，F14）除了它本身，拆开的小片段（「有」「14」「个」）也收：种子里没枚举到的
+ *   组合在播放时拆回小片段照样有音频，不用退 TTS
+ * 停顿标记 PAUSE 不是音频，不收。种子固定，所以结果是确定的；模板改了、生成器改了，这里的集合跟着变，测试会提醒重跑 npm run audio。
  */
 import type { Lang } from '@/types/models'
 import { createRng, getGenerator } from '@/engine'
 import { allCourses } from '@/engine/catalog'
-import { answerSpeech, phraseSpeech, questionSpeech, RIGHT_KEYS } from '@/engine/speech'
+import { answerSpeech, PAUSE, phraseSpeech, piecesOf, questionSpeech, RIGHT_KEYS } from '@/engine/speech'
 
 export const CORPUS_SEEDS = 300
 
@@ -67,9 +69,16 @@ const FIXED_KEYS = [
 export function collectCorpus(): Record<Lang, string[]> {
   const sets: Record<Lang, Set<string>> = { zh: new Set(), en: new Set() }
   const langs: Lang[] = ['zh', 'en']
+  const add = (lang: Lang, tokens: string[]): void => {
+    for (const t of tokens) {
+      if (t === PAUSE) continue
+      sets[lang].add(t)
+      for (const piece of piecesOf(t, lang)) sets[lang].add(piece)
+    }
+  }
   for (const lang of langs) {
     for (let n = 0; n <= 100; n++) sets[lang].add(String(n))
-    for (const key of FIXED_KEYS) for (const t of phraseSpeech({ k: key }, lang)) sets[lang].add(t)
+    for (const key of FIXED_KEYS) add(lang, phraseSpeech({ k: key }, lang))
   }
   sets.zh.add('两')
   for (const course of allCourses()) {
@@ -80,8 +89,8 @@ export function collectCorpus(): Record<Lang, string[]> {
         for (const d of [1, 2, 3] as const) {
           const q = gen(d, createRng(seed))
           for (const lang of langs) {
-            for (const t of questionSpeech(q, lang)) sets[lang].add(t)
-            for (const t of answerSpeech(q, lang)) sets[lang].add(t)
+            add(lang, questionSpeech(q, lang))
+            add(lang, answerSpeech(q, lang))
           }
         }
       }

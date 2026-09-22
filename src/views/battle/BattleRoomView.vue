@@ -9,7 +9,7 @@
 // 模板只能有一个根元素、根上不能放 HTML 注释：App 的 <Transition mode="out-in"> 只给单根做过渡，多根（开发模式保留注释也算）会让过渡卡住、下一页空白。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { courseOfKp } from '@/engine/catalog'
+import { mapPathOf } from '@/engine/catalog'
 import { lang, ui } from '@/engine/i18n'
 import { hush, sayKeys } from '@/engine/voice'
 import type { Member, Role, Team } from '@/battle/protocol'
@@ -60,8 +60,7 @@ function saveName(name: string): void {
 const snap = computed(() => room.snapshot)
 const fatal = computed(() => (room.error && FATAL_ERRORS.includes(room.error) ? room.error : null))
 const toast = computed(() => (room.error && !FATAL_ERRORS.includes(room.error) ? room.error : null))
-const info = computed(() => (snap.value ? courseOfKp(snap.value.kpId) : undefined))
-const mapPath = computed(() => (info.value ? `/s/${info.value.subject.id}/g/${info.value.grade.id}` : '/'))
+const mapPath = computed(() => (snap.value ? mapPathOf(snap.value.kpId) : '/'))
 const me = computed(() => room.me)
 const myRole = computed<Role>(() => me.value?.role ?? 'watch')
 

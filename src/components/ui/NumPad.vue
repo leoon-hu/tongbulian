@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { onTap } from '@/components/ui/tap'
 
 /**
  * hideDisplay：不画显示框，由外层用 input 事件自己画（对战手机紧凑版把它放到题干那一栏，省高度）。
@@ -51,9 +52,9 @@ function confirm(): void {
     </div>
     <div class="grid">
       <template v-for="(k, i) in keys" :key="i">
-        <button v-if="k.kind === 'digit'" class="key" @click="tapDigit(k.d)">{{ k.d }}</button>
-        <button v-else-if="k.kind === 'back'" class="key func" @click="backspace">⌫</button>
-        <button v-else class="key ok" :disabled="value === ''" @click="confirm">✓</button>
+        <button v-if="k.kind === 'digit'" class="key" @pointerup="onTap($event, () => tapDigit(k.d))" @click="onTap($event, () => tapDigit(k.d))">{{ k.d }}</button>
+        <button v-else-if="k.kind === 'back'" class="key func" @pointerup="onTap($event, backspace)" @click="onTap($event, backspace)">⌫</button>
+        <button v-else class="key ok" :disabled="value === ''" @pointerup="onTap($event, confirm)" @click="onTap($event, confirm)">✓</button>
       </template>
     </div>
   </div>

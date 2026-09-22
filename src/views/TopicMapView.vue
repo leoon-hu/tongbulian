@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { KnowledgePoint } from '@/types/models'
 import { ROUND_SIZE, hasGenerator } from '@/engine'
@@ -28,8 +28,20 @@ const semesters = computed(() => {
   ].filter((s) => s.units.length > 0)
 })
 
-// 上册/下册切页签：只渲染当前册，避免竖着堆太长。
-const activeSem = ref<1 | 2>(1)
+// 上册/下册切页签：只渲染当前册，避免竖着堆太长。当前册记在地址里（`?sem=2`）：从下册的练习页 / 对战页
+// 「返回」带着它回来就还在下册，浏览器的返回键、刷新也一样（2026-09-22 用户报「不管从哪返回都回上册」）。
+const semFromRoute = (): 1 | 2 => (route.query.sem === '2' ? 2 : 1)
+const activeSem = ref<1 | 2>(semFromRoute())
+watch(
+  () => route.query.sem,
+  () => {
+    if (route.name === 'topics') activeSem.value = semFromRoute()
+  },
+)
+function switchSem(sem: 1 | 2): void {
+  activeSem.value = sem
+  void router.replace({ query: sem === 2 ? { sem: '2' } : {} })
+}
 const activeUnits = computed(() => {
   const list = semesters.value
   const current = list.find((s) => s.semester === activeSem.value)
@@ -71,7 +83,7 @@ function goBattle(): void {
 <template>
   <div v-if="course && subject" class="home">
     <header class="topbar">
-      <button class="back" @click="router.push(`/s/${subjectId}`)" aria-label="back">←</button>
+      <button class="back" @click="router.push(`/s/${subjectId}`)" :aria-label="ui('chooser.back')">←</button>
       <div class="ctx">
         <h1 class="ctx-title">{{ subject.icon }} {{ ui('grade.' + gradeId) }}</h1>
         <span class="ctx-sub">{{ ui('home.lit', { n: doneCount }) }}</span>
@@ -84,7 +96,7 @@ function goBattle(): void {
         :key="sem.semester"
         class="tab"
         :class="{ active: sem.semester === activeSem }"
-        @click="activeSem = sem.semester"
+        @click="switchSem(sem.semester)"
       >
         {{ ui('sem.' + sem.semester) }}
       </button>

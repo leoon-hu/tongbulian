@@ -10,6 +10,9 @@ export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'cl
 
 export const PING_MS = 25_000
 export const BACKOFF_MS: readonly number[] = [1000, 2000, 4000, 8000]
+/** 连上多久不掉才算稳定（退避归零） */
+export const STABLE_MS = 5000
+const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/
 
 /** 同源 /ws 地址；file:// 打开或没有 location 就 null（B46） */
 export function socketUrl(loc: Location | undefined = typeof location === 'undefined' ? undefined : location): string | null {
@@ -44,6 +47,8 @@ export interface RoomClientOptions {
   onTurn?(iceServers: IceServer[], ttl: number): void
   /** 可注入的 WebSocket（测试用假的） */
   factory?: (url: string) => SocketLike
+  /** 退避抖动的随机源（0…1）；测试注入固定值 */
+  jitter?: () => number
 }
 
 const OPEN = 1
@@ -128,7 +133,11 @@ export class RoomClient {
     ws.onopen = () => {
       if (this.ws !== ws) return
       this.setStatus('open')
-      this.attempt = 0
+      // 连上并稳定了一会儿才把退避归零：服务器「接受后立刻关掉」不会变成每秒一次的重连循环
+      const opened = this.attempt
+      setTimeout(() => {
+        if (this.ws === ws && this.attempt === opened) this.attempt = 0
+      }, STABLE_MS)
       const hello: ClientMsg = { type: 'hello', clientId: this.opts.clientId, name: this.opts.name, version: this.opts.version }
       if (this.code) {
         hello.code = this.code
@@ -151,13 +160,18 @@ export class RoomClient {
       // 服务器是自己的，但坏掉的一条也别让整页抛错：形状不对就丢掉
       if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return
       if (msg.type === 'state') {
-        if (!msg.room || typeof msg.room !== 'object' || typeof msg.you !== 'string' || !Array.isArray(msg.room.members)) return
-        this.code = msg.room.code
-        this.opts.onState(msg.room, msg.you, msg.now)
+        const r = msg.room
+        if (!r || typeof r !== 'object' || typeof msg.you !== 'string' || typeof msg.now !== 'number') return
+        if (!CODE_RE.test(String(r.code)) || !Array.isArray(r.members) || typeof r.kpId !== 'string' || typeof r.skin !== 'string') return
+        if (r.match !== null && (!r.match || typeof r.match !== 'object' || !Array.isArray(r.match.players))) return
+        if (!r.passcodes || typeof r.passcodes !== 'object') return
+        if (!r.members.every((m) => m && typeof m === 'object' && typeof m.clientId === 'string' && typeof m.name === 'string' && typeof m.role === 'string')) return
+        this.code = r.code
+        this.opts.onState(r, msg.you, msg.now)
       } else if (msg.type === 'event') {
         if (msg.e && typeof msg.e === 'object' && typeof msg.e.type === 'string') this.opts.onEvent(msg.e)
       } else if (msg.type === 'found') {
-        if (typeof msg.code === 'string' && typeof msg.t === 'string') this.opts.onFound?.(msg.code, msg.t)
+        if (CODE_RE.test(String(msg.code)) && (msg.t === 'red' || msg.t === 'blue' || msg.t === 'watch')) this.opts.onFound?.(msg.code, msg.t)
       } else if (msg.type === 'rtc') {
         if (typeof msg.from === 'string' && isRtcSignal(msg.data)) this.opts.onRtc?.(msg.from, msg.data)
       } else if (msg.type === 'turn') {
@@ -190,7 +204,8 @@ export class RoomClient {
 
   private scheduleRetry(): void {
     this.setStatus('reconnecting')
-    const wait = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!
+    // 退避加一点随机抖动：一片设备同时掉线（WiFi 闪断）不会同一毫秒一起撞回来
+    const wait = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]! * (1 + (this.opts.jitter ?? Math.random)() * 0.25)
     this.attempt += 1
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null

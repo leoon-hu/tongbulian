@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import WebSocket from 'ws'
 import type { ClientMsg, ServerMsg } from '@/battle/protocol'
-import { MAX_BAD_PASS, MAX_BAD_PASS_PER_IP, MAX_CONNS_PER_IP, clientIp, createBattleServer, type BattleServer } from '../index'
+import { MAX_BAD_PASS, MAX_BAD_PASS_PER_IP, MAX_CONNS_PER_IP, MAX_ROOMS_PER_IP, clientIp, createBattleServer, type BattleServer } from '../index'
 
 /** 一个测试客户端：收到的消息排队，按条件等 */
 class Client {
@@ -446,5 +446,63 @@ describe('中继服务（B41–B46）', () => {
     } finally {
       await s3.close()
     }
+  })
+  it('自我保护（N6 ⑨）：同一个 IP 开的房间超过 MAX_ROOMS_PER_IP 回 busy、别的 IP 照常；猜房间号与猜口令一样计次，连错 MAX_BAD_PASS 次断开；没开麦的人发的 offer 不转发、候选照转', async () => {
+    const ip = { 'x-real-ip': '10.9.9.9' }
+    const hosts: Client[] = []
+    for (let i = 0; i < MAX_ROOMS_PER_IP; i++) {
+      const c = new Client(server.port, ip)
+      await c.open()
+      c.send({ type: 'hello', clientId: `room-cap-${i}`, name: '房主', version: 'v1' })
+      c.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+      await c.state()
+      hosts.push(c)
+    }
+    const extra = new Client(server.port, ip)
+    await extra.open()
+    extra.send({ type: 'hello', clientId: 'room-cap-extra', name: '房主', version: 'v1' })
+    extra.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    expect(await extra.wait((m) => m.type === 'error')).toEqual({ type: 'error', error: 'busy' })
+    const other = new Client(server.port, { 'x-real-ip': '10.9.9.10' })
+    await other.open()
+    other.send({ type: 'hello', clientId: 'room-cap-other', name: '房主', version: 'v1' })
+    other.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    expect((await other.state()).room.members).toHaveLength(1)
+    // 一个房主离开，这个 IP 又能建了
+    hosts[0]!.send({ type: 'leave' })
+    await new Promise((r) => setTimeout(r, 30))
+    extra.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    expect((await extra.state()).room.members).toHaveLength(1)
+    for (const c of [...hosts, extra, other]) c.close()
+
+    // 猜房间号：hello 带不存在的房间号，连错 MAX_BAD_PASS 次被断开
+    const g = new Client(server.port, { 'x-real-ip': '10.9.9.11' })
+    await g.open()
+    const closed = new Promise<number>((r) => g.ws.once('close', (code) => r(code)))
+    for (let i = 0; i < MAX_BAD_PASS; i++) {
+      g.send({ type: 'hello', clientId: 'guess-1', name: '猜', version: 'v1', code: 'ZZZZZ' + 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[i]! })
+      expect(await g.wait((m) => m.type === 'error')).toEqual({ type: 'error', error: 'noRoom' })
+    }
+    expect(await closed).toBe(4002)
+
+    // offer 只转发开了麦的人发的
+    const a = new Client(server.port)
+    const b = new Client(server.port)
+    await Promise.all([a.open(), b.open()])
+    a.send({ type: 'hello', clientId: 'offer-a', name: '甲', version: 'v1' })
+    a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const code = (await a.state()).room.code
+    b.send({ type: 'hello', clientId: 'offer-b', name: '乙', version: 'v1', code, t: 'blue' })
+    const B = (await b.state()).you
+    const A = (await a.state((s) => s.room.members.length === 2)).you
+    a.send({ type: 'rtc', to: B, data: { sdp: { type: 'offer', sdp: 'v=0' } } })
+    a.send({ type: 'rtc', to: B, data: { candidates: [] } })
+    expect(await b.wait((m) => m.type === 'rtc')).toEqual({ type: 'rtc', from: A, data: { candidates: [] } })
+    a.send({ type: 'voice', on: true })
+    await b.state((s) => s.room.members.find((m) => m.clientId === A)?.voice === true)
+    a.send({ type: 'rtc', to: B, data: { sdp: { type: 'offer', sdp: 'v=0' } } })
+    expect(await b.wait((m) => m.type === 'rtc')).toEqual({ type: 'rtc', from: A, data: { sdp: { type: 'offer', sdp: 'v=0' } } })
+    a.close()
+    b.close()
   })
 })

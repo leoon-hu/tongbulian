@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ui } from '@/engine/i18n'
 import { useSettingsStore } from '@/stores/settings'
-import { useRoomStore } from '@/stores/room'
+import { joinOpen, roomAvailable } from '@/battle/lite'
 import RubyText from '@/components/ui/RubyText.vue'
 
 // 全局顶部栏：品牌标题 + 「🔑 加入对战」（B19，口令是全局的，不挂在某个知识点的对战页上）+ 主页 / 声音 / 语言切换。显示在每个页面上方（学科无关；竞技场里不显示）。
@@ -12,7 +12,6 @@ import RubyText from '@/components/ui/RubyText.vue'
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
-const room = useRoomStore()
 const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
 </script>
 
@@ -22,14 +21,14 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
       <span class="brand-icon">⚔️</span>
       <span class="brand-text">
         <component :is="titleTag" class="brand-title">
-          <span class="brand-name">{{ ui('brand.name') }}</span>
+          <span class="brand-name">{{ ui('brand.name') }}</span><span class="sr-only">-</span>
           <span class="brand-badge">{{ ui('brand.edition') }}</span>
         </component>
         <span class="brand-sub">{{ ui('brand.tagline') }}</span>
       </span>
     </RouterLink>
     <div class="nav">
-      <button v-if="room.available" type="button" class="nav-btn join" @click="room.joinOpen = true">🔑 <RubyText :text="{ k: 'room.join' }" /></button>
+      <button v-if="roomAvailable" type="button" class="nav-btn join" @click="joinOpen = true">🔑 <RubyText :text="{ k: 'room.join' }" /></button>
       <button class="nav-btn home" @click="router.push('/')" :aria-label="ui('nav.home')">🏠</button>
       <button
         class="nav-btn sound"
@@ -48,6 +47,15 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
 </template>
 
 <style scoped>
+/* 只给读屏器与爬虫看的连字符：h1 的文本是「同步练-对战版」（与 <title> / og:site_name 一致），画面上不显示 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 .app-header {
   display: flex;
   align-items: center;

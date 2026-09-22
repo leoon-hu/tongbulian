@@ -5,9 +5,18 @@
  * 主持人掉线 HOST_GRACE_MS 内回来不换人（屏幕锁一下就换主持人太吓人）。
  * 网络层（index.ts）只管连接、房间表、心跳、限流、节流广播；node 里能单测。
  */
+import { randomInt } from 'node:crypto'
 import type { ArenaEvent, ClientMsg, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { answer, beginPlay, createMatch, setInput, startMatch } from '@/battle/match'
 import { cleanName } from '@/battle/names'
+import { VOICE_MAX } from '@/battle/voice'
+
+/**
+ * 房间号、口令、题目种子都用加密随机数（N6 ⑨）：Math.random 是可预测的 xorshift128+，种子又随快照广播给房间里
+ * 所有人，从自己房间的输出就能恢复状态、预测别人的房间号与口令。random() 参数仍可注入（测试用固定序列）。
+ */
+export const secureRandom = (): number => randomInt(0, 2 ** 31) / 2 ** 31
+export const randomSeed = (): number => randomInt(0, 2 ** 31)
 
 export interface Room extends RoomSnapshot {
   /** 建房者的构建版本：后来者不一致就拒绝（B43） */
@@ -36,10 +45,12 @@ export const ROOM_IDLE_MS = 10 * 60 * 1000
 export const ROOM_LIFE_MS = 3 * 60 * 60 * 1000
 /** 主持人掉线多久才把主持权交给别人（B22） */
 export const HOST_GRACE_MS = 20 * 1000
+/** 一个人一局最多提交多少次作答（N6 ⑨）：正常一局 8 题对完不到 50 次，超过就是刷题目流让所有设备无限生成题 */
+export const MATCH_MAX_ANSWERS = 400
 
 /** 房间号 6 位：去掉 0 O 1 I L 这些易混字符（B19） */
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-export function makeCode(random: () => number = Math.random): string {
+export function makeCode(random: () => number = secureRandom): string {
   let s = ''
   for (let i = 0; i < 6; i++) s += CODE_CHARS[Math.floor(random() * CODE_CHARS.length)]
   return s
@@ -62,14 +73,14 @@ export function cleanInput(v: string): string {
 const ROLES: readonly Role[] = ['red', 'blue', 'watch']
 
 /** 口令（B19）：6 位数字、首位不为 0；三个身份各一个，全服务器唯一，一个口令就定了房间 + 身份 */
-export function makePasscode(random: () => number = Math.random): string {
+export function makePasscode(random: () => number = secureRandom): string {
   return String(100000 + Math.floor(random() * 900000))
 }
 export function isPasscode(v: unknown): v is string {
   return typeof v === 'string' && /^[1-9][0-9]{5}$/.test(v)
 }
 /** 三个身份的口令：互不相同、也不与 taken（别的房间的）重复 */
-export function makePasscodes(taken: ReadonlySet<string> = new Set(), random: () => number = Math.random): Record<Role, string> {
+export function makePasscodes(taken: ReadonlySet<string> = new Set(), random: () => number = secureRandom): Record<Role, string> {
   const used = new Set(taken)
   const one = (): string => {
     let p = makePasscode(random)
@@ -160,14 +171,18 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
   const existing = room.members.find((m) => m.clientId === who.clientId)
   if (existing) {
     const name = cleanName(who.name) || existing.name
-    const members = room.members.map((m) => (m === existing ? { ...m, online: true, name } : m))
+    // 刷新 / 重连回来的页面麦克风一定是关着的（新页面不会再发 voice:false）：座位上的 voice 跟着清掉，别留幽灵 🎤
+    const members = room.members.map((m) => (m === existing ? { ...m, online: true, name, voice: false } : m))
     return { room: withMembers({ ...room, lastActive: now }, members) }
   }
   if (room.members.length >= ROOM_MAX) return { room, error: 'full' }
   const wanted: Role | undefined = who.t && isRole(who.t) ? who.t : undefined
   let role: Role = 'watch'
   let error: RoomError | undefined
-  if (wanted !== 'watch') {
+  // 比赛中「离开房间」又打开链接回来的选手：仍是比赛里的人，接回原来的队（不然会以观战身份继续答题得分）
+  const seat = inMatch(room) ? room.match!.players.find((p) => p.id === who.clientId) : undefined
+  if (seat) role = seat.team
+  else if (wanted !== 'watch') {
     if (inMatch(room)) error = 'started'
     else {
       const pick = wanted ?? smallerTeam(room)
@@ -179,7 +194,7 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
     }
   }
   const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now, voice: false }
-  const next: Room = { ...room, members: [...room.members, member], lastActive: now }
+  const next: Room = withMembers({ ...room, lastActive: now }, [...room.members, member])
   return error ? { room: next, error } : { room: next }
 }
 
@@ -259,7 +274,7 @@ const err = (to: string, error: RoomError): Effect => ({ type: 'error', to, erro
  * 自动开始（B21）：红蓝两队都至少 1 人在线、而且这个房间还没开过局（match 为 null）就开始倒数；
  * 比赛结束后不自动再来（要主持人按「再来一局」）。网络层每次改动房间后调一次。
  */
-export function autoStart(room: Room, now: number, seeds: () => number = () => Math.floor(Math.random() * 2 ** 31)): Result {
+export function autoStart(room: Room, now: number, seeds: () => number = randomSeed): Result {
   if (room.match !== null || !canStartRoom(room)) return { room, effects: [] }
   const seedMap = Object.fromEntries(participants(room).map((m) => [m.clientId, seeds()]))
   return { room: startRoom({ ...room, lastActive: now }, seedMap, now), effects: [{ type: 'broadcast' }, { type: 'event', e: { type: 'countdown' } }] }
@@ -268,7 +283,7 @@ export function autoStart(room: Room, now: number, seeds: () => number = () => M
 /**
  * 处理一条消息。seeds：开始 / 再来一局时给每个参赛者的题目种子（网络层生成；测试注入）。
  */
-export function apply(room: Room, from: string, msg: ClientMsg, now: number, seeds: () => number = () => Math.floor(Math.random() * 2 ** 31)): Result {
+export function apply(room: Room, from: string, msg: ClientMsg, now: number, seeds: () => number = randomSeed): Result {
   const me = room.members.find((m) => m.clientId === from)
   if (!me) return { room, effects: [err(from, 'bad')] }
   const isHost = room.hostId === from
@@ -339,6 +354,8 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
       if (!room.match || room.match.phase !== 'playing') return { room, effects: [err(from, 'bad')] }
       if (typeof msg.index !== 'number' || typeof msg.given !== 'string') return { room, effects: [err(from, 'bad')] }
       if (!Number.isInteger(msg.index) || msg.index < 0) return { room, effects: [err(from, 'bad')] }
+      // 一局的作答次数有上限（N6 ⑨）：题目流每 16 题一批在每台设备上生成，不封顶会被无限刷
+      if ((room.match.players.find((p) => p.id === from)?.index ?? 0) >= MATCH_MAX_ANSWERS) return { room, effects: [err(from, 'bad')] }
       const res = answer(room.match, from, msg.index, !!msg.correct, cleanInput(msg.given), now)
       if (res.state === room.match) return { room, effects: [err(from, 'bad')] }
       return { room: { ...base, match: res.state }, effects: [{ type: 'broadcast' }, ...res.events.map((e): Effect => ({ type: 'event', e }))] }
@@ -353,6 +370,9 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
       // 开 / 关麦克风（B57）：进快照，大家据此知道要不要跟他建语音连接；重复的不广播
       const on = !!msg.on
       if (me.voice === on) return { room, effects: [] }
+      // 说话名额（B57 VOICE_MAX）在这里也守一遍：满了就不进快照、不报错（正常客户端自己不会再开，'full' 对客户端是致命错误）；
+      // 网络层转发 offer 时只认快照里 voice 为 true 的人，所以改过的客户端刷不出第 5 个 🎤、也推不出音频
+      if (on && room.members.filter((m) => m.voice && m.online).length >= VOICE_MAX) return { room, effects: [] }
       return { room: members((m) => ({ ...m, voice: on })), effects: [{ type: 'broadcast' }] }
     }
     case 'ping':

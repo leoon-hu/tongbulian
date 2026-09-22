@@ -5,7 +5,7 @@
 import { onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasGenerator } from '@/engine'
-import { courseOfKp } from '@/engine/catalog'
+import { courseOfKp, mapPathOf } from '@/engine/catalog'
 import { useBattleStore, type LocalMode } from '@/stores/battle'
 import Arena from '@/components/battle/Arena.vue'
 
@@ -18,7 +18,8 @@ const mode: LocalMode = route.query.mode === 'duo' ? 'duo' : 'ai'
 /** 直接打开地址时可带 ?skin= 指定游戏（截图 / 普查脚本用），不带就按章节 */
 const skin = typeof route.query.skin === 'string' ? route.query.skin : undefined
 const info = courseOfKp(kpId)
-const mapPath = info ? `/s/${info.subject.id}/g/${info.grade.id}` : '/'
+/** 回地图：按当前这一局的知识点算（「下一章」跨到下册也回下册） */
+const mapPath = (): string => mapPathOf(store.state?.kpId ?? kpId)
 const setupPath = `/battle/new/${kpId}`
 
 if (!info || !hasGenerator(kpId)) router.replace('/')
@@ -29,8 +30,9 @@ else if (!store.state || store.state.kpId !== kpId || store.mode !== mode) {
 }
 
 function exit(): void {
+  const to = mapPath()
   store.leave()
-  router.push(mapPath)
+  router.push(to)
 }
 
 /** 下一章（B9）：换知识点重新开一局（游戏按那一章排到的），地址跟着换但不重挂载 */

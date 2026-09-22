@@ -65,11 +65,25 @@ describe('语音的纯逻辑（B57）', () => {
     expect(isRtcSignal({ nope: 1 })).toBe(false)
   })
 
-  it('cleanIceServers：只留 urls 合法的（字符串变数组），用户名 / 口令是字符串才带', () => {
-    expect(cleanIceServers([{ urls: 'stun:a' }, { urls: ['turn:b', 3], username: 'u', credential: 'c' }, { urls: [] }, { urls: 5 }, null, 'x', { username: 'u' }, { urls: 'turn:d', username: 1 }])).toEqual([
+  it('cleanIceServers：只留 urls 合法的（字符串变数组、只认 stun / turn 协议），turn 必须带用户名与口令', () => {
+    expect(
+      cleanIceServers([
+        { urls: 'stun:a' },
+        { urls: ['turn:b', 3], username: 'u', credential: 'c' },
+        { urls: [] },
+        { urls: 5 },
+        null,
+        'x',
+        { username: 'u' },
+        { urls: 'turn:d', username: 1 },
+        { urls: 'turns:e.example.com:443?transport=tcp', username: 'u', credential: 'c' },
+        { urls: 'http://evil.example', username: 'u', credential: 'c' },
+        { urls: 'stun:a b' },
+      ]),
+    ).toEqual([
       { urls: ['stun:a'] },
       { urls: ['turn:b'], username: 'u', credential: 'c' },
-      { urls: ['turn:d'] },
+      { urls: ['turns:e.example.com:443?transport=tcp'], username: 'u', credential: 'c' },
     ])
     expect(cleanIceServers('x')).toEqual([])
     expect(cleanIceServers(undefined)).toEqual([])

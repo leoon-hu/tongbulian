@@ -99,11 +99,14 @@ function fitQuestion(): void {
   qZoom.value = Math.max(MIN_ZOOM, Math.floor(z * 100) / 100)
 }
 let ro: ResizeObserver | null = null
-onMounted(() => {
-  fitQuestion()
-  if (typeof ResizeObserver !== 'undefined' && qEl.value) {
+onMounted(fitQuestion)
+// 题干栏是 v-if 出来的（挂载时常常还没有题）：元素出现了再挂 ResizeObserver，换掉了就摘下
+watch(qEl, (el) => {
+  ro?.disconnect()
+  ro = null
+  if (typeof ResizeObserver !== 'undefined' && el) {
     ro = new ResizeObserver(() => fitQuestion())
-    ro.observe(qEl.value)
+    ro.observe(el)
   }
 })
 watch(
@@ -153,7 +156,7 @@ onBeforeUnmount(() => {
         @click="read"
         @keydown.enter.prevent="read"
       >
-        <QuestionRenderer :key="`${player.index}-${question.id}`" :question="question" with-speaker />
+        <QuestionRenderer :key="question.id" :question="question" with-speaker />
         <div
           v-if="compact && operable && !feedback && question.input === 'numpad'"
           :key="`typed-${player.index}`"

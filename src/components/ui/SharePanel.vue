@@ -17,7 +17,7 @@ const store = useShareStore()
         <h3 class="sheet-title">{{ ui('share.title') }}</h3>
         <p class="sheet-desc">{{ ui(store.panel.way === 'wechat' ? 'share.wechatHint' : store.panel.copied ? 'share.copiedHint' : 'share.copyHint') }}</p>
         <pre class="message">{{ store.panel.message }}</pre>
-        <button v-if="store.panel.way === 'copy'" type="button" class="sheet-ok" @click="store.copy()">
+        <button type="button" class="sheet-ok" @click="store.copy()">
           {{ ui(store.panel.copied ? 'share.copied' : 'share.copy') }}
         </button>
         <button type="button" class="sheet-ok" :class="{ ghost: store.panel.way === 'copy' }" @click="store.close()">{{ ui('share.gotit') }}</button>

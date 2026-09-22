@@ -9,7 +9,7 @@ import type { LParam, Question } from '@/types/models'
 import { createRng, type RNG } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
-import { answerSpeech, phraseSpeech, questionSpeech } from '@/engine/speech'
+import { phraseSpeech, questionSpeech } from '@/engine/speech'
 import { warmUp } from '@/engine/voice'
 import type { ArenaEvent, ClientMsg, MatchEvent, MatchState, Player, RoomSnapshot, SeqEvent, Team } from '@/battle/protocol'
 import {
@@ -76,9 +76,17 @@ export interface Callout {
   team: Team
 }
 
+/** 服务器认的身份格式（server/index.ts 的 hello 校验一样）：不对的存档要重新生成，不然页面只会一直「连接中」 */
+const CLIENT_ID_RE = /^[A-Za-z0-9_-]{6,40}$/
+
 function randomId(): string {
-  // 设备的身份就是这个 id（服务器只把它的哈希给别人看，B45a）：能用加密随机数就用，猜不到
+  // 设备的身份就是这个 id（服务器只把它的哈希给别人看，B45a）：加密随机数（randomUUID 只在安全上下文里有，
+  // getRandomValues 在 http 的局域网自部署里也有），猜不到
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  }
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6)
 }
 
@@ -96,7 +104,7 @@ function loadPrefs(): BattlePrefs {
     const names = (typeof p.names === 'object' && p.names !== null ? p.names : {}) as Record<string, unknown>
     const str = (v: unknown): string => (typeof v === 'string' ? cleanName(v) : '')
     return {
-      clientId: typeof p.clientId === 'string' && p.clientId ? p.clientId : base.clientId,
+      clientId: typeof p.clientId === 'string' && CLIENT_ID_RE.test(p.clientId) ? p.clientId : base.clientId,
       names: { me: str(names.me), left: str(names.left), right: str(names.right) },
       aiLevel: isAiLevel(p.aiLevel) ? p.aiLevel : base.aiLevel,
       intros: Object.fromEntries(
@@ -188,18 +196,17 @@ export const useBattleStore = defineStore('battle', () => {
     return Object.fromEntries(players.map((p) => [p.id, given?.[p.id] ?? newSeed()]))
   }
 
-  /** 这一局要读的片段先预解码（真人的题；机器人的不读） */
+  /**
+   * 这一局要读的片段先预解码：只预热本机会读的——本机可操作的那几行的题干（打机器人 / 线上是自己那一行，两人一台是两行；
+   * 观战一行都没有），答案在对战里不读（N8：原来把房间里每个真人的题干加答案全拉下来，线上 6 人一局要多下几倍）
+   */
   function prepareVoice(): void {
     const s = state.value
     if (!s) return
+    const mine = new Set(operable.value)
     const tokens = s.players
-      .filter((p) => p.kind === 'human')
-      .flatMap((p) =>
-        questionsAhead(s.kpId, p.seed, p.index, 16).flatMap((q) => [
-          ...questionSpeech(q, lang.value),
-          ...answerSpeech(q, lang.value),
-        ]),
-      )
+      .filter((p) => p.kind === 'human' && mine.has(p.id))
+      .flatMap((p) => questionsAhead(s.kpId, p.seed, p.index, 16).flatMap((q) => questionSpeech(q, lang.value)))
     for (const key of [ruleKey(s.skin), finishKey(s.skin), 'battle.half.red', 'battle.half.blue', 'battle.win.red', 'battle.win.blue']) {
       tokens.push(...phraseSpeech({ k: key }, lang.value))
     }
@@ -418,6 +425,10 @@ export const useBattleStore = defineStore('battle', () => {
     if (mode.value === 'online') {
       // 题目在本机判分，结果报给服务器（B41）；比分与事件等服务器的快照 / 事件回来
       awaiting.set(playerId, { index: p.index + 1, elapsed: false })
+      // 节流里还没发出去的「正在输入」作废：不然落后不到 100 ms 的按键会写到下一题的显示框上
+      if (inputTimer) clearTimeout(inputTimer)
+      inputTimer = null
+      inputPending = null
       transport?.send({ type: 'answer', index: p.index, given: String(given), correct: ok })
     } else {
       const res = applyAnswer(s, playerId, p.index, ok, String(given), now)

@@ -26,6 +26,15 @@ vi.mock('@/engine/update', async (orig) => ({ ...(await orig<typeof import('@/en
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
 import '@/views/battle/BattleRoomView.vue'
+// 「加入对战」面板在 App 里是按需加载的（N8）：这里先静态引一次，dynamic import 走缓存立刻就绪，用例不用等编译
+import '@/components/battle/JoinSheet.vue'
+
+/** 「加入对战」面板是按需加载的组件（N8）：点开后等它挂上 */
+async function joinSheetShown(w: { find(sel: string): { exists(): boolean } }): Promise<void> {
+  for (let i = 0; i < 200 && !w.find('.join-sheet').exists(); i++) await flushPromises()
+  expect(w.find('.join-sheet').exists()).toBe(true)
+}
+
 
 // 语言是模块级单例 + 本地存储持久化——每个用例后复位，保证相互独立。
 afterEach(() => {
@@ -71,7 +80,7 @@ describe('App 集成冒烟', () => {
   it('首页：品牌名是唯一的 <h1>，底部有各上线课程的知识点清单链接（静态页地址）与另外三个站的链接；子页标题跟随页面', async () => {
     const w = await mountAt('/')
     expect(w.findAll('h1')).toHaveLength(1)
-    expect(w.find('h1').text()).toBe('同步练对战版') // 品牌名 + 「对战版」药丸（两个 span 之间的换行被压掉）
+    expect(w.find('h1').text()).toBe('同步练-对战版') // 品牌名 + 只给读屏器的「-」+ 「对战版」药丸：与 <title> / og:site_name 一致
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('footer.about .about-links a')
@@ -194,6 +203,62 @@ describe('App 集成冒烟', () => {
     expect(shown(w)).toContain('破十法')
     expect(shown(w)).not.toContain('凑十法')
     w.unmount()
+  })
+
+  it('当前册记在地址里：切到下册地址带 ?sem=2，从下册的练习页 / 对战设置页返回还在下册（2026-09-22 用户报「不管从哪返回都回上册」）', async () => {
+    const until = async (pred: () => boolean): Promise<void> => {
+      for (let i = 0; i < 200 && !pred(); i++) await flushPromises()
+      expect(pred()).toBe(true)
+      for (let i = 0; i < 5; i++) await flushPromises()
+    }
+    const w = await mountAt(MAP)
+    const tab = w.findAll('button.tab').find((b) => b.text() === '下册')!
+    await tab.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.sem).toBe('2')
+    expect(shown(w)).toContain('破十法')
+
+    const tapNode = async (title: string): Promise<void> => {
+      await w.findAll('.node-wrap').find((n) => shown(n).includes(title))!.find('.node').trigger('click')
+      await flushPromises()
+    }
+    // 点下册的知识点 → 自己练 → 练习页的返回键 → 还是下册
+    await tapNode('破十法')
+    await w.find('.entry-btn.practice').trigger('click')
+    await until(() => router.currentRoute.value.name === 'practice')
+    expect(router.currentRoute.value.params.kpId).toBe('s2-02-borrow-sub')
+    await w.find('.page-header .back').trigger('click')
+    await until(() => router.currentRoute.value.name === 'topics')
+    expect(router.currentRoute.value.query.sem).toBe('2')
+    expect(shown(w)).toContain('破十法')
+    expect(shown(w)).not.toContain('凑十法')
+
+    // 对战设置页的返回键同样
+    await tapNode('破十法')
+    await w.find('.entry-btn.battle').trigger('click')
+    await until(() => router.currentRoute.value.name === 'battle-setup')
+    await w.find('.page-header .back').trigger('click')
+    await until(() => router.currentRoute.value.name === 'topics')
+    expect(router.currentRoute.value.query.sem).toBe('2')
+    expect(shown(w)).toContain('破十法')
+
+    // 切回上册：地址不再带 sem；直接打开带 ?sem=2 的地址就是下册
+    await w.findAll('button.tab').find((b) => b.text() === '上册')!.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.sem).toBeUndefined()
+    expect(shown(w)).toContain('凑十法')
+    await router.replace(`${MAP}?sem=2`)
+    await flushPromises()
+    expect(shown(w)).toContain('破十法')
+    w.unmount()
+
+    // 上册的知识点回来仍是上册
+    const p = await mountAt(practice('s1-05-carry-add'))
+    await p.find('.page-header .back').trigger('click')
+    await until(() => router.currentRoute.value.name === 'topics')
+    expect(router.currentRoute.value.query.sem).toBeUndefined()
+    expect(shown(p)).toContain('凑十法')
+    p.unmount()
   })
 
   it('练习页用真实题目渲染出作答按钮', async () => {
@@ -974,7 +1039,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w = await mountAt('/', fake)
     room = useRoomStore()
     await settle()
-    expect(w.find('.join-sheet').exists()).toBe(true)
+    await joinSheetShown(w)
     expect(sessionStorage.getItem(AUTOJOIN_KEY)).toBeNull()
     ws = FakeWs.last()
     ws.open()
@@ -1036,7 +1101,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     expect(w.find('.join-btn').exists()).toBe(false)
     expect(shown(w.find('.app-header .nav-btn.join'))).toContain('加入对战')
     await w.find('.app-header .nav-btn.join').trigger('click')
-    expect(w.find('.join-sheet').exists()).toBe(true)
+    await joinSheetShown(w)
     const input = w.find('.join-sheet input')
     await input.setValue('12ab34')
     expect((input.element as HTMLInputElement).value).toBe('1234')

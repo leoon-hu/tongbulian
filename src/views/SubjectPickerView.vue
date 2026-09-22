@@ -34,7 +34,7 @@ function tapSubject(sub: SubjectMeta): void {
   <div class="picker">
     <!-- 安装提示条（F16）：没装到主屏幕时从第一次打开就在首页顶上，标题之上 -->
     <InstallBar />
-    <section class="hero" aria-label="battle">
+    <section class="hero" :aria-label="ui('battle.title')">
       <span class="hero-icons" aria-hidden="true"><span v-for="(row, r) in iconRows" :key="r" class="hero-row"><span v-for="s in row" :key="s.id">{{ s.icon }}</span></span></span>
       <p class="hero-line"><RubyText :text="{ k: 'battle.hero' }" /></p>
     </section>

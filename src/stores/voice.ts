@@ -32,6 +32,8 @@ export const MY_TALK_LEVEL = 0.04
 export const PEER_TALK_LEVEL = 0.02
 /** 连接失败后隔多久由发 offer 的一方整条重建 */
 export const RETRY_MS = 2000
+/** 连败几次就不再自动重建（每次都是新 pc + STUN / TURN 分配，别无限刷） */
+export const MAX_RETRIES = 6
 /** 建连接前等 ICE 清单最多这么久 */
 export const TURN_WAIT_MS = 1000
 /** 连了这么久还没连上才写「连接中」；这么久还没连上当「连不上」 */
@@ -299,15 +301,20 @@ export const useVoiceStore = defineStore('voice', () => {
         if (live.get(id)?.peer !== peer || state === 'closed') return
         const cur = peers.value[id]
         if (cur) peers.value = { ...peers.value, [id]: { ...cur, state, fails: state === 'connected' ? 0 : state === 'failed' ? cur.fails + 1 : cur.fails } }
-        // 失败了：发 offer 的一方隔一会儿整条重建（两边都是新连接）；应答方等对方的新 offer
-        if (state === 'failed' && offerer && !retryTimers.has(id)) {
+        // 失败了：发 offer 的一方隔一会儿整条重建（两边都是新连接），间隔按失败次数翻倍（2、4、8…最多 32 秒）、
+        // 连败 MAX_RETRIES 次就不再试（界面上停在「连不上」，对方重新开关麦克风会从头来）；应答方等对方的新 offer
+        const fails = peers.value[id]?.fails ?? 0
+        if (state === 'failed' && offerer && !retryTimers.has(id) && fails <= MAX_RETRIES) {
           retryTimers.set(
             id,
-            setTimeout(() => {
-              retryTimers.delete(id)
-              const meSpeaks = speaking()
-              if (wantedPeers(members.value, me.value, meSpeaks).includes(id) && pairOfferer(me.value, meSpeaks, id, memberSpeaks(id)) === me.value) openPeer(id, true)
-            }, RETRY_MS),
+            setTimeout(
+              () => {
+                retryTimers.delete(id)
+                const meSpeaks = speaking()
+                if (wantedPeers(members.value, me.value, meSpeaks).includes(id) && pairOfferer(me.value, meSpeaks, id, memberSpeaks(id)) === me.value) openPeer(id, true)
+              },
+              RETRY_MS * Math.min(16, 2 ** Math.max(0, fails - 1)),
+            ),
           )
         }
       },

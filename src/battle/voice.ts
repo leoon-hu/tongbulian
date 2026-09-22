@@ -87,18 +87,24 @@ export function isRtcSignal(v: unknown): v is RtcSignal {
   return false
 }
 
-/** 服务器 / 别处给的 ICE 服务器清单：只留形状对的（urls 是字符串或字符串数组，用户名 / 口令是字符串） */
+const ICE_URL = /^(stun|stuns|turn|turns):[A-Za-z0-9.-]+(:\d{1,5})?(\?transport=(udp|tcp))?$/
+/**
+ * 服务器 / 别处给的 ICE 服务器清单：只留形状对的——urls 只能是 stun(s): / turn(s): 加主机名（带端口、transport 也行），
+ * turn(s) 必须带用户名与口令（没有凭据的 turn 条目会让 new RTCPeerConnection 直接抛错）
+ */
 export function cleanIceServers(v: unknown): IceServer[] {
   if (!Array.isArray(v)) return []
   const out: IceServer[] = []
   for (const item of v) {
     if (!item || typeof item !== 'object') continue
     const s = item as Record<string, unknown>
-    const urls = typeof s.urls === 'string' ? [s.urls] : Array.isArray(s.urls) ? s.urls.filter((u): u is string => typeof u === 'string') : []
+    const raw = typeof s.urls === 'string' ? [s.urls] : Array.isArray(s.urls) ? s.urls.filter((u): u is string => typeof u === 'string') : []
+    const urls = raw.filter((u) => ICE_URL.test(u))
     if (!urls.length) continue
     const server: IceServer = { urls }
     if (typeof s.username === 'string') server.username = s.username
     if (typeof s.credential === 'string') server.credential = s.credential
+    if (urls.some((u) => u.startsWith('turn')) && (!server.username || !server.credential)) continue
     out.push(server)
   }
   return out

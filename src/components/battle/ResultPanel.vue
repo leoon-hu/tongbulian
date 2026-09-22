@@ -5,6 +5,7 @@ import type { MatchState, Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
 import { ui } from '@/engine/i18n'
 import { useShareStore } from '@/stores/share'
+import { courseOfKp } from '@/engine/catalog'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
@@ -24,8 +25,12 @@ const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ?
 /** 「分享战绩」（F1「开源与分享」）：这一局的知识点、比分、谁赢了 + 站点链接；有系统分享面板直接弹，否则复制一段话 */
 const shareStore = useShareStore()
 function shareResult(): void {
+  // 链到这个知识点的静态页（有自己的标题、描述与「打一局」按钮），而不是首页
+  const course = courseOfKp(props.state.kpId)
+  const path = course ? `${course.course.subjectId}/${course.course.gradeId}/${props.state.kpId}.html` : ''
   void shareStore.share(
     ui('share.result', { kp: ui(`kp.${props.state.kpId}`), red: props.state.score.red, blue: props.state.score.blue, winner: ui(`battle.team.${winner.value}`) }),
+    path,
   )
 }
 </script>

@@ -4,6 +4,7 @@
  * 再截 iPad 横屏的对战设置页 / 开局规则句 / 两人同屏竞技场，和帮助页。
  * 用法：npm run dev 后执行 `npm run screenshots`（环境变量 BASE_URL、CHROME 可改）。
  * 安装提示条不进预览图：预先把静默期写成永久；对战的昵称也预先写好，免得先弹名字面板。
+ * 练习页的题是随机的：带 kp + seed 的截图预先把这一轮的 seed 写进本地存储，进页面就是那道代表题（每次截出来一样）。
  */
 
 import { spawn } from "node:child_process";
@@ -20,6 +21,7 @@ const profile = mkdtempSync(join(tmpdir(), "screenshots-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const BATTLE_PREFS = JSON.stringify({ names: { me: "🐰 小兔", left: "", right: "" }, aiLevel: "mid" });
+// 竞技场的题也是随机的：开打后把每个选手的 seed / index 换成固定的（题目流第 0 题），再摆一个中局比分——每次截出来一样
 // 每个新文档都跑：只压掉安装提示条；对战偏好按每张截图的 prefs 在导航前写（写在这里会把每张的覆盖冲掉）
 const INIT = `try{localStorage.setItem('tongbulian:install','{"until":9007199254740991}')}catch(e){}`;
 const SHOTS = [
@@ -40,11 +42,15 @@ const SHOTS = [
   },
   {
     "name": "practice",
-    "path": "#/s/math/g/g1/practice/s1-05-carry-add"
+    "path": "#/s/math/g/g1/practice/s1-05-carry-add",
+    "kp": "s1-05-carry-add",
+    "seed": 2
   },
   {
     "name": "clock",
-    "path": "#/s/math/g/g2/practice/m2s2-01-clock-hour"
+    "path": "#/s/math/g/g2/practice/m2s2-01-clock-hour",
+    "kp": "m2s2-01-clock-hour",
+    "seed": 1
   },
   {
     "name": "battle",
@@ -55,7 +61,7 @@ const SHOTS = [
     "load": 1500,
     "steps": [
       { "eval": "window.__battle.beginPlay()", "after": 400 },
-      { "eval": "window.__battle.state = { ...window.__battle.state, score: { red: 5, blue: 3 }, lastPoint: 'red', leading: 'red' }", "after": 1200 }
+      { "eval": "window.__battle.state = { ...window.__battle.state, players: window.__battle.state.players.map((p) => ({ ...p, seed: p.team === 'red' ? 8 : 15, index: 0 })), score: { red: 5, blue: 3 }, lastPoint: 'red', leading: 'red' }", "after": 1200 }
     ]
   },
   {
@@ -73,13 +79,15 @@ const SHOTS = [
   {
     "name": "battle-ipad",
     "path": "#/battle/local/s1-05-carry-add?mode=duo&skin=tower",
+    // 两人一台要有右边的名字（带 prefs 就会写成 小兔 / 小虎），不然竞技场会退回设置页问名字（撞过：截出来是设置页）
+    "prefs": {},
     "w": 1024,
     "h": 768,
     "scale": 2,
     "load": 1500,
     "steps": [
       { "eval": "window.__battle.beginPlay()", "after": 400 },
-      { "eval": "window.__battle.state = { ...window.__battle.state, score: { red: 5, blue: 3 }, lastPoint: 'red', leading: 'red' }", "after": 1400 }
+      { "eval": "window.__battle.state = { ...window.__battle.state, players: window.__battle.state.players.map((p) => ({ ...p, seed: p.team === 'red' ? 2 : 21, index: 0 })), score: { red: 5, blue: 3 }, lastPoint: 'red', leading: 'red' }", "after": 1400 }
     ]
   },
   {
@@ -116,12 +124,18 @@ const only = process.argv.slice(2);
 const wanted = only.length ? SHOTS.filter((s) => only.includes(s.name)) : SHOTS;
 if (only.length && wanted.length !== only.length) throw new Error("没有这张截图：" + only.filter((n) => !SHOTS.some((s) => s.name === n)).join(" "));
 try {
+  // 先开一次站点：本地存储只能在同源页面上写，about:blank 上写不进去（只截一张时第一张也要有偏好）
+  await send("Page.navigate", { url: BASE + "/" });
+  await sleep(1000);
   for (const s of wanted) {
     // 每张可以指定自己的尺寸（对战竞技场要横屏）
     const [w, h, scale] = [s.w ?? W, s.h ?? H, s.scale ?? SCALE];
     await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: scale, mobile: true, screenOrientation: { type: w > h ? "landscapePrimary" : "portraitPrimary", angle: w > h ? 90 : 0 } });
     const prefs = s.prefs ? JSON.stringify({ ...JSON.parse(BATTLE_PREFS), ...s.prefs, names: { me: "🐰 小兔", left: "🐰 小兔", right: "🐯 小虎" } }) : BATTLE_PREFS;
-    await ev(`try{localStorage.setItem('tongbulian:battle', ${JSON.stringify(prefs)});'ok'}catch(e){'blank'}`);
+    // 练习页：这一轮的 seed 预先写进本地存储，进页面就是那道代表题（题目流第 0 题 = 练习页同 seed 的第 1 题）
+    const round = s.kp ? JSON.stringify({ version: 2, progress: { completed: {}, rounds: { [s.kp]: { seed: s.seed, results: [] } } }, settings: { soundEnabled: true, lang: "zh" } }) : null;
+    const wrote = await ev(`try{localStorage.setItem('tongbulian:battle', ${JSON.stringify(prefs)});${round ? `localStorage.setItem('tongbulian:v1', ${JSON.stringify(round)});` : ""}'ok'}catch(e){'blank'}`);
+    if (wrote !== "ok") throw new Error("写不进本地存储：" + s.name);
     // 先去 about:blank 再进目标页：hash 路由只换 # 不会重新加载，上一张的比赛状态会留在内存里（撞过：截出来还是上一局）
     await send("Page.navigate", { url: "about:blank" });
     await sleep(200);

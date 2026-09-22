@@ -45,6 +45,9 @@ function isCount(v: unknown): v is number {
  * 把（可能缺字段、被改坏的）原始对象整理成合法状态：逐字段校验，
  * 缺失或类型不对的一律回退默认值，保证启动时不会因为一条坏数据整站打不开。
  */
+/** 存档里当键用的知识点 id：只认目录里那种样子，`__proto__` 之类的键不进对象（N6） */
+const KP_KEY = /^[a-z0-9][a-z0-9-]{0,63}$/
+
 function sanitize(raw: Record<string, unknown>): PersistedState {
   const base = defaultState()
   const progress = isRecord(raw.progress) ? raw.progress : {}
@@ -52,7 +55,7 @@ function sanitize(raw: Record<string, unknown>): PersistedState {
   const completed: Record<string, boolean> = {}
   if (isRecord(progress.completed)) {
     for (const [kpId, done] of Object.entries(progress.completed)) {
-      if (done === true) completed[kpId] = true
+      if (done === true && KP_KEY.test(kpId)) completed[kpId] = true
     }
   }
   // 当前这一轮：逐题对错是布尔数组，长度不能超过一轮的题数
@@ -60,6 +63,7 @@ function sanitize(raw: Record<string, unknown>): PersistedState {
   if (isRecord(progress.rounds)) {
     for (const [kpId, r] of Object.entries(progress.rounds)) {
       if (
+        KP_KEY.test(kpId) &&
         isRecord(r) &&
         isCount(r.seed) &&
         Array.isArray(r.results) &&

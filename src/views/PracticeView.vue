@@ -3,11 +3,11 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Question } from '@/types/models'
 import { ROUND_SIZE, buildSession, hasGenerator } from '@/engine'
-import { findKp, getCourse } from '@/engine/catalog'
+import { findKp, getCourse, mapPathOf } from '@/engine/catalog'
 import { answerLabel, checkAnswer } from '@/engine/answer'
 import { tenFrameProps } from '@/content/math/shared/demo'
 import { kpTitleKey, lang, ui } from '@/engine/i18n'
-import { answerSpeech, questionSpeech, rightSpeech, summarySpeech } from '@/engine/speech'
+import { RIGHT_KEYS, answerSpeech, phraseSpeech, questionSpeech, rightSpeech, summarySpeech } from '@/engine/speech'
 import { hush, say, warmUp } from '@/engine/voice'
 import { useProgressStore } from '@/stores/progress'
 import QuestionRenderer from '@/components/practice/QuestionRenderer.vue'
@@ -28,10 +28,11 @@ const progress = useProgressStore()
 const subjectId = String(route.params.subjectId)
 const gradeId = String(route.params.gradeId)
 const kpId = String(route.params.kpId)
-const mapPath = `/s/${subjectId}/g/${gradeId}`
 const course = getCourse(subjectId, gradeId)
 const kp = course ? findKp(course, kpId) : undefined
 const ready = kp !== undefined && hasGenerator(kpId)
+/** 返回地图：带上这个知识点所在的册（下册的题回到下册页签）；知识点不存在就回这门课的地图 */
+const mapPath = ready ? mapPathOf(kpId) : `/s/${subjectId}/g/${gradeId}`
 if (!ready) router.replace(course ? mapPath : '/')
 
 // 上次做到一半的那一轮：同一个 seed 复现同一组题，从断点接着做；没有或已做满就开新的一轮（重新计数）
@@ -56,12 +57,14 @@ function readQuestion(delayMs = 0): void {
   if (current.value) say(questionSpeech(current.value, lang.value), lang.value, delayMs)
 }
 
-/** 这一轮要读的片段先预解码，起播不卡 */
+/** 这一轮要读的片段先预解码，起播不卡：题干、答案，还有「答对夸一句」三句与结算句（不然第一次答对时才冷取） */
 function prepareVoice(): void {
   const tokens = questions.value.flatMap((q) => [
     ...questionSpeech(q, lang.value),
     ...answerSpeech(q, lang.value),
   ])
+  for (const key of RIGHT_KEYS) tokens.push(...phraseSpeech({ k: key }, lang.value))
+  tokens.push(...summarySpeech(questions.value.length, lang.value))
   warmUp(tokens, lang.value)
 }
 

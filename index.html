@@ -8,20 +8,32 @@
     />
     <!-- seo:head 与 seo:body 两段由 npm run seo（构建前自动跑）按目录生成，别手改；其余标签是固定的 -->
     <!-- seo:head -->
-    <title>同步练-对战版 · 人教版小学数学课本知识点对战游戏（一年级、二年级，带拼音和朗读）</title>
-    <meta name="description" content="同步练-对战版：儿童互动对战学习——把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢；打机器人、两人一台或多设备扫码组队，20 种游戏画面；一年级数学 26 个知识点、二年级数学 29 个知识点，也能一个人练；汉字标拼音、题目自动朗读；免费、无广告、可离线。" />
-    <meta name="keywords" content="同步练-对战版,同步练,儿童对战学习,小学数学对战游戏,课本知识点游戏,寓教于乐,小学数学练习,一年级数学练习题,二年级数学练习题,人教版,口算练习,凑十法,破十法,乘法口诀,有余数的除法,拼音,在线练习,儿童学习,数学对战游戏,口算比赛,两人对战" />
-    <meta property="og:title" content="同步练-对战版 · 人教版小学数学课本知识点对战游戏（一年级、二年级，带拼音和朗读）" />
+    <title>同步练-对战版：人教版小学数学练习题变对战游戏（一年级、二年级，带拼音朗读）</title>
+    <meta name="description" content="同步练-对战版：人教版一年级、二年级数学练习题在线做——把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢；打机器人、两人一台或多设备扫码组队，20 种游戏画面；一年级数学 26 个知识点、二年级数学 29 个知识点，也能一个人练；汉字标拼音、自动朗读；免费、无广告、可离线。" />
+    <meta name="keywords" content="同步练-对战版,同步练对战版,同步练,一年级数学练习题,二年级数学练习题,人教版一年级数学,人教版二年级数学,小学数学对战游戏,儿童对战学习,口算练习,在线练习" />
+    <meta property="og:title" content="同步练-对战版：人教版小学数学练习题变对战游戏（一年级、二年级，带拼音朗读）" />
     <meta property="og:description" content="把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢：打机器人、两人一台或多设备组队，20 种游戏画面；一年级数学 26 个知识点、二年级数学 29 个知识点；带拼音和朗读，免费、可离线。" />
-    <meta name="twitter:title" content="同步练-对战版 · 人教版小学数学课本知识点对战游戏（一年级、二年级，带拼音和朗读）" />
+    <meta name="twitter:title" content="同步练-对战版：人教版小学数学练习题变对战游戏（一年级、二年级，带拼音朗读）" />
     <meta name="twitter:description" content="把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢：打机器人、两人一台或多设备组队，20 种游戏画面；一年级数学 26 个知识点、二年级数学 29 个知识点；带拼音和朗读，免费、可离线。" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
+        "@type": [
+          "WebApplication",
+          "WebSite"
+        ],
         "url": "__SITE_URL__/",
         "name": "同步练-对战版",
-        "alternateName": "Chapter Practice · Battle",
+        "alternateName": [
+          "同步练对战版",
+          "同步练",
+          "Chapter Practice · Battle"
+        ],
+        "author": {
+          "@type": "Person",
+          "name": "leoon-hu",
+          "url": "https://github.com/leoon-hu/tongbulian"
+        },
         "applicationCategory": "EducationalApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript",
@@ -44,10 +56,17 @@
       }
     </script>
     <!-- /seo:head -->
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="author" content="leoon-hu" />
     <meta name="application-name" content="同步练-对战版" />
     <meta name="format-detection" content="telephone=no" />
+    <!-- 百度移动适配声明：同一地址同时适配电脑与手机，别转码 -->
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <!-- 微信 / QQ 分享卡片：QQ 认 itemprop 三件套，微信认页面里第一张 ≥ 300×300 的图（静态简介里的品牌图是 512 的图标） -->
+    <meta itemprop="name" content="同步练-对战版 · 课本知识点对战学习" />
+    <meta itemprop="description" content="把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢；也能一个人练，汉字标拼音、题目自动朗读" />
+    <meta itemprop="image" content="./icon-512.png" />
     <!-- 站点地址只在部署机的 .env（SITE_URL）里，构建时由 vite.config.ts 填入；没有就整行去掉 -->
     <link rel="canonical" href="__SITE_URL__/" />
     <meta property="og:type" content="website" />
@@ -55,8 +74,10 @@
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:url" content="__SITE_URL__/" />
     <meta property="og:image" content="__SITE_URL__/og.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="同步练-对战版：把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="__SITE_URL__/og.png" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -67,6 +88,9 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <!-- 首页 hero 那句话的拼音字体：先取，不然注音先用回退字体画一遍再换（styles/tokens.css 的 @font-face 同一个文件） -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="./fonts/andika-400-latin-ext.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="./fonts/andika-400-latin.woff2" />
     <style>
       /* 应用挂载前的静态简介（给不跑 JS 的爬虫看，也是 JS 加载时的占位）；Vue 挂载后整个替换掉 */
       .prerender {
@@ -96,17 +120,18 @@
     <div id="app">
       <!-- seo:body -->
       <main class="prerender">
+        <img src="./icon-512.png" alt="同步练-对战版" width="72" height="72" />
         <h1>同步练-对战版 · 课本知识点对战学习</h1>
         <p>
-          儿童互动对战学习：把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出：一到六年级，语文、数学、英语；练的是课本，玩的是游戏。每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示。免费、无广告、不用注册，添加到主屏幕后没有网也能用。现在一年级、二年级数学共 55 个知识点可对战、可练。
+          儿童互动对战学习：把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出，现在是一年级、二年级数学，其它年级与学科陆续补充；练的是课本，玩的是游戏。每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示。免费、无广告、不用注册，添加到主屏幕后没有网也能用。现在一年级、二年级数学共 55 个知识点可对战、可练。
         </p>
         <h2>对战怎么玩</h2>
         <p>同一个知识点的课本题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），可以两个人一台平板左右分屏，也可以每人一台设备扫码进同一个房间（两队各最多 6 人，还能观战）；每答对一题，20 种实时绘图的游戏画面就走一步（赛跑、赛车、火箭升空、热气球、游泳、爬梯子、挖宝、钓鱼、盖楼、种花、孵蛋、吹泡泡、摘果子、点亮星星、拼图、拔河、跷跷板、抢旗、融冰、拆城堡），开局先讲一句规则，得分有音效和语音提示。不想比的时候，直接点知识点就是一份安静的同步练习：一轮 8 题，做完打勾。</p>
-        <h2>一年级数学（上下册 13 个单元、26 个知识点）</h2>
-        <p>数一数，比多少，上下前后左右，1~5 的认识，5 以内分与合，5 以内加减法，6~10 的认识，6~10 的组成，10 以内加减法，连加连减、加减混合，立体图形，11~20 的认识，简单加、减法，凑十法，平面图形，破十法，100 以内的数，比大小，整十数加减法，口算加法，口算减法，笔算加法，笔算减法，两数相差几，比一个数多几或少几，认识人民币。</p>
+        <h2>一年级数学练习题（上下册 13 个单元、26 个知识点）</h2>
+        <p><a href="./math/g1/s1-00-count.html">数一数</a>，<a href="./math/g1/s1-00-compare.html">比多少</a>，<a href="./math/g1/s1-00-position.html">上下前后左右</a>，<a href="./math/g1/s1-01-num-5.html">1~5 的认识</a>，<a href="./math/g1/s1-01-compose-5.html">5 以内分与合</a>，<a href="./math/g1/s1-01-addsub-5.html">5 以内加减法</a>，<a href="./math/g1/s1-02-num-10.html">6~10 的认识</a>，<a href="./math/g1/s1-02-compose-10.html">6~10 的组成</a>，<a href="./math/g1/s1-02-addsub-10.html">10 以内加减法</a>，<a href="./math/g1/s1-02-mixed.html">连加连减、加减混合</a>，<a href="./math/g1/s1-03-solid-shapes.html">立体图形</a>，<a href="./math/g1/s1-04-num-20.html">11~20 的认识</a>，<a href="./math/g1/s1-04-simple-addsub.html">简单加、减法</a>，<a href="./math/g1/s1-05-carry-add.html">凑十法</a>，<a href="./math/g1/s2-01-flat-shapes.html">平面图形</a>，<a href="./math/g1/s2-02-borrow-sub.html">破十法</a>，<a href="./math/g1/s2-03-num-100.html">100 以内的数</a>，<a href="./math/g1/s2-03-compare-100.html">比大小</a>，<a href="./math/g1/s2-03-tens-addsub.html">整十数加减法</a>，<a href="./math/g1/s2-04-oral-add.html">口算加法</a>，<a href="./math/g1/s2-04-oral-sub.html">口算减法</a>，<a href="./math/g1/s2-05-written-add.html">笔算加法</a>，<a href="./math/g1/s2-05-written-sub.html">笔算减法</a>，<a href="./math/g1/s2-06-diff.html">两数相差几</a>，<a href="./math/g1/s2-06-more-less.html">比一个数多几或少几</a>，<a href="./math/g1/s2-07-money.html">认识人民币</a>。</p>
         <p><a href="./math/g1/">查看一年级数学全部知识点、示例题与对战入口 →</a></p>
-        <h2>二年级数学（上下册 11 个单元、29 个知识点）</h2>
-        <p>分类与整理，乘法的初步认识，2~6 的乘法口诀，乘加、乘减，用乘法解决问题，平均分，认识除法算式，用 2~6 的乘法口诀求商，用除法解决问题，认识东、南、西、北，认识厘米和米，量一量，7、8、9 的乘法口诀，用 7、8、9 的乘法口诀求商，连续两问，认识整时和半时，认识几时几分，时与分，认识余数，有余数除法的计算，倍的认识，乘除法解决问题，1000 以内数的认识，10000 以内数的认识，万以内数的大小比较，整百、整千数加减法，三位数加法，三位数减法，加减法各部分间的关系。</p>
+        <h2>二年级数学练习题（上下册 11 个单元、29 个知识点）</h2>
+        <p><a href="./math/g2/m2s1-01-sorting.html">分类与整理</a>，<a href="./math/g2/m2s1-02-mult-intro.html">乘法的初步认识</a>，<a href="./math/g2/m2s1-02-table-6.html">2~6 的乘法口诀</a>，<a href="./math/g2/m2s1-02-mult-addsub.html">乘加、乘减</a>，<a href="./math/g2/m2s1-02-mult-solve.html">用乘法解决问题</a>，<a href="./math/g2/m2s1-03-share.html">平均分</a>，<a href="./math/g2/m2s1-03-div-parts.html">认识除法算式</a>，<a href="./math/g2/m2s1-03-div-6.html">用 2~6 的乘法口诀求商</a>，<a href="./math/g2/m2s1-03-div-solve.html">用除法解决问题</a>，<a href="./math/g2/m2s1-04-directions.html">认识东、南、西、北</a>，<a href="./math/g2/m2s1-05-cm-m.html">认识厘米和米</a>，<a href="./math/g2/m2s1-05-measure.html">量一量</a>，<a href="./math/g2/m2s1-06-table-9.html">7、8、9 的乘法口诀</a>，<a href="./math/g2/m2s1-06-div-9.html">用 7、8、9 的乘法口诀求商</a>，<a href="./math/g2/m2s1-06-two-questions.html">连续两问</a>，<a href="./math/g2/m2s2-01-clock-hour.html">认识整时和半时</a>，<a href="./math/g2/m2s2-01-time-read.html">认识几时几分</a>，<a href="./math/g2/m2s2-01-time-calc.html">时与分</a>，<a href="./math/g2/m2s2-02-remainder.html">认识余数</a>，<a href="./math/g2/m2s2-02-rem-calc.html">有余数除法的计算</a>，<a href="./math/g2/m2s2-03-times.html">倍的认识</a>，<a href="./math/g2/m2s2-03-mul-div-solve.html">乘除法解决问题</a>，<a href="./math/g2/m2s2-04-num-1000.html">1000 以内数的认识</a>，<a href="./math/g2/m2s2-04-num-10000.html">10000 以内数的认识</a>，<a href="./math/g2/m2s2-04-compare.html">万以内数的大小比较</a>，<a href="./math/g2/m2s2-04-round-addsub.html">整百、整千数加减法</a>，<a href="./math/g2/m2s2-05-add.html">三位数加法</a>，<a href="./math/g2/m2s2-05-sub.html">三位数减法</a>，<a href="./math/g2/m2s2-05-relations.html">加减法各部分间的关系</a>。</p>
         <p><a href="./math/g2/">查看二年级数学全部知识点、示例题与对战入口 →</a></p>
         <p>其它年级和语文、英语陆续补充。</p>
         <p><a href="./help/">帮助与说明：对战玩法、规则、技巧、学习内容、常见问题 →</a></p>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Loop, MAX_DT, SLOW_LIMIT, SLOW_WINDOW, type LoopClock } from '../engine/loop'
+import { Loop, MAX_DT, RECOVER_WINDOWS, SLOW_LIMIT, SLOW_WINDOW, type LoopClock } from '../engine/loop'
 import { Tween, clamp, ease, lerp } from '../engine/tween'
 import { DEFAULT_CAPACITY, ParticlePool } from '../engine/particles'
 import { fillRoundRect, gradient, withAlpha, withTransform } from '../engine/draw'
@@ -25,6 +25,10 @@ function fakeClock() {
     advance(ms: number) {
       t += ms
       for (const cb of queue.splice(0)) cb(t)
+    },
+    /** 一帧里干活花掉的时间（在 frame 回调里调） */
+    busy(ms: number) {
+      t += ms
     },
     get pending() {
       return queue.length
@@ -152,17 +156,34 @@ describe('帧循环', () => {
     expect(loop.running).toBe(false)
   })
 
-  it('连续掉帧逐级降级，最多 3 级', () => {
+  it('连续掉帧（按一帧的工作耗时算）逐级降级，最多 3 级；帧间隔慢但工作快（低电量模式 30 Hz）不算掉帧；连续几个窗口都不掉帧就逐级恢复', () => {
     const fc = fakeClock()
     const levels: number[] = []
-    const loop = new Loop({ frame: () => {}, degrade: (l) => levels.push(l), clock: fc.clock })
+    let cost = 0
+    const loop = new Loop({ frame: () => fc.busy(cost), degrade: (l) => levels.push(l), clock: fc.clock })
     loop.start()
-    for (let i = 0; i < SLOW_WINDOW; i++) fc.advance(i < SLOW_LIMIT ? 40 : 16)
+    const frames = (n: number, work: number, gap = 16): void => {
+      for (let i = 0; i < n; i++) {
+        cost = work
+        fc.advance(gap)
+      }
+    }
+    // 30 Hz 的 rAF、每帧只干 3 ms：不降级
+    frames(SLOW_WINDOW * 3, 3, 33)
+    expect(levels).toEqual([])
+    frames(SLOW_LIMIT, 20)
+    frames(SLOW_WINDOW - SLOW_LIMIT, 5)
     expect(levels).toEqual([1])
-    for (let i = 0; i < SLOW_WINDOW; i++) fc.advance(16)
+    frames(SLOW_WINDOW, 5)
     expect(levels).toEqual([1])
-    for (let round = 0; round < 5; round++) for (let i = 0; i < SLOW_WINDOW; i++) fc.advance(40)
+    for (let round = 0; round < 5; round++) frames(SLOW_WINDOW, 20)
     expect(levels).toEqual([1, 2, 3])
     expect(loop.level).toBe(3)
+    // 之后一直很快：每 RECOVER_WINDOWS 个窗口恢复一级
+    frames(SLOW_WINDOW * RECOVER_WINDOWS, 3)
+    expect(loop.level).toBe(2)
+    frames(SLOW_WINDOW * RECOVER_WINDOWS * 2, 3)
+    expect(loop.level).toBe(0)
+    expect(levels).toEqual([1, 2, 3, 2, 1, 0])
   })
 })

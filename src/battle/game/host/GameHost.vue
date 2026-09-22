@@ -41,8 +41,11 @@ const loop = new Loop({
     if (mod) guard(() => mod!.tick(dt))
   },
   degrade: (lv) => {
+    const wasLowRes = level.value >= 3
     level.value = lv
     if (mod?.degrade) guard(() => mod!.degrade!(lv))
+    // 从「降像素比」那一级恢复回来：重排一次，画布换回正常的像素比
+    if (wasLowRes && lv < 3 && info && mod) guard(() => mod!.resize(info!.width, info!.height, info!.dpr))
   },
 })
 
@@ -103,10 +106,14 @@ function useModule(m: GameModule, s: HostStatus): void {
 function onResize(): void {
   if (!info) return
   const { width, height } = measure()
+  const dpr = deviceScale()
+  const compact = !!props.compact
+  // 尺寸没变就不重排：ResizeObserver 会因为邻居的重排、字号缩放等再报一次同样的盒子，重排要重新分配画布与离屏背景
+  if (info.width === width && info.height === height && info.dpr === dpr && info.compact === compact) return
   info.width = width
   info.height = height
-  info.dpr = deviceScale()
-  info.compact = !!props.compact
+  info.dpr = dpr
+  info.compact = compact
   if (mod) guard(() => mod!.resize(width, height, info!.dpr))
 }
 
@@ -116,7 +123,9 @@ function onVisibility(): void {
     if (mod) guard(() => mod!.pause())
   } else {
     if (mod) guard(() => mod!.resume())
-    loop.resume()
+    // 页面在后台时挂载的（扫码后切回来）：循环还没 start 过，resume 是空操作，这里补上
+    if (loop.running || loop.started) loop.resume()
+    else if (mod) loop.start()
   }
 }
 
@@ -155,6 +164,14 @@ watch(
     if (mod) guard(() => mod!.setState(s))
   },
   { deep: true },
+)
+// 结果页 / 大厅盖在画面上的时候隔帧画（约 30 fps）：胜利的彩纸看不出差别，省一半电
+watch(
+  () => props.state.phase,
+  (p) => {
+    loop.idle = p === 'ended' || p === 'lobby'
+  },
+  { immediate: true },
 )
 
 watch(

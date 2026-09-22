@@ -11,18 +11,27 @@ import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, IceServer, RoomError, ServerMsg } from '@/battle/protocol'
 import { cleanName } from '@/battle/names'
 import { DEFAULT_ICE_SERVERS, cleanIceServers, isRtcSignal } from '@/battle/voice'
-import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
+import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, randomSeed, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
 
 export const MAX_ROOMS = 500
+/** 同一个 IP 同时最多开几个房间、10 分钟内最多建几次（N6 ⑨）：不然几个 IP 几分钟就把 MAX_ROOMS 占满，所有人建房都回 busy */
+export const MAX_ROOMS_PER_IP = 20
+export const MAX_CREATES_PER_IP = 30
 export const MAX_MSG_BYTES = 4096
 /** 语音信令 rtc 单独放宽（B57）：SDP 常有 2–4 KB */
 export const MAX_RTC_BYTES = 16384
 export const RATE_PER_SEC = 20
-/** TURN 临时凭据的有效期（秒）与提前多久换新（B57） */
-export const TURN_TTL_S = 7200
+/** 语音信令另算一个窗口（B57）：开麦时向 5–6 个人同时建连接，候选每 100 ms 一包，突发能到每秒几十条，不能挤占比赛消息的额度 */
+export const RTC_RATE_PER_SEC = 60
+/** 发给一个连接的数据攒到这么多还没被读走：快照可以丢（下一份 100 ms 后就来）；再多就是不读的连接，直接断开（N6 ⑨） */
+export const SEND_SKIP_BYTES = 256 * 1024
+export const SEND_KILL_BYTES = 1024 * 1024
+/** TURN 临时凭据的有效期（秒）与提前多久换新（B57）：凭据全服务共用、发出去就收不回，所以只给 1 小时 */
+export const TURN_TTL_S = 3600
 export const TURN_MARGIN_MS = 10 * 60 * 1000
-/** 取凭据失败后隔多久再试 */
+/** 取凭据失败后隔多久再试；向 Cloudflare 取凭据的超时 */
 export const TURN_RETRY_MS = 60 * 1000
+export const TURN_FETCH_TIMEOUT_MS = 8000
 export const HEARTBEAT_MS = 60_000
 /** 一个连接口令连错几次就断开（口令只有 90 万种，别让人一直猜；B19） */
 export const MAX_BAD_PASS = 5
@@ -47,10 +56,11 @@ interface Conn {
   code: string | null
   ip: string
   lastSeen: number
-  /** 限流：这一秒收了几条 */
+  /** 限流：这一秒收了几条（比赛消息 / 语音信令各一个计数） */
   windowStart: number
   count: number
-  /** 口令连错了几次 */
+  rtcCount: number
+  /** 口令 / 房间号连错了几次 */
   badPass: number
 }
 
@@ -87,6 +97,7 @@ export function cloudflareTurn(keyId: string, token: string, fetchFn: typeof fet
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ ttl: TURN_TTL_S }),
+      signal: AbortSignal.timeout(TURN_FETCH_TIMEOUT_MS),
     })
     if (!res.ok) return null
     const body = (await res.json()) as { iceServers?: unknown }
@@ -126,15 +137,21 @@ export interface BattleServer {
 export function createBattleServer(opts: BattleServerOptions = {}): Promise<BattleServer> {
   const now = opts.now ?? Date.now
   const schedule = opts.schedule ?? ((fn, ms) => setTimeout(fn, Math.max(0, ms)))
-  const seed = opts.seed ?? (() => Math.floor(Math.random() * 2 ** 31))
+  const seed = opts.seed ?? randomSeed
   const log = opts.log ?? ((line: string) => console.log(line))
   const rooms = new Map<string, Room>()
   const conns = new Set<Conn>()
+  /** 每个房间里的连接（广播 / 转发不用扫全表） */
+  const connsByCode = new Map<string, Set<Conn>>()
   const pendingFlush = new Set<string>()
-  /** 每个 IP 当前的连接数 / 口令错误计数（B45a） */
+  /** 每个 IP 当前的连接数 / 口令错误计数 / 建房计数（B45a、N6 ⑨） */
   const connsByIp = new Map<string, number>()
   const badPassByIp = new Map<string, Window>()
   const badPassGlobal: Window = { start: 0, count: 0 }
+  const createsByIp = new Map<string, Window>()
+  /** 每个房间是哪个 IP 建的（按 IP 限房间数用） */
+  const roomIp = new Map<string, string>()
+  const roomsByIp = new Map<string, number>()
   /**
    * 对外身份 = clientId 的哈希（B45a）：clientId 是设备自己的秘密，只在 hello 里出现；快照里给大家看的是哈希，
    * 别人拿不到你的 clientId，也就不能冒充你重连、把你顶掉。盐每次启动随机，房间本来也不跨重启。
@@ -156,47 +173,86 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     bump(w, t)
     bump(badPassGlobal, t)
   }
-  /** 这个 IP（或整个服务）口令错太多，暂时不给查 */
+  /**
+   * 这个 IP 口令错太多，暂时不给查；全服务的上限只拦「本窗口里自己也错过」的 IP——不然十来个 IP 各错 30 次就能让
+   * 所有人的「加入对战」一直回「服务器忙」，全服务上限本身成了一个公开的开关
+   */
   function passBlocked(ip: string, t: number): boolean {
     const w = badPassByIp.get(ip)
-    const ipHit = !!w && t - w.start < BAD_PASS_WINDOW_MS && w.count >= MAX_BAD_PASS_PER_IP
+    const mine = w && t - w.start < BAD_PASS_WINDOW_MS ? w.count : 0
     const all = t - badPassGlobal.start < BAD_PASS_WINDOW_MS && badPassGlobal.count >= MAX_BAD_PASS_GLOBAL
-    return ipHit || all
+    return mine >= MAX_BAD_PASS_PER_IP || (all && mine > 0)
   }
 
-  function send(ws: WebSocket, msg: ServerMsg): void {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg))
+  /**
+   * 发一条消息；对方一直不读（bufferedAmount 攒着）就别再往里塞：快照可以丢，下一份 100 ms 后还会来；
+   * 攒过 SEND_KILL_BYTES 的连接直接断开——不然慢速 / 停摆的客户端会让服务端的写缓冲无限长
+   */
+  function send(ws: WebSocket, msg: ServerMsg | string): void {
+    if (ws.readyState !== ws.OPEN) return
+    if (ws.bufferedAmount > SEND_KILL_BYTES) {
+      ws.terminate()
+      return
+    }
+    if (ws.bufferedAmount > SEND_SKIP_BYTES && (typeof msg === 'string' || msg.type === 'state')) return
+    ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg))
   }
   function fail(ws: WebSocket, error: RoomError): void {
     send(ws, { type: 'error', error })
   }
-  function connsOf(code: string): Conn[] {
-    const out: Conn[] = []
-    for (const c of conns) if (c.code === code) out.push(c)
-    return out
+  function connsOf(code: string): Iterable<Conn> {
+    return connsByCode.get(code) ?? []
+  }
+  /** 连接进 / 出房间：同时维护按房间的索引 */
+  function setCode(c: Conn, code: string | null): void {
+    if (c.code) {
+      const set = connsByCode.get(c.code)
+      set?.delete(c)
+      if (set && set.size === 0) connsByCode.delete(c.code)
+    }
+    c.code = code
+    if (code) {
+      let set = connsByCode.get(code)
+      if (!set) connsByCode.set(code, (set = new Set()))
+      set.add(c)
+    }
   }
 
-  /** 广播整份快照，每房间最多每 BROADCAST_MS 一次（B42） */
+  /** 广播整份快照，每房间最多每 BROADCAST_MS 一次（B42）；快照只序列化一次，每个连接只补自己的 you */
   function flush(code: string): void {
     if (pendingFlush.has(code)) return
     pendingFlush.add(code)
     setTimeout(() => {
       pendingFlush.delete(code)
-      const room = rooms.get(code)
-      if (!room) return
-      const snap = snapshot(room)
-      const t = now()
-      for (const c of connsOf(code)) if (c.clientId) send(c.ws, { type: 'state', room: snap, you: c.clientId, now: t })
+      try {
+        const room = rooms.get(code)
+        if (!room) return
+        const head = JSON.stringify({ type: 'state', room: snapshot(room), now: now() }).slice(0, -1)
+        for (const c of connsOf(code)) if (c.clientId) send(c.ws, `${head},"you":${JSON.stringify(c.clientId)}}`)
+      } catch (e) {
+        log(`广播出错：${String(e)}`)
+      }
     }, BROADCAST_MS)
+  }
+
+  function dropRoom(code: string): void {
+    rooms.delete(code)
+    const ip = roomIp.get(code)
+    if (ip !== undefined) {
+      roomIp.delete(code)
+      const n = (roomsByIp.get(ip) ?? 1) - 1
+      if (n > 0) roomsByIp.set(ip, n)
+      else roomsByIp.delete(ip)
+    }
   }
 
   /** 关掉房间（「不玩了」/ 过期）：每个连接收到 closed 并脱离房间，房间从表里删掉 */
   function closeRoom(code: string): void {
-    for (const c of connsOf(code)) {
+    for (const c of [...connsOf(code)]) {
       fail(c.ws, 'closed')
-      c.code = null
+      setCode(c, null)
     }
-    rooms.delete(code)
+    dropRoom(code)
   }
 
   function runEffects(code: string, effects: Effect[]): void {
@@ -217,9 +273,13 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     if (m && m.phase === 'countdown' && (!before?.match || before.match.phase !== 'countdown' || before.match.startedAt !== m.startedAt)) {
       const at = m.startedAt
       schedule(() => {
-        const room = rooms.get(code)
-        if (!room || !room.match || room.match.startedAt !== at) return
-        commit(code, tick(room, Math.max(now(), at)))
+        try {
+          const room = rooms.get(code)
+          if (!room || !room.match || room.match.startedAt !== at) return
+          commit(code, tick(room, Math.max(now(), at)))
+        } catch (e) {
+          log(`开局出错：${String(e)}`)
+        }
       }, at - now())
     }
     // 红蓝两队都有人在线且还没开过局：自动开始（B21）；开始后 match 不为 null，这里不会再进
@@ -231,16 +291,23 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     const code = c.code
     if (!code || !c.clientId) return
     const room = rooms.get(code)
-    c.code = null
+    setCode(c, null)
     if (!room) return
     if (remove) {
       const res = apply(room, c.clientId, { type: 'leave' }, now())
       if (res.room.members.length === 0) {
-        rooms.delete(code)
+        dropRoom(code)
         return
       }
       commit(code, res)
     } else commit(code, setOnline(room, c.clientId, false, now()))
+  }
+
+  /** 房间号 / 口令猜错一次：计数，连错 MAX_BAD_PASS 次断开（房间号与口令一样是密钥，猜法要一样贵） */
+  function badGuess(c: Conn, t: number): void {
+    noteBadPass(c.ip, t)
+    fail(c.ws, 'noRoom')
+    if (++c.badPass >= MAX_BAD_PASS) c.ws.close(4002, 'too many tries')
   }
 
   function onHello(c: Conn, msg: Extract<ClientMsg, { type: 'hello' }>): void {
@@ -253,26 +320,29 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       fail(c.ws, 'version')
       return
     }
-    // 同一条连接又 hello 一次（换身份）：先把原来的座位标掉线，别留一个永远在线的幽灵
-    if (c.code) leaveRoom(c, false)
-    c.clientId = publicId(msg.clientId)
+    // 同一条连接又 hello 一次：同一个身份是重连，标掉线等它接回；换了身份就把原来的座位整个撤掉——
+    // 不然一条连接反复换身份就能用幽灵成员把房间或某队塞满
+    const id = publicId(msg.clientId)
+    if (c.code) leaveRoom(c, c.clientId !== null && c.clientId !== id)
+    c.clientId = id
     c.name = typeof msg.name === 'string' ? cleanName(msg.name) : ''
     c.version = msg.version.slice(0, 40)
     if (msg.code === undefined) return
-    if (!isCode(msg.code)) {
-      fail(c.ws, 'noRoom')
+    const t = now()
+    if (passBlocked(c.ip, t)) {
+      fail(c.ws, 'busy')
       return
     }
-    const room = rooms.get(msg.code)
+    const room = isCode(msg.code) ? rooms.get(msg.code) : undefined
     if (!room) {
-      fail(c.ws, 'noRoom')
+      badGuess(c, t)
       return
     }
     // 同一个 clientId 再开一个标签页：后开的顶掉先开的（B24）
-    for (const other of connsOf(msg.code)) {
+    for (const other of [...connsOf(msg.code)]) {
       if (other !== c && other.clientId === c.clientId) {
         fail(other.ws, 'replaced')
-        other.code = null
+        setCode(other, null)
         other.ws.close(4000, 'replaced')
       }
     }
@@ -282,7 +352,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       return
     }
     if (res.error) fail(c.ws, res.error)
-    c.code = msg.code
+    setCode(c, msg.code)
     // 加入 / 重连的人马上拿到一份快照，别人按节流广播；两队齐了 commit 里会自动开始
     send(c.ws, { type: 'state', room: snapshot(res.room), you: c.clientId, now: now() })
     commit(msg.code, { room: res.room, effects: [{ type: 'broadcast' }] })
@@ -297,7 +367,11 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       fail(c.ws, 'bad')
       return
     }
-    if (rooms.size >= MAX_ROOMS) {
+    // 全服务、这个 IP 同时开着的、这个 IP 10 分钟内建过的（N6 ⑨）
+    const t = now()
+    let creates = createsByIp.get(c.ip)
+    if (!creates) createsByIp.set(c.ip, (creates = { start: t, count: 0 }))
+    if (rooms.size >= MAX_ROOMS || (roomsByIp.get(c.ip) ?? 0) >= MAX_ROOMS_PER_IP || bump(creates, t) > MAX_CREATES_PER_IP) {
       fail(c.ws, 'busy')
       return
     }
@@ -307,10 +381,12 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     // 口令全服务器唯一（B19）：避开别的房间正在用的
     const taken = new Set<string>()
     for (const r of rooms.values()) for (const p of Object.values(r.passcodes)) taken.add(p)
-    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name }, version: c.version, now: now(), passcodes: makePasscodes(taken) })
+    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name }, version: c.version, now: t, passcodes: makePasscodes(taken) })
     rooms.set(code, room)
-    c.code = code
-    send(c.ws, { type: 'state', room: snapshot(room), you: c.clientId, now: now() })
+    roomIp.set(code, c.ip)
+    roomsByIp.set(c.ip, (roomsByIp.get(c.ip) ?? 0) + 1)
+    setCode(c, code)
+    send(c.ws, { type: 'state', room: snapshot(room), you: c.clientId, now: t })
   }
 
   /**
@@ -332,9 +408,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       send(c.ws, { type: 'found', code: hit.code, t: hit.t })
       return
     }
-    noteBadPass(c.ip, t)
-    fail(c.ws, 'noRoom')
-    if (++c.badPass >= MAX_BAD_PASS) c.ws.close(4002, 'too many tries')
+    badGuess(c, t)
   }
 
   // ── 语音（B57）：信令只转发、ICE 清单按需取 ──
@@ -363,15 +437,21 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     const info = await turnInflight
     return info ?? stunOnly()
   }
-  function onTurn(c: Conn): void {
-    // 只给在房间里的连接（别让人白拿凭据）
-    if (!c.clientId || !c.code) {
-      fail(c.ws, 'bad')
+  function onTurn(c: Conn, room: Room): void {
+    // 只给在房间里、而且房间里不止自己一个人在线的连接：凭据全服务共用、发出去就收不回（可在房间外当中继用、流量记到站长账上），
+    // 一个人建个空房就来领是最便宜的拿法；只 STUN 的清单随便给
+    const alone = room.members.filter((m) => m.online).length < 2
+    if (alone) {
+      const info = stunOnly()
+      send(c.ws, { type: 'turn', iceServers: info.iceServers, ttl: info.ttl })
       return
     }
     void getTurn().then((info) => send(c.ws, { type: 'turn', iceServers: info.iceServers, ttl: info.ttl }))
   }
-  /** 转给同房间在线的目标；目标不在（离开了 / 别的房间的人 / 自己）就丢掉不报错，形状不对才报 bad */
+  /**
+   * 转给同房间在线的目标；目标不在（离开了 / 别的房间的人 / 自己）就丢掉不报错，形状不对才报 bad。
+   * offer 只转发快照里开着麦的人发的（谁开了麦谁发 offer，B57）：没标 🎤 的连接推不出音频、也占不了名额
+   */
   function onRtc(c: Conn, room: Room, msg: Extract<ClientMsg, { type: 'rtc' }>): void {
     if (typeof msg.to !== 'string' || !isRtcSignal(msg.data)) {
       fail(c.ws, 'bad')
@@ -380,19 +460,24 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     if (msg.to === c.clientId) return
     const target = room.members.find((m) => m.clientId === msg.to)
     if (!target || !target.online) return
+    const sdp = (msg.data as { sdp?: { type?: unknown } }).sdp
+    if (sdp && sdp.type === 'offer' && !room.members.some((m) => m.clientId === c.clientId && m.voice)) return
     for (const other of connsOf(room.code)) if (other.clientId === msg.to) send(other.ws, { type: 'rtc', from: c.clientId!, data: msg.data })
   }
 
-  function onMessage(c: Conn, data: string): void {
+  function onMessage(c: Conn, data: string, bytes: number): void {
     const t = now()
     c.lastSeen = t
     if (t - c.windowStart >= 1000) {
       c.windowStart = t
       c.count = 0
+      c.rtcCount = 0
     }
-    if (++c.count > RATE_PER_SEC) return
-    // 普通消息 ≤ MAX_MSG_BYTES（B45）；只有语音信令 rtc 可以到 MAX_RTC_BYTES（ws 层的 maxPayload）
-    const big = data.length > MAX_MSG_BYTES
+    // 语音信令（B57）另算一个窗口：先看开头是不是 rtc（不用先解析整条），比赛消息与信令互不挤占
+    const isRtc = /^\{\s*"type"\s*:\s*"rtc"/.test(data)
+    if (isRtc ? ++c.rtcCount > RTC_RATE_PER_SEC : ++c.count > RATE_PER_SEC) return
+    // 普通消息 ≤ MAX_MSG_BYTES（B45，按字节算）；只有语音信令 rtc 可以到 MAX_RTC_BYTES（ws 层的 maxPayload）
+    const big = bytes > MAX_MSG_BYTES
     let msg: ClientMsg
     try {
       msg = JSON.parse(data) as ClientMsg
@@ -445,7 +530,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       return
     }
     if (msg.type === 'turn') {
-      onTurn(c)
+      onTurn(c, room)
       return
     }
     commit(c.code, apply(room, c.clientId, msg, t, seed))
@@ -472,22 +557,33 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
 
   wss.on('connection', (ws, req) => {
     const ip = clientIp(req)
-    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, badPass: 0 }
+    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, rtcCount: 0, badPass: 0 }
     conns.add(c)
     connsByIp.set(ip, (connsByIp.get(ip) ?? 0) + 1)
+    // 每条消息 / 每次断开都兜住异常（N6 ⑨）：一条畸形消息把整个进程杀掉 = 所有在玩的房间清空
     ws.on('message', (data, isBinary) => {
       if (isBinary) {
         ws.close(1003, 'text only')
         return
       }
-      onMessage(c, data.toString())
+      try {
+        const text = data.toString()
+        onMessage(c, text, Buffer.isBuffer(data) ? data.length : Buffer.byteLength(text))
+      } catch (e) {
+        log(`处理消息出错：${String(e)}`)
+        ws.close(1011, 'error')
+      }
     })
     ws.on('close', () => {
       conns.delete(c)
       const n = (connsByIp.get(ip) ?? 1) - 1
       if (n > 0) connsByIp.set(ip, n)
       else connsByIp.delete(ip)
-      leaveRoom(c, false)
+      try {
+        leaveRoom(c, false)
+      } catch (e) {
+        log(`断开处理出错：${String(e)}`)
+      }
     })
     ws.on('error', () => {
       /* close 会跟着来 */
@@ -496,14 +592,19 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
 
   // 心跳（B44）：60 秒没消息就当掉线；主持人掉线太久交接（B22）；房间 GC（B19）；过期的口令错误计数清掉
   const heartbeat = setInterval(() => {
-    const t = now()
-    for (const c of conns) if (t - c.lastSeen > HEARTBEAT_MS) c.ws.terminate()
-    for (const [ip, w] of badPassByIp) if (t - w.start >= BAD_PASS_WINDOW_MS) badPassByIp.delete(ip)
-    for (const [code, room] of rooms) {
-      const handover = reassignHost(room, t)
-      if (handover.room !== room) commit(code, handover)
-      if (!expired(room, t)) continue
-      closeRoom(code)
+    try {
+      const t = now()
+      for (const c of conns) if (t - c.lastSeen > HEARTBEAT_MS) c.ws.terminate()
+      for (const [ip, w] of badPassByIp) if (t - w.start >= BAD_PASS_WINDOW_MS) badPassByIp.delete(ip)
+      for (const [ip, w] of createsByIp) if (t - w.start >= BAD_PASS_WINDOW_MS) createsByIp.delete(ip)
+      for (const [code, room] of rooms) {
+        const handover = reassignHost(room, t)
+        if (handover.room !== room) commit(code, handover)
+        if (!expired(room, t)) continue
+        closeRoom(code)
+      }
+    } catch (e) {
+      log(`定时检查出错：${String(e)}`)
     }
   }, opts.sweepMs ?? SWEEP_MS)
 
@@ -539,6 +640,9 @@ if (import.meta.url === entry) {
     .filter(Boolean)
   const turnId = process.env.TURN_KEY_ID?.trim()
   const turnToken = process.env.TURN_KEY_TOKEN?.trim()
+  // 进程级兜底：记下来、不退出——退出 = 清空所有在玩的房间（systemd 会拉起来，但比赛没了）
+  process.on('uncaughtException', (e) => console.error('未捕获的异常：', e))
+  process.on('unhandledRejection', (e) => console.error('未处理的 rejection：', e))
   createBattleServer({
     port: Number(process.env.PORT ?? 8787),
     host: process.env.HOST ?? '127.0.0.1',

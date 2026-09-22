@@ -3,7 +3,10 @@
  * - 一个共享 AudioContext，首次触摸时解锁（iOS / Safari 的自动播放限制），之后序列播放不再受手势约束。
  * - 片段解码成 AudioBuffer 缓存（起播延迟 < 10ms），做 LRU。
  * - file:// 打开（fetch 不可用）时退化为 <audio> 元素池。
- * 同一时刻只播一个声音；新的 play 会打断上一个，序列播放靠 await 串起来。
+ * - 一句话 = 一串片段：playSequence 先把要用的片段都解码好，再按 AudioContext 的时钟一次排到时间轴上
+ *   （片段之间只留 JOIN_GAP_S，停顿标记留 PAUSE_S），不再一条播完等 onended 再起下一条——那样每个接缝
+ *   都是「文件里自带的静音 + 事件延迟」的一百多毫秒，一句 13 段的题听起来一顿一顿的（F14）。
+ * 同一时刻只播一个声音；新的 play / playSequence 会打断上一个。
  */
 import type { Lang } from '@/types/models'
 import { tts, stopTTS } from './tts'
@@ -14,7 +17,14 @@ let gain: GainNode | null = null
 let elementMode = false
 const buffers = new Map<string, AudioBuffer>()
 const MAX_BUFFERS = 400
+/** 解码后的 PCM 总量上限（字节）：400 条并句后的片段解码开约 100 MB，按体积再卡一道，平板上不至于常驻这么多（N8） */
+const MAX_BUFFER_BYTES = 40 * 1024 * 1024
+let bufferBytes = 0
 const inflight = new Map<string, Promise<AudioBuffer | null>>()
+/** 正在预解码队列里的文件（几批 preload 撞在一起不重复排） */
+const queued = new Set<string>()
+/** 上下文解锁失败后一小段时间内不再等：不然退回逐条播的那一句里每条都要空等 1 秒 */
+let ctxBlockedUntil = 0
 /** 确认不存在（404）的文件，避免反复请求 */
 const missing = new Set<string>()
 let current: { stop(): void } | null = null
@@ -24,6 +34,19 @@ const pool: HTMLAudioElement[] = []
 let poolIndex = 0
 
 const inBrowser = typeof window !== 'undefined'
+
+/** 序列里的一项：一个片段（file 为 null = 没音频，退 TTS 读 text）或一个停顿 */
+export interface SeqItem {
+  pause?: boolean
+  file?: string | null
+  text?: string
+}
+/** 片段之间留多久（秒）：一个词接下一个词 */
+export const JOIN_GAP_S = 0.03
+/** 停顿标记（逗号、句号）停多久（秒） */
+export const PAUSE_S = 0.28
+/** 每条 mp3 自带的首尾数字静音（build-audio.py 的 LEAD_SILENCE_MS + TAIL_SILENCE_MS），排时间轴时让下一条盖住它 */
+export const CLIP_PAD_S = 0.1
 const DEV = typeof import.meta !== 'undefined' && !!import.meta.env?.DEV
 function warn(...args: unknown[]): void {
   if (DEV) console.warn('[audio]', ...args)
@@ -111,12 +134,17 @@ async function decode(ac: AudioContext, data: ArrayBuffer): Promise<AudioBuffer>
   })
 }
 
+const bytesOf = (buf: AudioBuffer): number => buf.length * buf.numberOfChannels * 4
+
 function remember(file: string, buf: AudioBuffer): void {
-  buffers.delete(file)
+  if (buffers.has(file)) buffers.delete(file)
+  else bufferBytes += bytesOf(buf)
   buffers.set(file, buf)
-  if (buffers.size > MAX_BUFFERS) {
+  while (buffers.size > MAX_BUFFERS || (bufferBytes > MAX_BUFFER_BYTES && buffers.size > 1)) {
     const oldest = buffers.keys().next().value
-    if (oldest !== undefined) buffers.delete(oldest)
+    if (oldest === undefined) break
+    bufferBytes -= bytesOf(buffers.get(oldest)!)
+    buffers.delete(oldest)
   }
 }
 
@@ -157,11 +185,17 @@ function getBuffer(file: string): Promise<AudioBuffer | null> {
 /** 预解码一批文件（并发 6），失败静默 */
 export async function preload(files: string[]): Promise<void> {
   if (elementMode || !ensureContext()) return
-  const queue = files.filter((f) => !buffers.has(f))
+  const queue = files.filter((f) => !buffers.has(f) && !queued.has(f))
+  for (const f of queue) queued.add(f)
   const workers = Array.from({ length: 6 }, async () => {
     while (queue.length) {
       const f = queue.shift()
-      if (f) await getBuffer(f)
+      if (!f) continue
+      try {
+        await getBuffer(f)
+      } finally {
+        queued.delete(f)
+      }
     }
   })
   await Promise.all(workers)
@@ -173,6 +207,7 @@ export async function preload(files: string[]): Promise<void> {
  */
 async function contextReady(ac: AudioContext): Promise<boolean> {
   if ((ac.state as string) === 'running') return true
+  if (Date.now() < ctxBlockedUntil) return false
   ac.resume().catch((e: unknown) => warn('resume 失败', e))
   const deadline = Date.now() + 1000
   while (Date.now() < deadline) {
@@ -180,6 +215,7 @@ async function contextReady(ac: AudioContext): Promise<boolean> {
     if ((ac.state as string) === 'running') return true
   }
   warn('AudioContext 一直是', ac.state)
+  ctxBlockedUntil = Date.now() + 1000
   return false
 }
 
@@ -280,6 +316,98 @@ export async function play(file: string | null, text: string, lang: Lang, signal
     warn('没有音频，退回 TTS', text)
   }
   if (settings.ttsFallback && text) await tts(text, lang, signal)
+}
+
+/**
+ * 一串有 buffer 的片段（与停顿）按时钟排到时间轴上一起播。返回 false 表示上下文没准备好（没播），
+ * 调用方改走逐条的 play()。
+ */
+async function playRun(run: Array<{ item: SeqItem; buf: AudioBuffer | null }>, signal?: AbortSignal): Promise<boolean> {
+  const ac = ensureContext()!
+  if (signal?.aborted) return true
+  if (!(await contextReady(ac))) return false
+  if (signal?.aborted) return true
+  return new Promise((resolve) => {
+    const sources: AudioBufferSourceNode[] = []
+    let t = ac.currentTime + 0.03
+    let lastEnd = t
+    for (const { item, buf } of run) {
+      if (item.pause || !buf) {
+        t += PAUSE_S
+        continue
+      }
+      const src = ac.createBufferSource()
+      src.buffer = buf
+      src.connect(gain ?? ac.destination)
+      src.start(t)
+      sources.push(src)
+      lastEnd = t + buf.duration
+      t += Math.max(0.05, buf.duration - CLIP_PAD_S) + JOIN_GAP_S
+    }
+    // 最后一条播完再等它后面的停顿（如果有）
+    const tailMs = Math.max(0, t - lastEnd - JOIN_GAP_S) * 1000
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      signal?.removeEventListener('abort', stopNow)
+      if (current?.stop === stopNow) current = null
+      resolve(true)
+    }
+    const stopNow = () => {
+      for (const s of sources) {
+        try {
+          s.stop()
+        } catch {
+          /* 已经停了 */
+        }
+      }
+      finish()
+    }
+    const last = sources[sources.length - 1]
+    if (last) last.onended = () => setTimeout(finish, tailMs)
+    else setTimeout(finish, tailMs)
+    signal?.addEventListener('abort', stopNow, { once: true })
+    current = { stop: stopNow }
+    // 兜底：onended 不触发（标签页切后台等）时不要卡住序列
+    setTimeout(finish, (t - ac.currentTime) * 1000 + 1500)
+  })
+}
+
+/**
+ * 播一句话：能排时间轴的（有 buffer 的片段与停顿）连成一段一起排；没 buffer 的（缺文件 / file:// / 解码失败）
+ * 走 play() 的老路（<audio> 元素 → TTS）。resolve 表示播完或被打断。
+ */
+export async function playSequence(items: SeqItem[], lang: Lang, signal?: AbortSignal): Promise<void> {
+  stop()
+  if (signal?.aborted || !inBrowser) return
+  const ac = elementMode ? null : ensureContext()
+  const bufs = await Promise.all(items.map((it) => (ac && !it.pause && it.file && !missing.has(it.file) ? getBuffer(it.file) : Promise.resolve(null))))
+  if (signal?.aborted) return
+  let i = 0
+  while (i < items.length) {
+    const run: Array<{ item: SeqItem; buf: AudioBuffer | null }> = []
+    while (i < items.length && (items[i]!.pause || bufs[i])) {
+      run.push({ item: items[i]!, buf: bufs[i]! })
+      i++
+    }
+    if (run.length) {
+      if (ac && (await playRun(run, signal))) {
+        if (signal?.aborted) return
+        continue
+      }
+      // 上下文没解锁 / 没有 WebAudio：逐条来
+      for (const { item } of run) {
+        if (signal?.aborted) return
+        if (item.pause) await new Promise((r) => setTimeout(r, PAUSE_S * 1000))
+        else await play(item.file ?? null, item.text ?? '', lang, signal)
+      }
+      continue
+    }
+    const it = items[i++]!
+    await play(it.file ?? null, it.text ?? '', lang, signal)
+    if (signal?.aborted) return
+  }
 }
 
 export function stop(): void {

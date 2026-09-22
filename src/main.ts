@@ -5,7 +5,7 @@ import App from '@/App.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useInstallStore } from '@/stores/install'
 import { unlockAudio } from '@/engine/audio'
-import { trackBackNavigation } from '@/engine/analytics'
+import { setupPageTracking } from '@/engine/analytics'
 import '@/styles/tokens.css'
 import '@/styles/themes.css'
 import '@/styles/base.css'
@@ -22,5 +22,5 @@ useSettingsStore()
 useInstallStore().setup()
 app.use(router)
 app.mount('#app')
-// 访问统计（N7）：返回键那一下 tracker 自己不记，这里补；没加统计标签时什么都不做
-trackBackNavigation()
+// 访问统计（N7）：翻页由路由上报（房间号不进统计库、返回键不记两次）；没加统计标签时什么都不做
+setupPageTracking(router)

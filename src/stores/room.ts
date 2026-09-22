@@ -3,11 +3,12 @@
  * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / lookup / team（建房的设备自己上场）/ input / answer / rematch / next / leave / ping。
  * 比赛部分交给 stores/battle（syncOnline / onRemoteEvent），竞技场页不知道自己在哪种模式下（B41）。
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { hasGenerator } from '@/engine'
 import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
+import { joinOpen, roomAvailable, roomInMatch, roomKpId } from '@/battle/lite'
 import { useBattleStore } from './battle'
 import { useVoiceStore } from './voice'
 import { reloadForNewVersion } from '@/engine/update'
@@ -27,8 +28,7 @@ export const useRoomStore = defineStore('room', () => {
   const code = ref<string | null>(null)
   /** 口令查到的房间号与身份（B19）：「加入对战」面板看到它就跳到房间页 */
   const found = ref<{ code: string; t: Role } | null>(null)
-  /** 全局「加入对战」面板开着（顶栏按钮打开，App 渲染 JoinSheet） */
-  const joinOpen = ref(false)
+  // 全局「加入对战」面板开着：真值在 battle/lite.ts（顶栏 / App 不引这个 store 也能看）
   /** 页面版本旧了，正在更新并重载（B43）：页面显示「正在更新…」；重载没成功（同版本已试过）会变回 false，错误照常显示 */
   const updating = ref(false)
   let client: RoomClient | null = null
@@ -36,7 +36,7 @@ export const useRoomStore = defineStore('room', () => {
   /** 测试可注入假的 WebSocket */
   let factory: RoomClientOptions['factory'] | undefined
 
-  const available = computed(() => socketUrl() !== null)
+  const available = roomAvailable
   const me = computed<Member | undefined>(() => snapshot.value?.members.find((m) => m.clientId === you.value))
   const isHost = computed(() => !!snapshot.value && snapshot.value.hostId === you.value)
   const participants = computed(() => snapshot.value?.members.filter((m) => m.role !== 'watch') ?? [])
@@ -46,6 +46,9 @@ export const useRoomStore = defineStore('room', () => {
     return p === 'countdown' || p === 'playing' || p === 'ended'
   })
   const teamMembers = (team: Team): Member[] => snapshot.value?.members.filter((m) => m.role === team) ?? []
+  // 镜像给轻模块（App.vue / AppHeader 只看它）
+  watch(inMatch, (v) => (roomInMatch.value = v), { immediate: true })
+  watch(() => snapshot.value?.kpId ?? null, (v) => (roomKpId.value = v), { immediate: true })
 
   function useFactory(f: RoomClientOptions['factory'] | undefined): void {
     factory = f

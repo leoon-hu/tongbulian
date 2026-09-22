@@ -17,6 +17,7 @@ function client(overrides: Partial<RoomClientOptions> = {}) {
     onError: (e) => calls.errors.push(e),
     onStatus: (s) => calls.status.push(s),
     factory: (url) => new FakeWs(url),
+    jitter: () => 0,
     ...overrides,
   })
   return { c, calls }

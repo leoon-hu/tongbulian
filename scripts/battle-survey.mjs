@@ -38,7 +38,7 @@ const combos = [];
       for (const kp of course.knowledgePoints) {
         if (!hasGenerator(kp.id)) continue;
         for (let seed = 1; seed <= 40; seed++) {
-          const q = questionAt(kp.id, seed, 1, 0);
+          const q = questionAt(kp.id, seed, 0);
           const key = `${[...new Set(q.stem.map((p) => p.kind))].sort().join("+")}|${q.input}`;
           if (!seen.has(key)) seen.set(key, { key, kp: kp.id, seed, subject: course.subjectId, grade: course.gradeId });
         }

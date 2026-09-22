@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { setupSwUpdates, type SwLike } from '../sw'
+import { UPDATE_CHECK_GAP_MS, setupSwUpdates, type SwLike } from '../sw'
 
 function fakeSw(controller: unknown): SwLike & { fire(): void; update: ReturnType<typeof vi.fn> } {
   const fns: Array<() => void> = []
@@ -51,14 +51,34 @@ describe('新版本 Service Worker 接管后重载页面（B43）', () => {
     expect(reload).toHaveBeenCalledTimes(1) // 攒着的只用一次
   })
 
-  it('回到前台时查一次更新；没有 SW 的环境什么都不做', async () => {
+  it('回到前台时查一次更新（10 分钟内不重复、对战里不查）；没有 SW 的环境什么都不做', async () => {
     const sw = fakeSw({})
     const doc = fakeDoc()
-    setupSwUpdates(() => false, { sw, doc, reload: vi.fn() })
+    let t = 0
+    let busy = false
+    setupSwUpdates(() => busy, { sw, doc, reload: vi.fn(), now: () => t })
+    doc.show()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(sw.update).toHaveBeenCalledTimes(0) // 刚打开的页面本来就是新的
+    t = UPDATE_CHECK_GAP_MS
+    busy = true
+    doc.show()
+    await Promise.resolve()
+    expect(sw.update).toHaveBeenCalledTimes(0) // 对战里不查
+    busy = false
     doc.show()
     await Promise.resolve()
     await Promise.resolve()
     expect(sw.update).toHaveBeenCalledTimes(1)
+    doc.show()
+    await Promise.resolve()
+    expect(sw.update).toHaveBeenCalledTimes(1) // 10 分钟内不重复
+    t = UPDATE_CHECK_GAP_MS * 2
+    doc.show()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(sw.update).toHaveBeenCalledTimes(2)
     const reload = vi.fn()
     const { flush } = setupSwUpdates(() => false, { sw: null, doc: null, reload })
     flush()

@@ -17,17 +17,29 @@ import { AUTHOR_CONTACT, REPO_URL, SISTER_SITES } from '@/engine/sites'
 import { type AnalyticsConfig, analyticsTag } from '@/engine/analytics'
 import { SKINS } from '@/battle/skins'
 import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
+import { EMOJI_ZH } from '@/content/math/shared/emoji'
+import { KP_SEO as SEO_G1, type KpSeo } from '@/content/math/grade1/seo'
+import { KP_SEO as SEO_G2 } from '@/content/math/grade2/seo'
+
+/** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2 }
+/** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
+const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
 export const SITE_NAME = '同步练-对战版'
 export const SITE_TAGLINE = '课本知识点对战学习'
 /** 一句话定位（2026-09-21 用户定），入口页 / 静态页 / 分享图共用 */
 export const SITE_PITCH = '把人教版课本的知识点测验变成游戏积分，谁先答对 8 题谁赢'
+/** 站名的别名（搜索引擎把「同步练对战版」「同步练」也认到这个站上） */
+export const SITE_ALT_NAMES = ['同步练对战版', '同步练', 'Chapter Practice · Battle']
 /** 每个知识点页上示例题的数量：三档难度各几道 */
 export const SAMPLES_PER_TIER = 2
 
 const zh = (l: Parameters<typeof translate>[0]): string => translate(l, 'zh')
 const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+/** 写进 <script type="application/ld+json"> 的 JSON：< 转义成 \u003c，文案里哪天出现 </script> 或 <!-- 也不会把脚本截断 */
+const ldJson = (v: unknown, indent?: number): string => JSON.stringify(v, null, indent).replace(/</g, '\\u003c')
 
 // ── 目录 ──────────────────────────────────────────────────────────────
 
@@ -75,20 +87,34 @@ export function sampleQuestions(kpId: string, perTier = SAMPLES_PER_TIER): Quest
   if (!gen) return []
   const out: Question[] = []
   const seen = new Set<string>()
+  const shapes = new Set<string>()
+  // 同一档先挑「题型不同」的（题干文字去掉数字后的骨架不同），挑不满再放宽——不然同一个模板的两道题会连着出
+  const shapeOf = (q: Question): string => q.stem.map((p) => (p.kind === 'text' ? zh(p.text).replace(/\d+/g, '#') : p.kind)).join('|')
   for (const d of [1, 2, 3] as const) {
     let got = 0
-    for (let seed = 1; seed <= 60 && got < perTier; seed++) {
-      const q = gen(d, createRng(seed * 7 + d))
-      if (seen.has(q.id)) continue
-      seen.add(q.id)
-      out.push(q)
-      got += 1
+    for (const strict of [true, false]) {
+      for (let seed = 1; seed <= 60 && got < perTier; seed++) {
+        const q = gen(d, createRng(seed * 7 + d))
+        if (seen.has(q.id)) continue
+        const shape = shapeOf(q)
+        if (strict && shapes.has(shape)) continue
+        seen.add(q.id)
+        shapes.add(shape)
+        out.push(q)
+        got += 1
+      }
     }
   }
   return out
 }
 
-const icons = (icon: string, n: number): string => (n <= 20 ? icon.repeat(n) : `${icon} × ${n}`)
+/** emoji 的中文名（content/math/shared/emoji.ts）：示例题里名词只有 emoji，搜索引擎认不出，补上「3 个苹果」 */
+const emojiName = (icon: string): string | undefined => EMOJI_ZH[`emoji.${icon}`]
+const icons = (icon: string, n: number): string => {
+  const name = emojiName(icon)
+  const pics = n <= 20 ? icon.repeat(n) : `${icon} × ${n}`
+  return name ? `${pics}（${n} 个${name}）` : pics
+}
 
 /** 题干片段的文字版：文字与算式照原样，教具说成一句话（示例题是给家长看的，能看懂题在问什么就行） */
 export function stemText(part: StemPart): string {
@@ -101,8 +127,10 @@ export function stemText(part: StemPart): string {
       return `（十格阵：${part.filled} 个${part.taken ? `，划掉 ${part.taken} 个` : ''}${part.extra ? `，另有 ${part.extra} 个` : ''}）`
     case 'objects':
       return icons(part.icon, part.count)
-    case 'scatter':
-      return part.items.join(' ')
+    case 'scatter': {
+      const names = [...new Set(part.items.map(emojiName).filter((x): x is string => !!x))]
+      return names.length ? `${part.items.join(' ')}（${names.join('、')}）` : part.items.join(' ')
+    }
     case 'compare-rows':
       return part.rows.map((r) => icons(r.icon, r.count)).join('\n')
     case 'clock':
@@ -117,8 +145,17 @@ export function stemText(part: StemPart): string {
       return `（${part.rows} 排、每排 ${part.cols} 个小正方形拼成的图形）`
     case 'sequence':
       return part.cells.map((c) => (c.kind === 'item' ? c.label : '?')).join(' ')
-    case 'lineup':
-      return part.items.map((it, i) => (i === part.highlight ? `【${it}】` : it)).join(' ')
+    case 'lineup': {
+      // 排成一列的方向：左右一排（默认）、上下一列（第一个在最上面）、前后一排（第一个在最前面）——静态页上写清楚，不然「谁在最上面」看着像答错了
+      const row = part.items.map((it, i) => {
+        const name = emojiName(it)
+        const label = name ? `${it}${name}` : it
+        return i === part.highlight ? `【${label}】` : label
+      })
+      if (part.axis === 'ud') return `（从上到下）${row.join('、')}`
+      if (part.axis === 'fb') return `（从前到后）${row.join('、')}`
+      return `（从左到右）${row.join('、')}`
+    }
     case 'number-line':
       return `（数轴 ${part.from}~${part.to}${part.marks?.length ? `，标出 ${part.marks.join('、')}` : ''}）`
     case 'ruler':
@@ -194,6 +231,10 @@ interface PageMeta {
   title: string
   description: string
   jsonLd: Record<string, unknown>[]
+  /** 这一页的搜索词（知识点页从 KP_SEO 来）；没有就不写 keywords */
+  keywords?: string[]
+  /** 不进 sitemap、不索引（404 页） */
+  noindex?: boolean
 }
 
 function absoluteTags(siteUrl: string, path: string): string {
@@ -203,9 +244,20 @@ function absoluteTags(siteUrl: string, path: string): string {
     `<link rel="canonical" href="${url}" />`,
     `<meta property="og:url" content="${url}" />`,
     `<meta property="og:image" content="${siteUrl}/og.png" />`,
+    `<meta property="og:image:type" content="image/png" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${SITE_NAME}：${SITE_PITCH}" />`,
     `<meta name="twitter:image" content="${siteUrl}/og.png" />`,
+  ].join('\n    ')
+}
+
+/** 微信 / QQ 分享卡片认页面里第一张 ≥ 300×300 的图与 itemprop 三件套：把 512 的图标放在最前面（显示成 36px 的品牌图） */
+function shareHints(root: string, title: string, description: string): string {
+  return [
+    `<meta itemprop="name" content="${esc(title)}" />`,
+    `<meta itemprop="description" content="${esc(description)}" />`,
+    `<meta itemprop="image" content="${root}icon-512.png" />`,
   ].join('\n    ')
 }
 
@@ -235,8 +287,9 @@ function contactBlock(root: string): string {
 
 function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string, analytics: AnalyticsConfig | null): string {
   const fullTitle = `${meta.title} · ${SITE_NAME}`
-  // 回站点根的相对路径按页面深度算：<学科>/<年级>/ 下两层是 ../../，help/ 下一层是 ../
-  const root = '../'.repeat(meta.path.split('/').length - 1)
+  // 回站点根的相对路径按页面深度算：<学科>/<年级>/ 下两层是 ../../，help/ 下一层是 ../；
+  // 404 页会在任何地址上被服务器直接吐出来（error_page），只能用根路径
+  const root = meta.path === NOT_FOUND_FILE ? '/' : '../'.repeat(meta.path.split('/').length - 1)
   const crumbHtml = crumbs
     .map((c) => `<li>${c.href ? `<a href="${c.href}">${esc(c.text)}</a>` : esc(c.text)}</li>`)
     .join('')
@@ -256,26 +309,33 @@ function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: st
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${esc(fullTitle)}</title>
-    <meta name="description" content="${esc(meta.description)}" />
-    <meta name="robots" content="index, follow" />
+    <meta name="description" content="${esc(meta.description)}" />${meta.keywords?.length ? `\n    <meta name="keywords" content="${esc(meta.keywords.join(','))}" />` : ''}
+    <meta name="robots" content="${meta.noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'}" />
+    <meta name="author" content="${AUTHOR.name}" />
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
     <meta name="theme-color" content="#ff8a3d" />
     <link rel="icon" type="image/svg+xml" href="${root}favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="${root}icon-192.png" />
     <link rel="apple-touch-icon" href="${root}apple-touch-icon.png" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="${SITE_NAME}" />
-    <meta property="og:title" content="${esc(fullTitle)}" />
+    <meta property="og:title" content="${esc(meta.title)}" />
     <meta property="og:description" content="${esc(meta.description)}" />
     <meta property="og:locale" content="zh_CN" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${esc(meta.title)}" />
+    <meta name="twitter:description" content="${esc(meta.description)}" />
+    ${shareHints(root, fullTitle, meta.description)}
     ${absoluteTags(siteUrl, meta.path)}
-    <script type="application/ld+json">${JSON.stringify([breadcrumb, ...meta.jsonLd])}</script>${analytics ? `\n    ${analyticsTag(analytics)}` : ''}
+    <script type="application/ld+json">${ldJson([breadcrumb, ...meta.jsonLd])}</script>${analytics ? `\n    ${analyticsTag(analytics)}` : ''}
     <style>
 ${STYLE}
     </style>
   </head>
   <body>
     <header>
-      <a class="brand" href="${root}"><img src="${root}icon-192.png" alt="" width="36" height="36" />${SITE_NAME} · ${SITE_TAGLINE}</a>
+      <a class="brand" href="${root}"><img src="${root}icon-512.png" alt="${SITE_NAME}" width="36" height="36" />${SITE_NAME} · ${SITE_TAGLINE}</a>
       <ol class="crumbs">${crumbHtml}</ol>
     </header>
     <main>
@@ -296,7 +356,9 @@ ${body}
 const webApp = (siteUrl: string): Record<string, unknown> => ({
   '@type': 'WebApplication',
   name: SITE_NAME,
+  alternateName: SITE_ALT_NAMES,
   applicationCategory: 'EducationalApplication',
+  author: AUTHOR,
   ...(siteUrl ? { url: `${siteUrl}/` } : {}),
 })
 
@@ -306,8 +368,8 @@ function coursePage(lc: LiveCourse, siteUrl: string, analytics: AnalyticsConfig 
   const { course, name } = lc
   const kps = liveKps(course)
   const units = course.units.filter((u) => kpsOfUnit(course, u.id).some((kp) => getGenerator(kp.id)))
-  const title = `${name}知识点对战游戏与同步练习 · 人教版上下册 ${units.length} 个单元 ${kps.length} 个知识点`
-  const description = `人教版${name}（2022 版课标新教材）上册、下册共 ${units.length} 个单元、${kps.length} 个知识点，每个都能对战也能练：答对课本题得分，谁先答对 8 题谁赢，打机器人、两人一台或多设备扫码组队；按教材随机出题，汉字标拼音、题目自动朗读，答错有教具演示；免费、无广告、可离线。`
+  const title = `${name}练习题与对战游戏｜人教版上下册 ${kps.length} 个知识点`
+  const description = `人教版${name}上下册 ${kps.length} 个知识点的在线练习题：按 2022 版课标新教材随机出题，汉字标拼音、自动朗读，答错有教具演示；每个知识点也能打一局对战游戏。免费、无广告、可离线。`
   const sems = ([1, 2] as const).map((s) => ({ s, units: units.filter((u) => u.semester === s) })).filter((x) => x.units.length)
   const body = `
     <h1>${esc(name)} · 人教版知识点对战与练习</h1>
@@ -322,7 +384,7 @@ ${sems
 ${us
   .map(
     (u) => `
-      <div class="unit">
+      <div class="unit" id="u-${u.id}">
         <h3><span class="no">${esc(unitNo(u))}</span>${esc(u.title)}</h3>
         <ul class="topics">
 ${kpsOfUnit(course, u.id)
@@ -347,6 +409,7 @@ ${kpsOfUnit(course, u.id)
     name: `${name} · 人教版知识点对战与练习`,
     description,
     inLanguage: 'zh-CN',
+    author: AUTHOR,
     isPartOf: webApp(siteUrl),
     hasPart: sems.map(({ s, units: us }) => ({
       '@type': 'ItemList',
@@ -378,12 +441,18 @@ function kpPage(lc: LiveCourse, kp: KnowledgePoint, siteUrl: string, analytics: 
   const unit = course.units.find((u) => u.id === kp.unitId)!
   const sem = semName(unit.semester)
   const where = `人教版${name}${sem}${unitLabel(unit)}`
-  const title = `${kp.title}对战游戏与练习题 · ${where}`
-  const description = `${where}的知识点「${kp.title}」：答对课本题得分的对战游戏（打机器人、两人一台或多设备组队，谁先答对 8 题谁赢）与在线同步练习，程序随机出题，汉字标拼音、题目自动朗读，答错用教具演示；免费、无广告、可离线。附示例题目与答案。`
+  const extra = KP_SEO[kp.id]
+  const title = `${kp.title}练习题｜人教版${name}${sem}`
+  const description = `${where}「${kp.title}」的在线练习题：随机出题、汉字标拼音、自动朗读，答错有教具演示；也能打一局对战游戏（打机器人、两人一台或多设备组队，谁先答对 8 题谁赢）。免费、无广告、可离线。${extra ? `附示例题与答案、怎么学、常见错误与家长陪练建议。` : '附示例题与答案。'}`
   const samples = sampleQuestions(kp.id).map(questionText)
   const siblings = kpsOfUnit(course, unit.id).filter((k) => getGenerator(k.id))
+  // 本册按目录顺序的上一个 / 下一个（跨单元也算），每页都有出入链
+  const all = liveKps(course)
+  const at = all.findIndex((k) => k.id === kp.id)
+  const prev = at > 0 ? all[at - 1] : undefined
+  const next = at >= 0 && at < all.length - 1 ? all[at + 1] : undefined
   const body = `
-    <h1>${kp.icon} ${esc(kp.title)}</h1>
+    <h1>${esc(kp.title)}：${esc(name)}${esc(sem)}练习题与对战游戏</h1>
     <p class="lead">${esc(where)}的知识点「${esc(kp.title)}」。可以打一局：答对一题得 1 分，谁先答对 8 题谁赢，打机器人、两人一台平板，或者每人一台设备扫码组队，${SKINS.length} 种游戏画面跟着比分走；也可以安静地练：每轮 8 题，做完打勾。题目都按课本要求随机出，每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错显示正确答案${kp.questionTypes.includes('arith') ? '并演示算法' : '并用教具演示'}，不计时、不扣分。</p>
     <p><a class="cta" href="${appBattle(kp)}">⚔️ 打一局：${esc(kp.title)}</a><a class="cta secondary" href="${appPractice(course, kp)}">安静地练</a></p>
     <p class="note">用数字键盘或四选一卡片作答，在手机、平板、电脑的浏览器里直接用；添加到主屏幕后离线也能练、也能打机器人和两人一台。</p>
@@ -402,6 +471,21 @@ ${samples
   )
   .join('\n')}
     </ol>${
+      extra
+        ? `
+    <h2>${esc(kp.title)}怎么学</h2>
+    <p>${esc(extra.learn)}</p>
+    <h3>常见错误</h3>
+    <p>${esc(extra.mistakes)}</p>
+    <h3>家长怎么陪</h3>
+    <p>${esc(extra.parent)}</p>`
+        : ''
+    }${
+      prev || next
+        ? `
+    <p class="links">${prev ? `<a href="${prev.id}.html" rel="prev">← 上一个：${esc(prev.title)}</a>` : ''}${next ? `<a href="${next.id}.html" rel="next">下一个：${esc(next.title)} →</a>` : ''}</p>`
+        : ''
+    }${
       siblings.length > 1
         ? `
     <h2>${esc(unitLabel(unit))}的其它知识点</h2>
@@ -424,24 +508,27 @@ ${siblings
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LearningResource',
-    name: `${kp.title}对战游戏与练习题`,
+    name: `${kp.title}练习题与对战游戏`,
     description,
     inLanguage: 'zh-CN',
     learningResourceType: '对战游戏与同步练习',
     educationalLevel: `小学${zh(lc.grade.title)}`,
     educationalUse: 'practice',
+    teaches: `${where} ${kp.title}`,
     audience: { '@type': 'EducationalAudience', educationalRole: 'student' },
     isAccessibleForFree: true,
     about: `${where} ${kp.title}`,
+    author: AUTHOR,
+    ...(extra ? { keywords: extra.keywords.join(',') } : {}),
     isPartOf: webApp(siteUrl),
   }
   return page(
-    { path: kpPath(course, kp), title, description, jsonLd: [jsonLd] },
+    { path: kpPath(course, kp), title, description, jsonLd: [jsonLd], keywords: extra?.keywords },
     siteUrl,
     [
       { href: ROOT, text: SITE_NAME },
       { href: './', text: name },
-      { text: `${sem} ${unitLabel(unit)}` },
+      { href: `./#u-${unit.id}`, text: `${sem} ${unitLabel(unit)}` },
       { text: kp.title },
     ],
     body,
@@ -455,7 +542,7 @@ ${siblings
 function helpPage(siteUrl: string, analytics: AnalyticsConfig | null): string {
   const sections = helpSections('zh')
   const games = helpGames('zh')
-  const title = `${HELP_TITLE.zh}：对战玩法、规则、技巧、学习内容与常见问题`
+  const title = `${SITE_NAME}怎么玩：对战规则、技巧、学习内容与常见问题`
   const description = `${HELP_LEAD.zh}同一个知识点的课本题，红队和蓝队各答各的；打机器人、两人一台，或者各用各的设备扫码进同一个房间，${games.length} 种游戏画面跟着比分走。`
   const render = (b: ReturnType<typeof helpSections>[number]['blocks'][number]): string => {
     switch (b.kind) {
@@ -497,6 +584,7 @@ ${s.blocks.map(render).join('\n')}
       name: title,
       description,
       inLanguage: 'zh-CN',
+      author: AUTHOR,
       isPartOf: webApp(siteUrl),
     },
   ]
@@ -522,6 +610,26 @@ export interface StaticPage {
   /** 相对站点根的地址（sitemap 用） */
   path: string
   html: string
+  /** 不进 sitemap（404 页） */
+  noindex?: boolean
+}
+
+/** 404 页（`404.html`，服务器 error_page 指过来，仍回 404 状态）：品牌 + 回首页 / 各年级 / 帮助的链接，不索引 */
+export const NOT_FOUND_FILE = '404.html'
+function notFoundPage(siteUrl: string, analytics: AnalyticsConfig | null): string {
+  const body = `
+    <h1>这个地址没有内容</h1>
+    <p class="lead">可能是链接打错了，或者这一页已经搬走。下面这些都在：</p>
+    <p class="links"><a href="/">${SITE_NAME}首页</a>${liveCourses()
+      .map((o) => `<a href="/${coursePath(o.course)}">${esc(o.name)}练习题</a>`)
+      .join('')}<a href="/${HELP_PATH}">帮助与说明</a></p>`
+  return page(
+    { path: NOT_FOUND_FILE, title: '找不到这一页', description: `${SITE_NAME}：这个地址没有内容，回首页看看。`, jsonLd: [], noindex: true },
+    siteUrl,
+    [{ href: '/', text: SITE_NAME }, { text: '找不到这一页' }],
+    body,
+    analytics,
+  )
 }
 
 /** analytics：访问统计标签（需求 N7），构建脚本按 .env 算出来传进来；null = 不加 */
@@ -534,6 +642,7 @@ export function staticPages(siteUrl: string, analytics: AnalyticsConfig | null =
     }
   }
   out.push({ file: `${HELP_PATH}index.html`, path: HELP_PATH, html: helpPage(siteUrl, analytics) })
+  out.push({ file: NOT_FOUND_FILE, path: NOT_FOUND_FILE, html: notFoundPage(siteUrl, analytics), noindex: true })
   return out
 }
 
@@ -544,12 +653,20 @@ export function robotsTxt(siteUrl: string): string {
   return `User-agent: *\nAllow: /\n${siteUrl ? `Sitemap: ${siteUrl}/sitemap.xml\n` : ''}`
 }
 
-export function sitemapXml(siteUrl: string): string {
-  const urls = ['', ...staticPages(siteUrl).map((p) => p.path)].map((p) => `${siteUrl}/${p}`)
+/**
+ * sitemap：首页 + 全部可索引的静态页。lastmod 是构建这一天（Bing / 百度按它安排重抓；页面每次发布都可能变——
+ * 统计标签、目录、文案），传进来是为了测试可复现；changefreq / priority 给百度看（Google 忽略）
+ */
+export function sitemapXml(siteUrl: string, lastmod: string = new Date().toISOString().slice(0, 10)): string {
+  const pages = staticPages(siteUrl).filter((p) => !p.noindex)
+  const entries = [
+    { loc: `${siteUrl}/`, priority: '1.0', changefreq: 'weekly' },
+    ...pages.map((p) => ({ loc: `${siteUrl}/${p.path}`, priority: p.path.endsWith('/') ? '0.8' : '0.6', changefreq: p.path.endsWith('/') ? 'weekly' : 'monthly' })),
+  ]
   return (
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-    urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n') +
+    entries.map((e) => `  <url><loc>${e.loc}</loc><lastmod>${lastmod}</lastmod><changefreq>${e.changefreq}</changefreq><priority>${e.priority}</priority></url>`).join('\n') +
     '\n</urlset>\n'
   )
 }
@@ -564,30 +681,18 @@ export function homeMeta(): { title: string; description: string; ogDescription:
   const subjects = [...new Set(lcs.map((lc) => zh(lc.subject.title)))].join('、')
   const list = lcs.map((lc) => `${lc.name} ${liveKps(lc.course).length} 个知识点`).join('、')
   return {
-    title: `${SITE_NAME} · 人教版小学${subjects}课本知识点对战游戏（${grades}，带拼音和朗读）`,
-    description: `${SITE_NAME}：儿童互动对战学习——${SITE_PITCH}；打机器人、两人一台或多设备扫码组队，${SKINS.length} 种游戏画面；${list}，也能一个人练；汉字标拼音、题目自动朗读；免费、无广告、可离线。`,
+    title: `${SITE_NAME}：人教版小学${subjects}练习题变对战游戏（${grades}，带拼音朗读）`,
+    description: `${SITE_NAME}：人教版${grades}${subjects}练习题在线做——${SITE_PITCH}；打机器人、两人一台或多设备扫码组队，${SKINS.length} 种游戏画面；${list}，也能一个人练；汉字标拼音、自动朗读；免费、无广告、可离线。`,
     ogDescription: `${SITE_PITCH}：打机器人、两人一台或多设备组队，${SKINS.length} 种游戏画面；${list}；带拼音和朗读，免费、可离线。`,
     keywords: [
       SITE_NAME,
-      '同步练',
-      '儿童对战学习',
-      '小学数学对战游戏',
-      '课本知识点游戏',
-      '寓教于乐',
-      '小学数学练习',
+      ...SITE_ALT_NAMES.slice(0, 2),
       ...lcs.map((lc) => `${lc.name}练习题`),
-      '人教版',
+      ...lcs.map((lc) => `人教版${lc.name}`),
+      '小学数学对战游戏',
+      '儿童对战学习',
       '口算练习',
-      '凑十法',
-      '破十法',
-      '乘法口诀',
-      '有余数的除法',
-      '拼音',
       '在线练习',
-      '儿童学习',
-      '数学对战游戏',
-      '口算比赛',
-      '两人对战',
     ].join(','),
     grades,
     kpCount,
@@ -598,10 +703,11 @@ export function homeHead(): string {
   const m = homeMeta()
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
+    '@type': ['WebApplication', 'WebSite'],
     url: '__SITE_URL__/',
     name: SITE_NAME,
-    alternateName: 'Chapter Practice · Battle',
+    alternateName: SITE_ALT_NAMES,
+    author: AUTHOR,
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'Any',
     browserRequirements: 'Requires JavaScript',
@@ -613,7 +719,7 @@ export function homeHead(): string {
     description: m.ogDescription,
   }
   // JSON-LD 一行一个键：没配置 SITE_URL 时构建插件会把含 __SITE_URL__ 的那一行整行删掉，其余仍是合法 JSON
-  const ld = JSON.stringify(jsonLd, null, 2)
+  const ld = ldJson(jsonLd, 2)
     .split('\n')
     .map((line) => `      ${line}`)
     .join('\n')
@@ -637,15 +743,16 @@ export function homeBody(): string {
     .map((lc) => {
       const kps = liveKps(lc.course)
       const units = lc.course.units.filter((u) => kpsOfUnit(lc.course, u.id).some((kp) => getGenerator(kp.id)))
-      return `        <h2>${esc(lc.name)}（上下册 ${units.length} 个单元、${kps.length} 个知识点）</h2>
-        <p>${esc(kps.map((kp) => kp.title).join('，'))}。</p>
+      return `        <h2>${esc(lc.name)}练习题（上下册 ${units.length} 个单元、${kps.length} 个知识点）</h2>
+        <p>${kps.map((kp) => `<a href="./${kpPath(lc.course, kp)}">${esc(kp.title)}</a>`).join('，')}。</p>
         <p><a href="./${coursePath(lc.course)}">查看${esc(lc.name)}全部知识点、示例题与对战入口 →</a></p>`
     })
     .join('\n')
   return `      <main class="prerender">
+        <img src="./icon-512.png" alt="${SITE_NAME}" width="72" height="72" />
         <h1>${SITE_NAME} · ${SITE_TAGLINE}</h1>
         <p>
-          儿童互动对战学习：${SITE_PITCH}——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出：一到六年级，语文、数学、英语；练的是课本，玩的是游戏。每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示。免费、无广告、不用注册，添加到主屏幕后没有网也能用。现在${esc(m.grades)}数学共 ${m.kpCount} 个知识点可对战、可练。
+          儿童互动对战学习：${SITE_PITCH}——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出，现在是${esc(m.grades)}数学，其它年级与学科陆续补充；练的是课本，玩的是游戏。每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示。免费、无广告、不用注册，添加到主屏幕后没有网也能用。现在${esc(m.grades)}数学共 ${m.kpCount} 个知识点可对战、可练。
         </p>
         <h2>对战怎么玩</h2>
         <p>同一个知识点的课本题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），可以两个人一台平板左右分屏，也可以每人一台设备扫码进同一个房间（两队各最多 6 人，还能观战）；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。不想比的时候，直接点知识点就是一份安静的同步练习：一轮 8 题，做完打勾。</p>

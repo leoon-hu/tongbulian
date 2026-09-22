@@ -17,6 +17,8 @@ import { createRoom, join, snapshot, type Room } from '../../../server/room'
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
 import '@/views/battle/BattleRoomView.vue'
+// 「加入对战」面板在 App 里是按需加载的（N8）：这里先静态引一次，dynamic import 走缓存立刻就绪，用例不用等编译
+import '@/components/battle/JoinSheet.vue'
 
 vi.mock('@/engine/voice', async (orig) => ({
   ...(await orig<typeof import('@/engine/voice')>()),
@@ -260,6 +262,7 @@ describe('多设备房间', () => {
     const room = useRoomStore()
     room.useFactory((url) => new FakeWs(url))
     await w.find('.app-header .nav-btn.join').trigger('click')
+    await until(() => w.find('.join-sheet').exists())
     await settle()
     expect(spoken()).toEqual([['room.join.title', 'room.join.hint']])
     await w.find('.join-sheet input').setValue('123456')

@@ -59,6 +59,18 @@ export function courseOfKp(
   return undefined
 }
 
+/**
+ * 从某个知识点「返回地图」的地址：带上它所在的册（`?sem=2`），地图按它打开下册页签——
+ * 不然从下册的练习页 / 对战页回来永远落在上册（2026-09-22 用户报的）。上册不带参数。不在目录里 → '/'。
+ */
+export function mapPathOf(kpId: string): string {
+  const info = courseOfKp(kpId)
+  if (!info) return '/'
+  const base = `/s/${info.subject.id}/g/${info.grade.id}`
+  const sem = info.course.units.find((u) => u.id === info.kp.unitId)?.semester
+  return sem === 2 ? `${base}?sem=2` : base
+}
+
 /** 这个知识点所在那一册（上 / 下）的全部知识点，按目录顺序（含 ☆ 单元）；不在目录里 → []。对战按章节排游戏、「下一章」都用它 */
 export function volumeKps(kpId: string): KnowledgePoint[] {
   const info = courseOfKp(kpId)

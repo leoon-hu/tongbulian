@@ -20,7 +20,11 @@ export interface SwUpdateDeps {
   sw: SwLike | null
   doc: DocLike | null
   reload(): void
+  now?: () => number
 }
+
+/** 回到前台查更新的最短间隔：切个微信再回来不用每次都去要 sw.js */
+export const UPDATE_CHECK_GAP_MS = 10 * 60 * 1000
 
 function defaultDeps(): SwUpdateDeps {
   return {
@@ -51,8 +55,14 @@ export function setupSwUpdates(isBusy: () => boolean, deps: SwUpdateDeps = defau
     pending = true
     flush()
   })
+  // 回到前台查更新：对战里不查（新 SW 安装要下载几十 MB 音频、装好还会立刻接管），10 分钟内不重复查
+  const now = deps.now ?? Date.now
+  let lastCheck = now()
   deps.doc?.addEventListener('visibilitychange', () => {
-    if (deps.doc?.visibilityState !== 'visible') return
+    if (deps.doc?.visibilityState !== 'visible' || isBusy()) return
+    const t = now()
+    if (t - lastCheck < UPDATE_CHECK_GAP_MS) return
+    lastCheck = t
     sw.getRegistration()
       .then((r) => r?.update())
       .catch(() => undefined)

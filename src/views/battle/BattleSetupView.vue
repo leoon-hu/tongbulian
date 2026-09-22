@@ -5,7 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
-import { courseOfKp } from '@/engine/catalog'
+import { courseOfKp, mapPathOf } from '@/engine/catalog'
 import { kpTitleKey, lang, ui } from '@/engine/i18n'
 import { hush, sayKeys } from '@/engine/voice'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
@@ -29,7 +29,7 @@ const kpId = String(route.params.kpId)
 const info = courseOfKp(kpId)
 const ready = info !== undefined && hasGenerator(kpId)
 if (!ready) router.replace('/')
-const mapPath = info ? `/s/${info.subject.id}/g/${info.grade.id}` : '/'
+const mapPath = mapPathOf(kpId)
 
 const mode = ref<BattleMode>('ai')
 /** 多设备（B46）：这个地址有没有对战服务（file:// 打开就没有） */

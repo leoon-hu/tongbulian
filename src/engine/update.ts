@@ -11,7 +11,7 @@ export const RELOAD_KEY = 'tongbulian:reloaded'
 export const AUTOCREATE_KEY = 'tongbulian:autocreate'
 export const AUTOJOIN_KEY = 'tongbulian:autojoin'
 /** 从开始到重载最多这么久：等新版本 Service Worker 接管，到了也重载 */
-export const UPDATE_WAIT_MS = 20_000
+export const UPDATE_WAIT_MS = 60_000
 /** registration.update() 最多等这么久：旧 SW 还在装（首次预缓存几 MB）时它会等装完才返回，别跟着死等 */
 export const UPDATE_CHECK_MS = 3000
 

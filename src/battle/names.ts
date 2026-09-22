@@ -23,8 +23,16 @@ export function suggestNames(lang: Lang, rng: RNG, count = 6, taken: readonly st
   return rng.shuffle(pool).slice(0, count)
 }
 
-/** 清洗：去控制字符、去首尾空白，最多 NAME_MAX 个字符（按码点数，emoji 算一个） */
+/**
+ * 清洗：去控制字符与不可见的格式字符（含双向控制符——能把别人界面上「（我）」「🎤」与名单顺序视觉上调换）、
+ * 连续的叠加符号只留一个（不然一个字能堆出一条竖线），去首尾空白，最多 NAME_MAX 个字符（按码点数，emoji 算一个）。
+ * emoji 里的连接符 ZWJ（U+200D）与变体选择符（U+FE0F）要留着，不然「👨‍👩‍👧」会散架
+ */
 export function cleanName(raw: string): string {
-  const stripped = raw.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029]/g, '').trim()
+  const stripped = raw
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, '')
+    .replace(/(?![\u200d\ufe0f])\p{Cf}/gu, '')
+    .replace(/(\p{M})\p{M}+/gu, '$1')
+    .trim()
   return Array.from(stripped).slice(0, NAME_MAX).join('')
 }

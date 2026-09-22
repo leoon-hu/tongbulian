@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Choice } from '@/types/models'
 import { t } from '@/engine/i18n'
 import RubyText from '@/components/ui/RubyText.vue'
+import { onTap } from '@/components/ui/tap'
 
 const props = defineProps<{
   choices: Choice[]
@@ -38,7 +39,8 @@ const long = computed(() => textLen.value > 3)
         picked: readonly && c.id === highlight,
       }"
       :disabled="!!revealed || readonly"
-      @click="emit('select', c.id)"
+      @pointerup="onTap($event, () => emit('select', c.id))"
+      @click="onTap($event, () => emit('select', c.id))"
     >
       <RubyText :text="c.label" />
     </button>

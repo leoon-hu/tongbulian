@@ -11,18 +11,12 @@
  * 排队时同一个 key 只留最新的一条（一行的读题一个 key、一种提示一个 key），forget(key) 撤回还没轮到的那条。
  */
 import type { Lang } from '@/types/models'
-import manifest from '@/audio/manifest.json'
-import { play, preload, stop } from './audio'
+import { clipFile } from '@/audio/clips'
+import { watch } from 'vue'
+import { playSequence, preload, stop, type SeqItem } from './audio'
+import { soundOn } from './sound'
 import { cancel, check, run, sleep } from './runner'
-import { phraseSpeech } from './speech'
-
-interface Manifest {
-  version: number
-  zh: Record<string, string>
-  en: Record<string, string>
-}
-
-const CLIPS = manifest as Manifest
+import { joinSpeech, PAUSE, phraseSpeech, piecesOf } from './speech'
 
 export type SayMode = 'cut' | 'hold' | 'wait' | 'skip'
 
@@ -44,24 +38,51 @@ interface Item {
   finish: () => void
 }
 
-let enabled = true
+// 开关真值在 engine/sound.ts（settings 只改它）；关掉就闭嘴
+watch(soundOn, (on) => {
+  if (!on) hush()
+})
 /** 正在播的那句（含它的 delay 期间） */
 let current: Item | null = null
 /** 等着播的，按先来后到 */
 const queue: Item[] = []
 
 export function setVoiceEnabled(on: boolean): void {
-  enabled = on
+  soundOn.value = on
   if (!on) hush()
 }
 
 export function isVoiceEnabled(): boolean {
-  return enabled
+  return soundOn.value
 }
 
 /** 片段对应的音频文件名（不含 .mp3）；没有就 null（会退 TTS） */
 export function clipFor(token: string, lang: Lang): string | null {
-  return CLIPS[lang][token] ?? null
+  return clipFile(token, lang)
+}
+
+/**
+ * 片段 → 要播的条目：停顿标记是一个停顿；有音频的直接播；并成一条的短语没有音频（语料里没枚举到这个组合）
+ * 就拆回小片段（「有 / 14 / 个」「比 / 小猪」）各播各的，小片段也不全就整条退 TTS（读一整句比逐段 TTS 自然）。
+ */
+export function sequenceFor(tokens: string[], lang: Lang): SeqItem[] {
+  const out: SeqItem[] = []
+  for (const token of tokens) {
+    if (token === PAUSE) {
+      out.push({ pause: true })
+      continue
+    }
+    const file = clipFor(token, lang)
+    if (file === null) {
+      const parts = piecesOf(token, lang)
+      if (parts.length > 1 && parts.every((p) => clipFor(p, lang) !== null)) {
+        for (const p of parts) out.push({ file: clipFor(p, lang), text: p })
+        continue
+      }
+    }
+    out.push({ file, text: token })
+  }
+  return out
 }
 
 function makeItem(tokens: string[], lang: Lang, delayMs: number, mode: SayMode, key: string | undefined): Item {
@@ -86,10 +107,8 @@ function start(item: Item): Promise<void> {
   // run() 会中止上一句
   run(async (signal) => {
     if (item.delayMs > 0) await sleep(item.delayMs, signal)
-    for (const token of item.tokens) {
-      await play(clipFor(token, item.lang), token, item.lang, signal)
-      check(signal)
-    }
+    await playSequence(sequenceFor(item.tokens, item.lang), item.lang, signal)
+    check(signal)
   }).then(() => {
     item.finish()
     // 被 cut / hush 掉的：后面的事由打断者管
@@ -103,7 +122,7 @@ function start(item: Item): Promise<void> {
 
 /** 顺序播一串片段；delayMs 先停一下（页面切换动画结束后再开口）。静音时什么都不做。返回的 Promise 在播完（或被撤掉）时兑现。 */
 export function say(tokens: string[], lang: Lang, delayMs = 0, opts: SayOptions = {}): Promise<void> {
-  if (!enabled || tokens.length === 0) return Promise.resolve()
+  if (!soundOn.value || tokens.length === 0) return Promise.resolve()
   const mode = opts.mode ?? 'cut'
   const item = makeItem(tokens, lang, delayMs, mode, opts.key)
   if (mode !== 'cut' && current) {
@@ -130,11 +149,11 @@ export function say(tokens: string[], lang: Lang, delayMs = 0, opts: SayOptions 
 
 /**
  * 读几条固定词条（F13 / B39a）：页面打开、切到某个功能、弹出面板或提示时，把屏幕上的提示语读给还不太会认字的孩子听。
- * 词条要在 corpus.ts 的 FIXED_KEYS 里（有预合成的音频）；播法与 say 一样。
+ * 词条要在 corpus.ts 的 FIXED_KEYS 里（有预合成的音频）；几条之间停顿一下；播法与 say 一样。
  */
 export function sayKeys(keys: string[], lang: Lang, delayMs = 0, opts: SayOptions = {}): Promise<void> {
   return say(
-    keys.flatMap((k) => phraseSpeech({ k }, lang)),
+    joinSpeech(keys.map((k) => phraseSpeech({ k }, lang))),
     lang,
     delayMs,
     opts,
@@ -158,6 +177,6 @@ export function hush(): void {
 
 /** 预解码一批片段的音频（进练习页时把这一轮要读的都备好） */
 export function warmUp(tokens: string[], lang: Lang): void {
-  const files = [...new Set(tokens.map((t) => clipFor(t, lang)).filter((f): f is string => f !== null))]
+  const files = [...new Set(sequenceFor(tokens, lang).map((it) => it.file ?? null).filter((f): f is string => f !== null))]
   if (files.length) preload(files).catch(() => {})
 }

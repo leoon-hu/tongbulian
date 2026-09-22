@@ -27,10 +27,13 @@ export const useShareStore = defineStore('share', () => {
 
   const url = (): string => siteRoot(typeof location !== 'undefined' ? location.href : '', SITE_URL)
 
-  /** text 不传就是站点的一句话介绍（share.text 词条）；传了就是这一刻的内容（比如一局的战绩），后面都跟着站点链接 */
-  async function share(text = ui('share.text')): Promise<void> {
+  /**
+   * text 不传就是站点的一句话介绍（share.text 词条）；传了就是这一刻的内容（比如一局的战绩），后面都跟着链接：
+   * 默认是站点根，path 传了就是站内某一页（分享战绩链到这个知识点的静态页，卡片上是它的标题与描述、进去就能打）
+   */
+  async function share(text = ui('share.text'), path = ''): Promise<void> {
     const way = shareWay(env())
-    const link = url()
+    const link = path ? url().replace(/\/?$/, '/') + path : url()
     const message = shareMessage(text, link)
     if (way === 'native') {
       try {

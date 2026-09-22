@@ -5,14 +5,25 @@ vi.mock('@/engine/audio', () => ({
   play: vi.fn(async (file: string | null, text: string) => {
     played.push(`${file ?? '-'}|${text}`)
   }),
+  // 假的序列播放：一项一项记下来，每项之间让出一次微任务，中止了就不再记（真的也是被打断就停）
+  playSequence: vi.fn(async (items: Array<{ pause?: boolean; file?: string | null; text?: string }>, _lang: string, signal?: AbortSignal) => {
+    for (const it of items) {
+      if (signal?.aborted) return
+      played.push(it.pause ? '·' : `${it.file ?? '-'}|${it.text}`)
+      await Promise.resolve()
+    }
+  }),
   preload: vi.fn(async () => {}),
   stop: vi.fn(),
 }))
-vi.mock('@/audio/manifest.json', () => ({
-  default: { version: 1, zh: { 加: 'zh-jia', 等于: 'zh-dengyu' }, en: {} },
-}))
+// 片段 → 文件名（clips.ts 按哈希查）：这里换成一张小表
+vi.mock('@/audio/clips', () => {
+  const zh: Record<string, string> = { 加: 'zh-jia', 等于: 'zh-dengyu', 有: 'zh-you', 个: 'zh-ge', '14': 'zh-14', 有14个: 'zh-you14ge', 少: 'zh-shao' }
+  return { clipFile: (text: string, lang: string) => (lang === 'zh' ? (zh[text] ?? null) : null) }
+})
 
-const { say, sayKeys, setVoiceEnabled, clipFor, hush, forget } = await import('@/engine/voice')
+const { say, sayKeys, sequenceFor, setVoiceEnabled, clipFor, hush, forget } = await import('@/engine/voice')
+const { PAUSE } = await import('@/engine/speech')
 
 describe('voice.say', () => {
   beforeEach(() => {
@@ -44,6 +55,21 @@ describe('voice.say', () => {
   it('sayKeys 把词条的片段拼成一句', async () => {
     await sayKeys(['sym.plus'], 'zh')
     expect(played.length).toBeGreaterThan(0)
+  })
+
+  it('停顿标记播成一个停顿；并成一条的短语有音频就整条播，没有就拆回小片段，小片段也不全就整条退 TTS', async () => {
+    expect(sequenceFor(['加', PAUSE, '等于'], 'zh')).toEqual([{ file: 'zh-jia', text: '加' }, { pause: true }, { file: 'zh-dengyu', text: '等于' }])
+    expect(sequenceFor(['有14个'], 'zh')).toEqual([{ file: 'zh-you14ge', text: '有14个' }])
+    // 「有 14 个」有音频但「有15个」没有：拆回「有 / 15 / 个」——15 没有音频，所以整条退 TTS
+    expect(sequenceFor(['有15个'], 'zh')).toEqual([{ file: null, text: '有15个' }])
+    // 「少14个」没有音频，拆开的「少 / 14 / 个」都有
+    expect(sequenceFor(['少14个'], 'zh')).toEqual([
+      { file: 'zh-shao', text: '少' },
+      { file: 'zh-14', text: '14' },
+      { file: 'zh-ge', text: '个' },
+    ])
+    await say(['加', PAUSE, '少14个'], 'zh')
+    expect(played).toEqual(['zh-jia|加', '·', 'zh-shao|少', 'zh-14|14', 'zh-ge|个'])
   })
 
   it('clipFor 按语言查 manifest', () => {

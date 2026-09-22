@@ -9,6 +9,8 @@ import { buildSession } from '@/engine'
 export const BATCH_SIZE = 16
 
 const cache = new Map<string, Question[]>()
+/** 缓存的批次上限（N8）：每局每个选手一个种子、几批，打一晚上也用不到几百批；超过就丢最早的 */
+const MAX_BATCHES = 256
 
 /** 第 batch 批的种子：与 seed 一起决定，批与批之间不同 */
 export function batchSeed(seed: number, batch: number): number {
@@ -24,6 +26,10 @@ function batchOf(kpId: string, seed: number, batch: number): Question[] {
   if (!qs) {
     qs = buildSession(kpId, BATCH_SIZE, { seed: batchSeed(seed, batch), difficulty: LEVEL })
     if (qs.length === 0) throw new Error(`empty batch for ${kpId}`)
+    if (cache.size >= MAX_BATCHES) {
+      const oldest = cache.keys().next().value
+      if (oldest !== undefined) cache.delete(oldest)
+    }
     cache.set(key, qs)
   }
   return qs

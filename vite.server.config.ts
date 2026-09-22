@@ -12,6 +12,8 @@ export default defineConfig({
   },
   // 与网站同一个版本号（B43）：服务器据此拒绝版本旧了的页面，让它自己更新
   define: { __BUILD__: JSON.stringify(compatId()) },
+  // 服务不用 public/ 里的东西：不关的话每次 build:server 都把 70 MB 音频复制进 dist-server/ 再删
+  publicDir: false,
   build: {
     ssr: 'server/index.ts',
     outDir: 'dist-server',

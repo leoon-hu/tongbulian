@@ -9,32 +9,42 @@
 - **也能安静地练**：一轮 8 题，做完打勾。随机出题，不是题库：每个知识点一个生成器，题干配十格阵、实物图、钟面、人民币、图形、数轴、尺子、竖式、排队等可视化教具；答错当场用教具演示讲解（凑十法 / 破十法有动画）。
 - **识字不多也能自己玩**：每个汉字标拼音，每道题自动朗读（离线预合成的语音片段拼播，不依赖浏览器 TTS）；对战里让孩子照着做的提示（跟谁打、你叫什么、扫码进入、等大家进来、输口令……）在出现的那一刻也会读出来。
 - **没有惩罚**：练习不计时、不扣分、没有排行、没有解锁链；对战答错不扣分、不锁题，输了只写「差一点点！」，也不改练习进度、不存战绩。
-- **纯前端、离线、不要账号**：进度只存在本机浏览器里，`dist/index.html` 可以直接双击打开；只有对战的多设备模式需要一个小小的内存中继服务（仓库 `server/`）。
+- **纯前端、离线、不要账号**：进度只存在本机浏览器里，`dist/` 放到任何静态托管就能跑；只有对战的多设备模式需要一个小小的内存中继服务（仓库 `server/`）。
 - **开源、干净**：代码全部以 MIT 许可公开在这个仓库里，谁都能查、也能自己部署一套；免费、无广告、不用注册、不收集个人信息。首页底部和每张静态页页脚都写着这一句并链到仓库；「分享给朋友」一键调系统分享面板（微信里教用右上角菜单，电脑上复制一段话），对战结果页还能「分享战绩」。
 - 界面中文 / 英文一键切换，题目、拼音、朗读都跟着切。
 
 **目前内容**：一年级数学 26 个知识点、二年级数学 29 个知识点全部可练可对战，单元结构与 2024–2026 年新版教材一致（含「数学游戏」和带 ☆ 的综合与实践，清单见[知识点清单](#知识点清单)）；其它年级和语文、英语在目录里占位「敬请期待」，逐步补。
 
 <p align="center">
-  <img src="screenshots/battle.png" width="72%" alt="对战：打机器人（手机横屏，赛跑）">
+  <a href="screenshots/demo.mp4"><img src="screenshots/demo.webp" width="342" alt="实拍：两个小朋友在一台 iPad 上对战（点开看带声音的视频）"></a>
 </p>
+<p align="center"><sub>实拍：两个小朋友在一台 iPad 上对战，各答各的题，谁先答对 8 题谁赢——点图片看带声音的视频（<a href="screenshots/demo.mp4">demo.mp4</a>）</sub></p>
+
 <p align="center">
-  <img src="screenshots/battle-ipad.png" width="72%" alt="对战：两人一台（iPad 横屏，盖楼）">
+  <img src="screenshots/battle-ipad.png" width="49%" alt="对战：两人一台（iPad 横屏，盖楼，红队 5 : 蓝队 3）">
+  <img src="screenshots/battle-rule.png" width="49%" alt="开局先讲一句游戏规则（iPad 横屏，火箭升空）">
 </p>
+<p align="center"><sub>iPad 横屏：两人一台，左右各答各的（盖楼）· 开局先讲一句游戏规则，说完再倒数（火箭升空）</sub></p>
+
 <p align="center">
-  <img src="screenshots/battle-rule.png" width="49%" alt="开局先讲一句规则（iPad，赛跑）">
+  <img src="screenshots/battle.png" width="80%" alt="对战：打机器人（手机横屏紧凑版，赛跑）">
 </p>
+<p align="center"><sub>手机横屏（紧凑版）：打机器人，对方那一行实时显示它在答什么（赛跑）</sub></p>
+
 <p align="center">
+  <img src="screenshots/home.png" width="24%" alt="首页：选学科">
+  <img src="screenshots/map.png" width="24%" alt="知识点地图：按单元排的圆形节点，下面是这一轮的进度">
+  <img src="screenshots/entry.png" width="24%" alt="点知识点弹出：自己练，还是对战？">
   <img src="screenshots/battle-setup.png" width="24%" alt="对战设置：跟谁打（⚙️ 配置里有机器人快慢、选游戏、改名字）">
-  <img src="screenshots/home.png" width="24%" alt="选学科">
-  <img src="screenshots/map.png" width="24%" alt="知识点地图">
-  <img src="screenshots/help.png" width="24%" alt="帮助与说明：学习内容、对战玩法、规则、技巧、常见问题">
 </p>
+<p align="center"><sub>手机：首页选学科 → 知识点地图 → 点一个知识点弹「自己练，还是对战？」→ 对战设置「跟谁打」</sub></p>
+
 <p align="center">
   <img src="screenshots/practice.png" width="24%" alt="练习：凑十法（十格阵 + 拼音 + 数字键盘）">
   <img src="screenshots/clock.png" width="24%" alt="练习：认识整时和半时（钟面 + 四选一）">
-  <img src="screenshots/entry.png" width="24%" alt="点知识点：自己练，还是对战？">
+  <img src="screenshots/help.png" width="24%" alt="帮助与说明：对战怎么玩、游戏规则、技巧、学习内容、常见问题">
 </p>
+<p align="center"><sub>练习：凑十法（十格阵 + 数字键盘）· 认识整时和半时（钟面 + 四选一）· 帮助与说明</sub></p>
 
 ## 快速开始
 
@@ -68,7 +78,7 @@ npm run voice:check    # 语音联调：自己起中继（8788）与 dev 服务�
 
 首页顶部栏是「⚔️ 同步练」+「对战版」标记，标题下面一条每种游戏的图标和一句「答对课本题就得分，谁先答对 8 题谁赢！」（带拼音）；顶栏的「🔑 加入对战」输口令就能进别人建的房间。
 
-1. 选学科 → 选年级 → 进入**知识点地图**（上册 / 下册两个页签，每个单元一张卡，知识点是圆形节点）。
+1. 选学科 → 选年级 → 进入**知识点地图**（上册 / 下册两个页签，每个单元一张卡，知识点是圆形节点；当前册记在地址里，从题目返回还在同一册）。
 2. 点一个知识点，弹出「自己练，还是对战？」（带拼音，会读出来）：选「📖 自己练」开始练习，一轮 8 题，进题自动读题干，🔊 可以再听一遍；用**数字键盘**或**四选一卡片**作答；答对撒花、夸一句，答错读出并显示正确答案（有教具的知识点会演示一遍），点「我知道了」继续。
 3. 做完一轮就算「已完成」，地图上打勾。没做完的节点下面有 8 格进度条和这一轮的「x 题 · 对 y · 错 z」，中途退出下次接着做；做完的显示那一轮的对错数，再进去就开新的一轮重新计。家长也可以在地图上直接点状态标签手动标记 / 取消，不用做题。
 4. 想比一比：点知识点后选「⚔️ 对战模式」，再选跟谁打，开始。
@@ -86,7 +96,7 @@ npm run voice:check    # 语音联调：自己起中继（8788）与 dev 服务�
 设置页只有三张卡（各画一幅示意图，一眼看出模式）和「开始」；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」里。
 
 - **打机器人**：机器人有自己的题，按 🐢 慢 / 🐰 中 / 🚀 快三档节奏答题，会一个一个按出数字、也会答错，还有表情（🤔 想题、🤖 在按、😄 答对、😅 答错）。进题自动读题。
-- **两人一台**：一台 iPad / 电脑横着放，左右各一个人的题和键盘，可以同时按。不自动读题，点 🔊 读自己的；点了就一定读完，另一边这时点了排在后面接着读。
+- **两人一台**：一台 iPad / 电脑横着放，左右各一个人的题和键盘，可以同时按（上面的实拍视频就是这种）。不自动读题，点 🔊 读自己的；点了就一定读完，另一边这时点了排在后面接着读。
 - **各用各的**：每人一台设备，进同一个房间（见下一节）。用 `file://` 打开或托管方没有中继服务时这张卡置灰。
 
 **竞技场一律横向**：左区红队、右区蓝队，游戏画面在上方横条或左右之间的竖条（游戏说了算）；每人一行题目 + 键盘 / 选项卡。两队一眼分清：队区整块队色描边，队名条实心队色白字，题目里的按钮白底、队色描边、队色底边；自己那一队的队名条上标「我」，本机不能操作的行蒙一层半透明遮罩、右上角写「对方」或「队友」（两人一台两边都是自己，不标不蒙），只观战的设备顶栏写「👀 观战中」。手机竖着拿会提示横过来，横屏用紧凑版布局（题干与键盘左右并排，键盘按栏高缩放）；平板 / 手机进竞技场会试着全屏（电脑不会）。
@@ -173,23 +183,23 @@ npm run voice:check    # 语音联调：自己起中继（8788）与 dev 服务�
 ## 拼音与朗读
 
 - **拼音**：中文模式下练习页的所有汉字（题干、选项、页头、答错讲解、结算）都逐字注音，字体用为初学者设计的 [Andika](https://software.sil.org/andika/)（单层 a / g，OFL，自托管）。每条中文词条配一条与汉字逐字对齐的拼音（各内容包的 `pinyin.ts`、`src/locales/shell.ts`），一 / 不按实际读音标变调，有测试保证音节数与汉字数相等。
-- **朗读**：不用浏览器 TTS 读汉字。题目文字按「数字 / 汉字短语 / emoji 的名字 / 运算符与括号的读法」切成片段（`src/engine/speech.ts`），每个片段是一条预先合成好的 mp3（`public/audio/`，Microsoft Edge 神经语音，来源见 `public/audio/CREDITS.md`），播放时顺序拼接：「9 + 5 = ?」读作「九 · 加 · 五 · 等于几」，「(3 + 4) × 5 = ?」读作「括号 · 三 · 加 · 四 · 括号 · 乘 · 五 · 等于几」，「🐰 从左数排第几个？」读作「小兔子 · 从左数排第几个」。100 以上的数按课本读法拆成几段（3005 → 三千 · 零 · 五），所以万以内的数不用每个都录一条。缺片段（比如刚加了新题型还没重跑脚本）才退回浏览器 TTS。
+- **朗读**：不用浏览器 TTS 读汉字。题目文字按「数字 / 汉字短语 / emoji 的名字 / 运算符与括号的读法」切成片段（`src/engine/speech.ts`），连续的短语、运算符和一个「槽」（一个数或一个 emoji 的名字）并成一条自然的话（「小猪 · 有14个 · 苹果，小狗 · 比小猪 · 少8个」「9 · 加5等于几」；一条最多一个槽，量词留在数字后面、动词 / 介词 / 连词贴向后面），逗号 / 句号变成停顿；每个片段是一条预先合成好的 mp3（`public/audio/`，Microsoft Edge 神经语音，来源见 `public/audio/CREDITS.md`），播放时整句按 AudioContext 的时钟一次排到时间轴上（片段之间 30 ms、停顿 280 ms），不是一条播完再起下一条：「9 + 5 = ?」读作「九 · 加 · 五 · 等于几」，「🐷 有 14 个 🍎，🐶 比 🐷 少 8 个」读作「小猪 · 有十四个 · 苹果 ，小狗比小猪 · 少八个」，「(3 + 4) × 5 = ?」读作「括号 · 三 · 加 · 四 · 括号 · 乘 · 五 · 等于几」，「🐰 从左数排第几个？」读作「小兔子 · 从左数排第几个」。100 以上的数按课本读法拆成几段（3005 → 三千 · 零 · 五），所以万以内的数不用每个都录一条。缺片段（比如刚加了新题型还没重跑脚本）才退回浏览器 TTS。
 - **提示语**：让孩子照着做的提示（对战设置页的「跟谁打？」与三种模式的说明、问名字、退出确认、房间页的扫码说明 / 连接状态 / 输口令 / 错误提示）在页面打开或切到那个功能时自动读一遍（`engine/voice.ts` 的 `sayKeys`），与读题共用一个独占通道，新的打断旧的；只有对战里点 🔊 读题例外——那句必须读完，期间另一方点的、自动读的新题、要读的提示都排在后面（连对 / 反超这类弹出提示则跳过）。写这类文案时注意「」括号会把句子切成几段，每段要是自然的短语，别用圆括号（会读出「括号」）。
-- **音频包**：`npm run audio` = `scripts/collect-speech.mjs`（跑遍所有生成器与外壳固定句收集片段 → `src/audio/corpus.json`）+ `scripts/build-audio.py`（edge-tts 合成、裁静音、响度归一、转 24 kHz 48 kbps mp3 → `public/audio/` 与 `src/audio/manifest.json`），现在中英各五百多条、共约 6.8 MB。有测试保证语料与代码一致、每个片段都有文件。
+- **音频包**：`npm run audio` = `scripts/collect-speech.mjs`（跑遍所有生成器与外壳固定句收集片段 → `src/audio/corpus.json`）+ `scripts/build-audio.py`（edge-tts 合成、裁静音、响度归一、转 24 kHz 48 kbps mp3 → `public/audio/` 与 `src/audio/manifest.json`），现在中文 3400 多条、英文 3200 条，共约 56 MB（短语里的数与 emoji 名字并进短语后片段是原来的 5–6 倍；嫌离线包大可以把 `src/engine/speech.ts` 的 `MERGE_MAX` 调小，或把音频脚本的码率从 48k 降到 32k）。有测试保证语料与代码一致、每个片段都有文件。
 - iOS / Safari 要在用户手势里解锁音频：任何一次触摸都会顺手解锁，之后自动读题不再受限；直接用地址打开练习页时第一题会等到第一次触摸才有声音。
 
 ## 部署
 
 纯静态站：`npm run build` 后把 `dist/` 整个放到任何支持 HTTPS 的静态托管（nginx、对象存储、Pages 服务都行），不需要服务端；`base: './'`，放在子目录也能跑。
 
-- **离线与更新**：已注册 Service Worker（vite-plugin-pwa，`registerType: 'autoUpdate'`），首次打开会把页面、字体和全部朗读片段预缓存，之后断网可用；重新部署后开着的页面回到前台会自己换新版本（在对战里就等退出竞技场再换）。自己部署时**必须是 HTTPS**（局域网 http 地址不行，Service Worker 不会注册）。
+- **离线与更新**：已注册 Service Worker（vite-plugin-pwa，`registerType: 'autoUpdate'`），首次打开会把页面、字体和全部中文朗读片段（约 29 MB）在后台预缓存，之后断网可用（英文片段切到英文时用到一条存一条）；重新部署后开着的页面回到前台会自己换新版本（在对战里就等退出竞技场再换）。自己部署时**必须是 HTTPS**（局域网 http 地址不行，Service Worker 不会注册）。
 - **安装提示**：没从主屏幕打开时，首页顶上有一条「安装 同步练-对战版」提示（给家长看的，不出声、不遮按钮）：Android / 电脑 Chrome、Edge 点「安装」直接弹系统安装框；iPhone / iPad 点「怎么做」看步骤（Safari 分享 → 添加到主屏幕）；微信 / QQ 里教先在浏览器打开。关掉 3 天后再提示，装好了不再出现；电脑上只在能一键安装时提示。逻辑在 `src/engine/install.ts`（可单测）+ `src/stores/install.ts`，画在 `components/ui/InstallBar.vue`。
-- **搜索引擎**：应用是 hash 路由，搜索引擎只看得到根地址，所以构建前 `scripts/seo.mjs`（`prebuild` / `predev` 自动跑）按目录生成一套不用 JS 的静态页放进 `public/`：每个上线课程一张目录页（`math/g1/`）、每个知识点一张（`math/g1/s1-05-carry-add.html`：介绍、固定种子生成的示例题含选项与答案、同单元其它知识点、「⚔️ 打一局」深链到对战设置页、「安静地练」深链到练习页）、帮助页一张（`help/`，常见问题带 FAQPage 结构化数据），都带标题 / 描述 / canonical / Open Graph / 面包屑 JSON-LD，页脚互相链接。入口页 `index.html` 的标题、描述、JSON-LD 与应用挂载前的静态简介也由同一份目录生成（写在 `<!-- seo:head -->` / `<!-- seo:body -->` 两段标记之间，别手改，有测试保证与目录一致）。页面文案在 `src/seo/site.ts`。
+- **搜索引擎**：应用是 hash 路由，搜索引擎只看得到根地址，所以构建前 `scripts/seo.mjs`（`prebuild` / `predev` 自动跑）按目录生成一套不用 JS 的静态页放进 `public/`：每个上线课程一张目录页（`math/g1/`）、每个知识点一张（`math/g1/s1-05-carry-add.html`：介绍、固定种子生成的示例题含选项与答案、同单元其它知识点、「⚔️ 打一局」深链到对战设置页、「安静地练」深链到练习页）、帮助页一张（`help/`，常见问题带 FAQPage 结构化数据），都带标题 / 描述 / canonical / Open Graph / 面包屑 JSON-LD，每个知识点页还有三段专属正文「怎么学 / 常见错误 / 家长怎么陪」与搜索词（`src/content/math/<年级>/seo.ts`）、上一个 / 下一个链接，页脚互相链接；另生成一张 `404.html`（不索引，服务器 `error_page 404 /404.html`）。入口页 `index.html` 的标题、描述、JSON-LD 与应用挂载前的静态简介也由同一份目录生成（写在 `<!-- seo:head -->` / `<!-- seo:body -->` 两段标记之间，别手改，有测试保证与目录一致）。页面文案在 `src/seo/site.ts`。
 - 构建时若本机 `.env` 里有 `SITE_URL=https://你的域名`，页面会带上 canonical / Open Graph 的绝对地址，并生成 `robots.txt` 与列出全部静态页的 `sitemap.xml`；没有就不带（页面照常可用）。分享图 `public/og.png`（1200×630）由 `npm run og` 渲染。静态页与分享图不进离线包；托管时最好让未命中的地址直接 404（不要回退到 `index.html`，会被搜索引擎当成软 404）。
 - **对战中继服务**（只有「各用各的」需要）：`npm run build:server` 打成单文件 `dist-server/battle.mjs`，用 Node 跑（`PORT` / `HOST` 环境变量，默认 127.0.0.1:8787；`ALLOWED_ORIGINS=https://你的域名` 只接受本站页面的连接，逗号分隔可以多个），托管方把同源的 `/ws` 反向代理到它（要放行 WebSocket 升级，并传 `X-Real-IP` 或 `X-Forwarded-For`——按 IP 限制连接数与猜口令用）。网站与服务要用同一次构建：连接时核对出题相关源码的哈希，旧页面遇到新服务会自动更新重载。没有它网站照常可用，只是那张卡置灰。
 - **语音通话的穿透**（可选）：语音是点对点的，服务默认只发一份公共 STUN 清单；要让手机流量对手机流量也能连上，给服务再配 `TURN_KEY_ID` / `TURN_KEY_TOKEN`（[Cloudflare Realtime TURN](https://developers.cloudflare.com/realtime/turn/) 的密钥，按流量计费、有免费额度），服务会向 Cloudflare 换 2 小时有效的临时凭据发给房间里的人，密钥本身不出服务器。托管方的响应头要放行本站的麦克风：`Permissions-Policy: microphone=(self)`（写成 `microphone=()` 就开不了麦）。
-- **访问统计**（可选）：本机 `.env` 里同时写 `VITE_UMAMI_SCRIPT=https://你的统计站/script.js` 与 `VITE_UMAMI_WEBSITE_ID=<站点 id>`，正式构建会往 `index.html` 与每张静态页的 `<head>` 里加一行 [Umami](https://umami.is)（开源、无 cookie）的上报脚本；`data-domains` 取 `SITE_URL` 的主机名，本机预览不上报。两项都不配就什么都不加。逻辑在 `src/engine/analytics.ts`（可单测；返回键那一下 tracker 自己不记，`main.ts` 里补一次）。用了 Content-Security-Policy 的话 `script-src` 与 `connect-src` 要放行统计站的域名。
-- **安全**：纯静态、无账号、无 cookie，不存别人的数据。别人发来的文字（昵称、正在输入的内容）一律当纯文本渲染；设备身份只在连接时发给服务器，服务器给别人看的是它的哈希（拿不到别人的身份就冒充不了）；服务有消息大小 / 频率 / 连接数 / 猜口令次数的限制；建议托管时加一条 Content-Security-Policy（脚本、样式、字体、音频、图片只从本站取，图片另加 `data:` 给二维码，`connect-src` 加本站的 `wss://`，`frame-ancestors 'none'`），本项目线上就是这样配的；语音走 WebRTC 不受 `connect-src` 管，`Permissions-Policy` 只放行本站的 `microphone=(self)`。语音信令只转给同房间在线的人，形状不对的丢掉。客户端判分、服务器不复算（家庭游戏不防作弊）。
+- **访问统计**（可选）：本机 `.env` 里同时写 `VITE_UMAMI_SCRIPT=https://你的统计站/script.js` 与 `VITE_UMAMI_WEBSITE_ID=<站点 id>`，正式构建会往 `index.html` 与每张静态页的 `<head>` 里加一行 [Umami](https://umami.is)（开源、无 cookie）的上报脚本；`data-domains` 取 `SITE_URL` 的主机名，本机预览不上报。两项都不配就什么都不加。逻辑在 `src/engine/analytics.ts`（可单测）：入口页关掉 tracker 的自动记录，翻页由路由上报，上报前去掉查询串、把多设备房间的房间号换成 `room`（房间号是进房的钥匙，不进统计库）；静态页由 tracker 自己记。用了 Content-Security-Policy 的话 `script-src` 与 `connect-src` 要放行统计站的域名。
+- **安全**：纯静态、无账号、无 cookie，不存别人的数据。别人发来的文字（昵称、正在输入的内容）一律当纯文本渲染；设备身份只在连接时发给服务器，服务器给别人看的是它的哈希（拿不到别人的身份就冒充不了）；服务有消息大小 / 频率 / 连接数 / 猜口令次数的限制；建议托管时加一条 Content-Security-Policy（脚本、样式、字体、音频、图片只从本站取，图片另加 `data:` 给二维码，`connect-src` 加本站的 `wss://`，`frame-ancestors 'none'`），本项目线上就是这样配的；语音走 WebRTC 不受 `connect-src` 管，`Permissions-Policy` 只放行本站的 `microphone=(self)`。语音信令只转给同房间在线的人（offer 只转发开着麦的人发的），形状不对的丢掉。服务里的房间号 / 口令 / 题目种子都是加密随机数，建房按 IP 限量，猜房间号与猜口令一样计次，发送前看写缓冲、每条消息都兜住异常（一条坏消息不会让所有房间清空），TURN 临时凭据只给不止一个人在线的房间。客户端判分、服务器不复算（家庭游戏不防作弊）。
 
 ## 技术栈
 
@@ -208,20 +218,22 @@ src/
 │   ├── catalog.ts           目录：SUBJECTS（学科 → 年级，live / soon）+ 课程注册表 registerCourse；本册知识点清单、下一章
 │   ├── i18n.ts              可本地化字符串 LStr 的运行时：registerDict / translate / t / ui；registerPinyin / rubySegments 逐字注音
 │   ├── answer.ts            判题与正确答案文本
-│   ├── speech.ts            朗读文本：把题干 / 答案切成片段（数字、短语、emoji 名、运算符 / 括号读法；大数按位拆读）
-│   ├── voice.ts             朗读序列：片段 → manifest 里的音频文件，say / sayKeys（读几条提示词条）/ hush / warmUp、静音开关；播法 cut / hold / wait / skip 与排队 key（对战读题必须播完）
+│   ├── speech.ts            朗读文本：把题干 / 答案切成片段（数字并进短语、停顿标记、emoji 名、运算符 / 括号读法；大数按位拆读）
+│   ├── voice.ts             朗读序列：片段 → 音频文件（audio/clips.ts 按文本哈希查），say / sayKeys（读几条提示词条）/ hush / warmUp；播法 cut / hold / wait / skip 与排队 key（对战读题必须播完）
+│   ├── sound.ts / sha1.ts   声音开关的真值（settings 与 voice 共用，首页不用拉朗读模块）；同步 SHA-1（算音频文件名）
 │   ├── audio.ts / tts.ts / runner.ts   播放引擎（AudioContext 解码缓存、首次触摸解锁、file:// 退化为 <audio>）、浏览器 TTS 兜底、独占任务（新声音打断旧的）
 │   ├── storage.ts           localStorage 单一根 key + 版本迁移
 │   ├── install.ts           安装提示的纯逻辑：按环境决定「安装」/「怎么做」/ 不提示
 │   ├── sw.ts / update.ts    开着的页面换新版本；对战版本不一致时自动更新重载
 │   ├── sites.ts             另外三个站的名单与站长微信二维码（首页与静态页页脚）
-│   ├── analytics.ts         访问统计（可选）：按 .env 的 VITE_UMAMI_* 生成上报脚本标签；返回键补记一次页面浏览
+│   ├── analytics.ts         访问统计（可选）：按 .env 的 VITE_UMAMI_* 生成上报脚本标签；翻页由路由上报，房间号不进统计库
 │   └── index.ts             入口只导出 session / rng / question（故意不含 catalog，避免循环依赖）
 ├── content/<学科>/<年级>/     内容包：一个「学科 × 年级」一个目录，自给自足（现有 math/grade1、math/grade2）
 │   ├── curriculum.ts        单元树 + 知识点树（中文标题是单一事实源）
 │   ├── generators/          每个知识点的题目生成器，defineGenerator 自注册
 │   ├── i18n.ts              该包的题目 / 选项 / 教具文案（中英）+ 知识点、单元英文名
 │   ├── pinyin.ts            每条中文词条的拼音（与汉字逐字对齐）
+│   ├── seo.ts               每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），只进静态页
 │   └── index.ts             导出 Course；被 catalog import 即完成全部注册
 ├── content/math/shared/     数学各年级共用：图形名与拼音、金额 / 时刻格式化、符号读法、emoji 名字、答错讲解的教具参数
 ├── battle/                  对战
@@ -229,19 +241,21 @@ src/
 │   ├── match.ts             比赛状态机（纯函数：加分、判胜、连对 / 反超 / 到一半 / 还差一分事件），页面与中继服务共用
 │   ├── stream.ts            题目流 questionAt(kpId, seed, 序号)：分批 buildSession，任何设备都能复现别人的题
 │   ├── ai.ts / names.ts / sfx.ts / fullscreen.ts   机器人的节奏与答案、名字池、WebAudio 合成音效、触屏设备的全屏 + 横屏锁
-│   ├── socket.ts            与中继服务的连接：同源 /ws、心跳、断线退避重连、连上前先攒着的消息
+│   ├── socket.ts            与中继服务的连接：同源 /ws、心跳、断线退避重连（带抖动）、连上前先攒着的消息、服务器消息的形状校验
+│   ├── lite.ts              顶栏 / 根组件要看的几个房间状态 ref（有没有中继、面板开没开、在不在比赛里）：首页不用拉整个房间 store
 │   ├── voice.ts             语音通话的纯逻辑：连谁、谁发 offer、名额、候选打包、信令形状（服务器也用它校验）
 │   ├── rtc.ts               一条点对点语音连接：RTCPeerConnection 薄封装、对方音轨挂到隐藏 <audio>、音量（可注入假的）
 │   ├── skins/               游戏注册表（id、位置、类别、加载函数）、按章节排定、规则句 / 结束语的词条键
 │   ├── game/                实时绘图的公共部分：contract.ts 游戏与页面之间唯一的契约 GameModule；engine/ Canvas 2D 小引擎（帧循环、缓动、
 │   │                        粒子、画图助手、并行推进类选手的骨架）；sprites/ 矢量角色与道具；host/GameHost.vue 宿主；fallback.ts 保底画面
 │   └── games/<id>/          每个游戏：model.ts（纯模型，node 可测）、render.ts（只画）、index.ts（组装）——race / car / rocket / balloon / swim / ladder / dig / fish / tower / flower / egg / bubble / fruit / stars / puzzle / tug / seesaw / flag / ice / castle
-├── audio/                   朗读语料：corpus.ts 收集片段、corpus.json / manifest.json（脚本生成）
+├── audio/                   朗读语料：corpus.ts 收集片段、corpus.json / manifest.json（脚本生成）；clips.ts 按文本的 sha1 查有没有这条音频
+│                            （页面里只带 vite.config.ts 的 audioClips 插件压成的哈希表 virtual:audio-clips，不带 265 KB 的全表）
 ├── help/content.ts          帮助页内容（知识点数、游戏名与规则句都从目录与注册表算出来）
-├── seo/site.ts              搜索引擎用的静态页（课程目录页、知识点页含示例题、帮助页）、robots / sitemap、index.html 两段简介
+├── seo/site.ts              搜索引擎用的静态页（课程目录页、知识点页含示例题与专属正文、帮助页、404 页）、robots / sitemap、index.html 两段简介
 ├── locales/shell.ts         应用外壳词条（品牌、目录、导航、结算、鼓励语、安装提示、对战、房间、帮助）及其拼音，中英
 ├── components/
-│   ├── ui/                  通用控件：顶部栏（含「🔑 加入对战」）、页头、大按钮、数字键盘、选择卡、撒花、注音文字 RubyText、安装提示条、联系站长面板
+│   ├── ui/                  通用控件：顶部栏（含「🔑 加入对战」）、页头、大按钮、数字键盘、选择卡（tap.ts：pointerup 就响应，两人同时按不丢）、撒花、注音文字 RubyText、安装提示条、联系站长面板
 │   ├── practice/            练习流程：题干渲染 QuestionRenderer、作答面板 AnswerPanel、结算页
 │   ├── battle/              对战：竞技场 Arena（单设备与房间共用，只读 store、不知道自己在哪种模式下）、队区 TeamPanel、成员行 PlayerRow、
 │   │                        作答显示 WatchInput、游戏盒子 GameSlot、倒数（先讲规则）、弹出提示、胜利彩纸、结果页、横屏提示、
@@ -258,7 +272,7 @@ server/                      对战中继服务：room.ts 纯函数房间状态�
                              index.ts 网络层（ws、限流、心跳、快照节流广播、版本核对、房间回收）
 public/audio/                朗读音频片段（脚本生成）；public/fonts/ 拼音字体 Andika；图标；og.png 分享图
 public/<学科>/<年级>/、help/  搜索引擎用的静态页（构建前生成，连同 robots.txt / sitemap.xml 都不进仓库）
-screenshots/                 README 用的预览图（npm run screenshots 生成，不进构建产物）
+screenshots/                 README 用的预览图（npm run screenshots 生成）与实拍演示 demo.mp4 / demo.webp（不进构建产物）
 scripts/                     collect-speech.mjs 收集语料、build-audio.py 生成音频包、seo.mjs 生成静态页、og.mjs 渲染分享图、
                              screenshots.mjs / battle-survey.mjs / game-survey.mjs 截图核对（lib/ 里是无头 Chrome 工具与版本号）
 vite.config.ts               base './'、PWA 清单与预缓存（静态页不进离线包）、siteMeta（按 .env 的 SITE_URL 填绝对地址）、
