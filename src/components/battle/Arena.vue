@@ -36,7 +36,7 @@ const RESULT_DELAY_MS = 3000
 /** 机器人说话的播放速率（B61）：快一点、高一点，听起来像机器人 */
 const ROBOT_RATE = 1.2
 
-const emit = defineEmits<{ exit: []; next: [kpId: string] }>()
+const emit = defineEmits<{ exit: []; next: [kpId: string]; practice: [kpId: string] }>()
 
 const store = useBattleStore()
 const settings = useSettingsStore()
@@ -133,6 +133,13 @@ function goNext(): void {
   // 线上发给服务器（谁先点算谁的）；单设备由路由页换知识点接着打（竞技场不重开、全屏不退）
   if (store.mode === 'online') store.nextChapter(id, chapterSkin(id))
   else emit('next', id)
+}
+/** 结果页的「再练一遍」（B69）：退出竞技场去这个知识点的练习页，由路由页决定怎么离开 */
+function practiceAgain(): void {
+  const id = state.value?.kpId
+  if (!id) return
+  exitFullscreen()
+  emit('practice', id)
 }
 /** 结果页的「不玩了」：线上让服务器关房间、大家一起回地图；单设备直接退出回地图 */
 function quit(): void {
@@ -308,7 +315,18 @@ onBeforeUnmount(() => {
     <Callout :callout="store.callout" />
     <Countdown v-if="phase === 'countdown'" :rule="store.intro && skin ? ruleKey(skin.id) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
-    <ResultPanel v-if="showResult" :state="state" :next="nextKpId" :series="store.series" @rematch="store.rematch()" @next="goNext" @quit="quit" />
+    <ResultPanel
+      v-if="showResult"
+      :state="state"
+      :next="nextKpId"
+      :series="store.series"
+      :timeline="store.timeline"
+      :wrongs="store.wrongs"
+      @rematch="store.rematch()"
+      @next="goNext"
+      @quit="quit"
+      @practice="practiceAgain"
+    />
 
     <div v-if="confirming" class="confirm-mask" @click.self="confirming = false">
       <div class="confirm" role="dialog">

@@ -9,7 +9,7 @@
 // 模板只能有一个根元素、根上不能放 HTML 注释：App 的 <Transition mode="out-in"> 只给单根做过渡，多根（开发模式保留注释也算）会让过渡卡住、下一页空白。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mapPathOf } from '@/engine/catalog'
+import { mapPathOf, practicePathOf } from '@/engine/catalog'
 import { lang, ui } from '@/engine/i18n'
 import { hush, sayKeys } from '@/engine/voice'
 import type { Member, Role, Team } from '@/battle/protocol'
@@ -149,6 +149,13 @@ watch(toast, (e) => {
   if (e) sayKeys([`room.error.${e}`], lang.value)
 })
 
+/** 再练一遍（B69）：离开房间去这个知识点的练习页（只有自己这台设备走） */
+function practice(kpId: string): void {
+  const to = practicePathOf(kpId)
+  room.leave()
+  router.push(to)
+}
+
 function leave(): void {
   // 先记下地图地址：离开房间后快照没了，就不知道是哪个学科 / 年级了
   const to = mapPath.value
@@ -192,7 +199,7 @@ onBeforeUnmount(() => {
   </div>
 
   <template v-else-if="room.inMatch">
-    <Arena @exit="leave" />
+    <Arena @exit="leave" @practice="practice" />
     <p v-if="room.status === 'reconnecting'" class="netbar">📶 <RubyText :text="{ k: 'room.reconnecting' }" /></p>
     <p v-else-if="toast" class="netbar" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
   </template>

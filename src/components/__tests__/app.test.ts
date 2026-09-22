@@ -1508,3 +1508,36 @@ describe('幸运题（B65）', () => {
     w.unmount()
   })
 })
+
+describe('结果页回放与错题（B69）', () => {
+  it('打完一局：结果页有比分走势与我答错的题；「再练一遍」退出竞技场去这个知识点的练习页', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const correctOf = (q: { answer: { kind: string; value?: number; choiceId?: string } }): number | string => (q.answer.kind === 'number' ? q.answer.value! : q.answer.choiceId!)
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    const w = await mountAt('/battle/local/s1-04-simple-addsub?mode=duo')
+    await settle()
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    store.submit('left', 'nope')
+    vi.advanceTimersByTime(1500)
+    for (let i = 0; i < 8; i++) {
+      store.submit('left', correctOf(store.questionOf(store.state!.players[0]!)))
+      vi.advanceTimersByTime(1500)
+    }
+    await settle()
+    expect(store.state!.phase).toBe('ended')
+    vi.advanceTimersByTime(3100)
+    await settle()
+    expect(w.find('.result .timeline').exists()).toBe(true)
+    expect(w.findAll('.result .wrong-item')).toHaveLength(1)
+    await w.find('.result .practice-btn').trigger('click')
+    for (let i = 0; i < 40 && router.currentRoute.value.path !== '/s/math/g/g1/practice/s1-04-simple-addsub'; i++) await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/s/math/g/g1/practice/s1-04-simple-addsub')
+    expect(store.state).toBeNull()
+    w.unmount()
+  })
+})

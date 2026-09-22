@@ -179,6 +179,10 @@ export const useBattleStore = defineStore('battle', () => {
   /** 幸运题答对了（B65）：竞技场撒金色彩纸 */
   const lucky = ref<{ id: number; team: Team } | null>(null)
   let luckySeq = 0
+  /** 比分走势（B69）：每得一分记一笔（比赛开始后多少毫秒、当时的比分），结果页画回放条 */
+  const timeline = ref<{ t: number; red: number; blue: number }[]>([])
+  /** 这台设备上的真人答错的题（B69）：谁、第几题（题目由 seed + 题号重现），结果页列出来 */
+  const wrongs = ref<{ playerId: string; index: number }[]>([])
   /** 本章战绩（B64）：同一个知识点连着打了几局各赢几局；换知识点 / 离开清零，不存本地 */
   const series = ref<{ kpId: string; wins: Record<Team, number> } | null>(null)
   /** 机器人正在说的话（B61）：它那一行的气泡 + 朗读由竞技场做 */
@@ -253,6 +257,8 @@ export const useBattleStore = defineStore('battle', () => {
     callout.value = null
     emotes.value = []
     lucky.value = null
+    timeline.value = []
+    wrongs.value = []
     robotLine.value = null
     shownAt.clear()
     humanStats.times = []
@@ -376,6 +382,10 @@ export const useBattleStore = defineStore('battle', () => {
       if (e.type === 'point') {
         playSfx('ding', streakPitch(e.streak))
         for (const x of sounds.score) playSfx(x)
+        // 比分走势（B69）：按事件自己累加（线上事件先于快照到，不能看 state 里的比分）
+        const last = timeline.value.at(-1) ?? { red: 0, blue: 0 }
+        const started = state.value?.startedAt ?? now()
+        timeline.value = [...timeline.value, { t: Math.max(0, now() - started), red: last.red + (e.team === 'red' ? 1 : 0), blue: last.blue + (e.team === 'blue' ? 1 : 0) }]
       }
       if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
       if (e.type === 'lead' || e.type === 'nearWin' || e.type === 'deuce') playSfx(calloutSfx(e.type))
@@ -566,6 +576,8 @@ export const useBattleStore = defineStore('battle', () => {
     const q = questionOf(p)
     const ok = checkAnswer(q, given)
     pending.value = { ...pending.value, [playerId]: { question: q, correct: ok, given: String(given) } }
+    // 这台设备上的真人答错的题（B69）：结果页列出来
+    if (p.kind === 'human' && !ok) wrongs.value = [...wrongs.value, { playerId, index: p.index }]
     if (p.kind === 'human' && mode.value === 'ai') {
       // 记孩子的节奏（B60）：这题用了多久、对不对
       const since = shownAt.get(playerId)
@@ -678,6 +690,8 @@ export const useBattleStore = defineStore('battle', () => {
     emotes,
     lucky,
     series,
+    timeline,
+    wrongs,
     robotLine,
     intro,
     online,

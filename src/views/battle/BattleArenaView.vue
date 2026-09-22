@@ -5,7 +5,7 @@
 import { onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hasGenerator } from '@/engine'
-import { courseOfKp, mapPathOf } from '@/engine/catalog'
+import { courseOfKp, mapPathOf, practicePathOf } from '@/engine/catalog'
 import { useBattleStore, type LocalMode } from '@/stores/battle'
 import Arena from '@/components/battle/Arena.vue'
 
@@ -35,6 +35,13 @@ function exit(): void {
   router.push(to)
 }
 
+/** 再练一遍（B69）：结果页里点的，离开竞技场去这个知识点的练习页 */
+function practice(kpId: string): void {
+  const to = practicePathOf(kpId)
+  store.leave()
+  router.push(to)
+}
+
 /** 下一章（B9）：换知识点重新开一局（游戏按那一章排到的），地址跟着换但不重挂载 */
 function nextChapter(next: string): void {
   store.startLocal({ kpId: next, mode })
@@ -46,7 +53,7 @@ onBeforeUnmount(() => store.leave())
 
 <template>
   <div class="arena-page">
-    <Arena v-if="store.state" @exit="exit" @next="nextChapter" />
+    <Arena v-if="store.state" @exit="exit" @next="nextChapter" @practice="practice" />
   </div>
 </template>
 

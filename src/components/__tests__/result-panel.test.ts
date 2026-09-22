@@ -108,3 +108,39 @@ describe('本章战绩（B64）', () => {
     w.unmount()
   })
 })
+
+describe('回放条与我的错题（B69）', () => {
+  it('有走势就画两条阶梯线、反超处打点；错题列出题干（可点读）与正确答案、「再练一遍」发 practice；没错题写全都答对', async () => {
+    const state = ended()
+    const timeline = [
+      { t: 1000, red: 1, blue: 0 },
+      { t: 2000, red: 1, blue: 1 },
+      { t: 3000, red: 1, blue: 2 },
+      { t: 4000, red: 2, blue: 2 },
+      { t: 5000, red: 3, blue: 2 },
+    ]
+    const w = mount(ResultPanel, { props: { state, next: nextKp(KP), timeline, wrongs: [{ playerId: 'a', index: 0 }, { playerId: 'b', index: 2 }] } })
+    await flushPromises()
+    expect(w.findAll('.timeline polyline')).toHaveLength(2)
+    expect(w.find('.tl-line.red').attributes('points')).toContain('0,')
+    // 领先方换了两次：蓝反超（第 3 笔）、红反超（第 5 笔）
+    expect(w.findAll('.tl-flip')).toHaveLength(2)
+    expect(w.findAll('.tl-flip').map((c) => c.classes().includes('blue'))).toEqual([true, false])
+    expect(shown(w.find('.wrong-title'))).toContain('我答错的题')
+    const items = w.findAll('.wrong-item')
+    expect(items).toHaveLength(2)
+    expect(items[0]!.find('.stem').exists()).toBe(true)
+    expect(shown(items[0]!.find('.wrong-ans'))).toContain('正确答案')
+    expect(items.map((i) => i.find('.wrong-who').text())).toEqual(['小兔', '小虎'])
+    await w.find('.practice-btn').trigger('click')
+    expect(w.emitted('practice')).toHaveLength(1)
+    await w.setProps({ wrongs: [] })
+    expect(w.find('.wrong-item').exists()).toBe(false)
+    expect(shown(w.find('.wrong-none'))).toContain('全都答对')
+    expect(w.find('.practice-btn').exists()).toBe(false)
+    await w.setProps({ wrongs: undefined, timeline: [] })
+    expect(w.find('.wrong').exists()).toBe(false)
+    expect(w.find('.timeline').exists()).toBe(false)
+    w.unmount()
+  })
+})

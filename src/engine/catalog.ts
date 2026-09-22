@@ -71,6 +71,13 @@ export function mapPathOf(kpId: string): string {
   return sem === 2 ? `${base}?sem=2` : base
 }
 
+/** 这个知识点练习页的地址（结果页「再练一遍」用，B69）；不在目录里 → '/' */
+export function practicePathOf(kpId: string): string {
+  const info = courseOfKp(kpId)
+  if (!info) return '/'
+  return `/s/${info.subject.id}/g/${info.grade.id}/practice/${kpId}`
+}
+
 /** 这个知识点所在那一册（上 / 下）的全部知识点，按目录顺序（含 ☆ 单元）；不在目录里 → []。对战按章节排游戏、「下一章」都用它 */
 export function volumeKps(kpId: string): KnowledgePoint[] {
   const info = courseOfKp(kpId)

@@ -441,3 +441,60 @@ describe('幸运题与本章战绩（B65 / B64）', () => {
     expect(s.series).toBeNull()
   })
 })
+
+describe('回放条与我的错题（B69）', () => {
+  it('每得一分记一笔（开始后多少毫秒、当时比分）；真人答错的题记下谁、第几题；再来一局清空', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.setName('right', '小虎')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    s.beginPlay()
+    expect(s.timeline).toEqual([])
+    vi.advanceTimersByTime(1000)
+    s.submit('left', 'nope')
+    vi.advanceTimersByTime(FEEDBACK_WRONG_MS + 1)
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    s.submit('right', correctOf(s.questionOf(s.state!.players[1]!)))
+    vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    s.submit('right', 'nope')
+    expect(s.timeline.map((p) => [p.red, p.blue])).toEqual([
+      [1, 0],
+      [1, 1],
+    ])
+    expect(s.timeline[0]!.t).toBe(1000 + FEEDBACK_WRONG_MS + 1)
+    expect(s.timeline[1]!.t).toBeGreaterThan(s.timeline[0]!.t)
+    expect(s.wrongs).toEqual([
+      { playerId: 'left', index: 0 },
+      { playerId: 'right', index: 1 },
+    ])
+    s.rematch({ left: 3, right: 4 })
+    expect(s.timeline).toEqual([])
+    expect(s.wrongs).toEqual([])
+  })
+
+  it('打机器人：机器人答错的不记；线上模式按事件累加比分（事件先于快照到）', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 }, aiSeed: 3, aiLevel: 'slow' })
+    s.beginPlay()
+    s.submit(AI_ID, 'nope')
+    expect(s.wrongs).toEqual([])
+    s.leave()
+    const sent: unknown[] = []
+    s.startOnline({ send: (m) => sent.push(m) })
+    let r = createRoom({ code: 'ABC234', kpId: KP, skin: 'race', host: { clientId: 'hhhhhh', name: '主持' }, version: 'v1', now: 1000 })
+    r = join(r, { clientId: 'me', name: '小兔', t: 'red', version: 'v1' }, 2000).room
+    r = apply(r, 'hhhhhh', { type: 'team', role: 'blue' }, 3000, () => 7).room
+    r = apply(r, 'hhhhhh', { type: 'start' }, 3000, () => 7).room
+    s.syncOnline({ ...snapshot(r), match: { ...r.match!, phase: 'playing', startedAt: 3000 } }, 'me', 3000)
+    s.onRemoteEvent({ type: 'point', team: 'blue', playerId: 'hhhhhh', streak: 1 })
+    s.onRemoteEvent({ type: 'point', team: 'blue', playerId: 'hhhhhh', streak: 2 })
+    s.onRemoteEvent({ type: 'point', team: 'red', playerId: 'me', streak: 1 })
+    expect(s.timeline.map((p) => [p.red, p.blue])).toEqual([
+      [0, 1],
+      [0, 2],
+      [1, 2],
+    ])
+  })
+})
