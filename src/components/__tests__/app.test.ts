@@ -1318,6 +1318,10 @@ describe('帮助页（F17）', () => {
     expect(text).toContain('谁先答对 8 题谁赢')
     expect(text).toContain('火箭就升高一段')
     expect(document.title).toBe('帮助与说明 · 同步练-对战版')
+    // 版本与更新一节（N8 ⑦）：当前版本、检查更新、重装；离线朗读包的状态
+    expect(shown(w.find('#help-version'))).toContain('当前版本')
+    expect(w.findAll('#help-version .act').map((b) => b.text())).toEqual(['检查更新', '重装应用'])
+    expect(shown(w.find('#help-version'))).toContain('离线朗读包')
     setLang('en')
     await flushPromises()
     expect(shown(w)).toContain('Rules')

@@ -78,7 +78,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     // 对战版本（B43）：出题相关源码的哈希（scripts/lib/build-id.mjs），中继服务用同一个；只改界面不算新版本
-    define: { __BUILD__: JSON.stringify(compatId()) },
+    // __BUILT_AT__：构建时刻，帮助页「当前版本」显示用（与 __BUILD__ 不同：那个只随出题代码变）
+    define: { __BUILD__: JSON.stringify(compatId()), __BUILT_AT__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev，B46）
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev 起在 8787；BATTLE_PORT 可改，方便另起一份测试）
     server: { proxy: { '/ws': { target: `ws://127.0.0.1:${process.env.BATTLE_PORT ?? 8787}`, ws: true } } },
@@ -89,9 +90,10 @@ export default defineConfig(({ mode }) => {
       audioClips(),
       siteMeta(env.SITE_URL ?? ''),
       analyticsTag(env),
-      // PWA：「添加到主屏幕」后离线可用。页面 + 字体 + 中文朗读片段（约 3400 条、30 MB）首次打开时在后台预缓存；
-      // 英文片段（约 3200 条、28 MB）只在切到英文用到时按需缓存（runtimeCaching）——中文用户不用为它多下一倍、
-      // 首次安装与每次发布后的更新也快一倍（N8）
+      // PWA：「添加到主屏幕」后离线可用。预缓存只有页面外壳（代码 / 字体 / 图标，几 MB，几秒装好）——新版本几秒就能换上；
+      // 朗读片段（中文 3400 条 29 MB、英文 3200 条 28 MB）不进预缓存：由页面在后台分批下进运行时缓存 audio
+      // （engine/offline.ts），SW 离线时从它取。以前 mp3 都在预缓存里，新版本要下完几十 MB 才能装好，老手机刷新多少次
+      // 都是旧版（N8 ⑦，2026-09-22 用户报的）
       VitePWA({
         registerType: 'autoUpdate',
         // 注册脚本用 defer（默认是同步的 <script src>，会挡住 HTML 解析一个来回）
@@ -122,7 +124,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,json}', 'audio/zh-*.mp3'],
+          globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,json}'],
           // 子目录里的 html 是给搜索引擎的静态页（<学科>/<年级>/…），og.png 是分享图、screenshots/ 是安装对话框的截图，
           // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网）：都不进离线包
           globIgnores: ['*/**/*.html', '404.html', 'og.png', 'screenshots/**', '**/qrcode-*.js'],
@@ -133,10 +135,11 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/[^/]+\//, /\.[a-z0-9]+$/i, /^\/[^/.]+$/],
           runtimeCaching: [
             {
-              // 英文朗读片段按需缓存：用到一条存一条，30 天没用到的清掉
-              urlPattern: /\/audio\/en-[a-z0-9]+\.mp3$/,
+              // 朗读片段：缓存里有就用缓存，没有才取网络并存下（页面后台下载的也存在同一个缓存里）；
+              // 文件名是内容哈希，旧片段由 engine/offline.ts 下完一轮后清掉，这里不做过期
+              urlPattern: /\/audio\/(zh|en)-[a-z0-9]+\.mp3$/,
               handler: 'CacheFirst',
-              options: { cacheName: 'audio-en', expiration: { maxEntries: 4000, maxAgeSeconds: 30 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
+              options: { cacheName: 'audio', cacheableResponse: { statuses: [0, 200] } },
             },
           ],
         },

@@ -5,10 +5,16 @@
  * ② 新 SW 接管（controllerchange）后，不在对战里就马上重载，在对战里等退出竞技场再重载（不打断一局）。
  * 首次安装接管不算更新，不重载。
  */
+export interface RegistrationLike {
+  update(): Promise<unknown>
+  installing?: unknown
+  waiting?: unknown
+  unregister?(): Promise<boolean>
+}
 export interface SwLike {
   controller: unknown
   addEventListener(type: 'controllerchange', fn: () => void): void
-  getRegistration(): Promise<{ update(): Promise<unknown> } | undefined>
+  getRegistration(): Promise<RegistrationLike | undefined>
 }
 
 export interface DocLike {
@@ -25,6 +31,8 @@ export interface SwUpdateDeps {
 
 /** 回到前台查更新的最短间隔：切个微信再回来不用每次都去要 sw.js */
 export const UPDATE_CHECK_GAP_MS = 10 * 60 * 1000
+/** 手动「检查更新」：有新版本在装时最多等多久它接管（外壳只有几 MB） */
+export const MANUAL_UPDATE_WAIT_MS = 60_000
 
 function defaultDeps(): SwUpdateDeps {
   return {
@@ -69,3 +77,43 @@ export function setupSwUpdates(isBusy: () => boolean, deps: SwUpdateDeps = defau
   })
   return { flush }
 }
+
+export type UpdateCheck = 'updating' | 'latest' | 'unavailable'
+
+/**
+ * 帮助页的「检查更新」（N8 ⑦）：向服务器要一次 sw.js；有新版本在装 / 等着就返回 updating（装好接管后 setupSwUpdates 会重载），
+ * 没有就 latest；这个环境没有 SW（没 https、file://）就 unavailable。等待接管最多 MANUAL_UPDATE_WAIT_MS，超时也算 updating
+ * （下次打开会是新的）。
+ */
+export async function checkForUpdate(deps: Pick<SwUpdateDeps, 'sw'> & { wait?: (ms: number) => Promise<void> } = defaultDeps()): Promise<UpdateCheck> {
+  const sw = deps.sw
+  if (!sw) return 'unavailable'
+  const reg = await sw.getRegistration().catch(() => undefined)
+  if (!reg) return 'unavailable'
+  await reg.update().catch(() => undefined)
+  if (!reg.installing && !reg.waiting) return 'latest'
+  const wait = deps.wait ?? ((ms) => new Promise<void>((r) => setTimeout(r, ms)))
+  await Promise.race([new Promise<void>((r) => sw.addEventListener('controllerchange', () => r())), wait(MANUAL_UPDATE_WAIT_MS)])
+  return 'updating'
+}
+
+/**
+ * 「重装应用」：注销 Service Worker、删掉全部缓存（页面外壳与朗读片段），然后重载——从服务器重新拿一份最新的。
+ * 给「怎么都还是旧版」这种情况兜底；学习记录在 localStorage，不动。
+ */
+export async function reinstall(deps: { sw: SwLike | null; caches?: { keys(): Promise<string[]>; delete(name: string): Promise<boolean> } | null; reload(): void }): Promise<void> {
+  try {
+    const reg = await deps.sw?.getRegistration()
+    if (reg?.unregister) await reg.unregister()
+  } catch {
+    /* 没有就算了 */
+  }
+  try {
+    const store = deps.caches === undefined ? (typeof caches === 'undefined' ? null : caches) : deps.caches
+    if (store) for (const name of await store.keys()) await store.delete(name)
+  } catch {
+    /* 删不掉也照样重载 */
+  }
+  deps.reload()
+}
+

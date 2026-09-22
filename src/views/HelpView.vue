@@ -1,15 +1,43 @@
 <script setup lang="ts">
 // 帮助页（需求 F17）：学习内容 / 题目、对战玩法、规则、技巧、常见问题。内容在 help/content.ts，随语言切换；
 // 给家长看的说明文字，不注音（与安装步骤面板同一类）；每节有锚点，设置页的「怎么玩」直接跳到规则。
-import { computed, nextTick, onMounted, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { lang, ui } from '@/engine/i18n'
 import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
+import { checkForUpdate, reinstall, type UpdateCheck } from '@/engine/sw'
+import { useOfflineStore } from '@/stores/offline'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 const route = useRoute()
 const sections = computed(() => helpSections(lang.value))
 const games = computed(() => helpGames(lang.value))
+
+// 版本与更新（N8 ⑦）：当前版本 + 检查更新 + 重装；离线朗读包下到哪了
+const offline = useOfflineStore()
+const checking = ref(false)
+const checked = ref<UpdateCheck | null>(null)
+async function check(): Promise<void> {
+  if (checking.value) return
+  checking.value = true
+  checked.value = null
+  try {
+    checked.value = await checkForUpdate()
+  } finally {
+    checking.value = false
+  }
+}
+function redo(): void {
+  void reinstall({ sw: typeof navigator === 'undefined' ? null : ((navigator.serviceWorker as unknown as Parameters<typeof reinstall>[0]['sw']) ?? null), reload: () => location.reload() })
+}
+const builtAt = __BUILT_AT__
+const offlineLine = computed(() => {
+  const r = offline.last
+  const name = lang.value === 'zh' ? '中文' : 'English'
+  if (!r) return ui('help.offlineWait')
+  if (r.cached >= r.total && r.total > 0) return ui('help.offlineDone', { lang: name })
+  return ui('help.offline', { lang: name, cached: r.cached, total: r.total })
+})
 
 function jump(): void {
   const id = route.hash.replace(/^#/, '')
@@ -50,6 +78,16 @@ watch(() => route.hash, jump)
           </template>
         </dl>
       </template>
+    </section>
+    <section id="help-version" class="sec version">
+      <h2><span class="icon" aria-hidden="true">🔄</span>{{ ui('help.version') }} {{ builtAt }}</h2>
+      <p class="offline-line">{{ offlineLine }}</p>
+      <p class="actions">
+        <button type="button" class="act" :disabled="checking" @click="check">{{ checking ? ui('help.checking') : ui('help.check') }}</button>
+        <button type="button" class="act ghost" @click="redo">{{ ui('help.reinstall') }}</button>
+      </p>
+      <p v-if="checked" class="status" role="status">{{ ui(`help.${checked}`) }}</p>
+      <p class="hint">{{ ui('help.reinstallHint') }}</p>
     </section>
     <p class="foot"><RouterLink to="/">{{ ui('nav.home') }}</RouterLink></p>
   </div>
@@ -152,5 +190,37 @@ watch(() => route.hash, jump)
   .game {
     grid-template-columns: 1fr;
   }
+}
+
+.version .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.version .act {
+  min-height: var(--tap-min);
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+}
+.version .act.ghost {
+  background: #fff;
+  color: var(--c-primary-dark);
+  box-shadow: inset 0 0 0 2px var(--c-primary);
+}
+.version .act:disabled {
+  opacity: 0.6;
+}
+.version .status {
+  font-weight: 700;
+}
+.version .hint,
+.version .offline-line {
+  color: var(--c-text-light);
+  font-size: 15px;
 }
 </style>
