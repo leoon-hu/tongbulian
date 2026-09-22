@@ -127,6 +127,8 @@ export const useRoomStore = defineStore('room', () => {
       },
       onRtc: (from, data) => voice.onSignal(from, data),
       onTurn: (iceServers, ttl) => voice.onTurn(iceServers, ttl),
+      // 别人的表情（B58）：直接进竞技场的飞行层
+      onEmote: (_from, role, id) => battle.onRemoteEmote(role, id),
       factory,
     })
     battle.startOnline({

@@ -5,10 +5,11 @@
  * - 按需加载游戏模块（独立 chunk），喂快照与带序号的事件，跑 rAF 循环，切后台暂停；
  * - 游戏的每一次调用都包在 try/catch 里：加载失败或运行时抛错 → 卸掉它换成保底画面（两条队色进度条），
  *   保底画面也出错就停止绘制；比赛照常，不冒泡到页面。
- * - 根元素 pointer-events: none（inline 也写一份，别靠样式表），游戏永远拿不到触摸。
+ * - 根元素 pointer-events: none（inline 也写一份，别靠样式表），只有 canvas 收点按（B59）：宿主算出盒子里的坐标与
+ *   按位置猜的一方交给游戏的 poke，自己在点按处画一圈涟漪，并把这一下报给竞技场放声音；游戏仍拿不到事件对象。
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { SeqEvent } from '@/battle/protocol'
+import type { SeqEvent, Team } from '@/battle/protocol'
 import type { GameEvent, GameHostInfo, GameLoader, GameModule, GameState } from '../contract'
 import { deviceScale, prefersReducedMotion } from '../engine/canvas'
 import { Loop } from '../engine/loop'
@@ -19,7 +20,17 @@ const props = defineProps<{
   state: GameState
   events: readonly SeqEvent[]
   compact?: boolean
+  /** 点按位置 → 猜是哪一队的东西（B59；由 GameSlot 按皮肤的位置 / 类别给），不传就上半红下半蓝 */
+  sideOf?: (x: number, y: number, w: number, h: number) => Team
 }>()
+const emit = defineEmits<{ poke: [team: Team] }>()
+
+/** 两次点按至少隔多久才转给游戏（孩子连点也别把游戏刷爆）；涟漪显示多久 */
+const POKE_MIN_GAP_MS = 150
+const RIPPLE_MS = 500
+const ripples = ref<{ id: number; x: number; y: number }[]>([])
+let rippleSeq = 0
+let lastPoke = -Infinity
 
 export type HostStatus = 'loading' | 'game' | 'fallback' | 'dead'
 
@@ -117,6 +128,28 @@ function onResize(): void {
   if (mod) guard(() => mod!.resize(width, height, info!.dpr))
 }
 
+/** 盒子被点了一下（B59）：坐标换成盒子里的 CSS 像素，转给游戏，画涟漪，报给竞技场 */
+function onPointer(e: PointerEvent): void {
+  const canvas = canvasEl.value
+  if (!canvas || !info) return
+  const t = Date.now()
+  if (t - lastPoke < POKE_MIN_GAP_MS) return
+  lastPoke = t
+  const r = canvas.getBoundingClientRect()
+  const x = (e.clientX ?? 0) - (r?.left ?? 0)
+  const y = (e.clientY ?? 0) - (r?.top ?? 0)
+  const w = info.width
+  const h = info.height
+  const team: Team = props.sideOf ? props.sideOf(x, y, w, h) : y < h / 2 ? 'red' : 'blue'
+  if (mod?.poke) guard(() => mod!.poke!(x, y, team))
+  const id = ++rippleSeq
+  ripples.value = [...ripples.value.slice(-5), { id, x, y }]
+  setTimeout(() => {
+    ripples.value = ripples.value.filter((p) => p.id !== id)
+  }, RIPPLE_MS)
+  emit('poke', team)
+}
+
 function onVisibility(): void {
   if (document.hidden) {
     loop.pause()
@@ -208,7 +241,8 @@ defineExpose({ status, level })
 
 <template>
   <div ref="root" class="game-host" :data-status="status" style="pointer-events: none" aria-hidden="true">
-    <canvas ref="canvasEl" class="game-canvas" />
+    <canvas ref="canvasEl" class="game-canvas" @pointerdown="onPointer" />
+    <span v-for="p in ripples" :key="p.id" class="ripple" :style="{ left: `${p.x}px`, top: `${p.y}px` }" />
   </div>
 </template>
 
@@ -223,5 +257,34 @@ defineExpose({ status, level })
   display: block;
   width: 100%;
   height: 100%;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+/* 点按处的涟漪（B59）：DOM 画的，不进 canvas */
+.ripple {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 2px rgba(61, 44, 30, 0.25);
+  pointer-events: none;
+  animation: ripple 0.5s ease-out forwards;
+}
+@keyframes ripple {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ripple {
+    animation-duration: 0.25s;
+  }
 }
 </style>

@@ -237,6 +237,14 @@ export class CarModel {
     }
   }
 
+  /** 点一下（B59）：颠一下、轰一脚油门冒尾气 */
+  poke(team: Team): void {
+    const c = this.car(team)
+    c.poke.kick(1)
+    c.boost.kick(0.6)
+    this.puff(c, 3)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -282,6 +290,10 @@ export class CarModel {
 
   /** 车身离地（倒数发动机抖、跑动颠簸、胜利翘头蹦） */
   lift(c: Racer): number {
+    return this.liftBase(c) + c.poke.value * this.geo.size * 0.15
+  }
+
+  private liftBase(c: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (c.mood === 'ready') return Math.abs(Math.sin(c.hop * 6)) * g.size * 0.02

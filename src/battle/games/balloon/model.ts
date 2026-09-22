@@ -237,6 +237,15 @@ export class BalloonModel {
     }
   }
 
+  /** 点一下（B59）：烧嘴喷一下火、乘客挥手、往上一浮 */
+  poke(team: Team): void {
+    const b = this.balloon(team)
+    const i = team === 'red' ? 0 : 1
+    b.poke.kick(1)
+    this.burst[i]!.kick(1.3)
+    this.wave[i]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null
@@ -286,6 +295,10 @@ export class BalloonModel {
 
   /** 篮底当前 y（含待机起伏、输了下沉） */
   yOf(b: Racer): number {
+    return this.yOfBase(b) - b.poke.value * this.geo.size * 0.08
+  }
+
+  private yOfBase(b: Racer): number {
     const g = this.geo
     let y = b.pos.value
     if (!this.animated) return y

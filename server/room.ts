@@ -378,9 +378,10 @@ export function apply(room: Room, from: string, msg: ClientMsg, now: number, see
     case 'ping':
     case 'hello':
     case 'create':
-    // 信令与 ICE 清单（B57）由网络层处理（不改房间状态），不会到这里
+    // 信令与 ICE 清单（B57）、表情（B58）由网络层处理（不改房间状态），不会到这里
     case 'rtc':
     case 'turn':
+    case 'emote':
       return { room: base, effects: [] }
     default:
       return { room, effects: [err(from, 'bad')] }

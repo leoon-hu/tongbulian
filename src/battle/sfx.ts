@@ -42,6 +42,7 @@ export type Sfx =
   | 'clunk' // 跷跷板：砝码落板咚一下
   | 'hup' // 抢旗：旗子蹦一格
   | 'boom' // 拆城堡：开炮 + 砖碎
+  | 'boing' // 表情飞出去：啵嘤
   | 'sting' // 反超：上行三音
   | 'alert' // 还差一分：嘀嘀 — 嘀
 
@@ -193,6 +194,12 @@ const PATTERNS: Record<Sfx, Pattern> = {
     ],
   },
   stroke: { noise: [{ at: 0, d: 0.16, gain: 0.5, f: 2600, q: 0.8 }, { at: 0.14, d: 0.12, gain: 0.3, f: 1800, q: 1 }], notes: [{ f: 420, at: 0, d: 0.12, type: 'sine', gain: 0.25, to: 180 }] },
+  boing: {
+    notes: [
+      { f: 520, at: 0, d: 0.12, type: 'triangle', gain: 0.5, to: 980 },
+      { f: 780, at: 0.13, d: 0.16, type: 'sine', gain: 0.35, to: 1180 },
+    ],
+  },
   sting: {
     notes: [
       { f: 660, at: 0, d: 0.12, type: 'triangle', gain: 0.5 },
@@ -268,8 +275,8 @@ function noise(ac: AudioContext): AudioBuffer {
   return noiseBuffer
 }
 
-/** 播一个音效；pitch 是音高倍率（连对时「叮」逐级升高，1 = 原样） */
-export function playSfx(kind: Sfx, pitch = 1): void {
+/** 播一个音效；pitch 是音高倍率（连对时「叮」逐级升高，1 = 原样）；gain 是音量倍率（点游戏的反应小声一点，B59） */
+export function playSfx(kind: Sfx, pitch = 1, gain = 1): void {
   if (!isVoiceEnabled()) return
   const ac = audioContext()
   if (!ac) return
@@ -283,7 +290,7 @@ export function playSfx(kind: Sfx, pitch = 1): void {
       const start = t0 + n.at
       osc.frequency.setValueAtTime(n.f * pitch, start)
       if (n.to) osc.frequency.exponentialRampToValueAtTime(n.to * pitch, start + n.d)
-      const peak = (n.gain ?? 0.6) * 0.5
+      const peak = (n.gain ?? 0.6) * 0.5 * gain
       g.gain.setValueAtTime(0.0001, start)
       g.gain.exponentialRampToValueAtTime(peak, start + 0.01)
       g.gain.exponentialRampToValueAtTime(0.0001, start + n.d)
@@ -297,7 +304,7 @@ export function playSfx(kind: Sfx, pitch = 1): void {
       src.buffer = noise(ac)
       const g = ac.createGain()
       const start = t0 + n.at
-      const peak = (n.gain ?? 0.4) * 0.5
+      const peak = (n.gain ?? 0.4) * 0.5 * gain
       g.gain.setValueAtTime(0.0001, start)
       g.gain.exponentialRampToValueAtTime(peak, start + 0.02)
       g.gain.exponentialRampToValueAtTime(0.0001, start + n.d)

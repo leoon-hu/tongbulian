@@ -152,6 +152,8 @@ export class TugModel {
   bow = new Tween(500, ease.outBack)
   /** 得分时蝴蝶结抖一下 */
   bowKick = new Decay(0.3)
+  /** 点一下（B59）：那一队蹦一下 */
+  pokeHop: [Decay, Decay] = [new Decay(0.45), new Decay(0.45)]
   /** 还差一分时蝴蝶结发光 */
   bowGlow = new Decay(0.8)
   clouds: Cloud[] = []
@@ -386,6 +388,14 @@ export class TugModel {
     }
   }
 
+  /** 点一下（B59）：那一队使一把劲、蝴蝶结抖一下、蹦一下 */
+  poke(team: Team): void {
+    const side = this.side(team)
+    side.strain.kick(0.8)
+    this.bowKick.kick(0.6)
+    this.pokeHop[team === 'red' ? 0 : 1]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -416,6 +426,7 @@ export class TugModel {
 
   step(dt: number): void {
     this.time += dt
+    for (const p of this.pokeHop) p.step(dt)
     const g = this.geo
     const animated = this.animated
     if (animated && this.quality < 1) {
@@ -495,6 +506,10 @@ export class TugModel {
 
   /** 离地高度（倒数原地蹦、赢了跳） */
   liftOf(side: Side, i: number): number {
+    return this.liftOfBase(side, i) + this.pokeHop[i]!.value * this.geo.size * 0.3
+  }
+
+  private liftOfBase(side: Side, i: number): number {
     const g = this.geo
     if (!this.animated) return 0
     if (side.mood === 'ready') return Math.abs(Math.sin(side.hop + i * 1.3)) * g.size * 0.28

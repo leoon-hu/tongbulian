@@ -113,6 +113,8 @@ export class RaceModel {
   flagWave = 0
   /** 横幅发光 0…1 */
   bannerGlow = new Decay(0.8)
+  /** 点一下（B59）：跳一下 */
+  pokeHop: [Decay, Decay] = [new Decay(0.45), new Decay(0.45)]
   /** 发令员的旗：0 举起 1 落下 */
   starter = new Tween(0, ease.outBounce)
   /** 观众：每只的挥手强度与跳起高度 */
@@ -295,6 +297,13 @@ export class RaceModel {
     }
   }
 
+  /** 点一下（B59）：跳一下、蹬一下腿 */
+  poke(team: Team): void {
+    const r = this.runner(team)
+    r.boost.kick(0.5)
+    this.pokeHop[team === 'red' ? 0 : 1]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -302,6 +311,7 @@ export class RaceModel {
 
   step(dt: number): void {
     this.time += dt
+    for (const p of this.pokeHop) p.step(dt)
     const g = this.geo
     const animated = this.animated
     // 云
@@ -364,6 +374,10 @@ export class RaceModel {
 
   /** 角色离地高度（跑动 / 蹦 / 胜利跳） */
   lift(r: Runner): number {
+    return this.liftBase(r) + this.pokeHop[r.team === 'red' ? 0 : 1]!.value * this.geo.size * 0.4
+  }
+
+  private liftBase(r: Runner): number {
     const g = this.geo
     if (!this.animated) return 0
     if (r.mood === 'ready') return Math.abs(Math.sin(r.hop)) * g.size * (r.team === 'red' ? 0.12 : 0.35)

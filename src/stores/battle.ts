@@ -11,7 +11,7 @@ import { checkAnswer } from '@/engine/answer'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech, questionSpeech } from '@/engine/speech'
 import { warmUp } from '@/engine/voice'
-import type { ArenaEvent, ClientMsg, MatchEvent, MatchState, Player, RoomSnapshot, SeqEvent, Team } from '@/battle/protocol'
+import type { ArenaEvent, ClientMsg, MatchEvent, MatchState, Player, Role, RoomSnapshot, SeqEvent, Team } from '@/battle/protocol'
 import {
   answer as applyAnswer,
   beginPlay as applyBegin,
@@ -24,6 +24,7 @@ import {
 import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, isAiLevel, planAnswer, type AiLevel } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
+import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
 import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
@@ -45,6 +46,8 @@ export const ANSWER_WAIT_MS = 4000
 export const CALLOUT_MS = 1600
 /** 事件队列保留最近多少条 */
 export const EVENT_LOG = 64
+/** 点游戏（B59）：两次点按的音效至少隔多久 */
+export const POKE_GAP_MS = 250
 
 const KEY = 'tongbulian:battle'
 
@@ -66,6 +69,14 @@ export interface Feedback {
   question: Question
   correct: boolean
   given: string
+}
+
+/** 正在飞的表情（B58）：谁发的（红 / 蓝 / 观战）、是不是本机发的 */
+export interface EmoteShown {
+  id: number
+  kind: EmoteId
+  side: Role
+  mine: boolean
 }
 
 /** 弹出提示（B5a）：连对 / 反超 / 还差一分，词条 + 参数，带队色 */
@@ -158,6 +169,11 @@ export const useBattleStore = defineStore('battle', () => {
   let eventSeq = 0
   const callout = ref<Callout | null>(null)
   let calloutSeq = 0
+  /** 正在飞的表情（最近几条，EMOTE_MS 后自己消失） */
+  const emotes = ref<EmoteShown[]>([])
+  let emoteSeq = 0
+  const emoteAt: Partial<Record<Role, number>> = {}
+  let pokeAt = -Infinity
   /** 这局开场要不要先讲规则（B6）：本设备第一次进这个游戏讲，同一个游戏一天内不重复；再来一局不讲 */
   const intro = ref(false)
 
@@ -222,10 +238,55 @@ export const useBattleStore = defineStore('battle', () => {
       events.value = []
     }
     callout.value = null
+    emotes.value = []
     if (inputTimer) clearTimeout(inputTimer)
     inputTimer = null
     inputPending = null
     awaiting.clear()
+  }
+
+  // ── 表情 / 加油（B58）与点游戏（B59） ──
+
+  /** 一个表情飞出去：进列表（最多留 8 条）、一声「啵嘤」，EMOTE_MS 后消失；朗读由竞技场看列表决定 */
+  function showEmote(kind: EmoteId, side: Role, mine: boolean): void {
+    const id = ++emoteSeq
+    emotes.value = [...emotes.value.slice(-7), { id, kind, side, mine }]
+    playSfx('boing')
+    later(
+      timers,
+      () => {
+        emotes.value = emotes.value.filter((e) => e.id !== id)
+      },
+      EMOTE_MS,
+    )
+  }
+
+  /**
+   * 本机发一个表情：side 是哪一排（红 / 蓝 / 观战），同一排 EMOTE_GAP_MS 内只发一个（返回 false = 太快了没发）；
+   * 线上发给服务器（别人那里由 onRemoteEmote 画）；打机器人时机器人过一会儿回一个
+   */
+  function sendEmote(side: Role, kind: EmoteId, now = Date.now()): boolean {
+    if (!state.value) return false
+    if (now - (emoteAt[side] ?? -Infinity) < EMOTE_GAP_MS) return false
+    emoteAt[side] = now
+    showEmote(kind, side, true)
+    if (mode.value === 'online') transport?.send({ type: 'emote', id: kind })
+    else if (mode.value === 'ai') later(timers, () => showEmote(botReply(kind), 'blue', false), BOT_REPLY_MS)
+    return true
+  }
+
+  /** 别人（多设备房间里的其他人）发的表情 */
+  function onRemoteEmote(side: Role, kind: EmoteId): void {
+    if (state.value) showEmote(kind, side, false)
+  }
+
+  /** 游戏盒子被点了一下（B59）：游戏自己已经在动，这里只放这种游戏的得分音（小声），POKE_GAP_MS 内只放一次 */
+  function poke(_team: Team, now = Date.now()): void {
+    const s = state.value
+    if (!s || now - pokeAt < POKE_GAP_MS) return
+    pokeAt = now
+    const sounds = skinSfx(s.skin, skinById(s.skin)?.kind)
+    playSfx(sounds.score[0] ?? 'pop', 1, 0.45)
   }
 
   function clearPending(playerId: string): void {
@@ -281,6 +342,13 @@ export const useBattleStore = defineStore('battle', () => {
       if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
       else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
+    }
+    // 机器人对反超 / 结束的表情（B58）：结束的等胜利动画开始了再发
+    if (mode.value === 'ai') {
+      for (const e of evts) {
+        const kind = botEventEmote(e)
+        if (kind) later(timers, () => showEmote(kind, 'blue', false), e.type === 'finished' ? 1500 : 500)
+      }
     }
     return toCall
   }
@@ -522,6 +590,7 @@ export const useBattleStore = defineStore('battle', () => {
     lastEvent,
     events,
     callout,
+    emotes,
     intro,
     online,
     now,
@@ -534,6 +603,9 @@ export const useBattleStore = defineStore('battle', () => {
     beginPlay,
     setInput,
     submit,
+    sendEmote,
+    onRemoteEmote,
+    poke,
     rematch,
     nextChapter,
     quit,

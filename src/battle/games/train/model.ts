@@ -354,6 +354,14 @@ export class TrainModel {
     }
   }
 
+  /** 点一下（B59）：鸣笛喷汽、烟囱冒一团烟、车身颠一下 */
+  poke(team: Team): void {
+    const c = this.train(team)
+    c.poke.kick(1)
+    this.whistle[team === 'red' ? 0 : 1].kick(1)
+    this.puff(c, 4)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -412,6 +420,10 @@ export class TrainModel {
 
   /** 车身离地：跑动时轻微颠簸，到站后高兴地一颠一颠 */
   lift(c: Racer): number {
+    return this.liftBase(c) + c.poke.value * this.geo.size * 0.08
+  }
+
+  private liftBase(c: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     const i = c.team === 'red' ? 0 : 1

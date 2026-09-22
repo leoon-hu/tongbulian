@@ -334,6 +334,15 @@ export class CastleModel {
     }
   }
 
+  /** 点一下（B59）：炮口冒一股烟、炮身后坐、小动物蹦一下 */
+  poke(team: Team): void {
+    const gd = this.guard(team)
+    const i = team === 'red' ? 0 : 1
+    gd.poke.kick(1)
+    this.smoke[i]!.kick(1)
+    this.recoil[i]!.kick(0.6)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null
@@ -444,6 +453,10 @@ export class CastleModel {
   }
 
   liftOf(gd: Racer): number {
+    return this.liftOfBase(gd) + gd.poke.value * this.geo.size * 0.25
+  }
+
+  private liftOfBase(gd: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (gd.mood === 'ready') return Math.abs(Math.sin(gd.hop)) * g.size * 0.15

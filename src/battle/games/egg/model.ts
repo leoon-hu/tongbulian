@@ -293,6 +293,15 @@ export class EggModel {
     }
   }
 
+  /** 点一下（B59）：蛋晃一晃、母鸡扑一下翅膀 */
+  poke(team: Team): void {
+    const e = this.egg(team)
+    const i = team === 'red' ? 0 : 1
+    e.poke.kick(1)
+    this.wobble[i]!.kick(1.3)
+    this.flap[i]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null
@@ -382,6 +391,10 @@ export class EggModel {
 
   /** 母鸡离地（倒数 / 胜利蹦） */
   henLift(e: Racer): number {
+    return this.henLiftBase(e) + e.poke.value * this.geo.henS * 0.15
+  }
+
+  private henLiftBase(e: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (e.mood === 'ready') return Math.abs(Math.sin(e.hop)) * g.henS * 0.1

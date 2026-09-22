@@ -303,6 +303,15 @@ export class BubbleModel {
     }
   }
 
+  /** 点一下（B59）：鼓腮吹一口、泡泡颤一颤、蹦一下 */
+  poke(team: Team): void {
+    const b = this.blower(team)
+    const i = team === 'red' ? 0 : 1
+    b.poke.kick(1)
+    this.puff[i]!.kick(1.2)
+    this.wobble[i]!.kick(1.2)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null
@@ -393,6 +402,10 @@ export class BubbleModel {
   }
 
   liftOf(b: Racer): number {
+    return this.liftOfBase(b) + b.poke.value * this.geo.size * 0.2
+  }
+
+  private liftOfBase(b: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (b.mood === 'ready') return Math.abs(Math.sin(b.hop)) * g.size * 0.12

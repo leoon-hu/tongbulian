@@ -116,6 +116,8 @@ export class RocketModel {
   sprint = false
   /** 目标星脉动强度 0…1（冲刺 / 还差一分时高） */
   goalPulse = new Decay(1.2)
+  /** 点一下（B59）：往上蹿一下 */
+  pokeHop: [Decay, Decay] = [new Decay(0.45), new Decay(0.45)]
   /** 光芒旋转相位（赢了之后） */
   rays = 0
   /** 发射台闪光 */
@@ -309,6 +311,13 @@ export class RocketModel {
     }
   }
 
+  /** 点一下（B59）：喷一口大火、往上蹿一下 */
+  poke(team: Team): void {
+    const r = this.rocket(team)
+    r.burst.kick(1.2)
+    this.pokeHop[team === 'red' ? 0 : 1]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.shooting = null
@@ -317,6 +326,7 @@ export class RocketModel {
 
   step(dt: number): void {
     this.time += dt
+    for (const p of this.pokeHop) p.step(dt)
     const g = this.geo
     const animated = this.animated
     // 流星
@@ -389,6 +399,10 @@ export class RocketModel {
 
   /** 火箭底部当前 y（含悬浮 / 抖动 / 输了下沉） */
   yOf(r: Rocket): number {
+    return this.yOfBase(r) - this.pokeHop[this.rockets.indexOf(r) === 1 ? 1 : 0]!.value * this.geo.size * 0.12
+  }
+
+  private yOfBase(r: Rocket): number {
     const g = this.geo
     let y = r.y.value
     if (!this.animated) return y

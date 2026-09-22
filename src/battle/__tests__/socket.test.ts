@@ -195,3 +195,20 @@ describe('语音信令（B57）', () => {
     expect(ws.msgs.at(-1)).toEqual({ type: 'rtc', to: 'bbbb', data: { candidates: [] } })
   })
 })
+
+describe('表情（B58）', () => {
+  it('emote 回调（from / role / id 都对才转），形状不对的丢掉；发出去就是 { type: emote, id }', () => {
+    const got: [string, string, string][] = []
+    const { c } = client({ onEmote: (f, r, id) => got.push([f, r, id]) })
+    c.connect('ABC234')
+    const ws = FakeWs.last()
+    ws.open()
+    ws.receive({ type: 'emote', from: 'bbbb', role: 'watch', id: 'cheer' })
+    ws.receive({ type: 'emote', from: 'bbbb', role: 'nope', id: 'cheer' } as unknown as ServerMsg)
+    ws.receive({ type: 'emote', from: 'bbbb', role: 'red', id: 'x' } as unknown as ServerMsg)
+    ws.receive({ type: 'emote', from: 7, role: 'red', id: 'cool' } as unknown as ServerMsg)
+    expect(got).toEqual([['bbbb', 'watch', 'cheer']])
+    c.send({ type: 'emote', id: 'laugh' })
+    expect(ws.msgs.at(-1)).toEqual({ type: 'emote', id: 'laugh' })
+  })
+})

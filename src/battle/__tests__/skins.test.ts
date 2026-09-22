@@ -39,6 +39,11 @@ describe('皮肤注册表（B34–B36）', () => {
           for (let i = 0; i < 3; i++) mod.tick(1 / 60)
         }
       }
+      // 点一下（B59）：每种游戏都实现了 poke，两边各点一下再走几帧不抛错
+      expect(typeof mod.poke).toBe('function')
+      mod.poke!(10, 10, 'red')
+      mod.poke!(140, 690, 'blue')
+      for (let i = 0; i < 10; i++) mod.tick(1 / 60)
       mod.destroy()
     })
   }

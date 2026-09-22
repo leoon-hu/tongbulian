@@ -5,7 +5,12 @@ import '@/content/math/grade1'
 import type { Player } from '@/battle/protocol'
 import { AI_ID } from '@/battle/ai'
 import type { Question } from '@/types/models'
-import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, INTRO_AGAIN_MS, useBattleStore } from '../battle'
+import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, INTRO_AGAIN_MS, POKE_GAP_MS, useBattleStore } from '../battle'
+import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS } from '@/battle/emotes'
+import { playSfx } from '@/battle/sfx'
+import { apply, createRoom, join, snapshot } from '../../../server/room'
+
+vi.mock('@/battle/sfx', async (orig) => ({ ...(await orig<typeof import('@/battle/sfx')>()), playSfx: vi.fn() }))
 
 const KP = 's1-05-carry-add'
 
@@ -183,5 +188,103 @@ describe('打机器人（B11）', () => {
     expect(s.state!.winner).toBe('blue')
     expect(ai().correct).toBe(8)
     expect(ai().index).toBeGreaterThanOrEqual(8)
+  })
+})
+
+describe('表情与点游戏（B58 / B59）', () => {
+  it('两人一台：哪一排发的就从哪边飞，同一排 EMOTE_GAP_MS 内只发一个，EMOTE_MS 后消失；没开局不发', () => {
+    const s = useBattleStore()
+    expect(s.sendEmote('red', 'cheer')).toBe(false)
+    s.setName('me', '小兔')
+    s.setName('right', '小虎')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    expect(s.sendEmote('red', 'cheer')).toBe(true)
+    expect(s.sendEmote('red', 'laugh')).toBe(false) // 太快了
+    expect(s.sendEmote('blue', 'wow')).toBe(true) // 另一排不受影响
+    expect(s.emotes.map((e) => [e.kind, e.side, e.mine])).toEqual([
+      ['cheer', 'red', true],
+      ['wow', 'blue', true],
+    ])
+    expect(vi.mocked(playSfx)).toHaveBeenCalledWith('boing')
+    vi.advanceTimersByTime(EMOTE_GAP_MS)
+    expect(s.sendEmote('red', 'laugh')).toBe(true)
+    vi.advanceTimersByTime(EMOTE_MS)
+    expect(s.emotes).toEqual([])
+    // 两人一台没有机器人：不会有人回
+    expect(s.emotes.filter((e) => !e.mine)).toEqual([])
+  })
+
+  it('打机器人：发一个表情机器人 BOT_REPLY_MS 后回一个（蓝队、不是我发的）；机器人反超时自己 😎、被反超 😱；结束后按输赢发', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 }, aiSeed: 3 })
+    s.beginPlay()
+    s.sendEmote('red', 'laugh')
+    expect(s.emotes).toHaveLength(1)
+    vi.advanceTimersByTime(BOT_REPLY_MS)
+    expect(s.emotes.map((e) => [e.kind, e.side, e.mine])).toEqual([
+      ['laugh', 'red', true],
+      ['laugh', 'blue', false],
+    ])
+    vi.advanceTimersByTime(EMOTE_MS)
+    // 机器人先得分领先，我再连得两分反超：机器人 😱
+    s.submit(AI_ID, correctOf(s.questionOf(s.state!.players[1]!)))
+    vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    expect(s.state!.score).toEqual({ red: 2, blue: 1 })
+    expect(s.emotes).toEqual([])
+    vi.advanceTimersByTime(600)
+    expect(s.emotes.map((e) => [e.kind, e.side, e.mine])).toEqual([['wow', 'blue', false]])
+    vi.advanceTimersByTime(EMOTE_MS)
+    // 我打满：机器人给我 🔥
+    while (s.state!.phase === 'playing') {
+      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    expect(s.state!.winner).toBe('red')
+    // 结束的表情等 1.5 秒（胜利动画开始了）才发：循环末尾已经推进了 FEEDBACK_CALLOUT_MS + 1
+    vi.advanceTimersByTime(200)
+    expect(s.emotes.some((e) => e.kind === 'cheer' && e.side === 'blue')).toBe(true)
+  })
+
+  it('多设备：发表情只发给服务器（本机也画自己的）、不会有机器人回；别人的表情由 onRemoteEmote 画', () => {
+    const s = useBattleStore()
+    const sent: unknown[] = []
+    s.startOnline({ send: (m) => sent.push(m) })
+    expect(s.sendEmote('red', 'cheer')).toBe(false) // 还没有比赛快照
+    s.onRemoteEmote('watch', 'cheer')
+    expect(s.emotes).toEqual([])
+    let r = createRoom({ code: 'ABC234', kpId: KP, skin: 'race', host: { clientId: 'hhhhhh', name: '主持' }, version: 'v1', now: 1000 })
+    r = join(r, { clientId: 'me', name: '小兔', t: 'red', version: 'v1' }, 2000).room
+    r = apply(r, 'hhhhhh', { type: 'team', role: 'blue' }, 3000, () => 7).room
+    r = apply(r, 'hhhhhh', { type: 'start' }, 3000, () => 7).room
+    s.syncOnline(snapshot(r), 'me')
+    expect(s.sendEmote('red', 'cheer')).toBe(true)
+    expect(sent).toEqual([{ type: 'emote', id: 'cheer' }])
+    s.onRemoteEmote('watch', 'wow')
+    expect(s.emotes.map((e) => [e.kind, e.side, e.mine])).toEqual([
+      ['cheer', 'red', true],
+      ['wow', 'watch', false],
+    ])
+    vi.advanceTimersByTime(BOT_REPLY_MS + 100)
+    expect(s.emotes).toHaveLength(2) // 没有机器人
+  })
+
+  it('点游戏（B59）：放这种游戏的得分音（小声），POKE_GAP_MS 内只放一次；没开局不放', () => {
+    const s = useBattleStore()
+    vi.mocked(playSfx).mockClear()
+    s.poke('red')
+    expect(vi.mocked(playSfx)).not.toHaveBeenCalled()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'train', seeds: { left: 1, ai: 2 } })
+    vi.mocked(playSfx).mockClear()
+    s.poke('red')
+    s.poke('blue')
+    expect(vi.mocked(playSfx).mock.calls).toEqual([['chug', 1, 0.45]])
+    vi.advanceTimersByTime(POKE_GAP_MS)
+    s.poke('blue')
+    expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(2)
   })
 })

@@ -338,6 +338,13 @@ export class TowerModel {
     }
   }
 
+  /** 点一下（B59）：工人蹦一下、举手 */
+  poke(team: Team): void {
+    const t = this.tower(team)
+    t.hop.kick(1)
+    t.cheer.kick(0.6)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null

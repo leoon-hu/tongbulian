@@ -1,7 +1,7 @@
 /**
  * 游戏与页面之间唯一的契约（需求 B34 / B34a）。
- * 游戏在竞技场分给它的固定盒子里的一块 <canvas> 上实时绘图：只收比分快照与瞬时事件，
- * 不接触摸、不出声、没有文字、没有 CSS，也拿不到 store / 路由 / DOM。
+ * 游戏在竞技场分给它的固定盒子里的一块 <canvas> 上实时绘图：只收比分快照、瞬时事件与宿主转来的点按坐标（B59），
+ * 不出声、没有文字、没有 CSS，也拿不到 store / 路由 / DOM。
  * 宿主（host/GameHost.vue）负责 canvas、尺寸、加载、循环与出错回退；游戏只实现下面的接口。
  */
 import type { ArenaEvent, Phase, Team } from '../protocol'
@@ -46,6 +46,11 @@ export interface GameModule {
   destroy(): void
   /** 宿主的循环连续掉帧时调用（1 → 3 逐级加重）：游戏据此停视差 / 停粒子 / 降像素比 */
   degrade?(level: number): void
+  /**
+   * 盒子被点了一下（B59）：x / y 是盒子里的 CSS 像素，team 是宿主按位置猜的一方（横条的并行 / 收集类上半红下半蓝，
+   * 拉锯类与竖条左红右蓝）。游戏做个小反应（跳一下、鸣笛、喷火），不计分；没实现的宿主只画涟漪
+   */
+  poke?(x: number, y: number, team: Team): void
 }
 
 /** 每次挂载新建一个实例（同一皮肤再来一局、换皮肤都干净） */

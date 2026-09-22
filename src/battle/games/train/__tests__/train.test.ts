@@ -136,6 +136,22 @@ describe('开火车 · 模型（B36v）', () => {
     expect(m.greet.value).toBe(0)
   })
 
+  it('点一下（B59）：那列火车鸣笛喷汽、烟囱冒一团烟、车身颠一下，分数不变', () => {
+    const m = new TrainModel(createRng(4))
+    m.layout(1000, 120, false)
+    m.setState(snap(2, 3))
+    settle(m)
+    m.particles.clear()
+    m.poke('blue')
+    expect(m.whistle[1].value).toBe(1)
+    expect(m.whistle[0].value).toBeLessThan(0.2) // 开局那一声早衰减下去了
+    expect(m.particles.count).toBeGreaterThan(0)
+    m.step(1 / 60)
+    expect(m.lift(m.trains[1])).toBeGreaterThan(m.lift(m.trains[0]) + 1)
+    expect(m.carsOut(1)).toBe(3)
+    expect(m.trains[1].pos.target).toBeCloseTo(m.headFor(3), 3)
+  })
+
   it('晚进来的观战者：第一份快照就是比赛中 / 已结束，火车也开出来到该在的位置；结束态换了胜方也对', () => {
     const m = new TrainModel(createRng(2))
     m.layout(1000, 120, false)

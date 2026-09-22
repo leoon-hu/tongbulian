@@ -115,6 +115,8 @@ const inQuad = (t: number): number => t * t
 export class IceModel {
   geo: IceGeometry = layoutIce(150, 700, false)
   sides: [Side, Side]
+  /** 点一下（B59）：企鹅蹦一下 */
+  pokeHop: [Decay, Decay] = [new Decay(0.45), new Decay(0.45)]
   flakes: Flake[] = []
   fishX = 0
   fishDir: 1 | -1 = 1
@@ -357,6 +359,14 @@ export class IceModel {
     }
   }
 
+  /** 点一下（B59）：企鹅拍翅膀、蹦一下，冰晃一晃 */
+  poke(team: Team): void {
+    const side = this.side(team)
+    side.flap.kick(1)
+    side.wobble.kick(0.5)
+    this.pokeHop[team === 'red' ? 0 : 1]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.fishJumpT = -1
@@ -408,6 +418,7 @@ export class IceModel {
 
   step(dt: number): void {
     this.time += dt
+    for (const p of this.pokeHop) p.step(dt)
     const g = this.geo
     const animated = this.animated
     const scenery = animated && this.quality < 1
@@ -507,6 +518,10 @@ export class IceModel {
 
   /** 企鹅离地高度（倒数原地蹦、赢了跳） */
   liftOf(side: Side): number {
+    return this.liftOfBase(side) + this.pokeHop[this.sides.indexOf(side) === 1 ? 1 : 0]!.value * this.geo.size * 0.3
+  }
+
+  private liftOfBase(side: Side): number {
     const g = this.geo
     if (!this.animated) return 0
     if (side.mood === 'ready') return Math.abs(Math.sin(side.hop)) * g.size * 0.3

@@ -9,6 +9,7 @@ import type { IncomingMessage } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, IceServer, RoomError, ServerMsg } from '@/battle/protocol'
+import { EMOTE_SERVER_GAP_MS, isEmoteId } from '@/battle/emotes'
 import { cleanName } from '@/battle/names'
 import { DEFAULT_ICE_SERVERS, cleanIceServers, isRtcSignal } from '@/battle/voice'
 import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, randomSeed, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
@@ -62,6 +63,8 @@ interface Conn {
   rtcCount: number
   /** 口令 / 房间号连错了几次 */
   badPass: number
+  /** 上一个表情的时刻（B58：每连接 EMOTE_SERVER_GAP_MS 最多一条） */
+  lastEmote: number
 }
 
 /** 一个时间窗里的计数（口令错几次） */
@@ -465,6 +468,20 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     for (const other of connsOf(room.code)) if (other.clientId === msg.to) send(other.ws, { type: 'rtc', from: c.clientId!, data: msg.data })
   }
 
+  /** 表情（B58）：只认表里的 id、每连接隔 EMOTE_SERVER_GAP_MS 一条，转发给同房间的其他人（带发送者的身份与座位）；不进快照、不存 */
+  function onEmote(c: Conn, room: Room, msg: Extract<ClientMsg, { type: 'emote' }>): void {
+    if (!isEmoteId(msg.id)) {
+      fail(c.ws, 'bad')
+      return
+    }
+    const t = now()
+    if (t - c.lastEmote < EMOTE_SERVER_GAP_MS) return
+    c.lastEmote = t
+    const me = room.members.find((m) => m.clientId === c.clientId)
+    if (!me) return
+    for (const other of connsOf(room.code)) if (other !== c && other.clientId) send(other.ws, { type: 'emote', from: c.clientId!, role: me.role, id: msg.id })
+  }
+
   function onMessage(c: Conn, data: string, bytes: number): void {
     const t = now()
     c.lastSeen = t
@@ -533,6 +550,10 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       onTurn(c, room)
       return
     }
+    if (msg.type === 'emote') {
+      onEmote(c, room, msg)
+      return
+    }
     commit(c.code, apply(room, c.clientId, msg, t, seed))
   }
 
@@ -557,7 +578,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
 
   wss.on('connection', (ws, req) => {
     const ip = clientIp(req)
-    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, rtcCount: 0, badPass: 0 }
+    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, rtcCount: 0, badPass: 0, lastEmote: 0 }
     conns.add(c)
     connsByIp.set(ip, (connsByIp.get(ip) ?? 0) + 1)
     // 每条消息 / 每次断开都兜住异常（N6 ⑨）：一条畸形消息把整个进程杀掉 = 所有在玩的房间清空

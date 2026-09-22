@@ -274,6 +274,12 @@ export class SeesawModel {
     }
   }
 
+  /** 点一下（B59）：那一头颠一下、板子抖一抖 */
+  poke(team: Team): void {
+    this.bump[team === 'red' ? 0 : 1]!.kick(1)
+    this.shake.kick(0.6)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()

@@ -87,6 +87,8 @@ onBeforeUnmount(() => {
   padding: 0 24px;
   background: rgba(253, 246, 236, 0.75);
   z-index: 20;
+  /* 倒数层上没有按钮：不挡游戏盒子的点按（B59），倒数时也能逗一逗角色 */
+  pointer-events: none;
 }
 .num,
 .go,

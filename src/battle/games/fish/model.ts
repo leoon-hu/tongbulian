@@ -330,6 +330,15 @@ export class FishModel {
     }
   }
 
+  /** 点一下（B59）：鱼扑腾几下、竿弯一下、钓鱼人蹦一下 */
+  poke(team: Team): void {
+    const f = this.fish(team)
+    const i = team === 'red' ? 0 : 1
+    f.poke.kick(1)
+    this.thrash[i]!.kick(1.2)
+    this.bend[i]!.kick(0.6)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.minnow = null
@@ -438,6 +447,10 @@ export class FishModel {
 
   /** 钓鱼人离座的高度（倒数 / 胜利蹦） */
   liftOf(f: Racer): number {
+    return this.liftOfBase(f) + f.poke.value * this.geo.size * 0.15
+  }
+
+  private liftOfBase(f: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (f.mood === 'ready') return Math.abs(Math.sin(f.hop)) * g.size * 0.1

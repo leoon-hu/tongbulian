@@ -307,6 +307,13 @@ export class FlowerModel {
     }
   }
 
+  /** 点一下（B59）：浇一下水、花盆蹦一下 */
+  poke(team: Team): void {
+    const p = this.plant(team)
+    p.poke.kick(1)
+    this.water[team === 'red' ? 0 : 1]!.kick(1.2)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bee = null
@@ -380,6 +387,10 @@ export class FlowerModel {
 
   /** 花盆离地（倒数蹦） */
   liftOf(p: Racer): number {
+    return this.liftOfBase(p) + p.poke.value * this.geo.potH * 0.25
+  }
+
+  private liftOfBase(p: Racer): number {
     if (!this.animated || p.mood !== 'ready') return 0
     return Math.abs(Math.sin(p.hop)) * this.geo.potH * 0.12
   }

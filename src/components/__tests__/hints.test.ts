@@ -311,3 +311,23 @@ describe('多设备房间', () => {
     w.unmount()
   })
 })
+
+describe('表情（B58）', () => {
+  it('🔥 加油飞出去时读一声「加油！」（skip 播法，正在读题就不读）；别的表情不读', async () => {
+    named()
+    const w = await mountAt(`/battle/local/${KP}?mode=ai`)
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    vi.mocked(say).mockClear()
+    await w.find('.emotes.side-red [data-emote="laugh"]').trigger('click')
+    await settle()
+    const cheerCalls = () => vi.mocked(say).mock.calls.filter((c) => c[0].join('').includes('加油'))
+    expect(cheerCalls()).toHaveLength(0)
+    store.sendEmote('red', 'cheer', Date.now() + 1000)
+    await settle()
+    expect(cheerCalls()).toHaveLength(1)
+    expect(cheerCalls()[0]![3]).toEqual({ mode: 'skip' })
+    w.unmount()
+  })
+})

@@ -384,6 +384,12 @@ export class FruitModel {
     }
   }
 
+  /** 点一下（B59）：蹦一下、树晃一晃 */
+  poke(team: Team): void {
+    this.jump[team === 'red' ? 0 : 1]!.kick(1)
+    this.shake.kick(0.8)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null

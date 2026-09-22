@@ -307,3 +307,28 @@ describe('房间 store（B19–B25）', () => {
     expect(battle.state).toBeNull()
   })
 })
+
+describe('表情（B58）', () => {
+  it('比赛中收到别人的 emote 就进 battle.emotes（按座位飞、不算我发的）；没有比赛快照时丢掉', () => {
+    const room = useRoomStore()
+    const battle = useBattleStore()
+    battle.setName('me', '小兔')
+    room.useFactory((url) => new FakeWs(url))
+    room.enter(CODE, 'red')
+    const ws = FakeWs.last()
+    ws.open()
+    const me = battle.prefs.clientId
+    ws.receive({ type: 'emote', from: HOST, role: 'watch', id: 'cheer' })
+    expect(battle.emotes).toEqual([])
+    let r = roomWith(me)
+    r = apply(r, HOST, { type: 'team', role: 'blue' }, 3000, seeds).room
+    r = apply(r, HOST, { type: 'start' }, 3000, seeds).room
+    ws.receive({ type: 'state', room: snapshot(r), you: me, now: 5000 })
+    ws.receive({ type: 'emote', from: HOST, role: 'blue', id: 'wow' })
+    expect(battle.emotes.map((e) => [e.kind, e.side, e.mine])).toEqual([['wow', 'blue', false]])
+    ws.sent.length = 0
+    expect(battle.sendEmote('red', 'cheer')).toBe(true)
+    expect(ws.msgs).toEqual([{ type: 'emote', id: 'cheer' }])
+    expect(battle.emotes).toHaveLength(2)
+  })
+})

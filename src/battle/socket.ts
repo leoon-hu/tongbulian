@@ -4,6 +4,7 @@
  * 每 25 秒 ping（Cloudflare 代理 100 秒空闲会断）。WebSocket 与计时器可注入，node 里能测。
  */
 import type { ArenaEvent, ClientMsg, IceServer, Role, RoomError, RoomSnapshot, RtcSignal, ServerMsg } from './protocol'
+import { isEmoteId, type EmoteId } from './emotes'
 import { cleanIceServers, isRtcSignal } from './voice'
 
 export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed'
@@ -45,6 +46,8 @@ export interface RoomClientOptions {
   onRtc?(from: string, data: RtcSignal): void
   /** ICE 服务器清单（B57） */
   onTurn?(iceServers: IceServer[], ttl: number): void
+  /** 别人发的表情（B58） */
+  onEmote?(from: string, role: Role, id: EmoteId): void
   /** 可注入的 WebSocket（测试用假的） */
   factory?: (url: string) => SocketLike
   /** 退避抖动的随机源（0…1）；测试注入固定值 */
@@ -176,6 +179,8 @@ export class RoomClient {
         if (typeof msg.from === 'string' && isRtcSignal(msg.data)) this.opts.onRtc?.(msg.from, msg.data)
       } else if (msg.type === 'turn') {
         this.opts.onTurn?.(cleanIceServers(msg.iceServers), typeof msg.ttl === 'number' && msg.ttl > 0 ? msg.ttl : 0)
+      } else if (msg.type === 'emote') {
+        if (typeof msg.from === 'string' && (msg.role === 'red' || msg.role === 'blue' || msg.role === 'watch') && isEmoteId(msg.id)) this.opts.onEmote?.(msg.from, msg.role, msg.id)
       } else if (msg.type === 'error') {
         if (typeof msg.error !== 'string') return
         // 被顶掉 / 房间没了 / 版本不对：不再重连

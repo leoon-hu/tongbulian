@@ -2,6 +2,7 @@
  * 对战（需求 §8）的数据模型：一局比赛的快照与事件。客户端本地对局、以后的中继服务都用这一份。
  * 服务器只认识这些字段，不认识题目：题目由各端按 (kpId, seed, index) 自己生成（battle/stream.ts）。
  */
+import type { EmoteId } from './emotes'
 
 export type Team = 'red' | 'blue'
 export const TEAMS: readonly Team[] = ['red', 'blue']
@@ -136,6 +137,8 @@ export type ClientMsg =
   | { type: 'rtc'; to: string; data: RtcSignal }
   /** 要一份 ICE 服务器清单（B57）：服务器配了 TURN 就带临时凭据，否则只有 STUN */
   | { type: 'turn' }
+  /** 表情 / 加油（B58）：服务器只认 EMOTES 里的 id，转发给房间里其他人，不进快照 */
+  | { type: 'emote'; id: EmoteId }
 
 export type RoomError =
   | 'noRoom' // 房间不存在（或已关闭）
@@ -161,6 +164,8 @@ export type ServerMsg =
   | { type: 'rtc'; from: string; data: RtcSignal }
   /** ICE 服务器清单（B57）；ttl 秒（临时凭据的有效期，只有 STUN 时为 0） */
   | { type: 'turn'; iceServers: IceServer[]; ttl: number }
+  /** 别人发的表情（B58）：from 是对外身份，role 是他的座位（观战的也能发） */
+  | { type: 'emote'; from: string; role: Role; id: EmoteId }
 
 // ── 语音通话（B57）：信令经服务器转发、音频点对点 ─────────────────────────────────────────────
 

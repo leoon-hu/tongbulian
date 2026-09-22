@@ -240,6 +240,13 @@ export class FlagModel {
     }
   }
 
+  /** 点一下（B59）：蹦一下、城堡的旗帜飘一下 */
+  poke(team: Team): void {
+    const i = team === 'red' ? 0 : 1
+    this.jump[i]!.kick(1)
+    this.banner[i]!.kick(1)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()

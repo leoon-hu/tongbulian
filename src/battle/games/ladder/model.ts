@@ -291,6 +291,13 @@ export class LadderModel {
     }
   }
 
+  /** 点一下（B59）：在梯子上蹦一下、梯子晃一晃 */
+  poke(team: Team): void {
+    const c = this.climber(team)
+    c.poke.kick(1)
+    this.shake[team === 'red' ? 0 : 1]!.kick(0.8)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null
@@ -373,6 +380,10 @@ export class LadderModel {
 
   /** 离地高度（倒数原地蹦、胜利蹦） */
   liftOf(c: Racer): number {
+    return this.liftOfBase(c) + c.poke.value * this.geo.size * 0.2
+  }
+
+  private liftOfBase(c: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (c.mood === 'ready') return Math.abs(Math.sin(c.hop)) * g.size * 0.12

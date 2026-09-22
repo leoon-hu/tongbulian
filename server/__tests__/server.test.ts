@@ -506,3 +506,49 @@ describe('中继服务（B41–B46）', () => {
     b.close()
   })
 })
+
+describe('表情 / 加油（B58）', () => {
+  it('emote 转发给同房间其他人（带 from 与座位），不回给自己；不认识的 id 是 bad；每连接 0.5 秒最多一条；没进房不能发', async () => {
+    const a = new Client(server.port)
+    const b = new Client(server.port)
+    const w = new Client(server.port)
+    await Promise.all([a.open(), b.open(), w.open()])
+    a.send({ type: 'hello', clientId: 'emote-a', name: '小兔', version: 'v1' })
+    a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const created = await a.state()
+    const code = created.room.code
+    b.send({ type: 'hello', clientId: 'emote-b', name: '小虎', version: 'v1', code, t: 'red' })
+    await b.state()
+    w.send({ type: 'hello', clientId: 'emote-w', name: '看', version: 'v1', code, t: 'watch' })
+    await w.state()
+    const B = (await b.state()).you
+    b.send({ type: 'emote', id: 'cheer' })
+    const gotA = await a.wait((m) => m.type === 'emote')
+    const gotW = await w.wait((m) => m.type === 'emote')
+    expect(gotA).toEqual({ type: 'emote', from: B, role: 'red', id: 'cheer' })
+    expect(gotW).toEqual({ type: 'emote', from: B, role: 'red', id: 'cheer' })
+    // 自己收不到自己的；0.5 秒内第二条被吞掉（不报错）
+    b.send({ type: 'emote', id: 'laugh' })
+    await new Promise((r) => setTimeout(r, 60))
+    expect(b.inbox.filter((m) => m.type === 'emote')).toEqual([])
+    expect(a.inbox.filter((m) => m.type === 'emote')).toEqual([])
+    // 观战的人也能发，别人看到 role 是 watch
+    w.send({ type: 'emote', id: 'cool' })
+    const fromW = await a.wait((m) => m.type === 'emote')
+    expect(fromW).toMatchObject({ role: 'watch', id: 'cool' })
+    // 不认识的 id
+    w.send({ type: 'emote', id: 'nope' } as never)
+    const bad = await w.wait((m) => m.type === 'error')
+    expect(bad).toEqual({ type: 'error', error: 'bad' })
+    // 没进房：bad
+    const x = new Client(server.port)
+    await x.open()
+    x.send({ type: 'hello', clientId: 'emote-x', name: 'x', version: 'v1' })
+    x.send({ type: 'emote', id: 'cheer' })
+    expect(await x.wait((m) => m.type === 'error')).toEqual({ type: 'error', error: 'bad' })
+    a.close()
+    b.close()
+    w.close()
+    x.close()
+  })
+})

@@ -32,6 +32,8 @@ const FIXED_KEYS = [
   'battle.nearWin',
   'battle.half.red',
   'battle.half.blue',
+  // 表情 🔥 加油（B58）：飞出去时朗读一声
+  'emote.cheer',
   // 开场规则句与结束语（B39）：每种有专属话的皮肤一条 + default
   ...['default', 'race', 'car', 'train', 'rocket', 'balloon', 'swim', 'ladder', 'dig', 'fish', 'tower', 'flower', 'egg', 'bubble', 'fruit', 'stars', 'puzzle', 'tug', 'seesaw', 'flag', 'ice', 'castle'].flatMap((id) => [`battle.rule.${id}`, `battle.finish.${id}`]),
   // 页面打开 / 切换功能时自动读的提示语（B39a）：设置页「跟谁打」与三种模式的说明、问名字、退出确认，

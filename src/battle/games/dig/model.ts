@@ -277,6 +277,13 @@ export class DigModel {
     }
   }
 
+  /** 点一下（B59）：蹦一下、挥几下镐 */
+  poke(team: Team): void {
+    const d = this.digger(team)
+    d.poke.kick(1)
+    d.boost.kick(0.6)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -335,6 +342,10 @@ export class DigModel {
 
   /** 离地高度（倒数原地蹦、胜利蹦） */
   liftOf(d: Racer): number {
+    return this.liftOfBase(d) + d.poke.value * this.geo.size * 0.25
+  }
+
+  private liftOfBase(d: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (d.mood === 'ready') return Math.abs(Math.sin(d.hop)) * g.size * 0.12

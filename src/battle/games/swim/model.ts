@@ -265,6 +265,13 @@ export class SwimModel {
     }
   }
 
+  /** 点一下（B59）：跳出水面一下、划快几下 */
+  poke(team: Team): void {
+    const sw = this.swimmer(team)
+    sw.poke.kick(1)
+    sw.boost.kick(0.5)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -316,6 +323,10 @@ export class SwimModel {
 
   /** 泳道中线上的起伏（待机 / 游动 / 欢呼） */
   bobOf(sw: Racer, i: number): number {
+    return this.bobOfBase(sw, i) - sw.poke.value * this.geo.size * 0.12
+  }
+
+  private bobOfBase(sw: Racer, i: number): number {
     const g = this.geo
     if (!this.animated) return 0
     if (sw.mood === 'ready') return -Math.abs(Math.sin(sw.hop)) * g.size * 0.05

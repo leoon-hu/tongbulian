@@ -277,6 +277,13 @@ export class StarsModel {
     }
   }
 
+  /** 点一下（B59）：挥一下魔法棒、蹦一下 */
+  poke(team: Team): void {
+    const kid = this.kid(team)
+    kid.poke.kick(1)
+    this.wave[team === 'red' ? 0 : 1]!.kick(1.5)
+  }
+
   degrade(level: number): void {
     this.quality = level
     if (level >= 2) this.particles.clear()
@@ -352,6 +359,10 @@ export class StarsModel {
   }
 
   liftOf(kid: Racer): number {
+    return this.liftOfBase(kid) + kid.poke.value * this.geo.size * 0.25
+  }
+
+  private liftOfBase(kid: Racer): number {
     const g = this.geo
     if (!this.animated) return 0
     if (kid.mood === 'ready') return Math.abs(Math.sin(kid.hop)) * g.size * 0.15

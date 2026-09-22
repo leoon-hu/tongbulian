@@ -37,6 +37,7 @@ function spyGame(opts: { throwIn?: keyof GameModule } = {}) {
     pause: () => calls.push('pause'),
     resume: () => calls.push('resume'),
     destroy: () => calls.push('destroy'),
+    poke: (x, y, team) => calls.push(`poke:${team}:${Math.round(x)},${Math.round(y)}`),
   }
   const factory: GameFactory = () => mod
   return { calls, events, load: () => Promise.resolve(factory) }
@@ -137,5 +138,102 @@ describe('GameSlot（盒子里放什么）', () => {
     expect(spy.calls).toContain('destroy')
     expect(other.calls).toContain('mount')
     w.unmount()
+  })
+})
+
+describe('点一下游戏（B59）', () => {
+  it('canvas 收 pointerdown：坐标与 sideOf 猜的一方交给游戏的 poke、画一圈涟漪、往上报 poke；150 ms 内只算一次；根元素仍不接触摸', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const spy = spyGame()
+    const w = mount(GameHost, { props: { load: spy.load, state: state(), events: [], sideOf: (x: number) => (x < 50 ? 'red' : 'blue') } })
+    await flushPromises()
+    await flushPromises()
+    expect(w.find('.game-host').attributes('style')).toContain('pointer-events: none')
+    await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
+    expect(spy.calls.at(-1)).toBe('poke:red:10,20')
+    expect(w.findAll('.ripple')).toHaveLength(1)
+    expect(w.emitted('poke')).toEqual([['red']])
+    // 太快的第二下不算
+    await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
+    expect(spy.calls.filter((c) => c.startsWith('poke')).length).toBe(1)
+    vi.advanceTimersByTime(200)
+    await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
+    expect(spy.calls.at(-1)).toBe('poke:blue:90,20')
+    expect(w.emitted('poke')).toEqual([['red'], ['blue']])
+    vi.advanceTimersByTime(600)
+    await flushPromises()
+    expect(w.findAll('.ripple')).toHaveLength(0)
+    w.unmount()
+  })
+
+  it('游戏没实现 poke 也不出错（只有涟漪）；poke 抛错 → 换保底画面', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = spyGame()
+    const bare = { ...spy }
+    const w = mount(GameHost, {
+      props: {
+        load: () =>
+          bare.load().then((f) => () => {
+            const m = f()
+            delete m.poke
+            return m
+          }),
+        state: state(),
+        events: [],
+      },
+    })
+    await flushPromises()
+    await flushPromises()
+    await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
+    expect(w.findAll('.ripple')).toHaveLength(1)
+    expect(w.emitted('poke')).toEqual([['blue']]) // 没传 sideOf：1×1 的假盒子里 y=20 在下半
+    expect(spy.calls.some((c) => c.startsWith('poke'))).toBe(false)
+    w.unmount()
+
+    const boom = spyGame()
+    const w2 = mount(GameHost, {
+      props: {
+        load: () =>
+          boom.load().then((f) => () => {
+            const m = f()
+            m.poke = () => {
+              throw new Error('poke boom')
+            }
+            return m
+          }),
+        state: state(),
+        events: [],
+      },
+    })
+    await flushPromises()
+    await flushPromises()
+    await w2.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
+    expect(w2.find('.game-host').attributes('data-status')).toBe('fallback')
+    expect(warn).toHaveBeenCalled()
+    w2.unmount()
+  })
+
+  it('GameSlot 按皮肤猜一方：横条的并行 / 收集类上半红下半蓝，拉锯类与竖条左红右蓝', async () => {
+    const cases: Array<[{ slot: 'top' | 'center'; kind: 'race' | 'tug' | 'grow' | 'consume' }, number, number, string]> = [
+      [{ slot: 'top', kind: 'race' }, 900, 10, 'red'],
+      [{ slot: 'top', kind: 'grow' }, 900, 100, 'blue'],
+      [{ slot: 'top', kind: 'tug' }, 100, 100, 'red'],
+      [{ slot: 'top', kind: 'tug' }, 900, 10, 'blue'],
+      [{ slot: 'center', kind: 'race' }, 20, 690, 'red'],
+      [{ slot: 'center', kind: 'consume' }, 130, 10, 'blue'],
+    ]
+    for (const [meta, x, y, team] of cases) {
+      const spy = spyGame()
+      const w = mount(GameSlot, { props: { meta: { id: 'x', icon: '🎮', ...meta, game: spy.load }, state: state(), events: [] } })
+      await flushPromises()
+      await flushPromises()
+      // 假盒子量出来是 1×1：把 sideOf 的判断按 1000×120 / 150×700 的比例换算，直接调宿主的 sideOf 看结果
+      const host = w.findComponent(GameHost)
+      const sideOf = host.props('sideOf') as (x: number, y: number, w: number, h: number) => string
+      const [W, H] = meta.slot === 'top' ? [1000, 120] : [150, 700]
+      expect(sideOf(x, y, W, H), `${meta.slot}/${meta.kind} (${x},${y})`).toBe(team)
+      w.unmount()
+    }
   })
 })

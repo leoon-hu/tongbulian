@@ -65,6 +65,9 @@ export function createRaceGame(): GameModule {
     onEvent(e) {
       model?.onEvent(e)
     },
+    poke(_x, _y, team) {
+      model?.poke(team)
+    },
     resize(w, h, d) {
       width = w
       height = h

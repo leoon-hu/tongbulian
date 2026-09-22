@@ -29,6 +29,8 @@ export class Racer {
   blink: Blinker
   /** 被反超时回头看 */
   look = new Decay(0.5)
+  /** 被点了一下（B59）：跳一下 / 挥一下，游戏在姿势里读它 */
+  poke = new Decay(0.45)
   mood: RacerMood = 'idle'
   /** 在这个心情里待了多久 */
   moodT = 0
@@ -95,5 +97,6 @@ export class Racer {
     if (animated) this.hop = advancePhase(this.hop, dt, this.mood === 'ready' ? 2 : 0.5)
     this.blink.step(dt)
     this.look.step(dt)
+    this.poke.step(dt)
   }
 }
