@@ -152,6 +152,16 @@ describe('开火车 · 模型（B36v）', () => {
     expect(m.trains[1].pos.target).toBeCloseTo(m.headFor(3), 3)
   })
 
+  it('到一半（B70）：那一队做一下点一下的小动作——鸣笛喷汽', () => {
+    const m = new TrainModel(createRng(4))
+    m.layout(1000, 120, false)
+    m.setState(snap(4, 1))
+    settle(m)
+    m.onEvent({ type: 'half', team: 'red' })
+    expect(m.whistle[0].value).toBe(1)
+    expect(m.whistle[1].value).toBeLessThan(0.2)
+  })
+
   it('晚进来的观战者：第一份快照就是比赛中 / 已结束，火车也开出来到该在的位置；结束态换了胜方也对', () => {
     const m = new TrainModel(createRng(2))
     m.layout(1000, 120, false)

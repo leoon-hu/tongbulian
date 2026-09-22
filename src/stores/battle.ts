@@ -26,7 +26,7 @@ import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, GHOST_ID, GHOST_MAX, ROBOT_LINE_DELAY_M
 import { cleanName } from '@/battle/names'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
 import { DEFAULT_AVATARS, isAvatarId, type AvatarId } from '@/battle/avatars'
-import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
+import { calloutSfx, panOf, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
 export type LocalMode = 'ai' | 'duo'
@@ -51,6 +51,16 @@ export const EVENT_LOG = 64
 export const POKE_GAP_MS = 250
 /** 幸运题（B65）：金色彩纸撒多久 */
 export const LUCKY_MS = 1800
+/** 安卓的短震动（B70）：答对一下、答错三下；不支持就算了 */
+export const VIBRATE_RIGHT: number | number[] = 25
+export const VIBRATE_WRONG: number | number[] = [40, 40, 40]
+function vibrate(pattern: number | number[]): void {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern)
+  } catch {
+    /* 不支持 */
+  }
+}
 
 const KEY = 'tongbulian:battle'
 
@@ -423,8 +433,9 @@ export const useBattleStore = defineStore('battle', () => {
       lastEvent.value = e
       pushEvent(e)
       if (e.type === 'point') {
-        playSfx('ding', streakPitch(e.streak))
-        for (const x of sounds.score) playSfx(x)
+        // 得分音红队偏左、蓝队偏右（B70）
+        playSfx('ding', streakPitch(e.streak), 1, panOf(e.team))
+        for (const x of sounds.score) playSfx(x, 1, 1, panOf(e.team))
         // 比分走势（B69）：按事件自己累加（线上事件先于快照到，不能看 state 里的比分）
         const last = timeline.value.at(-1) ?? { red: 0, blue: 0 }
         const started = state.value?.startedAt ?? now()
@@ -650,7 +661,9 @@ export const useBattleStore = defineStore('battle', () => {
       state.value = res.state
       toCall = react(res.events, res.state.skin)
     }
-    if (!ok) playSfx('dong')
+    if (p.kind === 'human') vibrate(ok ? VIBRATE_RIGHT : VIBRATE_WRONG)
+    // 答错的声音按游戏换（B70）：火车刹车、气球漏气、火箭哑火……没有专属的仍是「咚」
+    if (!ok) for (const x of skinSfx(s.skin, skinById(s.skin)?.kind).wrong) playSfx(x, 1, 1, panOf(p.team))
     later(
       timers,
       () => {

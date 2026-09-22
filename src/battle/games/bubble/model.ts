@@ -298,6 +298,10 @@ export class BubbleModel {
       case 'finished':
         // 彩虹泡等胜方最后那一圈吹完（位移结束）再变，见 step
         break
+      case 'half':
+        // 到一半（B70）：那一队做一下「点一下」的小动作
+        this.poke(e.team)
+        break
       default:
         break
     }

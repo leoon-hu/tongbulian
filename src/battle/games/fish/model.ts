@@ -325,6 +325,10 @@ export class FishModel {
       case 'finished':
         // 水花与彩纸在 setState 里跟着胜方的心情放（晚进来的观战者也有）
         break
+      case 'half':
+        // 到一半（B70）：那一队做一下「点一下」的小动作
+        this.poke(e.team)
+        break
       default:
         break
     }

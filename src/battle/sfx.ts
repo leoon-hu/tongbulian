@@ -4,6 +4,7 @@
  */
 import { audioContext } from '@/engine/audio'
 import { isVoiceEnabled } from '@/engine/voice'
+import type { Team } from './protocol'
 import type { SkinKind } from './skins'
 
 export type Sfx =
@@ -46,6 +47,9 @@ export type Sfx =
   | 'sting' // 反超：上行三音
   | 'alert' // 还差一分：嘀嘀 — 嘀
   | 'heartbeat' // 决胜题：咚咚、咚咚、咚咚（B62）
+  | 'brake' // 答错（开火车 / 赛车）：刹车吱——（B70）
+  | 'hiss' // 答错（热气球 / 吹泡泡）：漏气嘶——（B70）
+  | 'fizzle' // 答错（火箭）：哑火噗——（B70）
 
 interface Note {
   /** 频率（Hz） */
@@ -221,35 +225,40 @@ const PATTERNS: Record<Sfx, Pattern> = {
       { f: 70, at: at + 0.2, d: 0.18, type: 'triangle' as const, gain: 0.75, to: 45 },
     ]),
   },
+  brake: { noise: [{ at: 0, d: 0.45, gain: 0.45, f: 3400, q: 3 }], notes: [{ f: 2400, at: 0, d: 0.45, type: 'sawtooth', gain: 0.12, to: 1500 }] },
+  hiss: { noise: [{ at: 0, d: 0.5, gain: 0.4, f: 5200, q: 0.8 }], notes: [{ f: 420, at: 0, d: 0.45, type: 'sine', gain: 0.3, to: 160 }] },
+  fizzle: { noise: [{ at: 0, d: 0.35, gain: 0.5, f: 900, q: 0.7 }], notes: [{ f: 220, at: 0, d: 0.4, type: 'triangle', gain: 0.6, to: 70 }] },
 }
 
-/** 一种皮肤的音效：得分、连对、胜利各放哪几声（B38，按游戏各不一样） */
+/** 一种皮肤的音效：得分、连对、胜利、答错各放哪几声（B38 / B70，按游戏各不一样） */
 export interface SkinSounds {
   score: Sfx[]
   streak: Sfx[]
   win: Sfx[]
+  /** 答错（B70）：没有专属的仍是「咚」 */
+  wrong: Sfx[]
 }
 
 const KIND_SOUNDS: Record<SkinKind, SkinSounds> = {
-  race: { score: ['whoosh'], streak: ['whoosh'], win: ['cheer'] },
-  tug: { score: ['heave'], streak: ['heave', 'whoosh'], win: ['splash', 'cheer'] },
-  consume: { score: ['crack'], streak: ['crack'], win: ['splash', 'cheer'] },
-  grow: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
+  race: { score: ['whoosh'], streak: ['whoosh'], win: ['cheer'], wrong: ['dong'] },
+  tug: { score: ['heave'], streak: ['heave', 'whoosh'], win: ['splash', 'cheer'], wrong: ['dong'] },
+  consume: { score: ['crack'], streak: ['crack'], win: ['splash', 'cheer'], wrong: ['dong'] },
+  grow: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'], wrong: ['dong'] },
 }
 
 const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
   race: { score: ['patter'], streak: ['patter', 'whoosh'] },
-  car: { score: ['vroom'], streak: ['nitro'] },
-  train: { score: ['chug'], streak: ['whistle', 'chug'], win: ['whistle', 'cheer'] },
-  rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
-  balloon: { score: ['burner'], streak: ['burner'] },
+  car: { score: ['vroom'], streak: ['nitro'], wrong: ['brake'] },
+  train: { score: ['chug'], streak: ['whistle', 'chug'], win: ['whistle', 'cheer'], wrong: ['brake'] },
+  rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'], wrong: ['fizzle'] },
+  balloon: { score: ['burner'], streak: ['burner'], wrong: ['hiss'] },
   swim: { score: ['stroke'], streak: ['stroke', 'whoosh'], win: ['splash', 'cheer'] },
   ladder: { score: ['rung'], streak: ['rung', 'whoosh'], win: ['fireworks', 'cheer'] },
   dig: { score: ['pick'], streak: ['pick', 'whoosh'], win: ['fireworks', 'cheer'] },
   fish: { score: ['reel'], streak: ['reel', 'whoosh'], win: ['splash', 'cheer'] },
   flower: { score: ['sprout'], streak: ['sprout', 'whoosh'], win: ['fireworks', 'cheer'] },
   egg: { score: ['crack'], streak: ['crack', 'whoosh'], win: ['peep', 'cheer'] },
-  bubble: { score: ['bloop'], streak: ['bloop', 'whoosh'], win: ['fireworks', 'cheer'] },
+  bubble: { score: ['bloop'], streak: ['bloop', 'whoosh'], win: ['fireworks', 'cheer'], wrong: ['hiss'] },
   fruit: { score: ['plop'], streak: ['plop', 'whoosh'], win: ['fireworks', 'cheer'] },
   stars: { score: ['twinkle'], streak: ['twinkle', 'whoosh'], win: ['fireworks', 'cheer'] },
   puzzle: { score: ['snap'], streak: ['snap', 'whoosh'], win: ['fireworks', 'cheer'] },
@@ -282,14 +291,30 @@ function noise(ac: AudioContext): AudioBuffer {
   return noiseBuffer
 }
 
-/** 播一个音效；pitch 是音高倍率（连对时「叮」逐级升高，1 = 原样）；gain 是音量倍率（点游戏的反应小声一点，B59） */
-export function playSfx(kind: Sfx, pitch = 1, gain = 1): void {
+/** 得分音的左右（B70）：红队偏左、蓝队偏右 */
+export const PAN_AMOUNT = 0.5
+export function panOf(team: Team | null | undefined): number {
+  return team === 'red' ? -PAN_AMOUNT : team === 'blue' ? PAN_AMOUNT : 0
+}
+
+/**
+ * 播一个音效；pitch 是音高倍率（连对时「叮」逐级升高，1 = 原样）；gain 是音量倍率（点游戏的反应小声一点，B59）；
+ * pan 是左右（−1 左 … 1 右，B70：得分音红队偏左、蓝队偏右），浏览器没有 StereoPanner 就居中
+ */
+export function playSfx(kind: Sfx, pitch = 1, gain = 1, pan = 0): void {
   if (!isVoiceEnabled()) return
   const ac = audioContext()
   if (!ac) return
   try {
     const t0 = ac.currentTime
     const pattern = PATTERNS[kind]
+    let out: AudioNode = ac.destination
+    if (pan !== 0 && typeof ac.createStereoPanner === 'function') {
+      const p = ac.createStereoPanner()
+      p.pan.value = Math.max(-1, Math.min(1, pan))
+      p.connect(ac.destination)
+      out = p
+    }
     for (const n of pattern.notes ?? []) {
       const osc = ac.createOscillator()
       const g = ac.createGain()
@@ -302,7 +327,7 @@ export function playSfx(kind: Sfx, pitch = 1, gain = 1): void {
       g.gain.exponentialRampToValueAtTime(peak, start + 0.01)
       g.gain.exponentialRampToValueAtTime(0.0001, start + n.d)
       osc.connect(g)
-      g.connect(ac.destination)
+      g.connect(out)
       osc.start(start)
       osc.stop(start + n.d + 0.02)
     }
@@ -323,7 +348,7 @@ export function playSfx(kind: Sfx, pitch = 1, gain = 1): void {
         src.connect(bp)
         bp.connect(g)
       } else src.connect(g)
-      g.connect(ac.destination)
+      g.connect(out)
       src.start(start)
       src.stop(start + n.d + 0.02)
     }

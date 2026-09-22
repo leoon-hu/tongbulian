@@ -379,6 +379,10 @@ export class FruitModel {
       case 'finished':
         // 光芒、亮片、举篮在 setState 里跟着胜方的心情放（晚进来的观战者也有）
         break
+      case 'half':
+        // 到一半（B70）：那一队做一下「点一下」的小动作
+        this.poke(e.team)
+        break
       default:
         break
     }

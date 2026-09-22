@@ -356,6 +356,10 @@ export class TrainModel {
       case 'finished':
         this.bell.kick(1)
         break
+      case 'half':
+        // 到一半（B70）：那一队做一下「点一下」的小动作
+        this.poke(e.team)
+        break
       default:
         break
     }

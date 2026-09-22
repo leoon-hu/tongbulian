@@ -290,6 +290,10 @@ export class PuzzleModel {
       case 'finished':
         // 整图亮起等胜方最后一块扣上再放，见 step
         break
+      case 'half':
+        // 到一半（B70）：那一队做一下「点一下」的小动作
+        this.poke(e.team)
+        break
       default:
         break
     }

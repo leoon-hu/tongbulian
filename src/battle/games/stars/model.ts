@@ -272,6 +272,10 @@ export class StarsModel {
       case 'finished':
         // 连线等胜方最后一颗亮完（位移结束）再连，见 step
         break
+      case 'half':
+        // 到一半（B70）：那一队做一下「点一下」的小动作
+        this.poke(e.team)
+        break
       default:
         break
     }
