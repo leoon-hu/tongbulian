@@ -180,6 +180,8 @@ function shareResult(): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* 内容比屏幕高（回放条 + 错题，B69）时从顶上开始滚，别把奖杯裁掉；不认识 safe 的浏览器保留上一行的居中 */
+  justify-content: safe center;
   gap: 8px;
   padding: 16px;
   background: rgba(253, 246, 236, 0.9);
