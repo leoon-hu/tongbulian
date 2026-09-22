@@ -25,6 +25,7 @@ import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, isAiLevel, planAnswer, robotLineFor, type AiLevel, type HumanPace } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
+import { DEFAULT_AVATARS, isAvatarId, type AvatarId } from '@/battle/avatars'
 import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 
@@ -60,6 +61,8 @@ export interface BattlePrefs {
   aiLevel: AiLevel
   /** 每种游戏上次讲开场规则句的时间（ms）：本设备第一次进这个游戏才讲，一天内不重复（B6） */
   intros: Record<string, number>
+  /** 我的小动物（B66）：me = 本设备的（打机器人 / 两人一台左边 / 多设备），right = 两人一台右边的 */
+  avatars: { me: AvatarId; right: AvatarId }
 }
 
 
@@ -109,12 +112,14 @@ function loadPrefs(): BattlePrefs {
     names: { me: '', left: '', right: '' },
     aiLevel: 'auto',
     intros: {},
+    avatars: { ...DEFAULT_AVATARS },
   }
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return base
     const p = JSON.parse(raw) as Record<string, unknown>
     const names = (typeof p.names === 'object' && p.names !== null ? p.names : {}) as Record<string, unknown>
+    const avatars = (typeof p.avatars === 'object' && p.avatars !== null ? p.avatars : {}) as Record<string, unknown>
     const str = (v: unknown): string => (typeof v === 'string' ? cleanName(v) : '')
     return {
       clientId: typeof p.clientId === 'string' && CLIENT_ID_RE.test(p.clientId) ? p.clientId : base.clientId,
@@ -125,6 +130,7 @@ function loadPrefs(): BattlePrefs {
           (kv): kv is [string, number] => typeof kv[1] === 'number' && Number.isFinite(kv[1]),
         ),
       ),
+      avatars: { me: isAvatarId(avatars.me) ? avatars.me : DEFAULT_AVATARS.me, right: isAvatarId(avatars.right) ? avatars.right : DEFAULT_AVATARS.right },
     }
   } catch {
     return base
@@ -223,6 +229,11 @@ export const useBattleStore = defineStore('battle', () => {
 
   function setName(which: keyof BattlePrefs['names'], name: string): void {
     prefs.value.names[which] = cleanName(name)
+  }
+
+  /** 选小动物（B66）：me = 自己的，right = 两人一台右边的 */
+  function setAvatar(which: 'me' | 'right', id: AvatarId): void {
+    if (isAvatarId(id)) prefs.value.avatars = { ...prefs.value.avatars, [which]: id }
   }
 
   function seedsFor(players: PlayerInit[], given?: Record<string, number>): Record<string, number> {
@@ -504,12 +515,12 @@ export const useBattleStore = defineStore('battle', () => {
     const players: PlayerInit[] =
       opts.mode === 'ai'
         ? [
-            { id: 'left', name: me, team: 'red' },
+            { id: 'left', name: me, team: 'red', avatar: prefs.value.avatars.me },
             { id: AI_ID, name: '', team: 'blue', kind: 'ai' },
           ]
         : [
-            { id: 'left', name: prefs.value.names.left || me, team: 'red' },
-            { id: 'right', name: prefs.value.names.right, team: 'blue' },
+            { id: 'left', name: prefs.value.names.left || me, team: 'red', avatar: prefs.value.avatars.me },
+            { id: 'right', name: prefs.value.names.right, team: 'blue', avatar: prefs.value.avatars.right },
           ]
     operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
     const now = opts.now ?? Date.now()
@@ -697,6 +708,7 @@ export const useBattleStore = defineStore('battle', () => {
     online,
     now,
     setName,
+    setAvatar,
     startLocal,
     startOnline,
     syncOnline,

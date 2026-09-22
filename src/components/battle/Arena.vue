@@ -9,6 +9,7 @@ import { lang, ui } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
 import { forget, hush, say, sayKeys } from '@/engine/voice'
 import { TEAMS, type Team } from '@/battle/protocol'
+import { teamAvatars } from '@/battle/avatars'
 import { elapsedMs, formatElapsed, luckyIndexFor, teamPlayers } from '@/battle/match'
 import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
 import { nextKp } from '@/engine/catalog'
@@ -55,7 +56,7 @@ const skin = computed(() => (state.value ? (skinById(state.value.skin) ?? skinBy
 const skinProps = computed(() => {
   const s = state.value
   return s
-    ? { red: s.score.red, blue: s.score.blue, target: s.target, phase: s.phase, winner: s.winner, lastPoint: s.lastPoint }
+    ? { red: s.score.red, blue: s.score.blue, target: s.target, phase: s.phase, winner: s.winner, lastPoint: s.lastPoint, avatars: teamAvatars(s.players) }
     : null
 })
 

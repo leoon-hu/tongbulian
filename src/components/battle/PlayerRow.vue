@@ -7,6 +7,7 @@ import type { Player } from '@/battle/protocol'
 import type { Feedback } from '@/stores/battle'
 import type { VoiceMark } from '@/stores/voice'
 import { answerLabel } from '@/engine/answer'
+import { avatarEmoji } from '@/battle/avatars'
 import { lang, ui } from '@/engine/i18n'
 import { questionSpeech } from '@/engine/speech'
 import { hush, say } from '@/engine/voice'
@@ -45,7 +46,7 @@ function onInput(v: string): void {
   emit('input', v)
 }
 
-const displayName = computed(() => (props.player.kind === 'ai' ? ui('battle.robot') : props.player.name))
+const displayName = computed(() => (props.player.kind === 'ai' ? ui('battle.robot') : `${avatarEmoji(props.player.avatar)}${props.player.name}`))
 /** 机器人的表情（B11）：想题 / 在按 / 答对 / 答错 */
 const mood = computed(() => {
   if (props.player.kind !== 'ai') return undefined

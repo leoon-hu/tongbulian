@@ -3,6 +3,7 @@
  * 服务器只认识这些字段，不认识题目：题目由各端按 (kpId, seed, index) 自己生成（battle/stream.ts）。
  */
 import type { EmoteId } from './emotes'
+import type { AvatarId } from './avatars'
 
 export type Team = 'red' | 'blue'
 export const TEAMS: readonly Team[] = ['red', 'blue']
@@ -26,6 +27,8 @@ export interface Player {
   /** 正在按的内容（数字串或选项 id），给别人看 */
   input: string
   online: boolean
+  /** 他选的小动物（B66）：名字旁、结果页、有司机 / 乘客的游戏里露脸；机器人 / 没选的没有 */
+  avatar?: AvatarId
 }
 
 export interface MatchState {
@@ -95,6 +98,8 @@ export interface Member {
   joinedAt: number
   /** 开了麦克风（B57）：别人据此知道要不要跟他建语音连接、画 🎤；离开清掉，掉线保留 */
   voice: boolean
+  /** 他选的小动物（B66，随 hello 来） */
+  avatar?: AvatarId
 }
 
 /** 整份房间快照（B42：任何变化都发整份） */
@@ -116,7 +121,7 @@ export interface RoomSnapshot {
 
 /** 客户端 → 服务器 */
 export type ClientMsg =
-  | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role }
+  | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role; avatar?: AvatarId }
   | { type: 'create'; kpId: string; skin: string }
   /** 口令换房间号与身份（B19）；服务器回 found，客户端再按链接的方式进房 */
   | { type: 'lookup'; pass: string }

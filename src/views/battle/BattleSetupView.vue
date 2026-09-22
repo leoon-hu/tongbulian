@@ -215,6 +215,8 @@ function start(): void {
       v-if="asking"
       :initial="asking === 'right' ? names.right : names.me"
       :taken="asking === 'right' ? [names.me] : [names.right]"
+      :avatar="store.prefs.avatars[asking === 'right' ? 'right' : 'me']"
+      @update:avatar="(id) => store.setAvatar(asking === 'right' ? 'right' : 'me', id)"
       @save="saveName"
       @close="cancelName"
     />

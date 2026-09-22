@@ -552,3 +552,27 @@ describe('表情 / 加油（B58）', () => {
     x.close()
   })
 })
+
+describe('我的小动物（B66）', () => {
+  it('hello 里带的小动物进快照的 members，开局后进 players；不认识的忽略；重连时可以换', async () => {
+    const a = new Client(server.port)
+    const b = new Client(server.port)
+    await Promise.all([a.open(), b.open()])
+    a.send({ type: 'hello', clientId: 'avatar-a', name: '小兔', version: 'v1', avatar: 'rabbit' })
+    a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const created = await a.state()
+    const code = created.room.code
+    expect(created.room.members[0]!.avatar).toBe('rabbit')
+    b.send({ type: 'hello', clientId: 'avatar-b', name: '小虎', version: 'v1', code, t: 'blue', avatar: 'dog' as never })
+    const joined = await b.state()
+    expect(joined.room.members.find((m) => m.name === '小虎')!.avatar).toBeUndefined()
+    a.send({ type: 'team', role: 'red' })
+    const started = await a.state((s) => s.room.match !== null)
+    expect(started.room.match!.players.map((p) => [p.team, p.avatar])).toEqual([
+      ['red', 'rabbit'],
+      ['blue', undefined],
+    ])
+    a.close()
+    b.close()
+  })
+})

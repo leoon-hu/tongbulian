@@ -4,6 +4,7 @@
  */
 import { ROUND_SIZE } from '@/engine'
 import type { MatchEvent, MatchState, Player, Team } from './protocol'
+import type { AvatarId } from './avatars'
 
 /** 「预备」+ 倒数 3、2、1 + 「开始」的总时长 */
 export const COUNTDOWN_MS = 4400
@@ -19,6 +20,7 @@ export interface PlayerInit {
   name: string
   team: Team
   kind?: 'human' | 'ai'
+  avatar?: AvatarId
 }
 
 export function createMatch(opts: { kpId: string; skin: string; players: PlayerInit[]; target?: number }): MatchState {
@@ -38,6 +40,7 @@ export function createMatch(opts: { kpId: string; skin: string; players: PlayerI
       streak: 0,
       input: '',
       online: true,
+      ...(p.avatar ? { avatar: p.avatar } : {}),
     })),
     score: { red: 0, blue: 0 },
     startedAt: 0,

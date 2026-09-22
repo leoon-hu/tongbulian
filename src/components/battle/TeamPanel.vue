@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import type { Team } from '@/battle/protocol'
 import { ui } from '@/engine/i18n'
+import { avatarEmoji } from '@/battle/avatars'
 import RubyText from '@/components/ui/RubyText.vue'
 import PlayerRow from './PlayerRow.vue'
 import type { RowData } from './rows'
@@ -36,7 +37,7 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
       <span class="team-name">
         <template v-if="solo && soloPlayer">
           <RubyText v-if="soloPlayer.kind === 'ai'" :text="{ k: 'battle.robot' }" />
-          <template v-else>{{ soloPlayer.name }}</template>
+          <template v-else><span v-if="soloPlayer.avatar" class="avatar" aria-hidden="true">{{ avatarEmoji(soloPlayer.avatar) }}</span>{{ soloPlayer.name }}</template>
         </template>
         <RubyText v-else :text="{ k: `battle.team.${team}` }" />
       </span>
@@ -72,6 +73,9 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
 </template>
 
 <style scoped>
+.avatar {
+  margin-right: 4px;
+}
 .me-tag {
   flex: none;
   padding: 1px 10px;

@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="room-page">
-  <NameSheet v-if="asking" @save="saveName" @close="leave" />
+  <NameSheet v-if="asking" :avatar="battle.prefs.avatars.me" @update:avatar="(id) => battle.setAvatar('me', id)" @save="saveName" @close="leave" />
 
   <div v-else-if="fatal === 'version' && room.updating" class="room-msg">
     <p class="big">🔄</p>

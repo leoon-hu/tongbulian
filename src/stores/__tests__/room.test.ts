@@ -104,7 +104,7 @@ describe('房间 store（B19–B25）', () => {
     ws.open()
     const me = battle.prefs.clientId
     expect(ws.msgs).toEqual([
-      { type: 'hello', clientId: me, name: '小兔', version: expect.any(String) },
+      { type: 'hello', clientId: me, name: '小兔', version: expect.any(String), avatar: 'bear' },
       { type: 'create', kpId: KP, skin: 'race' },
     ])
     const r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
@@ -176,7 +176,7 @@ describe('房间 store（B19–B25）', () => {
     const ws = FakeWs.last()
     ws.open()
     expect(ws.msgs).toEqual([
-      { type: 'hello', clientId: battle.prefs.clientId, name: '小兔', version: expect.any(String) },
+      { type: 'hello', clientId: battle.prefs.clientId, name: '小兔', version: expect.any(String), avatar: 'bear' },
       { type: 'lookup', pass: '123456' },
     ])
     expect(room.found).toBeNull()

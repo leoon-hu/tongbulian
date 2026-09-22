@@ -9,6 +9,10 @@ import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
 import { clamp, ease, Tween } from '@/battle/game/engine/tween'
+import type { CritterKind } from '@/battle/game/sprites/scenery'
+
+/** 默认的两位司机；选了小动物（B66）就换成他们的 */
+export const DRIVERS: [CritterKind, CritterKind] = ['monkey', 'panda']
 
 export interface CarGeometry {
   W: number
@@ -75,6 +79,8 @@ const CROWD = 4
 export class CarModel {
   geo: CarGeometry = layoutCar(1000, 120, false)
   cars: [Racer, Racer]
+  /** 两位司机（B66：按快照里两队的小动物换） */
+  kinds: [CritterKind, CritterKind] = [DRIVERS[0], DRIVERS[1]]
   /** 轮子转角（按走过的距离累计） */
   wheel: [number, number] = [0, 0]
   private lastX: [number, number] = [0, 0]
@@ -140,6 +146,7 @@ export class CarModel {
 
   setState(s: GameState): void {
     this.target = Math.max(1, s.target)
+    this.kinds = [s.avatars?.red ?? DRIVERS[0], s.avatars?.blue ?? DRIVERS[1]]
     const prevPhase = this.phase
     this.phase = s.phase
     this.winner = s.winner

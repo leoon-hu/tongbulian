@@ -7,6 +7,7 @@ import { useBattleStore } from '@/stores/battle'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import SkinPicker from './SkinPicker.vue'
+import AvatarPicker from './AvatarPicker.vue'
 
 defineProps<{ skin: string }>()
 const emit = defineEmits<{ close: []; rename: [which: 'me' | 'right']; 'update:skin': [id: string] }>()
@@ -58,6 +59,13 @@ const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '�
             <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
           </button>
         </div>
+      </section>
+
+      <section class="part">
+        <h3 class="label"><RubyText :text="{ k: 'battle.avatar' }" /></h3>
+        <AvatarPicker :model-value="store.prefs.avatars.me" @update:model-value="(id) => store.setAvatar('me', id)" />
+        <p class="hint sub"><RubyText :text="{ k: 'battle.mode.duo' }" /> · <RubyText :text="{ k: 'battle.name.right' }" /></p>
+        <AvatarPicker :model-value="store.prefs.avatars.right" @update:model-value="(id) => store.setAvatar('right', id)" />
       </section>
 
       <div class="actions">
@@ -112,6 +120,9 @@ const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '�
   margin: 0 0 8px;
   color: var(--c-text-light);
   font-size: var(--fs-sm);
+}
+.hint.sub {
+  margin: 10px 0 6px;
 }
 .levels {
   display: grid;

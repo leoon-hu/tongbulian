@@ -5,11 +5,14 @@ import { createRng } from '@/engine'
 import { lang, ui } from '@/engine/i18n'
 import { sayKeys } from '@/engine/voice'
 import { NAME_MAX, cleanName, suggestNames } from '@/battle/names'
+import type { AvatarId } from '@/battle/avatars'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
+import AvatarPicker from './AvatarPicker.vue'
 
-const props = withDefaults(defineProps<{ initial?: string; taken?: string[] }>(), { initial: '', taken: () => [] })
-const emit = defineEmits<{ save: [name: string]; close: [] }>()
+/** avatar：传了就在名字下面顺便选小动物（B66），改了立刻 emit */
+const props = withDefaults(defineProps<{ initial?: string; taken?: string[]; avatar?: AvatarId | null }>(), { initial: '', taken: () => [], avatar: null })
+const emit = defineEmits<{ save: [name: string]; close: []; 'update:avatar': [id: AvatarId] }>()
 
 const value = ref(props.initial)
 const suggestions = suggestNames(lang.value, createRng(), 6, props.taken)
@@ -42,6 +45,10 @@ function save(): void {
       <div class="suggest">
         <button v-for="n in suggestions" :key="n" type="button" class="chip" @click="value = n">{{ n }}</button>
       </div>
+      <template v-if="avatar">
+        <p class="pick-label"><RubyText :text="{ k: 'battle.avatar' }" /></p>
+        <AvatarPicker :model-value="avatar" @update:model-value="(id) => emit('update:avatar', id)" />
+      </template>
       <BigButton color="green" :disabled="!cleaned"><RubyText :text="{ k: 'battle.name.ok' }" /></BigButton>
     </form>
   </div>
@@ -73,6 +80,11 @@ function save(): void {
 }
 .ask {
   font-size: var(--fs-lg);
+}
+.pick-label {
+  margin: 4px 0 -6px;
+  font-size: var(--fs-sm);
+  color: var(--c-text-light);
 }
 .input {
   width: 100%;

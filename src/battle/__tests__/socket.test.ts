@@ -212,3 +212,18 @@ describe('表情（B58）', () => {
     expect(ws.msgs.at(-1)).toEqual({ type: 'emote', id: 'laugh' })
   })
 })
+
+describe('我的小动物（B66）', () => {
+  it('给了 avatar 的 hello 带着它，没给的不带', () => {
+    const { c } = client({ avatar: 'cat' })
+    c.connect('ABC234')
+    const ws = FakeWs.last()
+    ws.open()
+    expect(ws.msgs[0]).toMatchObject({ type: 'hello', avatar: 'cat' })
+    const plain = client()
+    plain.c.connect('ABC234')
+    const ws2 = FakeWs.last()
+    ws2.open()
+    expect(ws2.msgs[0]).not.toHaveProperty('avatar')
+  })
+})

@@ -112,6 +112,7 @@ export const useRoomStore = defineStore('room', () => {
       url,
       clientId: battle.prefs.clientId,
       name: battle.prefs.names.me,
+      avatar: battle.prefs.avatars.me,
       version: __BUILD__,
       onState,
       onEvent,

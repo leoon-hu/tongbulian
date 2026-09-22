@@ -10,6 +10,7 @@ import type { ArenaEvent, ClientMsg, Member, Role, RoomError, RoomSnapshot, Team
 import { answer, beginPlay, createMatch, setInput, startMatch } from '@/battle/match'
 import { cleanName } from '@/battle/names'
 import { VOICE_MAX } from '@/battle/voice'
+import type { AvatarId } from '@/battle/avatars'
 
 /**
  * 房间号、口令、题目种子都用加密随机数（N6 ⑨）：Math.random 是可预测的 xorshift128+，种子又随快照广播给房间里
@@ -131,7 +132,7 @@ export function createRoom(opts: {
   code: string
   kpId: string
   skin: string
-  host: { clientId: string; name: string; role?: Role }
+  host: { clientId: string; name: string; role?: Role; avatar?: AvatarId }
   version: string
   now: number
   /** 三个身份的口令（网络层保证全服务器唯一）；不传就随机生成（测试用） */
@@ -145,6 +146,7 @@ export function createRoom(opts: {
     online: true,
     joinedAt: opts.now,
     voice: false,
+    ...(opts.host.avatar ? { avatar: opts.host.avatar } : {}),
   }
   return {
     code: opts.code,
@@ -166,13 +168,14 @@ export function createRoom(opts: {
  * 指定的队满了就进另一队、都满了观战。返回的 error 是给这个人的提示（started / teamFull 是提示，仍然加入；
  * version / full 是拒绝，room 不变）。
  */
-export function join(room: Room, who: { clientId: string; name: string; t?: Role; version: string }, now: number): { room: Room; error?: RoomError } {
+export function join(room: Room, who: { clientId: string; name: string; t?: Role; version: string; avatar?: AvatarId }, now: number): { room: Room; error?: RoomError } {
   if (who.version !== room.version) return { room, error: 'version' }
   const existing = room.members.find((m) => m.clientId === who.clientId)
   if (existing) {
     const name = cleanName(who.name) || existing.name
+    const avatar = who.avatar ?? existing.avatar
     // 刷新 / 重连回来的页面麦克风一定是关着的（新页面不会再发 voice:false）：座位上的 voice 跟着清掉，别留幽灵 🎤
-    const members = room.members.map((m) => (m === existing ? { ...m, online: true, name, voice: false } : m))
+    const members = room.members.map((m) => (m === existing ? { ...m, online: true, name, voice: false, ...(avatar ? { avatar } : {}) } : m))
     return { room: withMembers({ ...room, lastActive: now }, members) }
   }
   if (room.members.length >= ROOM_MAX) return { room, error: 'full' }
@@ -193,7 +196,7 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
       }
     }
   }
-  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now, voice: false }
+  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now, voice: false, ...(who.avatar ? { avatar: who.avatar } : {}) }
   const next: Room = withMembers({ ...room, lastActive: now }, [...room.members, member])
   return error ? { room: next, error } : { room: next }
 }
@@ -261,7 +264,7 @@ function startRoom(room: Room, seeds: Record<string, number>, now: number): Room
   const match = createMatch({
     kpId: room.kpId,
     skin: room.skin,
-    players: ps.map((m) => ({ id: m.clientId, name: m.name, team: m.role as Team })),
+    players: ps.map((m) => ({ id: m.clientId, name: m.name, team: m.role as Team, avatar: m.avatar })),
   })
   const started = startMatch(match, seeds, now)
   const players = started.players.map((p) => ({ ...p, online: room.members.find((m) => m.clientId === p.id)?.online ?? true }))

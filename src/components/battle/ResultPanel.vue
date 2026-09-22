@@ -10,6 +10,7 @@ import { lang, ui } from '@/engine/i18n'
 import { questionSpeech } from '@/engine/speech'
 import { say } from '@/engine/voice'
 import { useShareStore } from '@/stores/share'
+import { avatarEmoji } from '@/battle/avatars'
 import { courseOfKp } from '@/engine/catalog'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
@@ -82,7 +83,7 @@ function readWrong(q: (typeof wrongList.value)[number]['question']): void {
 const winner = computed<Team>(() => props.state.winner ?? 'red')
 const loser = computed<Team>(() => (winner.value === 'red' ? 'blue' : 'red'))
 const elapsed = computed(() => formatElapsed(elapsedMs(props.state, Date.now())))
-const nameOf = (p: { kind: string; name: string }): string => (p.kind === 'ai' ? ui('battle.robot') : p.name)
+const nameOf = (p: { kind: string; name: string; avatar?: import('@/battle/avatars').AvatarId }): string => (p.kind === 'ai' ? ui('battle.robot') : `${avatarEmoji(p.avatar)}${p.name}`)
 /** 战绩里两边的称呼：一个人就是他的名字，多人是队名 */
 function sideName(team: Team): string {
   const ps = teamPlayers(props.state, team)

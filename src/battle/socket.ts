@@ -5,6 +5,7 @@
  */
 import type { ArenaEvent, ClientMsg, IceServer, Role, RoomError, RoomSnapshot, RtcSignal, ServerMsg } from './protocol'
 import { isEmoteId, type EmoteId } from './emotes'
+import type { AvatarId } from './avatars'
 import { cleanIceServers, isRtcSignal } from './voice'
 
 export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed'
@@ -36,6 +37,8 @@ export interface RoomClientOptions {
   clientId: string
   name: string
   version: string
+  /** 我的小动物（B66）：随 hello 发给服务器 */
+  avatar?: AvatarId
   onState(room: RoomSnapshot, you: string, now: number): void
   onEvent(e: ArenaEvent): void
   onError(error: RoomError): void
@@ -142,6 +145,7 @@ export class RoomClient {
         if (this.ws === ws && this.attempt === opened) this.attempt = 0
       }, STABLE_MS)
       const hello: ClientMsg = { type: 'hello', clientId: this.opts.clientId, name: this.opts.name, version: this.opts.version }
+      if (this.opts.avatar) hello.avatar = this.opts.avatar
       if (this.code) {
         hello.code = this.code
         hello.t = this.role

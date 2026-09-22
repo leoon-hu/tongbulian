@@ -14,6 +14,8 @@ export const FUR: Record<CritterKind, [string, string]> = {
   pig: ['#f6a5b5', '#fbd0da'],
   panda: ['#ffffff', '#2b2b2b'],
   monkey: ['#b07a45', '#e8c39e'],
+  rabbit: ['#f4f4f4', '#ffc7d3'],
+  cat: ['#f4b860', '#fff0d6'],
 }
 
 export interface PullerPose {

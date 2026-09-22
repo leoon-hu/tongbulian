@@ -10,7 +10,6 @@ import { drawBell, drawClock, drawLocomotive, drawMountain, drawPortal, drawSign
 import type { TrainGeometry, TrainModel } from './model'
 
 const CROWD_KINDS: CritterKind[] = ['panda', 'monkey', 'bear']
-const DRIVERS: [CritterKind, CritterKind] = ['bear', 'pig']
 
 export function renderBackground(ctx: CanvasRenderingContext2D, g: TrainGeometry): void {
   const { W, H, k } = g
@@ -67,7 +66,7 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: TrainModel): voi
       if (x <= g.mouthX) continue
       drawWagon(ctx, x, y, g.carLen, g.size, c.team, j, m.wheel[i], bounce)
     }
-    drawLocomotive(ctx, c.pos.value, y, g.size, c.team, DRIVERS[i], {
+    drawLocomotive(ctx, c.pos.value, y, g.size, c.team, m.kinds[i], {
       wheel: m.wheel[i],
       bounce,
       light: m.light(c),

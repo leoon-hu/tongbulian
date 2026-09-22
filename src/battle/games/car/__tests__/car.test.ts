@@ -3,7 +3,7 @@ import { createRng } from '@/engine'
 import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
 import { createCarGame } from '..'
-import { CarModel, RUN_TIME, WIN_EXTRA, layoutCar } from '../model'
+import { CarModel, DRIVERS, RUN_TIME, WIN_EXTRA, layoutCar } from '../model'
 import { renderBackground, renderDynamic } from '../render'
 
 const snap = (red: number, blue: number, phase: GameState['phase'] = 'playing', winner: GameState['winner'] = null): GameState => ({
@@ -186,5 +186,21 @@ describe('赛车 · 渲染冒烟', () => {
       mute.tick(0.016)
       mute.destroy()
     }).not.toThrow()
+  })
+})
+
+describe('赛车 · 司机换脸（B66）', () => {
+  it('快照里两队的小动物换成司机，没有的用默认；渲染不抛错', () => {
+    const m = new CarModel(createRng(1))
+    m.layout(1000, 120, false)
+    m.setState({ ...snap(1, 0), avatars: { red: 'rabbit' } })
+    expect(m.kinds).toEqual(['rabbit', DRIVERS[1]])
+    m.setState({ ...snap(1, 0), avatars: { red: 'cat', blue: 'panda' } })
+    expect(m.kinds).toEqual(['cat', 'panda'])
+    m.setState(snap(1, 0))
+    expect(m.kinds).toEqual(DRIVERS)
+    const ctx = stubCtx()
+    renderDynamic(ctx, m)
+    expect(ctx.calls.length).toBeGreaterThan(50)
   })
 })

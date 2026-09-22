@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
 import type { ClientMsg, IceServer, RoomError, ServerMsg } from '@/battle/protocol'
 import { EMOTE_SERVER_GAP_MS, isEmoteId } from '@/battle/emotes'
+import { isAvatarId, type AvatarId } from '@/battle/avatars'
 import { cleanName } from '@/battle/names'
 import { DEFAULT_ICE_SERVERS, cleanIceServers, isRtcSignal } from '@/battle/voice'
 import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, randomSeed, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
@@ -65,6 +66,8 @@ interface Conn {
   badPass: number
   /** 上一个表情的时刻（B58：每连接 EMOTE_SERVER_GAP_MS 最多一条） */
   lastEmote: number
+  /** 他选的小动物（B66，hello 里带的，只认表里的） */
+  avatar?: AvatarId
 }
 
 /** 一个时间窗里的计数（口令错几次） */
@@ -329,6 +332,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     if (c.code) leaveRoom(c, c.clientId !== null && c.clientId !== id)
     c.clientId = id
     c.name = typeof msg.name === 'string' ? cleanName(msg.name) : ''
+    c.avatar = isAvatarId(msg.avatar) ? msg.avatar : undefined
     c.version = msg.version.slice(0, 40)
     if (msg.code === undefined) return
     const t = now()
@@ -349,7 +353,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
         other.ws.close(4000, 'replaced')
       }
     }
-    const res = join(room, { clientId: c.clientId, name: c.name, t: msg.t, version: c.version }, now())
+    const res = join(room, { clientId: c.clientId, name: c.name, t: msg.t, version: c.version, avatar: c.avatar }, now())
     if (res.error === 'version' || res.error === 'full') {
       fail(c.ws, res.error)
       return
@@ -384,7 +388,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     // 口令全服务器唯一（B19）：避开别的房间正在用的
     const taken = new Set<string>()
     for (const r of rooms.values()) for (const p of Object.values(r.passcodes)) taken.add(p)
-    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name }, version: c.version, now: t, passcodes: makePasscodes(taken) })
+    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name, avatar: c.avatar }, version: c.version, now: t, passcodes: makePasscodes(taken) })
     rooms.set(code, room)
     roomIp.set(code, c.ip)
     roomsByIp.set(c.ip, (roomsByIp.get(c.ip) ?? 0) + 1)

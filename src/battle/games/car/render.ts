@@ -9,7 +9,6 @@ import { drawCheckerFlag, drawCloud, drawCritter, drawFinishPost, drawHill, draw
 import type { CarGeometry, CarModel } from './model'
 
 const CROWD_KINDS: CritterKind[] = ['bear', 'pig', 'panda', 'monkey']
-const DRIVERS: [CritterKind, CritterKind] = ['monkey', 'panda']
 
 export function renderBackground(ctx: CanvasRenderingContext2D, g: CarGeometry): void {
   const { W, H, k } = g
@@ -99,7 +98,7 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: CarModel): void 
         ctx.stroke()
       }
     }
-    drawCar(ctx, x, y, g.size, c.team, DRIVERS[i]!, {
+    drawCar(ctx, x, y, g.size, c.team, m.kinds[i]!, {
       wheel: m.wheel[i]!,
       bounce: m.lift(c),
       tilt: m.tilt(c),

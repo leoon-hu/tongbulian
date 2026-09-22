@@ -1,4 +1,5 @@
 /** 赛跑场景的道具：云、太阳、山丘、蘑菇标记、格子终点柱、拱门彩旗、挥动的旗、发令员小猴、观众小动物。 */
+import type { AvatarId } from '@/battle/avatars'
 import { circle, ellipse, gradient, withTransform } from '../engine/draw'
 
 export function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, alpha = 0.95): void {
@@ -173,7 +174,8 @@ export function drawStarter(ctx: CanvasRenderingContext2D, x: number, y: number,
   })
 }
 
-export type CritterKind = 'bear' | 'pig' | 'panda' | 'monkey'
+/** 小动物的种类 = 可选的小动物（B66）：六种都能当司机 / 乘客 / 观众 */
+export type CritterKind = AvatarId
 
 /** 观众小动物：一张圆脸 + 耳朵，bounce 是离地高度 */
 export function drawCritter(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, kind: CritterKind, bounce: number, wave: number): void {
@@ -182,14 +184,40 @@ export function drawCritter(ctx: CanvasRenderingContext2D, x: number, y: number,
     pig: ['#f6a5b5', '#fbd0da'],
     panda: ['#ffffff', '#2b2b2b'],
     monkey: ['#b07a45', '#e8c39e'],
+    rabbit: ['#f4f4f4', '#ffc7d3'],
+    cat: ['#f4b860', '#fff0d6'],
   }
   const [main, accent] = colors[kind]
   withTransform(ctx, x, y - bounce, 0, 1, 1, () => {
     ctx.fillStyle = main
-    circle(ctx, -s * 0.28, -s * 0.5, s * 0.12)
-    ctx.fill()
-    circle(ctx, s * 0.28, -s * 0.5, s * 0.12)
-    ctx.fill()
+    if (kind === 'rabbit') {
+      // 小兔：两只长耳朵，里面一道粉
+      for (const sx of [-1, 1]) {
+        ellipse(ctx, sx * s * 0.16, -s * 0.74, s * 0.09, s * 0.24)
+        ctx.fill()
+      }
+      ctx.fillStyle = accent
+      for (const sx of [-1, 1]) {
+        ellipse(ctx, sx * s * 0.16, -s * 0.74, s * 0.045, s * 0.16)
+        ctx.fill()
+      }
+      ctx.fillStyle = main
+    } else if (kind === 'cat') {
+      // 小猫：两只尖耳朵
+      for (const sx of [-1, 1]) {
+        ctx.beginPath()
+        ctx.moveTo(sx * s * 0.12, -s * 0.56)
+        ctx.lineTo(sx * s * 0.32, -s * 0.76)
+        ctx.lineTo(sx * s * 0.34, -s * 0.46)
+        ctx.closePath()
+        ctx.fill()
+      }
+    } else {
+      circle(ctx, -s * 0.28, -s * 0.5, s * 0.12)
+      ctx.fill()
+      circle(ctx, s * 0.28, -s * 0.5, s * 0.12)
+      ctx.fill()
+    }
     circle(ctx, 0, -s * 0.32, s * 0.34)
     ctx.fill()
     ctx.fillStyle = accent

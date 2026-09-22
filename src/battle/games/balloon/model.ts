@@ -83,7 +83,8 @@ export class BalloonModel {
   sprint = false
   particles: ParticlePool
   quality = 0
-  readonly passengers = PASSENGERS
+  /** 两位乘客（B66：按快照里两队的小动物换） */
+  passengers: typeof PASSENGERS = PASSENGERS
   private nextBird = 3
   private confettiLeft = 0
   private confettiT = 0
@@ -132,6 +133,7 @@ export class BalloonModel {
   }
 
   setState(s: GameState): void {
+    this.passengers = [s.avatars?.red ?? PASSENGERS[0], s.avatars?.blue ?? PASSENGERS[1]] as typeof PASSENGERS
     this.target = Math.max(1, s.target)
     const prevPhase = this.phase
     this.phase = s.phase

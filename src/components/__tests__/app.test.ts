@@ -690,8 +690,8 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(w.findAll('.row.operable')).toHaveLength(2)
     expect(w.findAll('.mask')).toHaveLength(0) // 两边都是自己：不盖遮罩、不标「我」
     expect(w.findAll('.me-tag')).toHaveLength(0)
-    expect(w.find('.team.red .team-name').text()).toBe('小兔')
-    expect(w.find('.team.blue .team-name').text()).toBe('小虎')
+    expect(w.find('.team.red .team-name').text()).toBe('🐻小兔') // 名字前带默认的小动物（B66）
+    expect(w.find('.team.blue .team-name').text()).toBe('🐷小虎')
     expect(w.find(`.strip.${skinById(chapterSkin(KP))!.slot}`).exists()).toBe(true) // 游戏按章节排定
 
     // 第一题从界面上答：数字键盘按数字再 ✓，选择题点正确的那张卡
@@ -1112,7 +1112,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await w.find('form.join-sheet').trigger('submit')
     let ws = FakeWs.last()
     ws.open()
-    expect(ws.msgs).toEqual([{ type: 'hello', clientId: me, name: '小兔', version: expect.any(String) }, { type: 'lookup', pass: '123456' }])
+    expect(ws.msgs).toEqual([{ type: 'hello', clientId: me, name: '小兔', version: expect.any(String), avatar: 'bear' }, { type: 'lookup', pass: '123456' }])
     expect(shown(w.find('.join-sheet .big-btn'))).toContain('正在连接')
     // 口令不对：留在面板里提示，按钮放开，连接断掉
     ws.receive({ type: 'error', error: 'noRoom' })
@@ -1539,5 +1539,34 @@ describe('结果页回放与错题（B69）', () => {
     expect(router.currentRoute.value.path).toBe('/s/math/g/g1/practice/s1-04-simple-addsub')
     expect(store.state).toBeNull()
     w.unmount()
+  })
+})
+
+describe('我的小动物（B66）', () => {
+  it('配置面板里选小动物（我 / 两人一台右边各一排 6 只）记进偏好；竞技场队名条与结果页名字前带它', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    const w = await mountAt('/battle/new/s1-04-simple-addsub')
+    await settle()
+    await w.find('.config-btn').trigger('click')
+    expect(w.findAll('.config .avatars')).toHaveLength(2)
+    expect(w.findAll('.config .avatars')[0]!.findAll('.avatar-btn')).toHaveLength(6)
+    expect(w.findAll('.config .avatars')[0]!.find('.avatar-btn.on').attributes('data-avatar')).toBe('bear')
+    await w.findAll('.config .avatars')[0]!.find('[data-avatar="rabbit"]').trigger('click')
+    await w.findAll('.config .avatars')[1]!.find('[data-avatar="cat"]').trigger('click')
+    const store = useBattleStore()
+    expect(store.prefs.avatars).toEqual({ me: 'rabbit', right: 'cat' })
+    await w.find('.config .done').trigger('click')
+    w.unmount()
+    const w2 = await mountAt('/battle/local/s1-04-simple-addsub?mode=duo')
+    await settle()
+    store.beginPlay()
+    await settle()
+    expect(w2.find('.team.red .team-name').text()).toBe('🐰小兔')
+    expect(w2.find('.team.blue .team-name').text()).toBe('🐱小虎')
+    w2.unmount()
   })
 })

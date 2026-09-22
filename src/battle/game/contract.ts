@@ -5,6 +5,7 @@
  * 宿主（host/GameHost.vue）负责 canvas、尺寸、加载、循环与出错回退；游戏只实现下面的接口。
  */
 import type { ArenaEvent, Phase, Team } from '../protocol'
+import type { TeamAvatars } from '../avatars'
 
 /** 比分快照：与皮肤 props 完全一致（B34） */
 export interface GameState {
@@ -14,6 +15,8 @@ export interface GameState {
   phase: Phase
   winner: Team | null
   lastPoint: Team | null
+  /** 两队各自的小动物（B66）：有司机 / 乘客的游戏用它换脸；没有就用游戏自己的默认角色 */
+  avatars?: TeamAvatars
 }
 
 /** 瞬时事件：比赛事件（得分 / 连对 / 反超 / 还差一分 / 结束）+ 倒数开始 / 开打 */
