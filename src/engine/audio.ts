@@ -86,6 +86,32 @@ export function duckAudio(on: boolean): void {
   if (ducked === on) return
   ducked = on
   applyGain()
+  notifyDuck()
+}
+
+// ── 「有人在说话」的订阅（B68 背景音乐压低用）：正在朗读一句、或语音里别人在说话，都算 ──
+const duckListeners = new Set<(on: boolean) => void>()
+let speechActive = 0
+const anyoneTalking = (): boolean => ducked || speechActive > 0
+function notifyDuck(): void {
+  const on = anyoneTalking()
+  for (const fn of duckListeners) fn(on)
+}
+function speechBegin(): void {
+  speechActive += 1
+  if (speechActive === 1 && !ducked) notifyDuck()
+}
+function speechEnd(): void {
+  speechActive = Math.max(0, speechActive - 1)
+  if (speechActive === 0 && !ducked) notifyDuck()
+}
+/** 订阅「有人在说话」：订阅时先给一次当前值；返回取消函数 */
+export function subscribeDuck(fn: (on: boolean) => void): () => void {
+  duckListeners.add(fn)
+  fn(anyoneTalking())
+  return () => {
+    duckListeners.delete(fn)
+  }
 }
 
 /** 在用户手势里调用（每次触摸都可以调，很便宜）：恢复 AudioContext、解锁 <audio> 元素池 */
@@ -310,6 +336,15 @@ function playElement(file: string, signal?: AbortSignal, rate = 1): Promise<bool
 export async function play(file: string | null, text: string, lang: Lang, signal?: AbortSignal, rate = 1): Promise<void> {
   stop()
   if (signal?.aborted || !inBrowser) return
+  speechBegin()
+  try {
+    await playInner(file, text, lang, signal, rate)
+  } finally {
+    speechEnd()
+  }
+}
+
+async function playInner(file: string | null, text: string, lang: Lang, signal?: AbortSignal, rate = 1): Promise<void> {
   if (file && !missing.has(file)) {
     const buf = await getBuffer(file)
     if (signal?.aborted) return
@@ -394,6 +429,15 @@ async function playRun(run: Array<{ item: SeqItem; buf: AudioBuffer | null }>, s
 export async function playSequence(items: SeqItem[], lang: Lang, signal?: AbortSignal, rate = 1): Promise<void> {
   stop()
   if (signal?.aborted || !inBrowser) return
+  speechBegin()
+  try {
+    await playSequenceInner(items, lang, signal, rate)
+  } finally {
+    speechEnd()
+  }
+}
+
+async function playSequenceInner(items: SeqItem[], lang: Lang, signal: AbortSignal | undefined, rate: number): Promise<void> {
   const ac = elementMode ? null : ensureContext()
   const bufs = await Promise.all(items.map((it) => (ac && !it.pause && it.file && !missing.has(it.file) ? getBuffer(it.file) : Promise.resolve(null))))
   if (signal?.aborted) return

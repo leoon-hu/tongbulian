@@ -65,6 +65,8 @@ export interface BattlePrefs {
   avatars: { me: AvatarId; right: AvatarId }
   /** 幽灵对手（B67）：每个知识点最近一次打机器人的记录，最多 GHOST_MAX 个 */
   ghosts: Record<string, GhostRecord>
+  /** 背景音乐（B68）：默认开；🔇 静音时也不放 */
+  music: boolean
 }
 
 
@@ -116,6 +118,7 @@ function loadPrefs(): BattlePrefs {
     intros: {},
     avatars: { ...DEFAULT_AVATARS },
     ghosts: {},
+    music: true,
   }
   try {
     const raw = localStorage.getItem(KEY)
@@ -139,6 +142,7 @@ function loadPrefs(): BattlePrefs {
           .filter((kv): kv is [string, GhostRecord] => isGhostRecord(kv[1]))
           .map(([k, r]) => [k, { ...r, avatar: isAvatarId(r.avatar) ? r.avatar : undefined }]),
       ),
+      music: typeof p.music === 'boolean' ? p.music : true,
     }
   } catch {
     return base

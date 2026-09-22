@@ -586,3 +586,16 @@ describe('幽灵对手（B67）', () => {
     expect(Object.keys(again.prefs.ghosts)).toEqual(['b'])
   })
 })
+
+describe('背景音乐开关（B68）', () => {
+  it('偏好 music 默认开，关了重开还是关；坏值回默认', () => {
+    const s = useBattleStore()
+    expect(s.prefs.music).toBe(true)
+    s.prefs.music = false
+    setActivePinia(createPinia())
+    expect(useBattleStore().prefs.music).toBe(false)
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ music: 'yes' }))
+    setActivePinia(createPinia())
+    expect(useBattleStore().prefs.music).toBe(true)
+  })
+})

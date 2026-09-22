@@ -62,6 +62,13 @@ const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '�
       </section>
 
       <section class="part">
+        <h3 class="label"><RubyText :text="{ k: 'battle.music' }" /></h3>
+        <button type="button" class="music-toggle" :class="{ on: store.prefs.music }" :aria-pressed="store.prefs.music" @click="store.prefs.music = !store.prefs.music">
+          🎵 <RubyText :text="{ k: store.prefs.music ? 'battle.music.on' : 'battle.music.off' }" />
+        </button>
+      </section>
+
+      <section class="part">
         <h3 class="label"><RubyText :text="{ k: 'battle.avatar' }" /></h3>
         <AvatarPicker :model-value="store.prefs.avatars.me" @update:model-value="(id) => store.setAvatar('me', id)" />
         <p class="hint sub"><RubyText :text="{ k: 'battle.mode.duo' }" /> · <RubyText :text="{ k: 'battle.name.right' }" /></p>
@@ -160,6 +167,26 @@ const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '�
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+/* 背景音乐开关（B68） */
+.music-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap-min);
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  border: 3px solid transparent;
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--c-text-light);
+}
+.music-toggle.on {
+  border-color: var(--c-primary);
+  background: #fff3e6;
+  color: var(--c-text);
 }
 .name-chip {
   display: flex;

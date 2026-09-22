@@ -10,6 +10,7 @@ import { phraseSpeech } from '@/engine/speech'
 import { forget, hush, say, sayKeys } from '@/engine/voice'
 import { TEAMS, type Team } from '@/battle/protocol'
 import { teamAvatars } from '@/battle/avatars'
+import { setMusicSprint, startMusic, stopMusic } from '@/battle/music'
 import { elapsedMs, formatElapsed, luckyIndexFor, teamPlayers } from '@/battle/match'
 import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
 import { nextKp } from '@/engine/catalog'
@@ -91,6 +92,21 @@ const myTeam = computed<Team | null>(() => {
 })
 /** 只观战的设备（多设备里建房的那台 / 扫观战码的）：顶栏标一下 */
 const watching = computed(() => store.mode === 'online' && store.operable.length === 0)
+// ── 背景音乐（B68）：比赛中按游戏类别放，冲刺加快，结果页 / 倒数停；配置里关了或 🔇 静音不放 ──
+const sprinting = computed(() => {
+  const s = state.value
+  return !!s && s.phase === 'playing' && Math.max(s.score.red, s.score.blue) >= s.target - 2
+})
+watch(
+  () => [phase.value, skin.value?.kind, store.prefs.music, settings.soundEnabled] as const,
+  ([p, kind, music, sound]) => {
+    if (p === 'playing' && kind && music && sound) startMusic(kind, sprinting.value)
+    else stopMusic()
+  },
+  { immediate: true },
+)
+watch(sprinting, (s) => setMusicSprint(s))
+
 /** 决胜题（B62）：两队都只差 1 分且还在比赛——竞技场四周红蓝呼吸光 */
 const deuce = computed(() => {
   const s = state.value
@@ -240,6 +256,7 @@ onBeforeUnmount(() => {
   if (ticker) clearInterval(ticker)
   endTimers.forEach(clearTimeout)
   compactMq?.removeEventListener?.('change', onCompact)
+  stopMusic()
   hush()
   exitFullscreen()
 })

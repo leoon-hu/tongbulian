@@ -132,3 +132,22 @@ describe('playSequence', () => {
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes('missing'))).toHaveLength(1)
   })
 })
+
+describe('有人在说话的订阅（B68）', () => {
+  it('订阅时先给当前值；语音压低（duckAudio）时通知 true，恢复通知 false；取消后不再通知', async () => {
+    const { duckAudio, subscribeDuck } = await import('../audio')
+    const got: boolean[] = []
+    const off = subscribeDuck((on) => got.push(on))
+    expect(got).toEqual([false])
+    duckAudio(true)
+    expect(got).toEqual([false, true])
+    duckAudio(true)
+    expect(got).toEqual([false, true])
+    duckAudio(false)
+    expect(got).toEqual([false, true, false])
+    off()
+    duckAudio(true)
+    duckAudio(false)
+    expect(got).toEqual([false, true, false])
+  })
+})

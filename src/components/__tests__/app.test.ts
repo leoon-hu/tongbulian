@@ -16,6 +16,9 @@ import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
 import { useVoiceStore } from '@/stores/voice'
 import { COUNTDOWN_MS, luckyIndexFor } from '@/battle/match'
+import { setMusicSprint, startMusic, stopMusic } from '@/battle/music'
+
+vi.mock('@/battle/music', () => ({ startMusic: vi.fn(), stopMusic: vi.fn(), setMusicSprint: vi.fn(), musicPlaying: () => false }))
 import { FakeWs } from '@/battle/__tests__/fake-socket'
 import { FakePc, fakePeerDeps, fakeStream } from '@/battle/__tests__/fake-rtc'
 import { apply, autoStart, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
@@ -1594,5 +1597,56 @@ describe('幽灵对手（B67）', () => {
     expect(store.ghost).toBe(true)
     expect(w.find('.team.blue .team-name').text()).toBe('👻🐻小兔')
     w.unmount()
+  })
+})
+
+describe('背景音乐（B68）', () => {
+  it('开打就按游戏类别放，到 6 分加快，打完停；配置里关了不放；🔇 静音不放', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    vi.mocked(startMusic).mockClear()
+    vi.mocked(stopMusic).mockClear()
+    vi.mocked(setMusicSprint).mockClear()
+    const w = await mountAt('/battle/local/s1-04-simple-addsub?mode=duo')
+    await settle()
+    const store = useBattleStore()
+    expect(vi.mocked(startMusic)).not.toHaveBeenCalled() // 倒数不放
+    store.beginPlay()
+    await settle()
+    const kind = skinById(chapterSkin('s1-04-simple-addsub'))!.kind
+    expect(vi.mocked(startMusic)).toHaveBeenCalledWith(kind, false)
+    store.state = { ...store.state!, score: { red: 6, blue: 2 } }
+    await settle()
+    expect(vi.mocked(setMusicSprint)).toHaveBeenCalledWith(true)
+    store.state = { ...store.state!, score: { red: 8, blue: 2 }, phase: 'ended', winner: 'red', endedAt: Date.now() }
+    await settle()
+    expect(vi.mocked(stopMusic)).toHaveBeenCalled()
+    // 配置里关了：再开一局不放
+    store.prefs.music = false
+    store.rematch()
+    store.beginPlay()
+    await settle()
+    vi.mocked(startMusic).mockClear()
+    store.state = { ...store.state!, score: { red: 1, blue: 0 } }
+    await settle()
+    expect(vi.mocked(startMusic)).not.toHaveBeenCalled()
+    store.prefs.music = true
+    await settle()
+    expect(vi.mocked(startMusic)).toHaveBeenCalledTimes(1)
+    w.unmount()
+    expect(vi.mocked(stopMusic)).toHaveBeenCalled()
+    // 配置面板里有开关
+    const w2 = await mountAt('/battle/new/s1-04-simple-addsub')
+    await settle()
+    await w2.find('.config-btn').trigger('click')
+    const store2 = useBattleStore() // 新挂载 = 新的 pinia
+    expect(w2.find('.config .music-toggle').classes()).toContain('on')
+    await w2.find('.config .music-toggle').trigger('click')
+    expect(store2.prefs.music).toBe(false)
+    expect(w2.find('.config .music-toggle').classes()).not.toContain('on')
+    w2.unmount()
   })
 })
