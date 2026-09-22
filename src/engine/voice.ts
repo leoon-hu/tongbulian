@@ -24,6 +24,8 @@ export interface SayOptions {
   mode?: SayMode
   /** 排队用：同一个 key 只留最新的一条；不传就按 mode 分 */
   key?: string
+  /** 播放速率（1 = 原样；机器人说话用 1.2，音高跟着高一点，B61） */
+  rate?: number
 }
 
 interface Item {
@@ -34,6 +36,7 @@ interface Item {
   lang: Lang
   delayMs: number
   hold: boolean
+  rate: number
   done: Promise<void>
   finish: () => void
 }
@@ -85,12 +88,12 @@ export function sequenceFor(tokens: string[], lang: Lang): SeqItem[] {
   return out
 }
 
-function makeItem(tokens: string[], lang: Lang, delayMs: number, mode: SayMode, key: string | undefined): Item {
+function makeItem(tokens: string[], lang: Lang, delayMs: number, mode: SayMode, key: string | undefined, rate = 1): Item {
   let finish: () => void = () => {}
   const done = new Promise<void>((resolve) => {
     finish = resolve
   })
-  return { key: key ?? mode, sig: `${lang}\u0001${tokens.join('\u0001')}`, tokens, lang, delayMs, hold: mode === 'hold', done, finish }
+  return { key: key ?? mode, sig: `${lang}\u0001${tokens.join('\u0001')}`, tokens, lang, delayMs, hold: mode === 'hold', rate, done, finish }
 }
 
 /** 正在播的那句必须播完、或者已经有人排队：新来的也排队 */
@@ -107,7 +110,7 @@ function start(item: Item): Promise<void> {
   // run() 会中止上一句
   run(async (signal) => {
     if (item.delayMs > 0) await sleep(item.delayMs, signal)
-    await playSequence(sequenceFor(item.tokens, item.lang), item.lang, signal)
+    await playSequence(sequenceFor(item.tokens, item.lang), item.lang, signal, item.rate)
     check(signal)
   }).then(() => {
     item.finish()
@@ -124,7 +127,7 @@ function start(item: Item): Promise<void> {
 export function say(tokens: string[], lang: Lang, delayMs = 0, opts: SayOptions = {}): Promise<void> {
   if (!soundOn.value || tokens.length === 0) return Promise.resolve()
   const mode = opts.mode ?? 'cut'
-  const item = makeItem(tokens, lang, delayMs, mode, opts.key)
+  const item = makeItem(tokens, lang, delayMs, mode, opts.key, opts.rate ?? 1)
   if (mode !== 'cut' && current) {
     // 正在播的就是这一句（点 🔊 时它正在自动读）：不重头来，只把它升级成必须播完
     if (mode === 'hold' && current.key === item.key && current.sig === item.sig) {

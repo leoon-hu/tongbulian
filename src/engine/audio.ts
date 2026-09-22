@@ -219,8 +219,13 @@ async function contextReady(ac: AudioContext): Promise<boolean> {
   return false
 }
 
+/** 播放速率（机器人说话 1.2，B61）：只在不是 1 时设，测试的假音源没有 playbackRate */
+function setRate(src: AudioBufferSourceNode, rate: number): void {
+  if (rate !== 1 && src.playbackRate) src.playbackRate.value = rate
+}
+
 /** 返回 false 表示上下文没准备好，没有播 */
-async function playBuffer(buf: AudioBuffer, signal?: AbortSignal): Promise<boolean> {
+async function playBuffer(buf: AudioBuffer, signal?: AbortSignal, rate = 1): Promise<boolean> {
   const ac = ensureContext()!
   if (signal?.aborted) return true
   if (!(await contextReady(ac))) return false
@@ -228,6 +233,7 @@ async function playBuffer(buf: AudioBuffer, signal?: AbortSignal): Promise<boole
   return new Promise((resolve) => {
     const src = ac.createBufferSource()
     src.buffer = buf
+    setRate(src, rate)
     src.connect(gain ?? ac.destination)
     let done = false
     const finish = () => {
@@ -250,12 +256,12 @@ async function playBuffer(buf: AudioBuffer, signal?: AbortSignal): Promise<boole
     current = { stop: stopNow }
     src.start()
     // 兜底：onended 不触发（标签页切后台等）时不要卡住序列
-    setTimeout(finish, buf.duration * 1000 + 1500)
+    setTimeout(finish, (buf.duration / rate) * 1000 + 1500)
   })
 }
 
 /** <audio> 元素播放；返回 false 表示文件缺失或无法播放（需要兜底） */
-function playElement(file: string, signal?: AbortSignal): Promise<boolean> {
+function playElement(file: string, signal?: AbortSignal, rate = 1): Promise<boolean> {
   return new Promise((resolve) => {
     if (!pool.length) unlockAudio()
     const el = pool[poolIndex++ % pool.length]
@@ -284,6 +290,11 @@ function playElement(file: string, signal?: AbortSignal): Promise<boolean> {
     current = { stop: stopNow }
     el.src = url(file)
     el.volume = settings.volume
+    try {
+      el.playbackRate = rate
+    } catch {
+      /* 不支持就原速 */
+    }
     Promise.resolve(el.play()).catch((err: unknown) => {
       // 还没有用户手势：当作播完，不要退回 TTS（TTS 同样会被拦）
       const notAllowed = err instanceof DOMException && err.name === 'NotAllowedError'
@@ -296,19 +307,19 @@ function playElement(file: string, signal?: AbortSignal): Promise<boolean> {
  * 播放一个片段。resolve 表示播完或被打断。
  * file 为 null 表示没有这条音频（不在 manifest 里），直接退 TTS 读 text。
  */
-export async function play(file: string | null, text: string, lang: Lang, signal?: AbortSignal): Promise<void> {
+export async function play(file: string | null, text: string, lang: Lang, signal?: AbortSignal, rate = 1): Promise<void> {
   stop()
   if (signal?.aborted || !inBrowser) return
   if (file && !missing.has(file)) {
     const buf = await getBuffer(file)
     if (signal?.aborted) return
     if (buf) {
-      if (await playBuffer(buf, signal)) return
+      if (await playBuffer(buf, signal, rate)) return
       // 上下文没解锁：<audio> 元素在手势里还是能播的
       warn('改走 <audio> 元素', file)
     }
     if (!missing.has(file)) {
-      const ok = await playElement(file, signal)
+      const ok = await playElement(file, signal, rate)
       if (ok || signal?.aborted) return
       warn('音频播放失败，退回 TTS', file)
     }
@@ -322,7 +333,7 @@ export async function play(file: string | null, text: string, lang: Lang, signal
  * 一串有 buffer 的片段（与停顿）按时钟排到时间轴上一起播。返回 false 表示上下文没准备好（没播），
  * 调用方改走逐条的 play()。
  */
-async function playRun(run: Array<{ item: SeqItem; buf: AudioBuffer | null }>, signal?: AbortSignal): Promise<boolean> {
+async function playRun(run: Array<{ item: SeqItem; buf: AudioBuffer | null }>, signal?: AbortSignal, rate = 1): Promise<boolean> {
   const ac = ensureContext()!
   if (signal?.aborted) return true
   if (!(await contextReady(ac))) return false
@@ -338,11 +349,13 @@ async function playRun(run: Array<{ item: SeqItem; buf: AudioBuffer | null }>, s
       }
       const src = ac.createBufferSource()
       src.buffer = buf
+      setRate(src, rate)
       src.connect(gain ?? ac.destination)
       src.start(t)
       sources.push(src)
-      lastEnd = t + buf.duration
-      t += Math.max(0.05, buf.duration - CLIP_PAD_S) + JOIN_GAP_S
+      const dur = buf.duration / rate
+      lastEnd = t + dur
+      t += Math.max(0.05, dur - CLIP_PAD_S) + JOIN_GAP_S
     }
     // 最后一条播完再等它后面的停顿（如果有）
     const tailMs = Math.max(0, t - lastEnd - JOIN_GAP_S) * 1000
@@ -378,7 +391,7 @@ async function playRun(run: Array<{ item: SeqItem; buf: AudioBuffer | null }>, s
  * 播一句话：能排时间轴的（有 buffer 的片段与停顿）连成一段一起排；没 buffer 的（缺文件 / file:// / 解码失败）
  * 走 play() 的老路（<audio> 元素 → TTS）。resolve 表示播完或被打断。
  */
-export async function playSequence(items: SeqItem[], lang: Lang, signal?: AbortSignal): Promise<void> {
+export async function playSequence(items: SeqItem[], lang: Lang, signal?: AbortSignal, rate = 1): Promise<void> {
   stop()
   if (signal?.aborted || !inBrowser) return
   const ac = elementMode ? null : ensureContext()
@@ -392,7 +405,7 @@ export async function playSequence(items: SeqItem[], lang: Lang, signal?: AbortS
       i++
     }
     if (run.length) {
-      if (ac && (await playRun(run, signal))) {
+      if (ac && (await playRun(run, signal, rate))) {
         if (signal?.aborted) return
         continue
       }
@@ -400,12 +413,12 @@ export async function playSequence(items: SeqItem[], lang: Lang, signal?: AbortS
       for (const { item } of run) {
         if (signal?.aborted) return
         if (item.pause) await new Promise((r) => setTimeout(r, PAUSE_S * 1000))
-        else await play(item.file ?? null, item.text ?? '', lang, signal)
+        else await play(item.file ?? null, item.text ?? '', lang, signal, rate)
       }
       continue
     }
     const it = items[i++]!
-    await play(it.file ?? null, it.text ?? '', lang, signal)
+    await play(it.file ?? null, it.text ?? '', lang, signal, rate)
     if (signal?.aborted) return
   }
 }

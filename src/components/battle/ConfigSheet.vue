@@ -11,7 +11,7 @@ import SkinPicker from './SkinPicker.vue'
 defineProps<{ skin: string }>()
 const emit = defineEmits<{ close: []; rename: [which: 'me' | 'right']; 'update:skin': [id: string] }>()
 const store = useBattleStore()
-const AI_ICONS: Record<AiLevel, string> = { slow: '🐢', mid: '🐰', fast: '🚀' }
+const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '🐰', fast: '🚀' }
 </script>
 
 <template>
@@ -115,7 +115,7 @@ const AI_ICONS: Record<AiLevel, string> = { slow: '🐢', mid: '🐰', fast: '�
 }
 .levels {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 .level {

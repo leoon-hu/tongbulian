@@ -31,6 +31,8 @@ const props = defineProps<{
   masked?: 'theirs' | 'mate' | null
   /** 名字旁的 🎤（多设备开了语音才有，B57）：开着 / 正在说话 */
   voice?: VoiceMark | null
+  /** 机器人正在说的话（B61，词条键）：行里冒一个气泡（朗读由竞技场做）。叫 speech 不叫 say：模板里 say 是引入的朗读函数 */
+  speech?: string | null
 }>()
 const emit = defineEmits<{ answer: [given: unknown]; input: [value: string] }>()
 
@@ -143,6 +145,9 @@ onBeforeUnmount(() => {
       <span v-if="!player.online" class="off">📶 <RubyText :text="{ k: 'room.offline' }" /></span>
     </div>
     <div v-if="question" class="row-body">
+      <Transition name="bubble">
+        <p v-if="speech" :key="speech" class="robot-say" role="status">🤖 <RubyText :text="{ k: speech }" /></p>
+      </Transition>
       <div v-if="masked" class="mask" aria-hidden="true">
         <span class="mask-tag">{{ masked === 'mate' ? '🤝' : '👀' }} <RubyText :text="{ k: masked === 'mate' ? 'battle.mate' : 'battle.theirs' }" /></span>
       </div>
@@ -336,6 +341,35 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: var(--fs-sm);
   font-weight: 800;
+}
+/* 机器人的气泡（B61）：行的左上角，白底队色描边，冒出来再收起 */
+.robot-say {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  z-index: 3;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 999px 999px 999px 6px;
+  background: #fff;
+  border: 2px solid var(--team-line);
+  box-shadow: var(--shadow-card);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bubble-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.bubble-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.compact .robot-say {
+  font-size: var(--fs-sm);
+  padding: 2px 10px;
 }
 .q {
   flex: 0 1 auto;

@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
 import { createRng } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
-import { AI_KEY_MS, AI_LEVELS, AI_PROFILE, AI_SUBMIT_MS, isAiLevel, planAnswer } from '../ai'
+import { AI_KEY_MS, AI_LEVELS, AI_PROFILE, AI_SUBMIT_MS, AUTO_MAX_MS, AUTO_MIN_MS, FIXED_AI_LEVELS, NO_PACE, autoProfile, isAiLevel, planAnswer, profileFor, robotLineFor } from '../ai'
 import { questionAt } from '../stream'
 import { NAME_MAX, NAME_POOL, cleanName, suggestNames } from '../names'
 
 describe('机器人（B11）', () => {
   it('计划：总时长在档位范围内，答对 = 正确答案，答错 ≠ 正确答案，按键序列与答案一致', () => {
-    for (const level of AI_LEVELS) {
+    for (const level of FIXED_AI_LEVELS) {
       const { minMs, maxMs } = AI_PROFILE[level]
       for (let seed = 1; seed <= 60; seed++) {
         const q = questionAt('s1-05-carry-add', seed, seed % 5)
@@ -30,7 +30,7 @@ describe('机器人（B11）', () => {
 
   it('正确率大致等于档位设定', () => {
     const rng = createRng(99)
-    for (const level of AI_LEVELS) {
+    for (const level of FIXED_AI_LEVELS) {
       let right = 0
       const N = 600
       for (let i = 0; i < N; i++) {
@@ -41,9 +41,51 @@ describe('机器人（B11）', () => {
     }
   })
 
-  it('isAiLevel', () => {
+  it('isAiLevel：四档，auto 排第一（默认）', () => {
     expect(isAiLevel('fast')).toBe(true)
+    expect(isAiLevel('auto')).toBe(true)
     expect(isAiLevel('turbo')).toBe(false)
+    expect(AI_LEVELS[0]).toBe('auto')
+  })
+
+  it('「跟着你」（B60）：孩子没答过按「中」；答过就按平均用时 × 1.15，领先 3 分以上再慢、落后 3 分以上快；正确率比孩子低 0.1、卡在 0.55–0.9；范围有上下限', () => {
+    expect(autoProfile(NO_PACE)).toEqual(AI_PROFILE.mid)
+    expect(profileFor('auto')).toEqual(AI_PROFILE.mid)
+    expect(profileFor('fast')).toEqual(AI_PROFILE.fast)
+    const even = autoProfile({ avgMs: 4000, accuracy: 0.75, diff: 0 })
+    expect(even.minMs).toBe(Math.round(4600 * 0.8))
+    expect(even.maxMs).toBe(Math.round(4600 * 1.25))
+    expect(even.accuracy).toBeCloseTo(0.65, 5)
+    const ahead = autoProfile({ avgMs: 4000, accuracy: 0.75, diff: 3 }) // 机器人领先 3 分：慢 35%
+    expect(ahead.minMs).toBeGreaterThan(even.minMs)
+    expect(ahead.maxMs).toBe(Math.round(4600 * 1.35 * 1.25))
+    const behind = autoProfile({ avgMs: 4000, accuracy: 0.75, diff: -3 }) // 机器人落后 3 分：快 20%
+    expect(behind.maxMs).toBe(Math.round(4600 * 0.8 * 1.25))
+    expect(autoProfile({ avgMs: 500, accuracy: 1, diff: 0 })).toEqual({ minMs: Math.round(AUTO_MIN_MS * 0.8), maxMs: Math.round(AUTO_MIN_MS * 1.25), accuracy: 0.9 })
+    expect(autoProfile({ avgMs: 60000, accuracy: 0.1, diff: 0 })).toEqual({ minMs: Math.round(AUTO_MAX_MS * 0.8), maxMs: Math.round(AUTO_MAX_MS * 1.25), accuracy: 0.55 })
+    expect(autoProfile({ avgMs: 4000, accuracy: null, diff: 0 }).accuracy).toBe(AI_PROFILE.mid.accuracy)
+    // planAnswer 按节奏出计划：总时长落在算出来的范围里
+    for (let seed = 1; seed <= 40; seed++) {
+      const q = questionAt('s1-05-carry-add', seed, seed % 5)
+      const plan = planAnswer(q, 'auto', createRng(seed), { avgMs: 3000, accuracy: 0.9, diff: 0 })
+      const total = plan.thinkMs + plan.keys.length * AI_KEY_MS + AI_SUBMIT_MS
+      const { minMs, maxMs } = autoProfile({ avgMs: 3000, accuracy: 0.9, diff: 0 })
+      expect(total).toBeGreaterThanOrEqual(Math.min(minMs, 500 + plan.keys.length * AI_KEY_MS + AI_SUBMIT_MS))
+      expect(total).toBeLessThanOrEqual(maxMs + 1)
+    }
+  })
+
+  it('机器人的话（B61）：开局、自己反超、被反超、孩子还差一分、输、赢各一句；别的事件不说', () => {
+    expect(robotLineFor({ type: 'go' })).toBe('robot.ready')
+    expect(robotLineFor({ type: 'lead', team: 'blue' })).toBe('robot.lead')
+    expect(robotLineFor({ type: 'lead', team: 'red' })).toBe('robot.behind')
+    expect(robotLineFor({ type: 'nearWin', team: 'red' })).toBe('robot.worry')
+    expect(robotLineFor({ type: 'nearWin', team: 'blue' })).toBeNull()
+    expect(robotLineFor({ type: 'finished', winner: 'red' })).toBe('robot.lose')
+    expect(robotLineFor({ type: 'finished', winner: 'blue' })).toBe('robot.win')
+    expect(robotLineFor({ type: 'point', team: 'red', playerId: 'a', streak: 1 })).toBeNull()
+    expect(robotLineFor({ type: 'countdown' })).toBeNull()
+    expect(robotLineFor({ type: 'lead', team: 'red' }, 'red')).toBe('robot.lead')
   })
 })
 

@@ -9,4 +9,6 @@ export interface RowData {
   question: Question | null
   feedback: Feedback | null
   voice?: VoiceMark
+  /** 机器人正在说的话（B61，词条键）：它那一行冒气泡 */
+  say?: string | null
 }

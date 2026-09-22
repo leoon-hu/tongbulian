@@ -22,7 +22,7 @@ import {
   type PlayerInit,
 } from '@/battle/match'
 import { questionAt, questionsAhead } from '@/battle/stream'
-import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, isAiLevel, planAnswer, type AiLevel } from '@/battle/ai'
+import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, isAiLevel, planAnswer, robotLineFor, type AiLevel, type HumanPace } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
 import { calloutSfx, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
@@ -105,7 +105,7 @@ function loadPrefs(): BattlePrefs {
   const base: BattlePrefs = {
     clientId: randomId(),
     names: { me: '', left: '', right: '' },
-    aiLevel: 'mid',
+    aiLevel: 'auto',
     intros: {},
   }
   try {
@@ -174,6 +174,12 @@ export const useBattleStore = defineStore('battle', () => {
   let emoteSeq = 0
   const emoteAt: Partial<Record<Role, number>> = {}
   let pokeAt = -Infinity
+  /** 机器人正在说的话（B61）：它那一行的气泡 + 朗读由竞技场做 */
+  const robotLine = ref<{ id: number; key: string } | null>(null)
+  let robotSeq = 0
+  /** 孩子的节奏（B60，打机器人时）：每题从出现到答完的用时（最近 5 题）、答了几题、对了几题 */
+  const shownAt = new Map<string, number>()
+  const humanStats = { times: [] as number[], answered: 0, correct: 0 }
   /** 这局开场要不要先讲规则（B6）：本设备第一次进这个游戏讲，同一个游戏一天内不重复；再来一局不讲 */
   const intro = ref(false)
 
@@ -188,7 +194,7 @@ export const useBattleStore = defineStore('battle', () => {
   }
 
   let aiRng: RNG = createRng()
-  let aiLevel: AiLevel = 'mid'
+  let aiLevel: AiLevel = 'auto'
   const timers = new Set<ReturnType<typeof setTimeout>>()
   const aiTimers = new Set<ReturnType<typeof setTimeout>>()
 
@@ -239,6 +245,11 @@ export const useBattleStore = defineStore('battle', () => {
     }
     callout.value = null
     emotes.value = []
+    robotLine.value = null
+    shownAt.clear()
+    humanStats.times = []
+    humanStats.answered = 0
+    humanStats.correct = 0
     if (inputTimer) clearTimeout(inputTimer)
     inputTimer = null
     inputPending = null
@@ -293,6 +304,38 @@ export const useBattleStore = defineStore('battle', () => {
     const rest = { ...pending.value }
     delete rest[playerId]
     pending.value = rest
+    // 下一题从这一刻算起（B60）
+    shownAt.set(playerId, Date.now())
+  }
+
+  /** 机器人说一句（B61）：delay 后冒气泡，ROBOT_SAY_MS 后收起；朗读由竞技场 watch robotLine 做 */
+  function robotSay(key: string, delayMs: number): void {
+    later(
+      timers,
+      () => {
+        const id = ++robotSeq
+        robotLine.value = { id, key }
+        later(
+          timers,
+          () => {
+            if (robotLine.value?.id === id) robotLine.value = null
+          },
+          ROBOT_SAY_MS,
+        )
+      },
+      delayMs,
+    )
+  }
+
+  /** 孩子的节奏给「跟着你」档用（B60）：diff = 机器人比孩子多几分 */
+  function humanPace(): HumanPace {
+    const s = state.value
+    const t = humanStats.times
+    return {
+      avgMs: t.length ? t.reduce((a, b) => a + b, 0) / t.length : null,
+      accuracy: humanStats.answered >= 2 ? humanStats.correct / humanStats.answered : null,
+      diff: s ? s.score.blue - s.score.red : 0,
+    }
   }
 
   /** 线上模式：反馈窗口时间到了、快照也推进了才关；等太久（消息丢了）就放开让他重答 */
@@ -343,11 +386,13 @@ export const useBattleStore = defineStore('battle', () => {
       else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
     }
-    // 机器人对反超 / 结束的表情（B58）：结束的等胜利动画开始了再发
+    // 机器人对反超 / 结束的表情（B58）与话（B61）：结束的等胜利动画开始了再发
     if (mode.value === 'ai') {
       for (const e of evts) {
         const kind = botEventEmote(e)
         if (kind) later(timers, () => showEmote(kind, 'blue', false), e.type === 'finished' ? 1500 : 500)
+        const line = robotLineFor(e)
+        if (line && (e.type === 'lead' || e.type === 'nearWin' || e.type === 'finished')) robotSay(line, ROBOT_LINE_DELAY_MS[e.type])
       }
     }
     return toCall
@@ -447,7 +492,11 @@ export const useBattleStore = defineStore('battle', () => {
     if (!state.value || mode.value === 'online') return
     const before = state.value.phase
     state.value = applyBegin(state.value, now)
-    if (before === 'countdown' && state.value.phase === 'playing') pushEvent({ type: 'go' })
+    if (before === 'countdown' && state.value.phase === 'playing') {
+      pushEvent({ type: 'go' })
+      for (const p of state.value.players) if (p.kind === 'human') shownAt.set(p.id, now)
+      if (mode.value === 'ai') robotSay('robot.ready', ROBOT_LINE_DELAY_MS.go)
+    }
     if (mode.value === 'ai') aiStep()
   }
 
@@ -489,6 +538,13 @@ export const useBattleStore = defineStore('battle', () => {
     const q = questionOf(p)
     const ok = checkAnswer(q, given)
     pending.value = { ...pending.value, [playerId]: { question: q, correct: ok, given: String(given) } }
+    if (p.kind === 'human' && mode.value === 'ai') {
+      // 记孩子的节奏（B60）：这题用了多久、对不对
+      const since = shownAt.get(playerId)
+      if (since !== undefined) humanStats.times = [...humanStats.times.slice(-4), Math.max(0, now - since)]
+      humanStats.answered += 1
+      if (ok) humanStats.correct += 1
+    }
     let toCall: MatchEvent | null = null
     if (mode.value === 'online') {
       // 题目在本机判分，结果报给服务器（B41）；比分与事件等服务器的快照 / 事件回来
@@ -527,7 +583,7 @@ export const useBattleStore = defineStore('battle', () => {
     const ai = findPlayer(s, AI_ID)
     if (!ai) return
     const q = questionOf(ai)
-    const plan = planAnswer(q, aiLevel, aiRng)
+    const plan = planAnswer(q, aiLevel, aiRng, humanPace())
     later(
       aiTimers,
       () => {
@@ -591,6 +647,7 @@ export const useBattleStore = defineStore('battle', () => {
     events,
     callout,
     emotes,
+    robotLine,
     intro,
     online,
     now,

@@ -31,6 +31,8 @@ import RubyText from '@/components/ui/RubyText.vue'
 
 /** 到 8 分后先播胜利动画，再出结果页（B6） */
 const RESULT_DELAY_MS = 2000
+/** 机器人说话的播放速率（B61）：快一点、高一点，听起来像机器人 */
+const ROBOT_RATE = 1.2
 
 const emit = defineEmits<{ exit: []; next: [kpId: string] }>()
 
@@ -61,8 +63,8 @@ function rowsOf(team: Team): RowData[] {
   return teamPlayers(s, team).map((player) => {
     const feedback = store.pending[player.id] ?? null
     const question = feedback ? feedback.question : s.phase === 'playing' || s.phase === 'ended' ? store.questionOf(player) : null
-    // 名字旁的 🎤（B57）：只有多设备房间才有语音
-    return { player, question, feedback, voice: store.mode === 'online' ? voice.markOf(player.id) : null }
+    // 名字旁的 🎤（B57）：只有多设备房间才有语音；机器人那一行带它正在说的话（B61）
+    return { player, question, feedback, voice: store.mode === 'online' ? voice.markOf(player.id) : null, say: player.kind === 'ai' ? (store.robotLine?.key ?? null) : null }
   })
 }
 const redRows = computed(() => rowsOf('red'))
@@ -84,6 +86,13 @@ const emoteSides = computed<Team[]>(() => {
   if (!s) return []
   return TEAMS.filter((t) => s.players.some((p) => p.team === t && store.operable.includes(p.id)))
 })
+// 机器人说话（B61）：气泡出现就朗读，音高提一点像机器人；skip 播法，正在读题就不读
+watch(
+  () => store.robotLine,
+  (line) => {
+    if (line) say(phraseSpeech({ k: line.key }, lang.value), lang.value, 0, { mode: 'skip', rate: ROBOT_RATE })
+  },
+)
 // 🔥 加油飞出去时朗读一声「加油！」（B58；skip 播法：正在读题就不读）；每条只读一次
 let spokenEmote = 0
 watch(

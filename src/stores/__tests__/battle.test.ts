@@ -9,7 +9,12 @@ import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, I
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS } from '@/battle/emotes'
 import { playSfx } from '@/battle/sfx'
 import { apply, createRoom, join, snapshot } from '../../../server/room'
+import { ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, planAnswer } from '@/battle/ai'
 
+vi.mock('@/battle/ai', async (orig) => {
+  const m = await orig<typeof import('@/battle/ai')>()
+  return { ...m, planAnswer: vi.fn(m.planAnswer) }
+})
 vi.mock('@/battle/sfx', async (orig) => ({ ...(await orig<typeof import('@/battle/sfx')>()), playSfx: vi.fn() }))
 
 const KP = 's1-05-carry-add'
@@ -46,7 +51,7 @@ describe('对战偏好（B50）', () => {
     localStorage.setItem('tongbulian:battle', '{"skin":"nope","aiLevel":"turbo","names":5,"difficulty":9')
     setActivePinia(createPinia())
     const broken = useBattleStore()
-    expect(broken.prefs.aiLevel).toBe('mid')
+    expect(broken.prefs.aiLevel).toBe('auto') // 默认「跟着你」（B60）
     localStorage.setItem('tongbulian:battle', JSON.stringify({ skin: 'nope', aiLevel: 'turbo', names: 5, difficulty: 9 }))
     setActivePinia(createPinia())
   })
@@ -286,5 +291,75 @@ describe('表情与点游戏（B58 / B59）', () => {
     vi.advanceTimersByTime(POKE_GAP_MS)
     s.poke('blue')
     expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('机器人跟着你 + 会说话（B60 / B61）', () => {
+  it('「跟着你」：机器人的计划带着孩子的节奏——开局还没答过是空的，答了几题后平均用时、正确率、分差都对', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    expect(s.prefs.aiLevel).toBe('auto')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, [AI_ID]: 2 }, aiSeed: 3 })
+    vi.mocked(planAnswer).mockClear()
+    s.beginPlay()
+    expect(vi.mocked(planAnswer).mock.calls.at(-1)?.[1]).toBe('auto')
+    expect(vi.mocked(planAnswer).mock.calls.at(-1)?.[3]).toEqual({ avgMs: null, accuracy: null, diff: 0 })
+    // 孩子每题 2 秒，答对、答错、答对
+    vi.advanceTimersByTime(2000)
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
+    vi.advanceTimersByTime(2000)
+    s.submit('left', 'nope')
+    vi.advanceTimersByTime(FEEDBACK_WRONG_MS + 1)
+    vi.advanceTimersByTime(2000)
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
+    // 机器人答完一题后为下一题做计划：这时带着孩子的节奏
+    vi.advanceTimersByTime(12000)
+    const pace = vi.mocked(planAnswer).mock.calls.at(-1)?.[3]
+    expect(pace?.avgMs).toBeGreaterThanOrEqual(2000) // 反馈窗口多推进的那 1 ms 也算在下一题里
+    expect(pace?.avgMs).toBeLessThanOrEqual(2002)
+    expect(pace?.accuracy).toBeCloseTo(2 / 3, 5)
+    expect(Number.isInteger(pace?.diff)).toBe(true) // 做计划那一刻的分差（之后机器人又得了分）
+  })
+
+  it('机器人的话：开打 0.4 秒后「我准备好啦」冒气泡、2.6 秒后收起；被反超「哎呀被追上了」；孩子还差一分「别急别急」；输了「你太厉害了」；两人一台没有', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, [AI_ID]: 2 }, aiSeed: 3, aiLevel: 'slow' })
+    s.beginPlay()
+    expect(s.robotLine).toBeNull()
+    vi.advanceTimersByTime(ROBOT_LINE_DELAY_MS.go)
+    expect(s.robotLine?.key).toBe('robot.ready')
+    vi.advanceTimersByTime(ROBOT_SAY_MS)
+    expect(s.robotLine).toBeNull()
+    // 机器人先领先，我反超
+    s.submit(AI_ID, correctOf(s.questionOf(s.state!.players[1]!)))
+    vi.advanceTimersByTime(FEEDBACK_RIGHT_MS + 1)
+    for (let i = 0; i < 2; i++) {
+      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    expect(s.state!.score).toEqual({ red: 2, blue: 1 })
+    vi.advanceTimersByTime(ROBOT_LINE_DELAY_MS.lead - FEEDBACK_CALLOUT_MS) // 「反超啦」读完再说
+    expect(s.robotLine?.key).toBe('robot.behind')
+    vi.advanceTimersByTime(ROBOT_SAY_MS)
+    while (s.state!.score.red < 7) {
+      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    vi.advanceTimersByTime(ROBOT_LINE_DELAY_MS.nearWin - FEEDBACK_CALLOUT_MS)
+    expect(s.robotLine?.key).toBe('robot.worry')
+    vi.advanceTimersByTime(ROBOT_SAY_MS)
+    s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+    expect(s.state!.phase).toBe('ended')
+    vi.advanceTimersByTime(ROBOT_LINE_DELAY_MS.finished)
+    expect(s.robotLine?.key).toBe('robot.lose')
+    // 两人一台：没有机器人，什么都不说
+    s.setName('right', '小虎')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    s.beginPlay()
+    vi.advanceTimersByTime(3000)
+    expect(s.robotLine).toBeNull()
   })
 })

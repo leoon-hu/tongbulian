@@ -586,7 +586,8 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     // ⚙️ 配置：机器人快慢默认中、选游戏默认高亮按章节排到的那个（没有「按章节」这张卡）、名字
     await w.find('.config-btn').trigger('click')
     expect(shown(w.find('.config'))).toContain('机器人快慢')
-    expect(shown(w.find('.config .level.on'))).toContain('中')
+    expect(shown(w.find('.config .level.on'))).toContain('跟着你') // 默认「跟着你」（B60）
+    expect(w.findAll('.config .level')).toHaveLength(4)
     const tiles = w.findAll('.config .skins .tile')
     expect(tiles.some((t) => shown(t).includes('按章节'))).toBe(false) // 没有「按章节」这张卡
     expect(tiles).toHaveLength(SKINS.length + 1) // 🎲 随机 + 每种游戏
@@ -1401,6 +1402,39 @@ describe('表情与点游戏（B58 / B59）', () => {
     await settle()
     expect(w2.findAll('.emote-layer .emote.from-blue')).toHaveLength(1)
     expect(w2.find('.emote-layer .emote.from-blue').text()).toBe('😎')
+    w2.unmount()
+  })
+})
+
+describe('机器人会说话（B61）', () => {
+  it('打机器人：开打后机器人那一行冒气泡「我准备好啦！」（带拼音），2.6 秒后收起；两人一台没有气泡', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const w = await mountAt('/battle/local/s1-04-simple-addsub?mode=ai')
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    await settle()
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    expect(w.find('.robot-say').exists()).toBe(false)
+    vi.advanceTimersByTime(500)
+    await settle()
+    const bubble = w.find('.team.blue .robot-say')
+    expect(bubble.exists()).toBe(true)
+    expect(shown(bubble)).toContain('我准备好啦')
+    expect(bubble.html()).toMatch(/<rt[\s>]/)
+    vi.advanceTimersByTime(2700)
+    await settle()
+    expect(w.find('.robot-say').exists()).toBe(false)
+    w.unmount()
+    const w2 = await mountAt('/battle/local/s1-04-simple-addsub?mode=duo')
+    await settle()
+    store.beginPlay()
+    vi.advanceTimersByTime(1000)
+    await settle()
+    expect(w2.find('.robot-say').exists()).toBe(false)
     w2.unmount()
   })
 })
