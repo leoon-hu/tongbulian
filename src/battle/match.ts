@@ -127,6 +127,8 @@ export function answer(
       if (STREAK_MILESTONES.includes(streak)) events.push({ type: 'streak', playerId, team, n: streak })
       if (ahead === team && state.leading !== null && state.leading !== team) events.push({ type: 'lead', team })
       if (score[team] === state.target - 1) events.push({ type: 'nearWin', team })
+      // 决胜题（B62）：两队都只差 1 分——后到的那一分把局面变成决胜，只发这一次
+      if (score.red === state.target - 1 && score.blue === state.target - 1) events.push({ type: 'deuce' })
       if (score[team] === Math.floor(state.target / 2)) events.push({ type: 'half', team })
     }
   }

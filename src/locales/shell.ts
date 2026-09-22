@@ -180,6 +180,7 @@ export const SHELL_ZH: Dict = {
   'battle.streakBadge': '连对',
   'battle.lead': '反超啦！',
   'battle.nearWin': '还差一分！',
+  'battle.deuce': '决胜题！',
   'battle.half.red': '红队到一半啦！',
   'battle.half.blue': '蓝队到一半啦！',
   // 表情 / 加油（B58）：键的无障碍名字；🔥 加油会朗读
@@ -397,6 +398,7 @@ export const SHELL_PINYIN: Record<string, string> = {
   'battle.streakBadge': 'lián duì',
   'battle.lead': 'fǎn chāo la',
   'battle.nearWin': 'hái chà yì fēn',
+  'battle.deuce': 'jué shèng tí',
   'battle.half.red': 'hóng duì dào yí bàn la',
   'battle.half.blue': 'lán duì dào yí bàn la',
   'emote.group': 'fā biǎo qíng',
@@ -703,6 +705,7 @@ export const SHELL_EN: Dict = {
   'battle.streakBadge': 'streak',
   'battle.lead': 'Took the lead!',
   'battle.nearWin': 'One more!',
+  'battle.deuce': 'Match point!',
   'battle.half.red': 'Red team is halfway!',
   'battle.half.blue': 'Blue team is halfway!',
   'emote.group': 'Send a reaction',

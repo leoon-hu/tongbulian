@@ -148,3 +148,28 @@ describe('比赛状态机（B1–B9）', () => {
     expect(elapsedMs(createMatch({ kpId: 'k', skin: 'race', players }), 5)).toBe(0)
   })
 })
+
+describe('决胜题（B62）', () => {
+  it('两队都到 7 分时发一次 deuce（后到 7 的那一分），之后再得分不再发；先到 7 的只有 nearWin', () => {
+    let m = startMatch(createMatch({ kpId: 's1-05-carry-add', skin: 'race', players: [{ id: 'a', name: 'A', team: 'red' }, { id: 'b', name: 'B', team: 'blue' }] }), { a: 1, b: 2 }, 0)
+    m = beginPlay(m, 100)
+    const types: string[][] = []
+    const score = (id: string, n: number): void => {
+      for (let i = 0; i < n; i++) {
+        const p = m.players.find((x) => x.id === id)!
+        const res = answer(m, id, p.index, true, '1', 200)
+        m = res.state
+        types.push(res.events.map((e) => e.type))
+      }
+    }
+    score('a', 7)
+    expect(types.at(-1)).toEqual(['answered', 'point', 'nearWin'])
+    expect(types.flat()).not.toContain('deuce')
+    score('b', 7)
+    expect(types.at(-1)).toEqual(['answered', 'point', 'nearWin', 'deuce'])
+    expect(types.flat().filter((t) => t === 'deuce')).toHaveLength(1)
+    score('a', 1)
+    expect(types.at(-1)).toEqual(['answered', 'point', 'finished'])
+    expect(m.winner).toBe('red')
+  })
+})

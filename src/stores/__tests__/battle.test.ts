@@ -363,3 +363,27 @@ describe('机器人跟着你 + 会说话（B60 / B61）', () => {
     expect(s.robotLine).toBeNull()
   })
 })
+
+describe('决胜题（B62）', () => {
+  it('7 : 7 弹「决胜题！」（两队都算，team 是 both）+ 心跳声，比反超优先', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.setName('right', '小虎')
+    s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+    s.beginPlay()
+    for (let i = 0; i < 7; i++) {
+      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    vi.mocked(playSfx).mockClear()
+    for (let i = 0; i < 7; i++) {
+      s.submit('right', correctOf(s.questionOf(s.state!.players[1]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+      if (i < 6) vi.advanceTimersByTime(2000)
+    }
+    expect(s.state!.score).toEqual({ red: 7, blue: 7 })
+    expect(s.callout).toMatchObject({ key: 'battle.deuce', team: 'both' })
+    expect(vi.mocked(playSfx).mock.calls.map((c) => c[0])).toContain('heartbeat')
+    expect(s.events.at(-1)?.e.type).toBe('deuce')
+  })
+})

@@ -30,6 +30,7 @@ const FIXED_KEYS = [
   'battle.streak',
   'battle.lead',
   'battle.nearWin',
+  'battle.deuce',
   'battle.half.red',
   'battle.half.blue',
   // 表情 🔥 加油（B58）：飞出去时朗读一声

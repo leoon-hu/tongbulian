@@ -29,8 +29,9 @@ import EmoteLayer from '@/components/battle/EmoteLayer.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
-/** 到 8 分后先播胜利动画，再出结果页（B6） */
-const RESULT_DELAY_MS = 2000
+/** 到 8 分后先定格、终局特写，再出结果页（B6 / B63）：定格 0.5 秒 → 特写约 2.5 秒 → 结果页 */
+const FINALE_START_MS = 500
+const RESULT_DELAY_MS = 3000
 /** 机器人说话的播放速率（B61）：快一点、高一点，听起来像机器人 */
 const ROBOT_RATE = 1.2
 
@@ -80,6 +81,18 @@ const myTeam = computed<Team | null>(() => {
 })
 /** 只观战的设备（多设备里建房的那台 / 扫观战码的）：顶栏标一下 */
 const watching = computed(() => store.mode === 'online' && store.operable.length === 0)
+/** 决胜题（B62）：两队都只差 1 分且还在比赛——竞技场四周红蓝呼吸光 */
+const deuce = computed(() => {
+  const s = state.value
+  return !!s && s.phase === 'playing' && s.score.red === s.target - 1 && s.score.blue === s.target - 1
+})
+/** 终局特写（B63）：到 8 分后把游戏盒子放大、镜头对准赢的那一边，结果页出来前收回 */
+const finale = ref(false)
+const finaleOrigin = computed(() => {
+  const w = state.value?.winner ?? 'red'
+  if (skin.value?.slot === 'center') return w === 'red' ? '20% 50%' : '80% 50%'
+  return w === 'red' ? '50% 20%' : '50% 80%'
+})
 /** 哪几队有本机能操作的行（B58）：那一队的表情排才显示——两人一台两排都有，打机器人 / 多设备只有自己那排 */
 const emoteSides = computed<Team[]>(() => {
   const s = state.value
@@ -150,9 +163,11 @@ watch(
     endTimers.forEach(clearTimeout)
     endTimers.length = 0
     showResult.value = false
+    finale.value = false
     const winner = state.value?.winner
     if (p === 'ended' && winner) {
       const id = skin.value?.id ?? ''
+      endTimers.push(setTimeout(() => (finale.value = true), FINALE_START_MS))
       endTimers.push(
         setTimeout(
           () =>
@@ -163,7 +178,12 @@ watch(
           900,
         ),
       )
-      endTimers.push(setTimeout(() => (showResult.value = true), RESULT_DELAY_MS))
+      endTimers.push(
+        setTimeout(() => {
+          finale.value = false
+          showResult.value = true
+        }, RESULT_DELAY_MS),
+      )
     }
   },
   { immediate: true },
@@ -209,7 +229,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="state" class="arena" :class="[`slot-${skin?.slot ?? 'top'}`, { compact }]">
+  <div v-if="state" class="arena" :class="[`slot-${skin?.slot ?? 'top'}`, { compact, deuce, finale }]">
     <header class="bar">
       <div class="bar-side">
         <button type="button" class="bar-btn" :aria-label="ui('battle.exit')" @click="confirming = true">✕</button>
@@ -238,7 +258,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div v-if="skin && skin.slot === 'top' && skinProps" class="strip top">
+    <div v-if="skin && skin.slot === 'top' && skinProps" class="strip top" :style="{ '--finale-origin': finaleOrigin }">
       <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="store.poke" />
     </div>
 
@@ -256,7 +276,7 @@ onBeforeUnmount(() => {
         @answer="(id, g) => store.submit(id, g)"
         @input="(id, v) => store.setInput(id, v)"
       />
-      <div v-if="skin && skin.slot === 'center' && skinProps" class="strip center">
+      <div v-if="skin && skin.slot === 'center' && skinProps" class="strip center" :style="{ '--finale-origin': finaleOrigin }">
         <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="store.poke" />
       </div>
       <TeamPanel
@@ -365,6 +385,50 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   overflow: hidden;
+  transition: transform 0.5s ease;
+}
+/* 决胜题（B62）：四周红蓝呼吸光 */
+.arena.deuce::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 23;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 40px 10px rgba(255, 107, 107, 0.35),
+    inset 0 0 90px 30px rgba(74, 163, 255, 0.25);
+  animation: deuce 0.9s ease-in-out infinite alternate;
+}
+@keyframes deuce {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* 终局特写（B63）：游戏盒子放大两倍、镜头对准赢的那一边（--finale-origin 由竞技场按胜方与位置算），两边队区退后 */
+.arena.finale .strip {
+  z-index: 27;
+  transform: scale(2);
+  transform-origin: var(--finale-origin, 50% 50%);
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  box-shadow: 0 18px 50px rgba(61, 44, 30, 0.35);
+}
+.arena.finale .team {
+  opacity: 0.35;
+  transition: opacity 0.4s ease;
+}
+.arena.compact.finale .strip {
+  transform: scale(1.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena.deuce::after {
+    animation: none;
+  }
+  .arena.finale .strip {
+    transform: none;
+  }
 }
 .strip.top {
   height: 120px;

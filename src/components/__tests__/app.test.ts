@@ -640,7 +640,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     }
     await settle()
     expect(store.state!.phase).toBe('ended')
-    vi.advanceTimersByTime(2100)
+    vi.advanceTimersByTime(3100)
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(w.findAll('.result .big-btn')).toHaveLength(3) // 下一章 / 再来一局 / 不玩了，与房间里一样
@@ -667,7 +667,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
       vi.advanceTimersByTime(1500)
     }
     await settle()
-    vi.advanceTimersByTime(2100)
+    vi.advanceTimersByTime(3100)
     await settle()
     expect(w.find('.result .next-btn').exists()).toBe(false)
     expect(shown(w.find('.result .next-hint'))).toContain('打完啦')
@@ -724,7 +724,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     await settle()
     expect(store.state!.phase).toBe('ended')
     expect(w.find('.result').exists()).toBe(false) // 先播胜利动画
-    vi.advanceTimersByTime(2100)
+    vi.advanceTimersByTime(3100)
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(shown(w)).toContain('红队获胜')
@@ -897,7 +897,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     for (let i = 0; i < 8; i++) applyAndPush('rrrrrr', { type: 'answer', index: i, given: '7', correct: true }, 8000 + i)
     await settle()
     expect(battle.state!.phase).toBe('ended')
-    vi.advanceTimersByTime(2100)
+    vi.advanceTimersByTime(3100)
     await settle()
     expect(w.find('.result').exists()).toBe(true)
     expect(shown(w)).toContain('红队获胜')
@@ -924,7 +924,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await settle()
     for (let i = 0; i < 8; i++) applyAndPush('bbbbbb', { type: 'answer', index: i, given: '7', correct: true }, 30_000 + i)
     await settle()
-    vi.advanceTimersByTime(2100)
+    vi.advanceTimersByTime(3100)
     await settle()
     expect(shown(w.find('.result'))).toContain('蓝队获胜')
     ws.sent.length = 0
@@ -945,7 +945,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await settle()
     for (let i = 0; i < 8; i++) applyAndPush('rrrrrr', { type: 'answer', index: i, given: '7', correct: true }, 50_000 + i)
     await settle()
-    vi.advanceTimersByTime(2100)
+    vi.advanceTimersByTime(3100)
     await settle()
     expect(w.find('.result .quit-btn').exists()).toBe(true)
     ws.receive({ type: 'error', error: 'closed' })
@@ -1436,5 +1436,40 @@ describe('机器人会说话（B61）', () => {
     await settle()
     expect(w2.find('.robot-say').exists()).toBe(false)
     w2.unmount()
+  })
+})
+
+describe('决胜题与终局特写（B62 / B63）', () => {
+  it('7 : 7 竞技场带 deuce（四周呼吸光）；到 8 分半秒后 finale：游戏盒子放大、镜头对准赢的那一边，3 秒出结果页时收回', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
+    const w = await mountAt('/battle/local/s1-04-simple-addsub?mode=duo')
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    await settle()
+    const store = useBattleStore()
+    store.beginPlay()
+    await settle()
+    expect(w.find('.arena').classes()).not.toContain('deuce')
+    store.state = { ...store.state!, score: { red: 7, blue: 7 } }
+    await settle()
+    expect(w.find('.arena').classes()).toContain('deuce')
+    // 蓝队赢：特写对准下面那条道
+    store.state = { ...store.state!, score: { red: 7, blue: 8 }, phase: 'ended', winner: 'blue', endedAt: Date.now() }
+    await settle()
+    expect(w.find('.arena').classes()).not.toContain('deuce')
+    expect(w.find('.arena').classes()).not.toContain('finale')
+    vi.advanceTimersByTime(600)
+    await settle()
+    expect(w.find('.arena').classes()).toContain('finale')
+    const slot = skinById(chapterSkin('s1-04-simple-addsub'))!.slot // 横条对准下面那条道，竖条对准右边那一列
+    expect(w.find('.strip').attributes('style')).toContain(slot === 'top' ? '--finale-origin: 50% 80%' : '--finale-origin: 80% 50%')
+    expect(w.find('.result').exists()).toBe(false)
+    vi.advanceTimersByTime(2500)
+    await settle()
+    expect(w.find('.result').exists()).toBe(true)
+    expect(w.find('.arena').classes()).not.toContain('finale')
+    w.unmount()
   })
 })

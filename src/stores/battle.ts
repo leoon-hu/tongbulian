@@ -79,12 +79,12 @@ export interface EmoteShown {
   mine: boolean
 }
 
-/** 弹出提示（B5a）：连对 / 反超 / 还差一分，词条 + 参数，带队色 */
+/** 弹出提示（B5a）：连对 / 反超 / 还差一分，词条 + 参数，带队色；决胜题（B62）两队都算，team 是 'both' */
 export interface Callout {
   id: number
   key: string
   p?: Record<string, LParam>
-  team: Team
+  team: Team | 'both'
 }
 
 /** 服务器认的身份格式（server/index.ts 的 hello 校验一样）：不对的存档要重新生成，不然页面只会一直「连接中」 */
@@ -358,9 +358,9 @@ export const useBattleStore = defineStore('battle', () => {
 
   /** 收到比赛事件后的反应（两种模式共用）：入队、音效、弹提示；返回这次弹了什么（答对的反馈窗口要延长） */
   function react(evts: MatchEvent[], skin: string): MatchEvent | null {
-    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 反超 > 还差一分 > 连对 > 到一半
+    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 决胜题 > 反超 > 还差一分 > 连对 > 到一半
     let toCall: MatchEvent | null = null
-    const priority: Record<string, number> = { lead: 3, nearWin: 2, streak: 1, half: 0.5 }
+    const priority: Record<string, number> = { deuce: 4, lead: 3, nearWin: 2, streak: 1, half: 0.5 }
     const sounds = skinSfx(skin, skinById(skin)?.kind)
     for (const e of evts) {
       lastEvent.value = e
@@ -370,19 +370,20 @@ export const useBattleStore = defineStore('battle', () => {
         for (const x of sounds.score) playSfx(x)
       }
       if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
-      if (e.type === 'lead' || e.type === 'nearWin') playSfx(calloutSfx(e.type))
+      if (e.type === 'lead' || e.type === 'nearWin' || e.type === 'deuce') playSfx(calloutSfx(e.type))
       if (e.type === 'finished') {
         clearAll(aiTimers)
         later(timers, () => playSfx('fanfare'), 300)
         sounds.win.forEach((x, i) => later(timers, () => playSfx(x), 500 + i * 250))
       }
-      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
+      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half' || e.type === 'deuce') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
         toCall = e
       }
     }
     if (toCall) {
-      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' }>
-      if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
+      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' | 'deuce' }>
+      if (e.type === 'deuce') showCallout('battle.deuce', 'both')
+      else if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
       else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
     }
@@ -516,7 +517,7 @@ export const useBattleStore = defineStore('battle', () => {
     if (state.value) state.value = applyInput(state.value, playerId, input)
   }
 
-  function showCallout(key: string, team: Team, p?: Record<string, LParam>): void {
+  function showCallout(key: string, team: Team | 'both', p?: Record<string, LParam>): void {
     callout.value = { id: ++calloutSeq, key, team, p }
     playSfx('pop')
     const id = calloutSeq

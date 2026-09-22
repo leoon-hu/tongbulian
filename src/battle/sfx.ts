@@ -45,6 +45,7 @@ export type Sfx =
   | 'boing' // 表情飞出去：啵嘤
   | 'sting' // 反超：上行三音
   | 'alert' // 还差一分：嘀嘀 — 嘀
+  | 'heartbeat' // 决胜题：咚咚、咚咚、咚咚（B62）
 
 interface Note {
   /** 频率（Hz） */
@@ -214,6 +215,12 @@ const PATTERNS: Record<Sfx, Pattern> = {
       { f: 1318, at: 0.36, d: 0.2, type: 'square', gain: 0.4 },
     ],
   },
+  heartbeat: {
+    notes: [0, 0.75, 1.5].flatMap((at) => [
+      { f: 78, at, d: 0.16, type: 'triangle' as const, gain: 0.95, to: 48 },
+      { f: 70, at: at + 0.2, d: 0.18, type: 'triangle' as const, gain: 0.75, to: 45 },
+    ]),
+  },
 }
 
 /** 一种皮肤的音效：得分、连对、胜利各放哪几声（B38，按游戏各不一样） */
@@ -259,9 +266,9 @@ export function skinSfx(skinId: string, kind: SkinKind = 'race'): SkinSounds {
   return { ...KIND_SOUNDS[kind], ...(SKIN_SOUNDS[skinId] ?? {}) }
 }
 
-/** 弹出提示配的一声：反超上行三音、还差一分嘀嘀嘀、其它「啵」 */
-export function calloutSfx(type: 'lead' | 'nearWin' | 'streak' | 'half'): Sfx {
-  return type === 'lead' ? 'sting' : type === 'nearWin' ? 'alert' : 'pop'
+/** 弹出提示配的一声：反超上行三音、还差一分嘀嘀嘀、决胜题心跳、其它「啵」 */
+export function calloutSfx(type: 'lead' | 'nearWin' | 'streak' | 'half' | 'deuce'): Sfx {
+  return type === 'lead' ? 'sting' : type === 'nearWin' ? 'alert' : type === 'deuce' ? 'heartbeat' : 'pop'
 }
 
 let noiseBuffer: AudioBuffer | null = null

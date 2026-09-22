@@ -40,6 +40,14 @@ defineProps<{ callout: Callout | null }>()
   border-color: var(--c-blue);
   color: var(--c-blue);
 }
+/* 决胜题（B62）：两队都算，红蓝渐变描边 */
+.callout.both {
+  border-color: transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(90deg, var(--c-red), var(--c-blue)) border-box;
+  color: var(--c-primary-dark);
+}
 .callout-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
