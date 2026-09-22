@@ -59,7 +59,7 @@ describe('按章节的游戏（B36）', () => {
     second.forEach((kp, i) => expect(chapterSkin(kp.id)).toBe(games[(first.length + i) % games.length]))
     expect(chapterSkin(first[0]!.id)).toBe(games[0])
     expect(chapterSkin(second[0]!.id)).toBe(games[first.length % games.length])
-    // 一年级 26 个知识点比 20 种游戏多：一个年级打下来每种游戏都排得到
+    // 一年级 26 个知识点比 21 种游戏多：一个年级打下来每种游戏都排得到
     const used = new Set([...first, ...second].map((kp) => chapterSkin(kp.id)))
     expect(used.size).toBe(Math.min(games.length, first.length + second.length))
     // 二年级重新从第一个游戏排起

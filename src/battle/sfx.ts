@@ -22,6 +22,8 @@ export type Sfx =
   | 'patter' // 赛跑：哒哒哒的脚步
   | 'vroom' // 赛车：发动机轰一下
   | 'nitro' // 赛车连对：氮气
+  | 'chug' // 开火车：哐当哐当开一段 + 蒸汽
+  | 'whistle' // 开火车：呜——的汽笛
   | 'launch' // 火箭：点火升空的轰鸣
   | 'fireworks' // 烟花：三声啪
   | 'burner' // 热气球：烧嘴呼的一下
@@ -104,6 +106,26 @@ const PATTERNS: Record<Sfx, Pattern> = {
   },
   vroom: { notes: [{ f: 110, at: 0, d: 0.4, type: 'sawtooth', gain: 0.5, to: 330 }], noise: [{ at: 0, d: 0.3, gain: 0.15, f: 500, q: 0.8 }] },
   nitro: { notes: [{ f: 220, at: 0, d: 0.35, type: 'sawtooth', gain: 0.5, to: 880 }], noise: [{ at: 0, d: 0.4, gain: 0.4, f: 2600, q: 0.9 }] },
+  chug: {
+    noise: [
+      { at: 0, d: 0.07, gain: 0.55, f: 260, q: 1.2 },
+      { at: 0.13, d: 0.07, gain: 0.45, f: 320, q: 1.2 },
+      { at: 0.26, d: 0.07, gain: 0.55, f: 260, q: 1.2 },
+      { at: 0.39, d: 0.07, gain: 0.45, f: 320, q: 1.2 },
+      { at: 0.52, d: 0.07, gain: 0.5, f: 260, q: 1.2 },
+      { at: 0.65, d: 0.07, gain: 0.4, f: 320, q: 1.2 },
+      { at: 0, d: 0.75, gain: 0.12, f: 2400, q: 0.6 },
+    ],
+    notes: [{ f: 90, at: 0, d: 0.75, type: 'triangle', gain: 0.25 }],
+  },
+  whistle: {
+    notes: [
+      { f: 560, at: 0, d: 0.55, type: 'triangle', gain: 0.4, to: 640 },
+      { f: 760, at: 0, d: 0.55, type: 'triangle', gain: 0.32, to: 860 },
+      { f: 950, at: 0.02, d: 0.5, type: 'sine', gain: 0.2, to: 1070 },
+    ],
+    noise: [{ at: 0, d: 0.5, gain: 0.14, f: 3200, q: 0.7 }],
+  },
   launch: {
     notes: [{ f: 70, at: 0, d: 0.6, type: 'triangle', gain: 0.8, to: 160 }],
     noise: [
@@ -204,6 +226,7 @@ const KIND_SOUNDS: Record<SkinKind, SkinSounds> = {
 const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
   race: { score: ['patter'], streak: ['patter', 'whoosh'] },
   car: { score: ['vroom'], streak: ['nitro'] },
+  train: { score: ['chug'], streak: ['whistle', 'chug'], win: ['whistle', 'cheer'] },
   rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'] },
   balloon: { score: ['burner'], streak: ['burner'] },
   swim: { score: ['stroke'], streak: ['stroke', 'whoosh'], win: ['splash', 'cheer'] },
