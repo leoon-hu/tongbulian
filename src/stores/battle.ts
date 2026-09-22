@@ -50,8 +50,6 @@ export const CALLOUT_MS = 1600
 export const EVENT_LOG = 64
 /** 点游戏（B59）：两次点按的音效至少隔多久 */
 export const POKE_GAP_MS = 250
-/** 幸运题（B65）：金色彩纸撒多久 */
-export const LUCKY_MS = 1800
 /** 角色的台词（B71）：气泡显示多久、两句之间至少隔多久 */
 export const LINE_MS = 2600
 export const LINE_GAP_MS = 1500
@@ -214,9 +212,6 @@ export const useBattleStore = defineStore('battle', () => {
   let lineAt = -Infinity
   let lastLineKey: string | null = null
   const lineRng: RNG = createRng()
-  /** 幸运题答对了（B65）：竞技场撒金色彩纸 */
-  const lucky = ref<{ id: number; team: Team } | null>(null)
-  let luckySeq = 0
   /** 比分走势（B69）：每得一分记一笔（比赛开始后多少毫秒、当时的比分），结果页画回放条 */
   const timeline = ref<{ t: number; red: number; blue: number }[]>([])
   /** 这台设备上的真人答错的题（B69）：谁、第几题（题目由 seed + 题号重现），结果页列出来 */
@@ -302,7 +297,6 @@ export const useBattleStore = defineStore('battle', () => {
     callout.value = null
     emotes.value = []
     charLine.value = null
-    lucky.value = null
     timeline.value = []
     wrongs.value = []
     robotLine.value = null
@@ -451,9 +445,9 @@ export const useBattleStore = defineStore('battle', () => {
 
   /** 收到比赛事件后的反应（两种模式共用）：入队、音效、弹提示；返回这次弹了什么（答对的反馈窗口要延长） */
   function react(evts: MatchEvent[], skin: string): MatchEvent | null {
-    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 决胜题 > 幸运题 > 反超 > 还差一分 > 连对 > 到一半
+    // 一次答题只弹一条：胜负（VictoryOverlay 负责）> 决胜题 > 反超 > 还差一分 > 连对 > 到一半
     let toCall: MatchEvent | null = null
-    const priority: Record<string, number> = { deuce: 4, lucky: 3.5, lead: 3, nearWin: 2, streak: 1, half: 0.5 }
+    const priority: Record<string, number> = { deuce: 4, lead: 3, nearWin: 2, streak: 1, half: 0.5 }
     const sounds = skinSfx(skin, skinById(skin)?.kind)
     for (const e of evts) {
       lastEvent.value = e
@@ -469,19 +463,6 @@ export const useBattleStore = defineStore('battle', () => {
       }
       if (e.type === 'streak') for (const x of sounds.streak) playSfx(x)
       if (e.type === 'lead' || e.type === 'nearWin' || e.type === 'deuce') playSfx(calloutSfx(e.type))
-      if (e.type === 'lucky') {
-        // 幸运题（B65）：金色彩纸 + 烟花声，分数不变
-        playSfx('fireworks')
-        const id = ++luckySeq
-        lucky.value = { id, team: e.team }
-        later(
-          timers,
-          () => {
-            if (lucky.value?.id === id) lucky.value = null
-          },
-          LUCKY_MS,
-        )
-      }
       if (e.type === 'finished') {
         clearAll(aiTimers)
         later(timers, () => playSfx('fanfare'), 300)
@@ -493,14 +474,13 @@ export const useBattleStore = defineStore('battle', () => {
         // 上一次的记录（B67）：打机器人的每一局都记，下次机器人从第一题起就按这个节奏
         if (mode.value === 'ai' && kpId) saveRun(kpId, now())
       }
-      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half' || e.type === 'deuce' || e.type === 'lucky') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
+      if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half' || e.type === 'deuce') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
         toCall = e
       }
     }
     if (toCall) {
-      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' | 'deuce' | 'lucky' }>
+      const e = toCall as Extract<MatchEvent, { type: 'lead' | 'nearWin' | 'streak' | 'half' | 'deuce' }>
       if (e.type === 'deuce') showCallout('battle.deuce', 'both')
-      else if (e.type === 'lucky') showCallout('battle.lucky', e.team)
       else if (e.type === 'streak') showCallout('battle.streak', e.team, { n: e.n })
       else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
@@ -773,7 +753,6 @@ export const useBattleStore = defineStore('battle', () => {
     events,
     callout,
     emotes,
-    lucky,
     series,
     timeline,
     wrongs,

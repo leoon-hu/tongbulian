@@ -11,7 +11,7 @@ import { forget, hush, say, sayKeys } from '@/engine/voice'
 import { TEAMS, type Team } from '@/battle/protocol'
 import { teamAvatars } from '@/battle/avatars'
 import { setMusicSprint, startMusic, stopMusic } from '@/battle/music'
-import { elapsedMs, formatElapsed, luckyIndexFor, teamPlayers } from '@/battle/match'
+import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
 import { chapterSkin, finishKey, ruleKey, skinById } from '@/battle/skins'
 import { nextKp } from '@/engine/catalog'
 import { useBattleStore } from '@/stores/battle'
@@ -28,7 +28,6 @@ import Callout from '@/components/battle/Callout.vue'
 import VictoryOverlay from '@/components/battle/VictoryOverlay.vue'
 import EmoteBar from '@/components/battle/EmoteBar.vue'
 import EmoteLayer from '@/components/battle/EmoteLayer.vue'
-import LuckyBurst from '@/components/battle/LuckyBurst.vue'
 import CharBubble from '@/components/battle/CharBubble.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
@@ -68,15 +67,13 @@ function rowsOf(team: Team): RowData[] {
   return teamPlayers(s, team).map((player) => {
     const feedback = store.pending[player.id] ?? null
     const question = feedback ? feedback.question : s.phase === 'playing' || s.phase === 'ended' ? store.questionOf(player) : null
-    // 名字旁的 🎤（B57）：只有多设备房间才有语音；机器人那一行带它正在说的话（B61）；正在显示的题是不是幸运题（B65，反馈窗口里显示的是刚答完的那道）
-    const shownIndex = feedback ? player.index - 1 : player.index
+    // 名字旁的 🎤（B57）：只有多设备房间才有语音；机器人那一行带它正在说的话（B61）
     return {
       player,
       question,
       feedback,
       voice: store.mode === 'online' ? voice.markOf(player.id) : null,
       say: player.kind === 'ai' ? (store.robotLine?.key ?? null) : null,
-      lucky: question !== null && shownIndex === luckyIndexFor(player.seed),
     }
   })
 }
@@ -339,7 +336,6 @@ onBeforeUnmount(() => {
     </div>
 
     <EmoteLayer :emotes="store.emotes" />
-    <LuckyBurst v-if="store.lucky" :key="store.lucky.id" :team="store.lucky.team" />
     <Callout :callout="store.callout" />
     <Countdown v-if="phase === 'countdown'" :rule="store.intro && skin ? ruleKey(skin.id) : null" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />

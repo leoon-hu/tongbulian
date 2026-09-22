@@ -61,7 +61,6 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
         :masked="masks && !operable.includes(row.player.id) ? (mine ? 'mate' : 'theirs') : null"
         :voice="row.voice ?? null"
         :speech="row.say ?? null"
-        :lucky="row.lucky ?? false"
         :auto-read="autoRead && operable.includes(row.player.id)"
         :solo="solo"
         :compact="compact"

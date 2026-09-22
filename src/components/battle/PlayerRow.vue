@@ -34,8 +34,6 @@ const props = defineProps<{
   voice?: VoiceMark | null
   /** 机器人正在说的话（B61，词条键）：行里冒一个气泡（朗读由竞技场做）。叫 speech 不叫 say：模板里 say 是引入的朗读函数 */
   speech?: string | null
-  /** 这道题是幸运题（B65）：题干右上角标 ✨ */
-  lucky?: boolean
 }>()
 const emit = defineEmits<{ answer: [given: unknown]; input: [value: string] }>()
 
@@ -183,7 +181,6 @@ onBeforeUnmount(() => {
         @click="read"
         @keydown.enter.prevent="read"
       >
-        <span v-if="lucky" class="lucky-mark" :title="ui('battle.lucky')" aria-hidden="true">✨</span>
         <QuestionRenderer :key="question.id" :question="question" with-speaker />
         <div
           v-if="compact && operable && !feedback && question.input === 'numpad'"
@@ -406,26 +403,6 @@ onBeforeUnmount(() => {
 }
 .q:active {
   transform: scale(0.985);
-}
-/* 幸运题（B65）的 ✨：题干右上角，一闪一闪 */
-.lucky-mark {
-  position: absolute;
-  right: 6px;
-  top: 2px;
-  z-index: 1;
-  font-size: var(--fs-lg);
-  line-height: 1;
-  animation: twinkle 0.9s ease-in-out infinite alternate;
-}
-@keyframes twinkle {
-  from {
-    transform: scale(0.85) rotate(-10deg);
-    opacity: 0.7;
-  }
-  to {
-    transform: scale(1.15) rotate(10deg);
-    opacity: 1;
-  }
 }
 .a {
   flex: none;
