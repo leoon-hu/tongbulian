@@ -16,8 +16,7 @@ export interface Player {
   /** 昵称（只显示，不注音、不朗读） */
   name: string
   team: Team
-  /** ai = 机器人；ghost = 幽灵对手（B67，上一次的自己，按记录重放） */
-  kind: 'human' | 'ai' | 'ghost'
+  kind: 'human' | 'ai'
   /** 题目流的种子，开局时分配；任何设备都能由它复现这个人的题 */
   seed: number
   /** 下一题的序号 = 已答题数 */

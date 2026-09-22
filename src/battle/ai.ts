@@ -7,7 +7,6 @@ import type { Question } from '@/types/models'
 import type { RNG } from '@/engine'
 import { numberDistractors } from '@/engine'
 import type { ArenaEvent, Team } from './protocol'
-import type { AvatarId } from './avatars'
 
 /** auto = 跟着你（B60，默认）；slow / mid / fast 是固定档 */
 export type AiLevel = 'auto' | 'slow' | 'mid' | 'fast'
@@ -135,44 +134,60 @@ export function planAnswer(q: Question, level: AiLevel, rng: RNG, pace: HumanPac
   return { thinkMs, correct, given, keys }
 }
 
-// ── 幽灵对手（B67）：本设备上一次在这个知识点打完的每题用时与对错，下次当对手一题一题重放 ──
+// ── 上一次的记录（B67，2026-09-22 用户定：不要「跟上次的自己比」的按钮，并进机器人自己的策略）──
+// 本设备上一次在这个知识点打机器人的每题用时与对错，下次「跟着你」从第一题起就按这个节奏，这一局答过几题后逐渐改按这一局的
 
-export interface GhostAnswer {
+export interface RunAnswer {
   index: number
   ok: boolean
   /** 答完时离比赛开始多少毫秒 */
   t: number
 }
-export interface GhostRecord {
-  /** 记录的时刻（ms）：只留最近 GHOST_MAX 个知识点 */
+export interface RunRecord {
+  /** 记录的时刻（ms）：只留最近 RUNS_MAX 个知识点 */
   at: number
-  name: string
-  avatar?: AvatarId
-  answers: GhostAnswer[]
+  answers: RunAnswer[]
 }
-/** 幽灵那一行的 id（与机器人不同，两个不会同时在场） */
-export const GHOST_ID = 'ghost'
 /** 本地最多记多少个知识点的记录 */
-export const GHOST_MAX = 20
-/** 幽灵的最短思考时间：记录里的时刻已经过了也不会立刻按出来 */
-export const GHOST_MIN_THINK_MS = 300
-
-/**
- * 幽灵这一题的计划：按记录里这一题「答完时离开始多少毫秒」安排——现在已经过了 elapsedMs，剩下的时间减去按键的时间就是想的时间；
- * 记录里没有这一题（上次没答到这里）就按「中」档随机
- */
-export function planGhost(q: Question, rec: GhostAnswer | undefined, elapsedMs: number, rng: RNG): AiPlan {
-  if (!rec) return planAnswer(q, 'mid', rng)
-  const { given, keys } = answerKeys(q, rec.ok, rng)
-  const total = Math.max(0, rec.t - elapsedMs)
-  const thinkMs = Math.max(GHOST_MIN_THINK_MS, total - keys.length * AI_KEY_MS - AI_SUBMIT_MS)
-  return { thinkMs, correct: rec.ok, given, keys }
-}
+export const RUNS_MAX = 20
+/** 这一局答了这么多题后，上一次的记录就完全不算了 */
+export const PRIOR_FADE_N = 5
 
 /** 记录是不是合法的（读本地偏好时用） */
-export function isGhostRecord(v: unknown): v is GhostRecord {
+export function isRunRecord(v: unknown): v is RunRecord {
   if (!v || typeof v !== 'object') return false
   const r = v as Record<string, unknown>
-  if (typeof r.at !== 'number' || typeof r.name !== 'string' || !Array.isArray(r.answers)) return false
-  return r.answers.every((a) => a && typeof a === 'object' && Number.isInteger((a as GhostAnswer).index) && typeof (a as GhostAnswer).ok === 'boolean' && typeof (a as GhostAnswer).t === 'number')
+  if (typeof r.at !== 'number' || !Array.isArray(r.answers)) return false
+  return r.answers.every((a) => a && typeof a === 'object' && Number.isInteger((a as RunAnswer).index) && typeof (a as RunAnswer).ok === 'boolean' && typeof (a as RunAnswer).t === 'number')
+}
+
+/**
+ * 上一次记录里的节奏：每题的用时 = 相邻两题答完时刻的差再减掉上一题的反馈窗口（答对 / 答错各不一样，第一题从开始算），
+ * 取平均；正确率 = 对的 / 答的（答了不到 2 题 = null）。没记录 → 都是 null
+ */
+export function paceOfRun(rec: RunRecord | undefined, feedback: { right: number; wrong: number }): Pick<HumanPace, 'avgMs' | 'accuracy'> {
+  if (!rec || rec.answers.length === 0) return { avgMs: null, accuracy: null }
+  const times: number[] = []
+  let prevT = 0
+  let prevOk: boolean | null = null
+  for (const a of rec.answers) {
+    const gap = prevOk === null ? 0 : prevOk ? feedback.right : feedback.wrong
+    times.push(Math.max(300, a.t - prevT - gap))
+    prevT = a.t
+    prevOk = a.ok
+  }
+  const avgMs = times.reduce((x, y) => x + y, 0) / times.length
+  const n = rec.answers.length
+  const accuracy = n >= 2 ? rec.answers.filter((a) => a.ok).length / n : null
+  return { avgMs, accuracy }
+}
+
+/**
+ * 把上一次的记录当起始节奏：这一局还没答过就全按记录，答了 liveCount 题后按 liveCount / PRIOR_FADE_N 的比例改按这一局的，
+ * 答满 PRIOR_FADE_N 题就完全是这一局的；哪边没有就用另一边
+ */
+export function blendPace(live: HumanPace, prior: Pick<HumanPace, 'avgMs' | 'accuracy'>, liveCount: number): HumanPace {
+  const w = Math.min(1, Math.max(0, liveCount) / PRIOR_FADE_N)
+  const mix = (a: number | null, b: number | null): number | null => (a === null ? b : b === null ? a : a * w + b * (1 - w))
+  return { avgMs: mix(live.avgMs, prior.avgMs), accuracy: mix(live.accuracy, prior.accuracy), diff: live.diff }
 }

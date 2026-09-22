@@ -37,7 +37,7 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
       <span class="team-name">
         <template v-if="solo && soloPlayer">
           <RubyText v-if="soloPlayer.kind === 'ai'" :text="{ k: 'battle.robot' }" />
-          <template v-else><span v-if="soloPlayer.kind === 'ghost'" class="ghost-tag" aria-hidden="true">👻</span><span v-if="soloPlayer.avatar" class="avatar" aria-hidden="true">{{ avatarEmoji(soloPlayer.avatar) }}</span>{{ soloPlayer.name }}</template>
+          <template v-else><span v-if="soloPlayer.avatar" class="avatar" aria-hidden="true">{{ avatarEmoji(soloPlayer.avatar) }}</span>{{ soloPlayer.name }}</template>
         </template>
         <RubyText v-else :text="{ k: `battle.team.${team}` }" />
       </span>
@@ -74,9 +74,6 @@ const dots = computed(() => Array.from({ length: props.target }, (_, i) => i < p
 
 <style scoped>
 .avatar {
-  margin-right: 4px;
-}
-.ghost-tag {
   margin-right: 4px;
 }
 .me-tag {

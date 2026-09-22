@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
 import { createRng } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
-import { AI_KEY_MS, AI_LEVELS, AI_PROFILE, AI_SUBMIT_MS, AUTO_MAX_MS, AUTO_MIN_MS, FIXED_AI_LEVELS, GHOST_MIN_THINK_MS, NO_PACE, autoProfile, isAiLevel, isGhostRecord, planAnswer, planGhost, profileFor, robotLineFor } from '../ai'
+import { AI_KEY_MS, AI_LEVELS, AI_PROFILE, AI_SUBMIT_MS, AUTO_MAX_MS, AUTO_MIN_MS, FIXED_AI_LEVELS, NO_PACE, PRIOR_FADE_N, autoProfile, blendPace, isAiLevel, isRunRecord, paceOfRun, planAnswer, profileFor, robotLineFor } from '../ai'
 import { questionAt } from '../stream'
 import { NAME_MAX, NAME_POOL, cleanName, suggestNames } from '../names'
 
@@ -110,28 +110,32 @@ describe('昵称（B17）', () => {
   })
 })
 
-describe('幽灵对手（B67）', () => {
-  it('按记录里的时刻与对错安排：剩下的时间减去按键就是想的时间，已经过了也至少想 GHOST_MIN_THINK_MS；没有这一题的记录按「中」档随机', () => {
-    const q = questionAt('s1-05-carry-add', 3, 0)
-    const p = planGhost(q, { index: 0, ok: true, t: 5000 }, 1000, createRng(1))
-    expect(p.correct).toBe(true)
-    expect(checkAnswer(q, q.input === 'numpad' ? Number(p.given) : p.given)).toBe(true)
-    expect(p.thinkMs).toBe(4000 - p.keys.length * AI_KEY_MS - AI_SUBMIT_MS)
-    const late = planGhost(q, { index: 0, ok: false, t: 500 }, 9000, createRng(2))
-    expect(late.correct).toBe(false)
-    expect(checkAnswer(q, q.input === 'numpad' ? Number(late.given) : late.given)).toBe(false)
-    expect(late.thinkMs).toBe(GHOST_MIN_THINK_MS)
-    const none = planGhost(q, undefined, 0, createRng(3))
-    const total = none.thinkMs + none.keys.length * AI_KEY_MS + AI_SUBMIT_MS
-    expect(total).toBeGreaterThanOrEqual(Math.min(AI_PROFILE.mid.minMs, 500 + none.keys.length * AI_KEY_MS + AI_SUBMIT_MS))
-    expect(total).toBeLessThanOrEqual(AI_PROFILE.mid.maxMs + 1)
+describe('上一次的记录并进「跟着你」（B67）', () => {
+  it('记录里的节奏：相邻两题的差减掉上一题的反馈窗口取平均，正确率答了 2 题起；记录的形状校验', () => {
+    const fb = { right: 600, wrong: 1200 }
+    expect(paceOfRun(undefined, fb)).toEqual({ avgMs: null, accuracy: null })
+    expect(paceOfRun({ at: 1, answers: [] }, fb)).toEqual({ avgMs: null, accuracy: null })
+    const one = paceOfRun({ at: 1, answers: [{ index: 0, ok: true, t: 2000 }] }, fb)
+    expect(one).toEqual({ avgMs: 2000, accuracy: null })
+    // 第 1 题 2000；第 2 题 5000 − 2000 − 600（上题答对）= 2400；第 3 题 8000 − 5000 − 1200（上题答错）= 1800
+    const three = paceOfRun({ at: 1, answers: [{ index: 0, ok: true, t: 2000 }, { index: 1, ok: false, t: 5000 }, { index: 2, ok: true, t: 8000 }] }, fb)
+    expect(three.avgMs).toBeCloseTo((2000 + 2400 + 1800) / 3, 5)
+    expect(three.accuracy).toBeCloseTo(2 / 3, 5)
+    expect(isRunRecord({ at: 1, answers: [{ index: 0, ok: true, t: 1200 }] })).toBe(true)
+    expect(isRunRecord({ at: 1, answers: [{ index: 0.5, ok: true, t: 1 }] })).toBe(false)
+    expect(isRunRecord({ at: 'x', answers: [] })).toBe(false)
+    expect(isRunRecord(null)).toBe(false)
   })
 
-  it('记录的形状：at / name / answers（index 整数、ok 布尔、t 数）', () => {
-    expect(isGhostRecord({ at: 1, name: '小兔', answers: [{ index: 0, ok: true, t: 1200 }] })).toBe(true)
-    expect(isGhostRecord({ at: 1, name: '小兔', answers: [] })).toBe(true)
-    expect(isGhostRecord({ at: 1, name: '小兔', answers: [{ index: 0.5, ok: true, t: 1 }] })).toBe(false)
-    expect(isGhostRecord({ at: 'x', name: '小兔', answers: [] })).toBe(false)
-    expect(isGhostRecord(null)).toBe(false)
+  it('混合：这一局没答过全按记录，答了 PRIOR_FADE_N 题后全按这一局，中间按比例；哪边没有就用另一边；分差只看这一局', () => {
+    const prior = { avgMs: 4000, accuracy: 0.5 }
+    expect(blendPace({ avgMs: null, accuracy: null, diff: 2 }, prior, 0)).toEqual({ avgMs: 4000, accuracy: 0.5, diff: 2 })
+    const mid = blendPace({ avgMs: 2000, accuracy: 1, diff: -1 }, prior, PRIOR_FADE_N / 2)
+    expect(mid.avgMs).toBeCloseTo(3000, 5)
+    expect(mid.accuracy).toBeCloseTo(0.75, 5)
+    expect(mid.diff).toBe(-1)
+    expect(blendPace({ avgMs: 2000, accuracy: 1, diff: 0 }, prior, PRIOR_FADE_N)).toEqual({ avgMs: 2000, accuracy: 1, diff: 0 })
+    expect(blendPace({ avgMs: 2000, accuracy: null, diff: 0 }, { avgMs: null, accuracy: null }, 1)).toEqual({ avgMs: 2000, accuracy: null, diff: 0 })
+    expect(blendPace({ avgMs: null, accuracy: null, diff: 0 }, { avgMs: null, accuracy: null }, 0)).toEqual(NO_PACE)
   })
 })

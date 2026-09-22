@@ -522,71 +522,6 @@ describe('我的小动物（B66）', () => {
   })
 })
 
-describe('幽灵对手（B67）', () => {
-  it('打完一局机器人把孩子的逐题记录存成这个知识点的幽灵（重开还在）；选了幽灵对手 → 蓝队是 👻 上次的自己，按记录的时刻与对错一题一题重放，不说话不发表情', () => {
-    const s = useBattleStore()
-    s.setName('me', '小兔')
-    s.setAvatar('me', 'cat')
-    expect(s.hasGhost(KP)).toBe(false)
-    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 }, aiSeed: 3, aiLevel: 'slow' })
-    expect(s.ghost).toBe(false)
-    s.beginPlay()
-    const t0 = Date.now()
-    vi.advanceTimersByTime(1000)
-    s.submit('left', 'nope')
-    vi.advanceTimersByTime(FEEDBACK_WRONG_MS + 1)
-    while (s.state!.phase === 'playing') {
-      vi.advanceTimersByTime(700)
-      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
-      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
-    }
-    expect(s.hasGhost(KP)).toBe(true)
-    const rec = s.prefs.ghosts[KP]!
-    expect(rec.name).toBe('小兔')
-    expect(rec.avatar).toBe('cat')
-    expect(rec.answers[0]).toEqual({ index: 0, ok: false, t: 1000 })
-    expect(rec.answers).toHaveLength(9)
-    expect(rec.answers.every((a, i) => i === 0 || a.t > rec.answers[i - 1]!.t)).toBe(true)
-    expect(t0).toBeGreaterThan(0)
-    setActivePinia(createPinia())
-    const again = useBattleStore()
-    expect(again.hasGhost(KP)).toBe(true)
-
-    // 跟上次的自己比
-    again.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 5, ghost: 6 }, aiSeed: 3, ghost: true })
-    expect(again.ghost).toBe(true)
-    const blue = again.state!.players[1]!
-    expect([blue.id, blue.kind, blue.name, blue.avatar, blue.team]).toEqual(['ghost', 'ghost', '小兔', 'cat', 'blue'])
-    expect(again.operable).toEqual(['left'])
-    again.beginPlay()
-    vi.advanceTimersByTime(ROBOT_LINE_DELAY_MS.go + 10)
-    expect(again.robotLine).toBeNull() // 幽灵不说话
-    // 记录里第 0 题在 1000 ms 答错：到点它就按出来了（答错）
-    vi.advanceTimersByTime(1100)
-    expect(again.state!.players[1]!.index).toBe(1)
-    expect(again.state!.players[1]!.correct).toBe(0)
-    expect(again.state!.score.blue).toBe(0)
-    // 之后按记录一题一题对
-    vi.advanceTimersByTime(FEEDBACK_WRONG_MS + rec.answers[1]!.t - rec.answers[0]!.t + 50)
-    expect(again.state!.players[1]!.correct).toBeGreaterThanOrEqual(1)
-    again.sendEmote('red', 'laugh')
-    vi.advanceTimersByTime(BOT_REPLY_MS + 10)
-    expect(again.emotes.filter((e) => !e.mine)).toEqual([]) // 幽灵不回表情
-  })
-
-  it('没有记录时选幽灵也还是机器人；坏的记录读回来丢掉；最多留 GHOST_MAX 个', () => {
-    const s = useBattleStore()
-    s.setName('me', '小兔')
-    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 }, ghost: true })
-    expect(s.ghost).toBe(false)
-    expect(s.state!.players[1]!.kind).toBe('ai')
-    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔' }, ghosts: { a: { at: 1, name: 'x', answers: 'bad' }, b: { at: 2, name: 'y', answers: [{ index: 0, ok: true, t: 5 }] } } }))
-    setActivePinia(createPinia())
-    const again = useBattleStore()
-    expect(Object.keys(again.prefs.ghosts)).toEqual(['b'])
-  })
-})
-
 describe('背景音乐开关（B68）', () => {
   it('偏好 music 默认开，关了重开还是关；坏值回默认', () => {
     const s = useBattleStore()
@@ -660,5 +595,40 @@ describe('角色的台词（B71）', () => {
     expect(s.charLine).not.toBeNull()
     s.rematch()
     expect(s.charLine).toBeNull()
+  })
+})
+
+describe('上一次的记录并进机器人策略（B67）', () => {
+  it('打完一局机器人把孩子的逐题记录存成这个知识点的「上一次」（重开还在、坏的丢掉）；下一局「跟着你」第一题的计划就按上次的节奏，答几题后改按这一局的', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 }, aiSeed: 3, aiLevel: 'slow' })
+    s.beginPlay()
+    vi.advanceTimersByTime(1000)
+    s.submit('left', 'nope')
+    vi.advanceTimersByTime(FEEDBACK_WRONG_MS + 1)
+    while (s.state!.phase === 'playing') {
+      vi.advanceTimersByTime(700)
+      s.submit('left', correctOf(s.questionOf(s.state!.players[0]!)))
+      vi.advanceTimersByTime(FEEDBACK_CALLOUT_MS + 1)
+    }
+    const rec = s.prefs.lastRuns[KP]!
+    expect(rec.answers[0]).toEqual({ index: 0, ok: false, t: 1000 })
+    expect(rec.answers).toHaveLength(9)
+    setActivePinia(createPinia())
+    const again = useBattleStore()
+    expect(again.prefs.lastRuns[KP]).toEqual(rec)
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔' }, lastRuns: { a: { at: 1, answers: 'bad' }, b: { at: 2, answers: [{ index: 0, ok: true, t: 5 }] } } }))
+    setActivePinia(createPinia())
+    expect(Object.keys(useBattleStore().prefs.lastRuns)).toEqual(['b'])
+    // 新一局「跟着你」：还没答题，机器人的第一个计划就带着上次的节奏（不再是空的）
+    again.setName('me', '小兔')
+    again.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 5, ai: 6 }, aiSeed: 3 })
+    vi.mocked(planAnswer).mockClear()
+    again.beginPlay()
+    const pace = vi.mocked(planAnswer).mock.calls.at(-1)?.[3]
+    expect(pace?.avgMs).not.toBeNull()
+    expect(pace?.avgMs).toBeGreaterThan(300)
+    expect(pace?.accuracy).toBeCloseTo(8 / 9, 5)
   })
 })

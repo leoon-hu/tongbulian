@@ -19,7 +19,7 @@ export interface PlayerInit {
   id: string
   name: string
   team: Team
-  kind?: 'human' | 'ai' | 'ghost'
+  kind?: 'human' | 'ai'
   avatar?: AvatarId
 }
 
