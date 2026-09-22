@@ -11,6 +11,7 @@ import type { Lang } from '@/types/models'
 import { createRng, getGenerator } from '@/engine'
 import { allCourses } from '@/engine/catalog'
 import { answerSpeech, PAUSE, phraseSpeech, piecesOf, questionSpeech, RIGHT_KEYS } from '@/engine/speech'
+import { LINE_KEYS } from '@/battle/lines'
 
 export const CORPUS_SEEDS = 300
 
@@ -43,6 +44,8 @@ const FIXED_KEYS = [
   'robot.worry',
   'robot.lose',
   'robot.win',
+  // 角色的台词（B71）：25 个角色各 3 句
+  ...LINE_KEYS,
   // 开场规则句与结束语（B39）：每种有专属话的皮肤一条 + default
   ...['default', 'race', 'car', 'train', 'rocket', 'balloon', 'swim', 'ladder', 'dig', 'fish', 'tower', 'flower', 'egg', 'bubble', 'fruit', 'stars', 'puzzle', 'tug', 'seesaw', 'flag', 'ice', 'castle'].flatMap((id) => [`battle.rule.${id}`, `battle.finish.${id}`]),
   // 页面打开 / 切换功能时自动读的提示语（B39a）：设置页「跟谁打」与三种模式的说明、问名字、退出确认，

@@ -28,6 +28,7 @@ import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type Emo
 import { DEFAULT_AVATARS, isAvatarId, type AvatarId } from '@/battle/avatars'
 import { calloutSfx, panOf, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
+import { pickLine } from '@/battle/lines'
 
 export type LocalMode = 'ai' | 'duo'
 /** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
@@ -51,6 +52,9 @@ export const EVENT_LOG = 64
 export const POKE_GAP_MS = 250
 /** 幸运题（B65）：金色彩纸撒多久 */
 export const LUCKY_MS = 1800
+/** 角色的台词（B71）：气泡显示多久、两句之间至少隔多久 */
+export const LINE_MS = 2600
+export const LINE_GAP_MS = 1500
 /** 安卓的短震动（B70）：答对一下、答错三下；不支持就算了 */
 export const VIBRATE_RIGHT: number | number[] = 25
 export const VIBRATE_WRONG: number | number[] = [40, 40, 40]
@@ -204,6 +208,12 @@ export const useBattleStore = defineStore('battle', () => {
   let emoteSeq = 0
   const emoteAt: Partial<Record<Role, number>> = {}
   let pokeAt = -Infinity
+  /** 角色正在说的台词（B71）：气泡挂在游戏盒子里点按的位置，朗读由竞技场做 */
+  const charLine = ref<{ id: number; key: string; team: Team; x: number; y: number; rate: number } | null>(null)
+  let lineSeq = 0
+  let lineAt = -Infinity
+  let lastLineKey: string | null = null
+  const lineRng: RNG = createRng()
   /** 幸运题答对了（B65）：竞技场撒金色彩纸 */
   const lucky = ref<{ id: number; team: Team } | null>(null)
   let luckySeq = 0
@@ -294,6 +304,7 @@ export const useBattleStore = defineStore('battle', () => {
     }
     callout.value = null
     emotes.value = []
+    charLine.value = null
     lucky.value = null
     timeline.value = []
     wrongs.value = []
@@ -344,13 +355,31 @@ export const useBattleStore = defineStore('battle', () => {
     if (state.value) showEmote(kind, side, false)
   }
 
-  /** 游戏盒子被点了一下（B59）：游戏自己已经在动，这里只放这种游戏的得分音（小声），POKE_GAP_MS 内只放一次 */
-  function poke(_team: Team, now = Date.now()): void {
+  /**
+   * 游戏盒子被点了一下（B59 / B71）：游戏自己已经在动，这里放这种游戏的得分音（小声，POKE_GAP_MS 内只放一次），
+   * 并让那一队的角色在点按处冒一句台词（LINE_GAP_MS 内只出一句、不连续重复；朗读由竞技场看 charLine 做）
+   */
+  function poke(team: Team, x = 0, y = 0, now = Date.now()): void {
     const s = state.value
-    if (!s || now - pokeAt < POKE_GAP_MS) return
-    pokeAt = now
-    const sounds = skinSfx(s.skin, skinById(s.skin)?.kind)
-    playSfx(sounds.score[0] ?? 'pop', 1, 0.45)
+    if (!s) return
+    if (now - pokeAt >= POKE_GAP_MS) {
+      pokeAt = now
+      const sounds = skinSfx(s.skin, skinById(s.skin)?.kind)
+      playSfx(sounds.score[0] ?? 'pop', 1, 0.45, panOf(team))
+    }
+    if (now - lineAt < LINE_GAP_MS) return
+    lineAt = now
+    const picked = pickLine(s.skin, team, lineRng, lastLineKey)
+    lastLineKey = picked.key
+    const id = ++lineSeq
+    charLine.value = { id, key: picked.key, team, x, y, rate: picked.rate }
+    later(
+      timers,
+      () => {
+        if (charLine.value?.id === id) charLine.value = null
+      },
+      LINE_MS,
+    )
   }
 
   function clearPending(playerId: string): void {
@@ -758,6 +787,7 @@ export const useBattleStore = defineStore('battle', () => {
     timeline,
     wrongs,
     robotLine,
+    charLine,
     ghost,
     hasGhost,
     intro,

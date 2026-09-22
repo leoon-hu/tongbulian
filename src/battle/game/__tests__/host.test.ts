@@ -152,14 +152,17 @@ describe('点一下游戏（B59）', () => {
     await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
     expect(spy.calls.at(-1)).toBe('poke:red:10,20')
     expect(w.findAll('.ripple')).toHaveLength(1)
-    expect(w.emitted('poke')).toEqual([['red']])
+    expect(w.emitted('poke')).toEqual([['red', 10, 20]])
     // 太快的第二下不算
     await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
     expect(spy.calls.filter((c) => c.startsWith('poke')).length).toBe(1)
     vi.advanceTimersByTime(200)
     await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
     expect(spy.calls.at(-1)).toBe('poke:blue:90,20')
-    expect(w.emitted('poke')).toEqual([['red'], ['blue']])
+    expect(w.emitted('poke')).toEqual([
+      ['red', 10, 20],
+      ['blue', 90, 20],
+    ])
     vi.advanceTimersByTime(600)
     await flushPromises()
     expect(w.findAll('.ripple')).toHaveLength(0)
@@ -187,7 +190,7 @@ describe('点一下游戏（B59）', () => {
     await flushPromises()
     await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
     expect(w.findAll('.ripple')).toHaveLength(1)
-    expect(w.emitted('poke')).toEqual([['blue']]) // 没传 sideOf：1×1 的假盒子里 y=20 在下半
+    expect(w.emitted('poke')).toEqual([['blue', 10, 20]]) // 没传 sideOf：1×1 的假盒子里 y=20 在下半
     expect(spy.calls.some((c) => c.startsWith('poke'))).toBe(false)
     w.unmount()
 

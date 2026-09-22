@@ -12,7 +12,7 @@ const props = defineProps<{
   events: readonly SeqEvent[]
   compact?: boolean
 }>()
-const emit = defineEmits<{ poke: [team: Team] }>()
+const emit = defineEmits<{ poke: [team: Team, x: number, y: number] }>()
 
 function sideOf(x: number, y: number, w: number, h: number): Team {
   const byX = props.meta.slot === 'center' || props.meta.kind === 'tug'
@@ -21,5 +21,5 @@ function sideOf(x: number, y: number, w: number, h: number): Team {
 </script>
 
 <template>
-  <GameHost :key="meta.id" :load="meta.game" :state="state" :events="events" :compact="compact" :side-of="sideOf" @poke="(t) => emit('poke', t)" />
+  <GameHost :key="meta.id" :load="meta.game" :state="state" :events="events" :compact="compact" :side-of="sideOf" @poke="(t, x, y) => emit('poke', t, x, y)" />
 </template>

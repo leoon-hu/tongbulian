@@ -23,7 +23,7 @@ const props = defineProps<{
   /** 点按位置 → 猜是哪一队的东西（B59；由 GameSlot 按皮肤的位置 / 类别给），不传就上半红下半蓝 */
   sideOf?: (x: number, y: number, w: number, h: number) => Team
 }>()
-const emit = defineEmits<{ poke: [team: Team] }>()
+const emit = defineEmits<{ poke: [team: Team, x: number, y: number] }>()
 
 /** 两次点按至少隔多久才转给游戏（孩子连点也别把游戏刷爆）；涟漪显示多久 */
 const POKE_MIN_GAP_MS = 150
@@ -147,7 +147,7 @@ function onPointer(e: PointerEvent): void {
   setTimeout(() => {
     ripples.value = ripples.value.filter((p) => p.id !== id)
   }, RIPPLE_MS)
-  emit('poke', team)
+  emit('poke', team, x, y)
 }
 
 function onVisibility(): void {

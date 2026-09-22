@@ -29,6 +29,7 @@ import VictoryOverlay from '@/components/battle/VictoryOverlay.vue'
 import EmoteBar from '@/components/battle/EmoteBar.vue'
 import EmoteLayer from '@/components/battle/EmoteLayer.vue'
 import LuckyBurst from '@/components/battle/LuckyBurst.vue'
+import CharBubble from '@/components/battle/CharBubble.vue'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
@@ -125,6 +126,13 @@ const emoteSides = computed<Team[]>(() => {
   if (!s) return []
   return TEAMS.filter((t) => s.players.some((p) => p.team === t && store.operable.includes(p.id)))
 })
+// 角色的台词（B71）：点了角色冒气泡就朗读，按角色的速率变音色；skip 播法，正在读题就不读
+watch(
+  () => store.charLine,
+  (l) => {
+    if (l) say(phraseSpeech({ k: l.key }, lang.value), lang.value, 0, { mode: 'skip', rate: l.rate })
+  },
+)
 // 机器人说话（B61）：气泡出现就朗读，音高提一点像机器人；skip 播法，正在读题就不读
 watch(
   () => store.robotLine,
@@ -293,7 +301,8 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-if="skin && skin.slot === 'top' && skinProps" class="strip top" :style="{ '--finale-origin': finaleOrigin }">
-      <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="store.poke" />
+      <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="(t, x, y) => store.poke(t, x, y)" />
+      <CharBubble v-if="store.charLine" :line="store.charLine" />
     </div>
 
     <div class="field">
@@ -311,7 +320,8 @@ onBeforeUnmount(() => {
         @input="(id, v) => store.setInput(id, v)"
       />
       <div v-if="skin && skin.slot === 'center' && skinProps" class="strip center" :style="{ '--finale-origin': finaleOrigin }">
-        <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="store.poke" />
+        <GameSlot :meta="skin" :state="skinProps" :events="store.events" :compact="compact" @poke="(t, x, y) => store.poke(t, x, y)" />
+        <CharBubble v-if="store.charLine" :line="store.charLine" />
       </div>
       <TeamPanel
         team="blue"

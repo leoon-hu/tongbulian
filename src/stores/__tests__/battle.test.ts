@@ -5,7 +5,7 @@ import '@/content/math/grade1'
 import type { Player } from '@/battle/protocol'
 import { AI_ID } from '@/battle/ai'
 import type { Question } from '@/types/models'
-import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, INTRO_AGAIN_MS, POKE_GAP_MS, useBattleStore } from '../battle'
+import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, INTRO_AGAIN_MS, LINE_GAP_MS, LINE_MS, POKE_GAP_MS, useBattleStore } from '../battle'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS } from '@/battle/emotes'
 import { playSfx } from '@/battle/sfx'
 import { apply, createRoom, join, snapshot } from '../../../server/room'
@@ -287,11 +287,11 @@ describe('表情与点游戏（B58 / B59）', () => {
     s.setName('me', '小兔')
     s.startLocal({ kpId: KP, mode: 'ai', skin: 'train', seeds: { left: 1, ai: 2 } })
     vi.mocked(playSfx).mockClear()
-    s.poke('red')
-    s.poke('blue')
-    expect(vi.mocked(playSfx).mock.calls).toEqual([['chug', 1, 0.45]])
+    s.poke('red', 100, 40)
+    s.poke('blue', 200, 90)
+    expect(vi.mocked(playSfx).mock.calls).toEqual([['chug', 1, 0.45, -0.5]])
     vi.advanceTimersByTime(POKE_GAP_MS)
-    s.poke('blue')
+    s.poke('blue', 200, 90)
     expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(2)
   })
 })
@@ -626,5 +626,39 @@ describe('小项（B70）：答错按游戏、左右声道、震动', () => {
     expect(vib).not.toHaveBeenCalled()
     expect(vi.mocked(playSfx).mock.calls).toContainEqual(['brake', 1, 1, 0.5])
     Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
+  })
+})
+
+describe('角色的台词（B71）', () => {
+  it('点了角色：那一队的角色在点按处冒一句台词（带速率），LINE_GAP_MS 内只出一句、不连续重复，LINE_MS 后收起；再来一局清掉', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 } })
+    expect(s.charLine).toBeNull()
+    s.poke('red', 120, 60)
+    const first = s.charLine!
+    expect(first.key.startsWith('char.tortoise.')).toBe(true)
+    expect([first.team, first.x, first.y, first.rate]).toEqual(['red', 120, 60, 0.85])
+    s.poke('blue', 300, 90) // 太快：不换台词
+    expect(s.charLine).toBe(first)
+    vi.advanceTimersByTime(LINE_GAP_MS)
+    s.poke('blue', 300, 90)
+    expect(s.charLine!.key.startsWith('char.hare.')).toBe(true)
+    expect(s.charLine!.rate).toBe(1.25)
+    const keys = new Set<string>()
+    for (let i = 0; i < 12; i++) {
+      vi.advanceTimersByTime(LINE_GAP_MS)
+      const before = s.charLine!.key
+      s.poke('blue', 300, 90)
+      expect(s.charLine!.key).not.toBe(before)
+      keys.add(s.charLine!.key)
+    }
+    expect(keys.size).toBe(3)
+    vi.advanceTimersByTime(LINE_MS)
+    expect(s.charLine).toBeNull()
+    s.poke('red', 10, 10)
+    expect(s.charLine).not.toBeNull()
+    s.rematch()
+    expect(s.charLine).toBeNull()
   })
 })
