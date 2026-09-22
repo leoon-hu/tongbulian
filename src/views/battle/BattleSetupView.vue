@@ -43,6 +43,9 @@ const config = ref(false)
 const skin = ref(chapterSkin(kpId))
 /** 点了「开始」但还缺名字：问完接着开始 */
 let pendingStart = false
+/** 幽灵对手（B67）：这个知识点有上一次打机器人的记录才有这个选项；选了对手换成上一次的自己 */
+const ghostAvailable = computed(() => mode.value === 'ai' && store.hasGhost(kpId))
+const ghost = ref(false)
 
 function saveName(name: string): void {
   const which = asking.value
@@ -159,10 +162,11 @@ function start(): void {
     asking.value = 'right'
     return
   }
-  store.startLocal({ kpId, mode: mode.value as LocalMode, skin: skin.value })
+  const useGhost = ghost.value && ghostAvailable.value
+  store.startLocal({ kpId, mode: mode.value as LocalMode, skin: skin.value, ghost: useGhost })
   // 在这个手势里试着全屏 + 横屏锁（B30）：只有触屏设备，电脑不自动全屏
   enterArenaFullscreen()
-  router.push({ path: `/battle/local/${kpId}`, query: { mode: mode.value } })
+  router.push({ path: `/battle/local/${kpId}`, query: useGhost ? { mode: mode.value, ghost: '1' } : { mode: mode.value } })
 }
 </script>
 
@@ -198,6 +202,9 @@ function start(): void {
         </button>
       </div>
       <p class="mode-desc" :key="mode"><RubyText :text="{ k: `battle.mode.${mode}.desc` }" /></p>
+      <button v-if="ghostAvailable" type="button" class="ghost-chip" :class="{ on: ghost }" :aria-pressed="ghost" @click="ghost = !ghost">
+        👻 <RubyText :text="{ k: 'battle.ghost' }" />
+      </button>
     </section>
 
     <div class="start">
@@ -251,6 +258,26 @@ function start(): void {
 }
 .config-btn {
   margin-right: 8px;
+}
+/* 幽灵对手（B67）：说明下面一个可开关的药丸 */
+.ghost-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 4px 0;
+  min-height: var(--tap-min);
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  border: 3px solid transparent;
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--c-text);
+}
+.ghost-chip.on {
+  border-color: var(--c-primary);
+  background: #fff3e6;
 }
 /* 选中的模式下面一行说明（B27） */
 .mode-desc {

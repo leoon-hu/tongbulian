@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
 import { createRng } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
-import { AI_KEY_MS, AI_LEVELS, AI_PROFILE, AI_SUBMIT_MS, AUTO_MAX_MS, AUTO_MIN_MS, FIXED_AI_LEVELS, NO_PACE, autoProfile, isAiLevel, planAnswer, profileFor, robotLineFor } from '../ai'
+import { AI_KEY_MS, AI_LEVELS, AI_PROFILE, AI_SUBMIT_MS, AUTO_MAX_MS, AUTO_MIN_MS, FIXED_AI_LEVELS, GHOST_MIN_THINK_MS, NO_PACE, autoProfile, isAiLevel, isGhostRecord, planAnswer, planGhost, profileFor, robotLineFor } from '../ai'
 import { questionAt } from '../stream'
 import { NAME_MAX, NAME_POOL, cleanName, suggestNames } from '../names'
 
@@ -107,5 +107,31 @@ describe('昵称（B17）', () => {
       expect(taken).not.toContain(n)
     }
     expect(suggestNames('en', createRng(2)).every((n) => NAME_POOL.en.includes(n))).toBe(true)
+  })
+})
+
+describe('幽灵对手（B67）', () => {
+  it('按记录里的时刻与对错安排：剩下的时间减去按键就是想的时间，已经过了也至少想 GHOST_MIN_THINK_MS；没有这一题的记录按「中」档随机', () => {
+    const q = questionAt('s1-05-carry-add', 3, 0)
+    const p = planGhost(q, { index: 0, ok: true, t: 5000 }, 1000, createRng(1))
+    expect(p.correct).toBe(true)
+    expect(checkAnswer(q, q.input === 'numpad' ? Number(p.given) : p.given)).toBe(true)
+    expect(p.thinkMs).toBe(4000 - p.keys.length * AI_KEY_MS - AI_SUBMIT_MS)
+    const late = planGhost(q, { index: 0, ok: false, t: 500 }, 9000, createRng(2))
+    expect(late.correct).toBe(false)
+    expect(checkAnswer(q, q.input === 'numpad' ? Number(late.given) : late.given)).toBe(false)
+    expect(late.thinkMs).toBe(GHOST_MIN_THINK_MS)
+    const none = planGhost(q, undefined, 0, createRng(3))
+    const total = none.thinkMs + none.keys.length * AI_KEY_MS + AI_SUBMIT_MS
+    expect(total).toBeGreaterThanOrEqual(Math.min(AI_PROFILE.mid.minMs, 500 + none.keys.length * AI_KEY_MS + AI_SUBMIT_MS))
+    expect(total).toBeLessThanOrEqual(AI_PROFILE.mid.maxMs + 1)
+  })
+
+  it('记录的形状：at / name / answers（index 整数、ok 布尔、t 数）', () => {
+    expect(isGhostRecord({ at: 1, name: '小兔', answers: [{ index: 0, ok: true, t: 1200 }] })).toBe(true)
+    expect(isGhostRecord({ at: 1, name: '小兔', answers: [] })).toBe(true)
+    expect(isGhostRecord({ at: 1, name: '小兔', answers: [{ index: 0.5, ok: true, t: 1 }] })).toBe(false)
+    expect(isGhostRecord({ at: 'x', name: '小兔', answers: [] })).toBe(false)
+    expect(isGhostRecord(null)).toBe(false)
   })
 })

@@ -22,7 +22,7 @@ import {
   type PlayerInit,
 } from '@/battle/match'
 import { questionAt, questionsAhead } from '@/battle/stream'
-import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, isAiLevel, planAnswer, robotLineFor, type AiLevel, type HumanPace } from '@/battle/ai'
+import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, GHOST_ID, GHOST_MAX, ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, isAiLevel, isGhostRecord, planAnswer, planGhost, robotLineFor, type AiLevel, type GhostAnswer, type GhostRecord, type HumanPace } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
 import { DEFAULT_AVATARS, isAvatarId, type AvatarId } from '@/battle/avatars'
@@ -63,6 +63,8 @@ export interface BattlePrefs {
   intros: Record<string, number>
   /** 我的小动物（B66）：me = 本设备的（打机器人 / 两人一台左边 / 多设备），right = 两人一台右边的 */
   avatars: { me: AvatarId; right: AvatarId }
+  /** 幽灵对手（B67）：每个知识点最近一次打机器人的记录，最多 GHOST_MAX 个 */
+  ghosts: Record<string, GhostRecord>
 }
 
 
@@ -113,6 +115,7 @@ function loadPrefs(): BattlePrefs {
     aiLevel: 'auto',
     intros: {},
     avatars: { ...DEFAULT_AVATARS },
+    ghosts: {},
   }
   try {
     const raw = localStorage.getItem(KEY)
@@ -131,6 +134,11 @@ function loadPrefs(): BattlePrefs {
         ),
       ),
       avatars: { me: isAvatarId(avatars.me) ? avatars.me : DEFAULT_AVATARS.me, right: isAvatarId(avatars.right) ? avatars.right : DEFAULT_AVATARS.right },
+      ghosts: Object.fromEntries(
+        Object.entries(typeof p.ghosts === 'object' && p.ghosts !== null ? (p.ghosts as Record<string, unknown>) : {})
+          .filter((kv): kv is [string, GhostRecord] => isGhostRecord(kv[1]))
+          .map(([k, r]) => [k, { ...r, avatar: isAvatarId(r.avatar) ? r.avatar : undefined }]),
+      ),
     }
   } catch {
     return base
@@ -197,6 +205,11 @@ export const useBattleStore = defineStore('battle', () => {
   /** 孩子的节奏（B60，打机器人时）：每题从出现到答完的用时（最近 5 题）、答了几题、对了几题 */
   const shownAt = new Map<string, number>()
   const humanStats = { times: [] as number[], answered: 0, correct: 0 }
+  /** 这一局孩子每题的记录（B67）：打完存成这个知识点的幽灵 */
+  let humanLog: GhostAnswer[] = []
+  /** 这一局的对手是幽灵（B67）：按记录重放，不说话、不发表情 */
+  const ghost = ref(false)
+  let ghostRecord: GhostRecord | null = null
   /** 这局开场要不要先讲规则（B6）：本设备第一次进这个游戏讲，同一个游戏一天内不重复；再来一局不讲 */
   const intro = ref(false)
 
@@ -275,6 +288,7 @@ export const useBattleStore = defineStore('battle', () => {
     humanStats.times = []
     humanStats.answered = 0
     humanStats.correct = 0
+    humanLog = []
     if (inputTimer) clearTimeout(inputTimer)
     inputTimer = null
     inputPending = null
@@ -307,7 +321,7 @@ export const useBattleStore = defineStore('battle', () => {
     emoteAt[side] = now
     showEmote(kind, side, true)
     if (mode.value === 'online') transport?.send({ type: 'emote', id: kind })
-    else if (mode.value === 'ai') later(timers, () => showEmote(botReply(kind), 'blue', false), BOT_REPLY_MS)
+    else if (mode.value === 'ai' && !ghost.value) later(timers, () => showEmote(botReply(kind), 'blue', false), BOT_REPLY_MS)
     return true
   }
 
@@ -350,6 +364,20 @@ export const useBattleStore = defineStore('battle', () => {
       },
       delayMs,
     )
+  }
+
+  /** 这个知识点有没有上一次的记录（B67）：有才给「跟上次的自己比」的选项 */
+  function hasGhost(kpId: string): boolean {
+    return !!prefs.value.ghosts[kpId]
+  }
+
+  /** 打完一局机器人（B67）：把孩子这一局的记录存成这个知识点的幽灵，只留最近 GHOST_MAX 个知识点 */
+  function saveGhost(kpId: string, at: number): void {
+    const rec: GhostRecord = { at, name: prefs.value.names.me, avatar: prefs.value.avatars.me, answers: humanLog.slice() }
+    const entries = Object.entries({ ...prefs.value.ghosts, [kpId]: rec })
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, GHOST_MAX)
+    prefs.value.ghosts = Object.fromEntries(entries)
   }
 
   /** 孩子的节奏给「跟着你」档用（B60）：diff = 机器人比孩子多几分 */
@@ -421,6 +449,8 @@ export const useBattleStore = defineStore('battle', () => {
         const kpId = state.value?.kpId ?? ''
         const cur = series.value && series.value.kpId === kpId ? series.value : { kpId, wins: { red: 0, blue: 0 } }
         series.value = { kpId, wins: { ...cur.wins, [e.winner]: cur.wins[e.winner] + 1 } }
+        // 幽灵记录（B67）：打机器人（含打幽灵）的每一局都记，下次「跟上次的自己比」
+        if (mode.value === 'ai' && kpId) saveGhost(kpId, now())
       }
       if ((e.type === 'lead' || e.type === 'nearWin' || e.type === 'streak' || e.type === 'half' || e.type === 'deuce' || e.type === 'lucky') && (priority[e.type]! > (toCall ? priority[toCall.type]! : 0))) {
         toCall = e
@@ -434,8 +464,8 @@ export const useBattleStore = defineStore('battle', () => {
       else if (e.type === 'half') showCallout(`battle.half.${e.team}`, e.team)
       else showCallout(e.type === 'lead' ? 'battle.lead' : 'battle.nearWin', e.team)
     }
-    // 机器人对反超 / 结束的表情（B58）与话（B61）：结束的等胜利动画开始了再发
-    if (mode.value === 'ai') {
+    // 机器人对反超 / 结束的表情（B58）与话（B61）：结束的等胜利动画开始了再发；幽灵是上次的自己，不说话不发表情（B67）
+    if (mode.value === 'ai' && !ghost.value) {
       for (const e of evts) {
         const kind = botEventEmote(e)
         if (kind) later(timers, () => showEmote(kind, 'blue', false), e.type === 'finished' ? 1500 : 500)
@@ -494,7 +524,7 @@ export const useBattleStore = defineStore('battle', () => {
     react([e], s?.skin ?? '')
   }
 
-  /** 开一局单设备的比赛（进入倒数）。names 缺的用「我」的名字补，设置页会保证名字都有 */
+  /** 开一局单设备的比赛（进入倒数）。names 缺的用「我」的名字补，设置页会保证名字都有。ghost：打机器人时对手换成上一次的自己（B67，要有记录） */
   function startLocal(opts: {
     kpId: string
     mode: LocalMode
@@ -503,12 +533,15 @@ export const useBattleStore = defineStore('battle', () => {
     seeds?: Record<string, number>
     aiSeed?: number
     now?: number
+    ghost?: boolean
   }): void {
     reset()
     mode.value = opts.mode
     if (series.value && series.value.kpId !== opts.kpId) series.value = null
     aiLevel = opts.aiLevel ?? prefs.value.aiLevel
     aiRng = createRng(opts.aiSeed)
+    ghostRecord = opts.mode === 'ai' && opts.ghost ? (prefs.value.ghosts[opts.kpId] ?? null) : null
+    ghost.value = ghostRecord !== null
     // 没指定就用按章节排到的游戏（B36）；设置页的「配置」里换的只影响这一次，不记偏好
     const skin = resolveSkin(opts.skin ?? chapterSkin(opts.kpId), createRng())
     const me = prefs.value.names.me
@@ -516,13 +549,15 @@ export const useBattleStore = defineStore('battle', () => {
       opts.mode === 'ai'
         ? [
             { id: 'left', name: me, team: 'red', avatar: prefs.value.avatars.me },
-            { id: AI_ID, name: '', team: 'blue', kind: 'ai' },
+            ghostRecord
+              ? { id: GHOST_ID, name: ghostRecord.name, team: 'blue', kind: 'ghost', avatar: ghostRecord.avatar }
+              : { id: AI_ID, name: '', team: 'blue', kind: 'ai' },
           ]
         : [
             { id: 'left', name: prefs.value.names.left || me, team: 'red', avatar: prefs.value.avatars.me },
             { id: 'right', name: prefs.value.names.right, team: 'blue', avatar: prefs.value.avatars.right },
           ]
-    operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
+    operable.value = players.filter((p) => !p.kind || p.kind === 'human').map((p) => p.id)
     const now = opts.now ?? Date.now()
     state.value = startMatch(createMatch({ kpId: opts.kpId, skin, players }), seedsFor(players, opts.seeds), now)
     planIntro(skin, now)
@@ -544,7 +579,7 @@ export const useBattleStore = defineStore('battle', () => {
     if (before === 'countdown' && state.value.phase === 'playing') {
       pushEvent({ type: 'go' })
       for (const p of state.value.players) if (p.kind === 'human') shownAt.set(p.id, now)
-      if (mode.value === 'ai') robotSay('robot.ready', ROBOT_LINE_DELAY_MS.go)
+      if (mode.value === 'ai' && !ghost.value) robotSay('robot.ready', ROBOT_LINE_DELAY_MS.go)
     }
     if (mode.value === 'ai') aiStep()
   }
@@ -590,11 +625,12 @@ export const useBattleStore = defineStore('battle', () => {
     // 这台设备上的真人答错的题（B69）：结果页列出来
     if (p.kind === 'human' && !ok) wrongs.value = [...wrongs.value, { playerId, index: p.index }]
     if (p.kind === 'human' && mode.value === 'ai') {
-      // 记孩子的节奏（B60）：这题用了多久、对不对
+      // 记孩子的节奏（B60）：这题用了多久、对不对；以及这一局的逐题记录（B67）
       const since = shownAt.get(playerId)
       if (since !== undefined) humanStats.times = [...humanStats.times.slice(-4), Math.max(0, now - since)]
       humanStats.answered += 1
       if (ok) humanStats.correct += 1
+      humanLog = [...humanLog, { index: p.index, ok, t: Math.max(0, now - s.startedAt) }]
     }
     let toCall: MatchEvent | null = null
     if (mode.value === 'online') {
@@ -621,29 +657,30 @@ export const useBattleStore = defineStore('battle', () => {
           return
         }
         clearPending(playerId)
-        if (p.kind === 'ai') aiStep()
+        if (p.kind === 'ai' || p.kind === 'ghost') aiStep()
       },
       ok ? (toCall ? FEEDBACK_CALLOUT_MS : FEEDBACK_RIGHT_MS) : FEEDBACK_WRONG_MS,
     )
   }
 
-  /** 机器人答下一题：想一会儿 → 一个一个按出来 → 提交（B11） */
+  /** 机器人 / 幽灵答下一题：想一会儿 → 一个一个按出来 → 提交（B11；幽灵按记录里的时刻与对错，B67） */
   function aiStep(): void {
     const s = state.value
     if (!s || s.phase !== 'playing') return
-    const ai = findPlayer(s, AI_ID)
+    const id = ghostRecord ? GHOST_ID : AI_ID
+    const ai = findPlayer(s, id)
     if (!ai) return
     const q = questionOf(ai)
-    const plan = planAnswer(q, aiLevel, aiRng, humanPace())
+    const plan = ghostRecord ? planGhost(q, ghostRecord.answers[ai.index], Math.max(0, now() - s.startedAt), aiRng) : planAnswer(q, aiLevel, aiRng, humanPace())
     later(
       aiTimers,
       () => {
         plan.keys.forEach((k, i) =>
-          later(aiTimers, () => setInput(AI_ID, q.input === 'numpad' ? plan.keys.slice(0, i + 1).join('') : k), i * AI_KEY_MS),
+          later(aiTimers, () => setInput(id, q.input === 'numpad' ? plan.keys.slice(0, i + 1).join('') : k), i * AI_KEY_MS),
         )
         later(
           aiTimers,
-          () => submit(AI_ID, q.input === 'numpad' ? Number(plan.given) : plan.given),
+          () => submit(id, q.input === 'numpad' ? Number(plan.given) : plan.given),
           plan.keys.length * AI_KEY_MS + AI_SUBMIT_MS,
         )
       },
@@ -704,6 +741,8 @@ export const useBattleStore = defineStore('battle', () => {
     timeline,
     wrongs,
     robotLine,
+    ghost,
+    hasGhost,
     intro,
     online,
     now,

@@ -7,6 +7,7 @@ import type { Question } from '@/types/models'
 import type { RNG } from '@/engine'
 import { numberDistractors } from '@/engine'
 import type { ArenaEvent, Team } from './protocol'
+import type { AvatarId } from './avatars'
 
 /** auto = 跟着你（B60，默认）；slow / mid / fast 是固定档 */
 export type AiLevel = 'auto' | 'slow' | 'mid' | 'fast'
@@ -106,27 +107,72 @@ export function isAiLevel(v: unknown): v is AiLevel {
   return v === 'auto' || v === 'slow' || v === 'mid' || v === 'fast'
 }
 
-export function planAnswer(q: Question, level: AiLevel, rng: RNG, pace: HumanPace = NO_PACE): AiPlan {
-  const profile = profileFor(level, pace)
-  const correct = rng.chance(profile.accuracy)
+/** 答对 / 答错时要按出来的内容：数字题逐位（答错挑一个干扰项），选择题一张卡 */
+export function answerKeys(q: Question, correct: boolean, rng: RNG): { given: string; keys: string[] } {
   const ans = q.answer
-  let given: string
-  let keys: string[]
   if (ans.kind === 'number') {
     const value = ans.value
+    let given: string
     if (correct) given = String(value)
     else {
       const wrongs = numberDistractors(value, { min: 0, max: Math.max(value + 10, 20), count: 3 })
       given = String(wrongs.length ? rng.pick(wrongs) : value + 1)
     }
-    keys = given.split('')
-  } else {
-    const ids = (q.choices ?? []).map((c) => c.id)
-    const wrongs = ids.filter((id) => id !== ans.choiceId)
-    given = correct || wrongs.length === 0 ? ans.choiceId : rng.pick(wrongs)
-    keys = [given]
+    return { given, keys: given.split('') }
   }
+  const ids = (q.choices ?? []).map((c) => c.id)
+  const wrongs = ids.filter((id) => id !== ans.choiceId)
+  const given = correct || wrongs.length === 0 ? ans.choiceId : rng.pick(wrongs)
+  return { given, keys: [given] }
+}
+
+export function planAnswer(q: Question, level: AiLevel, rng: RNG, pace: HumanPace = NO_PACE): AiPlan {
+  const profile = profileFor(level, pace)
+  const correct = rng.chance(profile.accuracy)
+  const { given, keys } = answerKeys(q, correct, rng)
   const total = rng.int(profile.minMs, profile.maxMs)
   const thinkMs = Math.max(500, total - keys.length * AI_KEY_MS - AI_SUBMIT_MS)
   return { thinkMs, correct, given, keys }
+}
+
+// ── 幽灵对手（B67）：本设备上一次在这个知识点打完的每题用时与对错，下次当对手一题一题重放 ──
+
+export interface GhostAnswer {
+  index: number
+  ok: boolean
+  /** 答完时离比赛开始多少毫秒 */
+  t: number
+}
+export interface GhostRecord {
+  /** 记录的时刻（ms）：只留最近 GHOST_MAX 个知识点 */
+  at: number
+  name: string
+  avatar?: AvatarId
+  answers: GhostAnswer[]
+}
+/** 幽灵那一行的 id（与机器人不同，两个不会同时在场） */
+export const GHOST_ID = 'ghost'
+/** 本地最多记多少个知识点的记录 */
+export const GHOST_MAX = 20
+/** 幽灵的最短思考时间：记录里的时刻已经过了也不会立刻按出来 */
+export const GHOST_MIN_THINK_MS = 300
+
+/**
+ * 幽灵这一题的计划：按记录里这一题「答完时离开始多少毫秒」安排——现在已经过了 elapsedMs，剩下的时间减去按键的时间就是想的时间；
+ * 记录里没有这一题（上次没答到这里）就按「中」档随机
+ */
+export function planGhost(q: Question, rec: GhostAnswer | undefined, elapsedMs: number, rng: RNG): AiPlan {
+  if (!rec) return planAnswer(q, 'mid', rng)
+  const { given, keys } = answerKeys(q, rec.ok, rng)
+  const total = Math.max(0, rec.t - elapsedMs)
+  const thinkMs = Math.max(GHOST_MIN_THINK_MS, total - keys.length * AI_KEY_MS - AI_SUBMIT_MS)
+  return { thinkMs, correct: rec.ok, given, keys }
+}
+
+/** 记录是不是合法的（读本地偏好时用） */
+export function isGhostRecord(v: unknown): v is GhostRecord {
+  if (!v || typeof v !== 'object') return false
+  const r = v as Record<string, unknown>
+  if (typeof r.at !== 'number' || typeof r.name !== 'string' || !Array.isArray(r.answers)) return false
+  return r.answers.every((a) => a && typeof a === 'object' && Number.isInteger((a as GhostAnswer).index) && typeof (a as GhostAnswer).ok === 'boolean' && typeof (a as GhostAnswer).t === 'number')
 }

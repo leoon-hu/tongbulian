@@ -1570,3 +1570,29 @@ describe('我的小动物（B66）', () => {
     w2.unmount()
   })
 })
+
+describe('幽灵对手（B67）', () => {
+  it('这个知识点有上一次打机器人的记录，设置页才有「👻 跟上次的自己比」；选了开始 → 地址带 ghost=1、对手是 👻 + 自己的名字', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
+    const settle = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) await flushPromises()
+    }
+    const w = await mountAt('/battle/new/s1-04-simple-addsub')
+    await settle()
+    expect(w.find('.ghost-chip').exists()).toBe(false)
+    const store = useBattleStore()
+    store.prefs.ghosts = { 's1-04-simple-addsub': { at: 1, name: '小兔', avatar: 'bear', answers: [{ index: 0, ok: true, t: 3000 }] } }
+    await settle()
+    expect(w.find('.ghost-chip').exists()).toBe(true)
+    await w.find('.ghost-chip').trigger('click')
+    expect(w.find('.ghost-chip').classes()).toContain('on')
+    await w.find('.start-btn').trigger('click')
+    for (let i = 0; i < 40 && router.currentRoute.value.path !== '/battle/local/s1-04-simple-addsub'; i++) await flushPromises()
+    expect(router.currentRoute.value.query.ghost).toBe('1')
+    await settle()
+    expect(store.ghost).toBe(true)
+    expect(w.find('.team.blue .team-name').text()).toBe('👻🐻小兔')
+    w.unmount()
+  })
+})

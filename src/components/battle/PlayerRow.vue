@@ -46,9 +46,10 @@ function onInput(v: string): void {
   emit('input', v)
 }
 
-const displayName = computed(() => (props.player.kind === 'ai' ? ui('battle.robot') : `${avatarEmoji(props.player.avatar)}${props.player.name}`))
+const displayName = computed(() => (props.player.kind === 'ai' ? ui('battle.robot') : `${props.player.kind === 'ghost' ? '👻' : ''}${avatarEmoji(props.player.avatar)}${props.player.name}`))
 /** 机器人的表情（B11）：想题 / 在按 / 答对 / 答错 */
 const mood = computed(() => {
+  if (props.player.kind === 'ghost') return props.feedback ? (props.feedback.correct ? '😄' : '😅') : '👻'
   if (props.player.kind !== 'ai') return undefined
   if (props.feedback) return props.feedback.correct ? '😄' : '😅'
   return props.player.input ? '🤖' : '🤔'
@@ -182,8 +183,8 @@ onBeforeUnmount(() => {
             <RubyText :text="{ k: 'practice.answerIs' }" />
             <strong><RubyText :text="answerLabel(feedback.question)" /></strong>
           </p>
-          <span v-if="feedback.correct && player.kind === 'ai'" class="ai-mood" aria-hidden="true">😄</span>
-          <span v-else-if="player.kind === 'ai'" class="ai-mood" aria-hidden="true">😅</span>
+          <span v-if="feedback.correct && player.kind !== 'human'" class="ai-mood" aria-hidden="true">😄</span>
+          <span v-else-if="player.kind !== 'human'" class="ai-mood" aria-hidden="true">😅</span>
         </div>
         <AnswerPanel
           v-else-if="operable"

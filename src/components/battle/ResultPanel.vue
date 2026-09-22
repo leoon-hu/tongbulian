@@ -83,7 +83,7 @@ function readWrong(q: (typeof wrongList.value)[number]['question']): void {
 const winner = computed<Team>(() => props.state.winner ?? 'red')
 const loser = computed<Team>(() => (winner.value === 'red' ? 'blue' : 'red'))
 const elapsed = computed(() => formatElapsed(elapsedMs(props.state, Date.now())))
-const nameOf = (p: { kind: string; name: string; avatar?: import('@/battle/avatars').AvatarId }): string => (p.kind === 'ai' ? ui('battle.robot') : `${avatarEmoji(p.avatar)}${p.name}`)
+const nameOf = (p: { kind: string; name: string; avatar?: import('@/battle/avatars').AvatarId }): string => (p.kind === 'ai' ? ui('battle.robot') : `${p.kind === 'ghost' ? '👻' : ''}${avatarEmoji(p.avatar)}${p.name}`)
 /** 战绩里两边的称呼：一个人就是他的名字，多人是队名 */
 function sideName(team: Team): string {
   const ps = teamPlayers(props.state, team)
