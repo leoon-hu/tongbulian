@@ -92,19 +92,25 @@ function fitQuestion(): void {
   if (body) fitAnswer(body)
   if (!q || !stem || !body) return
   const max = props.compact ? 0.85 : 1
-  // offsetWidth / offsetHeight 是元素自己坐标系里的尺寸，不受 zoom 影响，就是原始大小
+  // 先把缩放放回 1 再量原始尺寸（offsetWidth / offsetHeight 是元素自己坐标系里的尺寸）：会换行的文字这类块级子元素的宽度
+  // 等于「栏宽 ÷ 当前缩放」，按当前缩放量出来永远觉得差一点放不下，就会一步步把自己缩到最小（2026-09-22 用户报「题目越来越小、抖动」）；
+  // 放回 1 量出来的数与当前缩放无关，算几次都一样，ResizeObserver 再报也不会再变
+  const inline = stem.style.zoom
+  stem.style.zoom = '1'
   let naturalW = 0
   for (const c of Array.from(stem.children) as HTMLElement[]) naturalW = Math.max(naturalW, c.offsetWidth, c.scrollWidth)
   const naturalH = stem.offsetHeight
+  stem.style.zoom = inline
   const availW = q.clientWidth
   // 紧凑版题干与作答面板左右并排，高度就是整行；否则要给下面的作答面板留出位置
   const a = body.querySelector<HTMLElement>(':scope > .a')
   const typed = q.querySelector<HTMLElement>(':scope > .typed')
   // 各留几像素余量，免得四舍五入后最后一行被裁掉一条边
   const availH = body.clientHeight - (props.compact ? 0 : (a?.offsetHeight ?? 0) + 10) - (typed?.offsetHeight ?? 0) - 6
+  // 只在真放不下时才缩（量出来正好等于栏宽的块级元素不算放不下）
   let z = max
-  if (naturalW > 0 && availW > 0) z = Math.min(z, (availW - 4) / naturalW)
-  if (naturalH > 0 && availH > 0) z = Math.min(z, availH / naturalH)
+  if (availW > 0 && naturalW > availW) z = Math.min(z, availW / naturalW)
+  if (availH > 0 && naturalH > availH) z = Math.min(z, availH / naturalH)
   const next = Math.max(MIN_ZOOM, quantize(z))
   if (next !== qZoom.value) qZoom.value = next
 }
@@ -131,13 +137,11 @@ watch(qEl, (el) => {
     ro.observe(el)
   }
 })
+// 换了题（或换了布局）再量一次；不按 player.index 触发——按下答案的那一刻题号就加一而显示的还是刚答的那道，
+// 那时重置缩放会让题目在反馈窗口里跳一下（2026-09-22 用户报「点答案时题目动来动去」）；量法与当前缩放无关，也不用先重置
 watch(
-  () => [props.question?.id, props.player.index, props.compact] as const,
-  () => {
-    qZoom.value = props.compact ? 0.85 : 1
-    aZoom.value = 1
-    nextTick(fitQuestion)
-  },
+  () => [props.question?.id, props.compact] as const,
+  () => nextTick(fitQuestion),
 )
 onBeforeUnmount(() => ro?.disconnect())
 
