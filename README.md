@@ -203,7 +203,7 @@ npm run voice:check    # 语音联调：自己起中继（8788）与 dev 服务�
 
 纯静态站：`npm run build` 后把 `dist/` 整个放到任何支持 HTTPS 的静态托管（nginx、对象存储、Pages 服务都行），不需要服务端；`base: './'`，放在子目录也能跑。
 
-- **离线与更新**：已注册 Service Worker（vite-plugin-pwa，`registerType: 'autoUpdate'`），预缓存只有页面外壳（代码、字体、图标，约 1 MB，几秒装好），朗读片段由页面在后台分批下载进另一个缓存（中文约 29 MB；文件名是内容哈希，换版本只补新增的，断了下次接着下），之后断网可用；帮助页末尾能看到当前版本、离线朗读包下到哪了，还有「检查更新」与「重装应用」（清掉缓存重新下载，学习记录不丢）；重新部署后开着的页面回到前台会自己换新版本（在对战里就等退出竞技场再换）。自己部署时**必须是 HTTPS**（局域网 http 地址不行，Service Worker 不会注册）。
+- **离线与更新**：已注册 Service Worker（vite-plugin-pwa，`registerType: 'autoUpdate'`），预缓存只有页面外壳（代码、字体、图标，约 1 MB，几秒装好），朗读片段由页面在后台分批下载进另一个缓存（中文约 29 MB；文件名是内容哈希，换版本只补新增的，断了下次接着下），之后断网可用；首页页脚最上面的版本卡片显示当前版本（构建时刻）、离线朗读包下到哪了，点「检查更新」会和服务器上的 `version.json`（构建时一起生成）比对，有新版本就下载并自动刷新，没更新成功还能「重新安装」（清掉缓存重新下载，学习记录不丢）；重新部署后开着的页面回到前台会自己换新版本（在对战里就等退出竞技场再换）。自己部署时**必须是 HTTPS**（局域网 http 地址不行，Service Worker 不会注册）。
 - **安装提示**：没从主屏幕打开时，首页顶上有一条「安装 同步练-对战版」提示（给家长看的，不出声、不遮按钮）：Android / 电脑 Chrome、Edge 点「安装」直接弹系统安装框；iPhone / iPad 点「怎么做」看步骤（Safari 分享 → 添加到主屏幕）；微信 / QQ 里教先在浏览器打开。关掉 3 天后再提示，装好了不再出现；电脑上只在能一键安装时提示。逻辑在 `src/engine/install.ts`（可单测）+ `src/stores/install.ts`，画在 `components/ui/InstallBar.vue`。
 - **搜索引擎**：应用是 hash 路由，搜索引擎只看得到根地址，所以构建前 `scripts/seo.mjs`（`prebuild` / `predev` 自动跑）按目录生成一套不用 JS 的静态页放进 `public/`：每个上线课程一张目录页（`math/g1/`）、每个知识点一张（`math/g1/s1-05-carry-add.html`：介绍、固定种子生成的示例题含选项与答案、同单元其它知识点、「⚔️ 打一局」深链到对战设置页、「安静地练」深链到练习页）、帮助页一张（`help/`，常见问题带 FAQPage 结构化数据），都带标题 / 描述 / canonical / Open Graph / 面包屑 JSON-LD，每个知识点页还有三段专属正文「怎么学 / 常见错误 / 家长怎么陪」与搜索词（`src/content/math/<年级>/seo.ts`）、上一个 / 下一个链接，页脚互相链接；另生成一张 `404.html`（不索引，服务器 `error_page 404 /404.html`）。入口页 `index.html` 的标题、描述、JSON-LD 与应用挂载前的静态简介也由同一份目录生成（写在 `<!-- seo:head -->` / `<!-- seo:body -->` 两段标记之间，别手改，有测试保证与目录一致）。页面文案在 `src/seo/site.ts`。
 - 构建时若本机 `.env` 里有 `SITE_URL=https://你的域名`，页面会带上 canonical / Open Graph 的绝对地址，并生成 `robots.txt` 与列出全部静态页的 `sitemap.xml`；没有就不带（页面照常可用）。分享图 `public/og.png`（1200×630）由 `npm run og` 渲染。静态页与分享图不进离线包；托管时最好让未命中的地址直接 404（不要回退到 `index.html`，会被搜索引擎当成软 404）。
@@ -235,7 +235,8 @@ src/
 │   ├── audio.ts / tts.ts / runner.ts   播放引擎（AudioContext 解码缓存、首次触摸解锁、file:// 退化为 <audio>）、浏览器 TTS 兜底、独占任务（新声音打断旧的）
 │   ├── storage.ts           localStorage 单一根 key + 版本迁移
 │   ├── install.ts           安装提示的纯逻辑：按环境决定「安装」/「怎么做」/ 不提示
-│   ├── sw.ts / update.ts    开着的页面换新版本、帮助页的检查更新 / 重装；对战版本不一致时自动更新重载
+│   ├── sw.ts / update.ts    开着的页面换新版本；对战版本不一致时自动更新重载
+│   ├── version.ts           当前版本与手动更新：比对 version.json、让 SW 换新版本后重新载入、重新安装、重新载入后报结果
 │   ├── offline.ts           离线朗读包：把当前语言的片段分批下进 SW 的运行时缓存 audio（只补缺的、可断点续传、下完清旧）
 │   ├── sites.ts             另外三个站的名单与站长微信二维码（首页与静态页页脚）
 │   ├── analytics.ts         访问统计（可选）：按 .env 的 VITE_UMAMI_* 生成上报脚本标签；翻页由路由上报，房间号不进统计库
@@ -267,7 +268,7 @@ src/
 ├── seo/site.ts              搜索引擎用的静态页（课程目录页、知识点页含示例题与专属正文、帮助页、404 页）、robots / sitemap、index.html 两段简介
 ├── locales/shell.ts         应用外壳词条（品牌、目录、导航、结算、鼓励语、安装提示、对战、房间、帮助）及其拼音，中英
 ├── components/
-│   ├── ui/                  通用控件：顶部栏（含「🔑 加入对战」）、页头、大按钮、数字键盘、选择卡（tap.ts：pointerup 就响应，两人同时按不丢）、撒花、注音文字 RubyText、安装提示条、联系站长面板
+│   ├── ui/                  通用控件：顶部栏（含「🔑 加入对战」）、页头、大按钮、数字键盘、选择卡（tap.ts：pointerup 就响应，两人同时按不丢）、撒花、注音文字 RubyText、安装提示条、联系站长面板、首页页脚的版本卡片（AppVersion）
 │   ├── practice/            练习流程：题干渲染 QuestionRenderer、作答面板 AnswerPanel、结算页
 │   ├── battle/              对战：竞技场 Arena（单设备与房间共用，只读 store、不知道自己在哪种模式下）、队区 TeamPanel、成员行 PlayerRow、
 │   │                        作答显示 WatchInput、游戏盒子 GameSlot、倒数（先讲规则）、弹出提示、胜利彩纸、结果页、横屏提示、

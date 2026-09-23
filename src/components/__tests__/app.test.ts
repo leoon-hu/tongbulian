@@ -23,6 +23,7 @@ import { FakeWs } from '@/battle/__tests__/fake-socket'
 import { FakePc, fakePeerDeps, fakeStream } from '@/battle/__tests__/fake-rtc'
 import { apply, autoStart, createRoom, join, snapshot, tick, type Room } from '../../../server/room'
 import { AUTOCREATE_KEY, AUTOJOIN_KEY, reloadForNewVersion } from '@/engine/update'
+import { APP_VERSION, noteUpdate } from '@/engine/version'
 
 vi.mock('@/engine/update', async (orig) => ({ ...(await orig<typeof import('@/engine/update')>()), reloadForNewVersion: vi.fn(async () => true) }))
 // 对战的三个视图是按需加载的：先静态导入一次，路由里的 import() 就不用在用例中途等模块转换
@@ -80,26 +81,33 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('首页：品牌名是唯一的 <h1>，底部有各上线课程的知识点清单链接（静态页地址）与另外三个站的链接；子页标题跟随页面', async () => {
+  it('首页：品牌名是唯一的 <h1>，底部有各上线课程的知识点清单链接（静态页地址）、页脚（版本卡片 → 开源 → 三个动作 → 更多应用）；子页标题跟随页面', async () => {
     const w = await mountAt('/')
     expect(w.findAll('h1')).toHaveLength(1)
     expect(w.find('h1').text()).toBe('同步练-对战版') // 品牌名 + 只给读屏器的「-」+ 「对战版」药丸：与 <title> / og:site_name 一致
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
-    const links = w.findAll('footer.about .about-links a')
+    const links = w.findAll('.about .about-links a')
     expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
-    const sites = w.findAll('footer.about .about-sites a')
+    // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
+    const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])
+    expect(parts).toEqual(['ver', 'foot-open', 'foot-actions', 'foot-sites'])
+    expect(shown(w.find('footer.foot .ver'))).toContain('当前版本')
+    expect(w.find('footer.foot .ver .ver-num').text()).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
+    expect(w.find('footer.foot .ver-btn').text()).toBe('检查更新')
+    expect(w.find('footer.foot .foot-sites-title').text()).toBe('更多应用')
+    const sites = w.findAll('footer.foot .foot-sites a')
     expect(sites.map((a) => a.attributes('href'))).toEqual(SISTER_SITES.map((s) => s.url))
     expect(sites.map((a) => a.attributes('target'))).toEqual(['_blank', '_blank', '_blank'])
     expect(sites.map((a) => a.text())).toEqual(['AI加词背单词', '拼音学习机拼音点读、拼读、测验', '识字卡片2–4 岁看图听音认知卡片'])
     // 「开源」一句 + 三个动作：GitHub 源码是链接（新窗口），分享 / 联系站长是按钮
-    expect(w.find('footer.about .about-open').text()).toContain('代码全部开源')
-    const repo = w.find('footer.about .about-actions a')
+    expect(w.find('footer.foot .foot-open').text()).toContain('代码全部开源')
+    const repo = w.find('footer.foot .foot-actions a')
     expect(repo.attributes('href')).toBe(REPO_URL)
     expect(repo.attributes('target')).toBe('_blank')
     // 「分享给朋友」：测试环境没有 navigator.share → 复制一段话并弹面板（jsdom 没有剪贴板，面板里写「把下面这段话发给朋友」）
-    await w.find('footer.about .share-btn').trigger('click')
+    await w.find('footer.foot .share-btn').trigger('click')
     await flushPromises()
     const shareDialog = document.querySelector('[role="dialog"][aria-label="分享给朋友"]')
     expect(shareDialog?.querySelector('pre')?.textContent).toContain('同步练-对战版')
@@ -108,7 +116,7 @@ describe('App 集成冒烟', () => {
     await nextTick()
     expect(document.querySelector('[role="dialog"][aria-label="分享给朋友"]')).toBeNull()
     // 「联系站长」是按钮不是链接：点了弹站长微信二维码的面板，「知道了」关掉
-    const contact = w.find('footer.about .contact-btn')
+    const contact = w.find('footer.foot .contact-btn')
     expect(contact.text()).toBe('联系站长')
     expect(document.querySelector('[role="dialog"] img')).toBeNull()
     await contact.trigger('click')
@@ -1306,6 +1314,62 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
   })
 })
 
+describe('首页页脚的版本卡片（F1 版本与更新）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    sessionStorage.clear()
+  })
+
+  it('检查更新：服务器上是同一个版本 → 已是最新，并给「重新安装」；没网 → 提示连上网再检查，「重新安装」也不清缓存', async () => {
+    const fetch = vi.fn(async (_url: string) => ({ ok: true, json: async () => ({ version: APP_VERSION }) }))
+    vi.stubGlobal('fetch', fetch)
+    const w = await mountAt('/')
+    await w.find('.ver-btn').trigger('click')
+    await flushPromises()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(String(fetch.mock.calls[0][0])).toMatch(/^version\.json\?t=\d+$/)
+    expect(w.find('.ver-status').text()).toBe('✓ 已是最新版本')
+    expect(w.find('.ver-redo').text()).toBe('重新安装')
+    // 切英文：卡片跟着换
+    setLang('en')
+    await flushPromises()
+    expect(w.find('.ver-btn').text()).toBe('Check for updates')
+    expect(w.find('.ver-status').text()).toBe('✓ Up to date')
+    setLang('zh')
+    await flushPromises()
+    // 没网时点「重新安装」：先确认连不上，就不清缓存（清了离线包页面就打不开了），说没联网
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const del = vi.fn()
+    vi.stubGlobal('caches', { keys: async () => ['audio'], delete: del })
+    await w.find('.ver-redo').trigger('click')
+    await flushPromises()
+    expect(del).not.toHaveBeenCalled()
+    expect(w.find('.ver-status').text()).toBe('没有联网，连上网再检查')
+    await w.find('.ver-btn').trigger('click')
+    await flushPromises()
+    onLine.mockRestore()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(w.find('.ver-status').text()).toBe('没有联网，连上网再检查')
+    expect(w.find('.ver-redo').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('刚为更新重新载入过：版本到了说「已更新」，没到说「更新没有完成」并给「重新安装」；只说一次', async () => {
+    noteUpdate('update', APP_VERSION)
+    const w = await mountAt('/')
+    expect(w.find('.ver-status').text()).toBe('✓ 已更新到最新版本')
+    w.unmount()
+    const again = await mountAt('/')
+    expect(again.find('.ver-status').text()).toBe('')
+    again.unmount()
+    noteUpdate('update', '2099-01-01 00:00')
+    const stale = await mountAt('/')
+    expect(stale.find('.ver-status').text()).toBe('更新没有完成，还是旧版本')
+    expect(stale.find('.ver-redo').exists()).toBe(true)
+    stale.unmount()
+  })
+})
+
 describe('帮助页（F17）', () => {
   it('首页页脚链到帮助页；帮助页五节都在、对战一节在前、规则一节列出每种游戏；切英文标题跟着换；标题栏是「帮助与说明 · 同步练-对战版」', async () => {
     const w = await mountAt('/')
@@ -1322,10 +1386,9 @@ describe('帮助页（F17）', () => {
     expect(text).toContain('谁先答对 8 题谁赢')
     expect(text).toContain('火箭就升高一段')
     expect(document.title).toBe('帮助与说明 · 同步练-对战版')
-    // 版本与更新一节（N8 ⑦）：当前版本、检查更新、重装；离线朗读包的状态
-    expect(shown(w.find('#help-version'))).toContain('当前版本')
-    expect(w.findAll('#help-version .act').map((b) => b.text())).toEqual(['检查更新', '重装应用'])
-    expect(shown(w.find('#help-version'))).toContain('离线朗读包')
+    // 版本与更新挪到了首页页脚（F1），帮助页里不再有
+    expect(w.find('#help-version').exists()).toBe(false)
+    expect(text).not.toContain('检查更新')
     setLang('en')
     await flushPromises()
     expect(shown(w)).toContain('Rules')

@@ -74,12 +74,40 @@ function audioClips(): Plugin {
   }
 }
 
+/**
+ * 当前版本（F1「版本与更新」，engine/version.ts）：构建时刻的北京时间「2026-09-23 14:05」（与构建机器的时区无关）。
+ * 页面里是 __APP_VERSION__；同一份写进 dist/version.json 给首页页脚的「检查更新」比对（不进离线包，见 globIgnores），
+ * dev 服务器也回同一份。
+ */
+function buildVersion(d = new Date()): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value]))
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`
+}
+function versionFile(version: string): Plugin {
+  const body = `${JSON.stringify({ version })}\n`
+  return {
+    name: 'version-file',
+    configureServer(server) {
+      server.middlewares.use('/version.json', (_req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        res.setHeader('Cache-Control', 'no-store')
+        res.end(body)
+      })
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: body })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const version = buildVersion()
   return {
     // 对战版本（B43）：出题相关源码的哈希（scripts/lib/build-id.mjs），中继服务用同一个；只改界面不算新版本
-    // __BUILT_AT__：构建时刻，帮助页「当前版本」显示用（与 __BUILD__ 不同：那个只随出题代码变）
-    define: { __BUILD__: JSON.stringify(compatId()), __BUILT_AT__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
+    // __APP_VERSION__：当前版本（构建时刻），首页页脚的版本卡片显示、「检查更新」比对（与 __BUILD__ 不同：那个只随出题代码变）
+    define: { __BUILD__: JSON.stringify(compatId()), __APP_VERSION__: JSON.stringify(version) },
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev，B46）
     // 开发时把 /ws 代理到本机的对战中继服务（npm run battle:dev 起在 8787；BATTLE_PORT 可改，方便另起一份测试）
     server: { proxy: { '/ws': { target: `ws://127.0.0.1:${process.env.BATTLE_PORT ?? 8787}`, ws: true } } },
@@ -90,6 +118,7 @@ export default defineConfig(({ mode }) => {
       audioClips(),
       siteMeta(env.SITE_URL ?? ''),
       analyticsTag(env),
+      versionFile(version),
       // PWA：「添加到主屏幕」后离线可用。预缓存只有页面外壳（代码 / 字体 / 图标，几 MB，几秒装好）——新版本几秒就能换上；
       // 朗读片段（中文 3400 条 29 MB、英文 3200 条 28 MB）不进预缓存：由页面在后台分批下进运行时缓存 audio
       // （engine/offline.ts），SW 离线时从它取。以前 mp3 都在预缓存里，新版本要下完几十 MB 才能装好，老手机刷新多少次
@@ -126,8 +155,8 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,json}'],
           // 子目录里的 html 是给搜索引擎的静态页（<学科>/<年级>/…），og.png 是分享图、screenshots/ 是安装对话框的截图，
-          // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网）：都不进离线包
-          globIgnores: ['*/**/*.html', '404.html', 'og.png', 'screenshots/**', '**/qrcode-*.js'],
+          // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网），version.json 是「检查更新」要现取的：都不进离线包
+          globIgnores: ['*/**/*.html', '404.html', 'og.png', 'screenshots/**', '**/qrcode-*.js', 'version.json'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           navigateFallback: 'index.html',
           // 只有入口页那一个地址走回退：带目录的是静态页，带扩展名的是文件（sitemap.xml / robots.txt / og.png / 站长验证文件），

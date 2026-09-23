@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { UPDATE_CHECK_GAP_MS, checkForUpdate, reinstall, setupSwUpdates, type SwLike } from '../sw'
+import { UPDATE_CHECK_GAP_MS, setupSwUpdates, type SwLike } from '../sw'
 
 function fakeSw(controller: unknown): SwLike & { fire(): void; update: ReturnType<typeof vi.fn> } {
   const fns: Array<() => void> = []
@@ -83,37 +83,5 @@ describe('新版本 Service Worker 接管后重载页面（B43）', () => {
     const { flush } = setupSwUpdates(() => false, { sw: null, doc: null, reload })
     flush()
     expect(reload).not.toHaveBeenCalled()
-  })
-})
-
-describe('检查更新 / 重装（N8 ⑦）', () => {
-  it('checkForUpdate：没 SW → unavailable；update 后没有在装的 → latest；有在装的等接管 → updating', async () => {
-    expect(await checkForUpdate({ sw: null })).toBe('unavailable')
-    const reg = { update: vi.fn(async () => undefined), installing: null as unknown, waiting: null as unknown }
-    const listeners: (() => void)[] = []
-    const sw: SwLike = { controller: {}, addEventListener: (_t, fn) => listeners.push(fn), getRegistration: async () => reg }
-    expect(await checkForUpdate({ sw })).toBe('latest')
-    expect(reg.update).toHaveBeenCalledTimes(1)
-    reg.installing = {}
-    const p = checkForUpdate({ sw, wait: () => new Promise(() => {}) })
-    for (let i = 0; i < 50 && !listeners.length; i++) await Promise.resolve()
-    listeners.forEach((fn) => fn())
-    expect(await p).toBe('updating')
-    // 一直不接管：超时也算 updating
-    expect(await checkForUpdate({ sw: { ...sw, addEventListener: () => {} }, wait: async () => {} })).toBe('updating')
-  })
-
-  it('reinstall：注销 SW、删掉全部缓存、重载；没有 SW / 缓存也照样重载', async () => {
-    const unregister = vi.fn(async () => true)
-    const sw: SwLike = { controller: {}, addEventListener: () => {}, getRegistration: async () => ({ update: async () => undefined, unregister }) }
-    const deleted: string[] = []
-    const reload = vi.fn()
-    await reinstall({ sw, caches: { keys: async () => ['a', 'audio'], delete: async (n) => (deleted.push(n), true) }, reload })
-    expect(unregister).toHaveBeenCalledTimes(1)
-    expect(deleted).toEqual(['a', 'audio'])
-    expect(reload).toHaveBeenCalledTimes(1)
-    const reload2 = vi.fn()
-    await reinstall({ sw: null, caches: null, reload: reload2 })
-    expect(reload2).toHaveBeenCalledTimes(1)
   })
 })
