@@ -308,8 +308,21 @@ describe('数学正确性', () => {
       const text = zh(stemOf(q, 'text')!.text)
       const nums = text.match(/\d+/g)!.map(Number)
       const v = correctNumber(q)
-      if (/的几倍/.test(text)) expect(v).toBe(nums[1]! / nums[0]!)
-      else if (/的个数是.*个数的 \d+ 倍/.test(text)) expect(v).toBe(nums[0]! * nums[1]!)
+      if (/的几倍/.test(text)) {
+        expect(v).toBe(nums[1]! / nums[0]!)
+        // 配图（G6）：两行开头是题里的两只动物，第一行一圈，第二行的圈数就是答案；只画不多的
+        const pic = stemOf(q, 'times-rows')
+        if (q.difficulty === 1 && nums[1]! <= 24) expect(pic).toBeDefined()
+        if (pic) {
+          expect(pic.per).toBe(nums[0])
+          expect(pic.rows.map((r) => r.count)).toEqual([nums[0], nums[1]])
+          expect(pic.rows.map((r) => text.includes(r.who))).toEqual([true, true])
+          expect(text.indexOf(pic.rows[0]!.who)).toBeLessThan(text.indexOf(pic.rows[1]!.who))
+          expect(pic.rows[1]!.count / pic.per).toBe(v)
+          expect(pic.rows[1]!.count).toBeLessThanOrEqual(24)
+        }
+        expect(stemOf(q, 'compare-rows')).toBeUndefined()
+      } else if (/的个数是.*个数的 \d+ 倍/.test(text)) expect(v).toBe(nums[0]! * nums[1]!)
       else expect(v).toBe(nums[0]! / nums[1]!)
     })
     each('m2s2-03-mul-div-solve', 300, (q) => {

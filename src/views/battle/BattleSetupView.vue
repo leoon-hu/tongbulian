@@ -171,7 +171,7 @@ function start(): void {
     <PageHeader :back="mapPath">
       <template #title>
         <span class="kp-icon">⚔️</span>
-        <RubyText :text="{ k: 'battle.title' }" />
+        <RubyText class="battle-word" :text="{ k: 'battle.title' }" />
         <span class="kp-name">{{ info.kp.icon }} <RubyText :text="{ k: kpTitleKey(info.kp) }" /></span>
       </template>
       <template #actions>
@@ -291,7 +291,13 @@ function start(): void {
 .kp-icon {
   flex: none;
 }
+/* 「对战」两个字不许被挤成竖排（手机上知识点名长时，flex 按最小内容宽度把它压成一字一行） */
+.battle-word {
+  flex: none;
+  white-space: nowrap;
+}
 .kp-name {
+  min-width: 0;
   font-size: var(--fs-md);
   font-weight: 700;
   color: var(--c-text-light);

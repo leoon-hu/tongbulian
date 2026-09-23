@@ -133,6 +133,12 @@ export function stemText(part: StemPart): string {
     }
     case 'compare-rows':
       return part.rows.map((r) => icons(r.icon, r.count)).join('\n')
+    case 'times-rows': {
+      const name = emojiName(part.icon) ?? part.icon
+      return part.rows
+        .map((r) => `${r.who}：${`（${part.icon.repeat(part.per)}）`.repeat(Math.floor(r.count / part.per))}（${Math.floor(r.count / part.per)} 份，每份 ${part.per} 个${name}）`)
+        .join('\n')
+    }
     case 'clock':
       return `（钟面：${zh({ k: 'time.hm', p: { hour: part.hour, minute: part.minute } })}）`
     case 'money':

@@ -62,6 +62,9 @@ watch(() => route.hash, jump)
   padding: 0 16px 48px;
   font-size: var(--fs-md);
   line-height: 1.7;
+  /* 给家长看的说明页：可以选中复制（整站默认不让选，见 base.css） */
+  -webkit-user-select: text;
+  user-select: text;
 }
 .lead {
   color: var(--c-text-light);

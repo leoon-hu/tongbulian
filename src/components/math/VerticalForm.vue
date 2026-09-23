@@ -5,7 +5,8 @@ import { computed } from 'vue'
  * 竖式（笔算加减法）：两个数按数位右对齐，运算符写在第二行左侧，下面一条横线，结果留给孩子在脑子里 / 纸上算。
  * 每一位一格，个位对齐个位——这正是笔算要教的「相同数位对齐」。
  */
-const props = defineProps<{ a: number; op: '+' | '-'; b: number }>()
+/** answer：练习页把按的数字写在横线下面（右对齐，比位数多的一位落在运算符那一格）；done = 已经判完，变绿 */
+const props = defineProps<{ a: number; op: '+' | '-'; b: number; answer?: string; done?: boolean }>()
 
 // 位数：加法要给和留出进位后多出来的一位；减法差不会比被减数长
 const width = computed(() =>
@@ -14,6 +15,8 @@ const width = computed(() =>
 const digits = (n: number): string[] => String(n).padStart(width.value, ' ').split('')
 const rowA = computed(() => digits(props.a))
 const rowB = computed(() => digits(props.b))
+/** 答案行：运算符那一格 + 每一位，没按到的位留空 */
+const rowC = computed(() => (props.answer ?? '').padStart(width.value + 1, ' ').slice(-(width.value + 1)).split(''))
 </script>
 
 <template>
@@ -27,9 +30,9 @@ const rowB = computed(() => digits(props.b))
       <span v-for="(d, i) in rowB" :key="`b${i}`" class="digit">{{ d }}</span>
     </div>
     <div class="rule" />
-    <div class="row answer">
-      <span class="op" />
-      <span v-for="i in width" :key="`c${i}`" class="digit blank" />
+    <div class="row answer" :class="{ done }">
+      <span class="op typed">{{ rowC[0] }}</span>
+      <span v-for="(d, i) in rowC.slice(1)" :key="`c${i}`" class="digit blank typed">{{ d }}</span>
     </div>
   </div>
 </template>
@@ -70,5 +73,13 @@ const rowB = computed(() => digits(props.b))
   height: 1.35em;
   border-bottom: 3px dashed var(--c-locked);
   margin: 0 3px;
+}
+.typed {
+  color: var(--c-primary-dark);
+  text-align: center;
+  white-space: pre;
+}
+.done .typed {
+  color: var(--c-green);
 }
 </style>

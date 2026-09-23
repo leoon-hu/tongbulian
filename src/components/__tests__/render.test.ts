@@ -15,6 +15,7 @@ import RulerGauge from '@/components/math/RulerGauge.vue'
 import AngleGlyph from '@/components/math/AngleGlyph.vue'
 import ShapeGlyph from '@/components/math/ShapeGlyph.vue'
 import VerticalForm from '@/components/math/VerticalForm.vue'
+import { hasBlank } from '@/components/practice/blank'
 import ChoiceCards from '@/components/ui/ChoiceCards.vue'
 import NumPad from '@/components/ui/NumPad.vue'
 import { setLang } from '@/engine/i18n'
@@ -70,6 +71,61 @@ describe('十格阵的划掉（回归：QuestionRenderer 必须转发 tenframe �
       w.unmount()
     }
     expect(checked).toBeGreaterThan(5)
+  })
+})
+
+describe('倍的认识的配图（G6：谁的 + 几个一圈）', () => {
+  it('每行开头是谁的，第一行一圈，第二行的圈数 = 几倍，每圈 per 个', () => {
+    const gen = getGenerator('m2s2-03-times')!
+    let checked = 0
+    for (let seed = 1; seed <= 80; seed++) {
+      const q = gen(1, createRng(seed))
+      const pic = q.stem.find((p) => p.kind === 'times-rows')
+      if (!pic || pic.kind !== 'times-rows') continue
+      checked += 1
+      const w = mount(QuestionRenderer, { props: { question: q } })
+      const rows = w.findAll('.t-row')
+      expect(rows).toHaveLength(2)
+      expect(rows.map((r) => r.find('.who').text())).toEqual(pic.rows.map((r) => r.who))
+      expect(rows[0]!.findAll('.group')).toHaveLength(1)
+      expect(rows[1]!.findAll('.group')).toHaveLength(pic.rows[1]!.count / pic.per)
+      for (const g of w.findAll('.group')) expect(g.findAll('.obj')).toHaveLength(pic.per)
+      w.unmount()
+    }
+    expect(checked).toBeGreaterThan(10)
+  })
+})
+
+describe('答案填在题目里（U5）', () => {
+  it('hasBlank：数字键盘题里算式有「?」或有竖式才算；文字题、选择题不算', () => {
+    let blanks = 0
+    for (const kp of registered) {
+      for (const q of buildSession(kp.id, 8, { seed: 3 })) {
+        const expected = q.input === 'numpad' && q.stem.some((p) => (p.kind === 'expr' && p.expr.includes('?')) || p.kind === 'vertical')
+        expect(hasBlank(q)).toBe(expected)
+        if (!expected) continue
+        blanks += 1
+        // 空只有一个「?」（算式里不会出现两个要填的空）
+        const marks = q.stem.filter((p) => p.kind === 'expr').map((p) => (p.kind === 'expr' ? p.expr.split('?').length - 1 : 0))
+        expect(marks.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(1)
+        // 按的数字填进去：算式的空里、竖式的答案行（右对齐）
+        const w = mount(QuestionRenderer, { props: { question: q, fill: { value: '12', done: false } } })
+        if (marks.some(Boolean)) expect(w.find('.fill-slot').text()).toBe('12')
+        if (q.stem.some((p) => p.kind === 'vertical')) {
+          const cells = w.findAll('.vertical .answer .typed').map((c) => c.text())
+          expect(cells.slice(-2)).toEqual(['1', '2'])
+        }
+        w.unmount()
+      }
+    }
+    expect(blanks).toBeGreaterThan(20)
+  })
+  it('不传 fill（对战）原样画「?」，竖式答案行是空的', () => {
+    const q = buildSession('m2s2-05-sub', 8, { seed: 1 })[0]!
+    const w = mount(QuestionRenderer, { props: { question: q } })
+    expect(w.find('.fill-slot').exists()).toBe(false)
+    expect(w.findAll('.vertical .answer .typed').every((c) => c.text() === '')).toBe(true)
+    w.unmount()
   })
 })
 

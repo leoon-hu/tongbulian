@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Question } from '@/types/models'
 import { ROUND_SIZE, buildSession, hasGenerator } from '@/engine'
-import { findKp, getCourse, mapPathOf } from '@/engine/catalog'
+import { findKp, getCourse, mapPathOf, nextKp, practicePathOf } from '@/engine/catalog'
 import { answerLabel, checkAnswer } from '@/engine/answer'
 import { tenFrameProps } from '@/content/math/shared/demo'
 import { kpTitleKey, lang, ui } from '@/engine/i18n'
@@ -12,6 +12,7 @@ import { hush, say, warmUp } from '@/engine/voice'
 import { useProgressStore } from '@/stores/progress'
 import QuestionRenderer from '@/components/practice/QuestionRenderer.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
+import { hasBlank, type BlankFill } from '@/components/practice/blank'
 import SessionSummary from '@/components/practice/SessionSummary.vue'
 import CelebrationOverlay from '@/components/ui/CelebrationOverlay.vue'
 import TenFrame from '@/components/math/TenFrame.vue'
@@ -34,6 +35,8 @@ const ready = kp !== undefined && hasGenerator(kpId)
 /** 返回地图：带上这个知识点所在的册（下册的题回到下册页签）；知识点不存在就回这门课的地图 */
 const mapPath = ready ? mapPathOf(kpId) : `/s/${subjectId}/g/${gradeId}`
 if (!ready) router.replace(course ? mapPath : '/')
+/** 结算页「下一章」：本册目录里的下一个知识点（同对战，B9）；最后一个 → null */
+const nextId = ready ? nextKp(kpId) : null
 
 // 上次做到一半的那一轮：同一个 seed 复现同一组题，从断点接着做；没有或已做满就开新的一轮（重新计数）
 const paused = ready && !progress.isRoundFinished(kpId) ? progress.roundOf(kpId) : undefined
@@ -51,6 +54,17 @@ function newSeed(): number {
 const revealed = ref<{ correctId: string; selectedId: string } | null>(null)
 
 const current = computed(() => questions.value[index.value])
+
+// 答案填在题目里（U5，blank.ts）：算式有「?」或有竖式的数字键盘题，按的数字直接显示在空里，键盘不画显示框
+const typed = ref('')
+const blank = computed(() => !!current.value && hasBlank(current.value))
+const fill = computed<BlankFill | null>(() => {
+  const q = current.value
+  if (!blank.value || !q) return null
+  if (phase.value === 'wrong') return { value: q.answer.kind === 'number' ? String(q.answer.value) : '', done: true }
+  return { value: typed.value, done: phase.value === 'right' }
+})
+watch(() => current.value?.id, () => (typed.value = ''))
 
 // ── 朗读：进题自动读题干（页面切换动画结束后再开口），答错报答案，答对夸一句，结算报成绩 ──
 function readQuestion(delayMs = 0): void {
@@ -169,7 +183,7 @@ function retry(): void {
         @click="readQuestion()"
         @keydown.enter.prevent="readQuestion()"
       >
-        <QuestionRenderer :key="current.id" :question="current" with-speaker />
+        <QuestionRenderer :key="current.id" :question="current" :fill="fill" with-speaker />
       </div>
 
       <div v-if="phase === 'wrong'" class="wrong-panel">
@@ -192,7 +206,9 @@ function retry(): void {
         :key="`panel-${current.id}`"
         :question="current"
         :revealed="revealed"
+        :hide-display="blank"
         @answer="onAnswer"
+        @input="(v: string) => (typed = v)"
       />
     </section>
 
@@ -200,6 +216,8 @@ function retry(): void {
       v-if="phase === 'summary'"
       :correct="correctCount"
       :total="questions.length"
+      :next="nextId"
+      @next="nextId && router.push(practicePathOf(nextId))"
       @retry="retry"
       @home="router.push(mapPath)"
     />
@@ -226,6 +244,13 @@ function retry(): void {
 .practice :deep(.page-header .back) {
   width: 44px;
   height: 44px;
+}
+/* 标题：手机上小一号，常见的知识点名一行放得下（「用 2~6 的乘法口诀求商」原来折成两行、还从「乘法」中间断开）。
+   拼音两边的留白别收：试过收窄 / 负外边距，「乘减」这种两个宽拼音挨着的会粘成「chéngjiǎn」 */
+.practice :deep(.page-header .title) {
+  font-size: clamp(19px, 5.2vw, var(--fs-lg));
+  gap: 6px;
+  line-height: 1.2;
 }
 .kp-icon {
   flex: none;
@@ -280,8 +305,26 @@ function retry(): void {
   font-size: min(40px, 9.5vw);
 }
 .question :deep(.vertical) {
-  font-size: min(var(--fs-huge), 12vw);
+  font-size: min(var(--fs-huge), 11vw);
   padding: 6px 16px 8px;
+}
+/* 竖式：行距收一点（答案行现在写着按的数字，不再是一大块空白）；上面的横式只是提示，小一号 */
+.question :deep(.vertical .row) {
+  line-height: 1.2;
+}
+.question :deep(.vertical .digit.blank) {
+  height: 1.2em;
+}
+.question :deep(.stem:has(.vertical) .stem-expr) {
+  font-size: min(40px, 9vw);
+}
+/* 比多少 / 排成几行的实物：手机上格子最大 34px、行距收窄（乘加看图题 4 排 × 5 个原来就占掉半屏） */
+@media (max-width: 600px) {
+  .question :deep(.compare) {
+    --cell: min(34px, calc((100vw - 56px) / var(--cols-max, 1)));
+    gap: 4px;
+    padding: 6px 12px;
+  }
 }
 /* 竖排的队伍（从上往下数）：格子和间距小一点 */
 .question :deep(.lineup.col) {
@@ -330,6 +373,16 @@ function retry(): void {
   padding: 0 24px;
   font-size: 48px;
   line-height: 1.25;
+}
+/* 矮一点的手机（带教具的文字题还要显示框）：显示框再矮一档 */
+@media (max-height: 820px) {
+  .stage :deep(.numpad) {
+    gap: 8px;
+  }
+  .stage :deep(.numpad .display) {
+    font-size: 40px;
+    line-height: 1.15;
+  }
 }
 .stage :deep(.numpad .grid) {
   gap: 8px;

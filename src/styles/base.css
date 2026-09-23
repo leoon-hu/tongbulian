@@ -21,6 +21,20 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   overscroll-behavior: none;
+  /* 整站不让选中文字（U2）：原来只有 button 不能选，点按钮偏了一点落在旁边的字上（比如「正确答案是」），
+     Android Chrome 会选中一个字并弹出「点按即可查看搜索结果」；iOS 长按也不弹放大镜 / 拷贝菜单 */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 输入框要能选、能编辑（iOS 上 user-select: none 会让输入框点不进去） */
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 #app {

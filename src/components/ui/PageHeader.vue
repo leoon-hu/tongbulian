@@ -45,13 +45,16 @@ const router = useRouter()
   flex-direction: column;
   gap: 6px;
 }
-/* 图标与文字并排：文字太长换行时，各行左边对齐，不会第一行被图标顶开、第二行顶格 */
+/* 图标与文字并排：文字太长换行时，各行左边对齐，不会第一行被图标顶开、第二行顶格。
+   只在空格 / 标点处换行（keep-all）：逐字注音的标题原来会从「乘 / 法口诀」中间断开；一个词本身比一行还宽才任意断 */
 .title {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: var(--fs-lg);
   text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .extra {
   display: flex;

@@ -99,6 +99,8 @@ export type StemPart =
   | { kind: 'scatter'; items: string[] }
   /** 两三行实物，逐行比多少 */
   | { kind: 'compare-rows'; rows: { icon: string; count: number }[] }
+  /** 倍的认识（G6）：每行开头是谁的（who），同一种实物按 per 个一圈圈起来（一圈 = 一份），圈数就是几倍 */
+  | { kind: 'times-rows'; icon: string; per: number; rows: { who: string; count: number }[] }
   /** 钟面（读整时/半时） */
   | { kind: 'clock'; hour: number; minute: number }
   /** 一组人民币 */

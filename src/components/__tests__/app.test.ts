@@ -6,6 +6,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import App from '@/App.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
+import { hasBlank } from '@/components/practice/blank'
+import { buildSession } from '@/engine'
 import { setLang, ui } from '@/engine/i18n'
 import { SKINS, chapterSkin, skinById } from '@/battle/skins'
 import { liveCourses, nextKp } from '@/engine/catalog'
@@ -398,6 +400,80 @@ describe('App 集成冒烟', () => {
     expect(map2.findAll('.stats')).toHaveLength(0) // 新一轮还没答题，统计不显示
     expect(shown(map2)).toContain('已完成') // 已完成不因为新开一轮而丢
     map2.unmount()
+  })
+
+  it('结算页三个按钮（F7）：下一章进本册下一个知识点的练习、不练了回地图', async () => {
+    const pinia = createPinia()
+    const kpId = 's1-04-simple-addsub'
+    await router.replace(practice(kpId))
+    await router.isReady()
+    const w = mount(App, { global: { plugins: [router, pinia] } })
+    await flushPromises()
+    await flushPromises()
+    for (let i = 0; i < 8; i++) {
+      w.findComponent(AnswerPanel).vm.$emit('answer', -999)
+      await flushPromises()
+      await w.findAll('button').find((b) => shown(b) === '我知道了')!.trigger('click')
+      await flushPromises()
+    }
+    expect(shown(w.find('.summary .next-hint'))).toBe('下一章：凑十法')
+    expect(w.findAll('.summary .actions .big-btn').map((b) => shown(b).trim())).toEqual(['下一章 ▶', '再练一次', '不练了'])
+    await w.find('.summary .next-btn').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe(practice(nextKp(kpId)!))
+    expect(shown(w.find('.page-header .title'))).toContain('凑十法')
+    expect(w.findAll('.dot.now')).toHaveLength(1)
+    w.unmount()
+
+    // 本册最后一个：没有下一章；「不练了」回这个知识点所在的地图
+    await router.replace(practice('s1-05-carry-add'))
+    const last = mount(App, { global: { plugins: [router, pinia] } })
+    await flushPromises()
+    await flushPromises()
+    for (let i = 0; i < 8; i++) {
+      last.findComponent(AnswerPanel).vm.$emit('answer', -999)
+      await flushPromises()
+      await last.findAll('button').find((b) => shown(b) === '我知道了')!.trigger('click')
+      await flushPromises()
+    }
+    expect(last.find('.summary .next-btn').exists()).toBe(false)
+    expect(shown(last.find('.summary .next-hint'))).toBe('这一册都练完啦！')
+    await last.find('.summary .quit-btn').trigger('click')
+    // 地图页是按需加载的：多等几轮
+    for (let i = 0; i < 50 && router.currentRoute.value.path !== MAP; i++) {
+      await flushPromises()
+      await new Promise((r) => setTimeout(r, 10))
+    }
+    expect(router.currentRoute.value.path).toBe(MAP)
+    last.unmount()
+  })
+
+  it('答案填在题目里（U5）：竖式题按的数字写在「?」和横线下面，键盘没有显示框；答错后空里是绿色的正确答案', async () => {
+    const kpId = 's2-05-written-sub'
+    let seed = 1
+    while (!hasBlank(buildSession(kpId, 8, { seed })[0]!)) seed++
+    const q = buildSession(kpId, 8, { seed })[0]!
+    const answer = q.answer.kind === 'number' ? q.answer.value : NaN
+    localStorage.setItem('tongbulian:v1', JSON.stringify({ version: 2, progress: { completed: {}, rounds: { [kpId]: { seed, results: [] } } }, settings: { soundEnabled: true, lang: 'zh' } }))
+    const w = await mountAt(practice(kpId))
+    expect(w.find('.numpad .display').exists()).toBe(false)
+    expect(w.find('.question .fill-slot').text()).toBe('?')
+    const key = (t: string) => w.findAll('.numpad .key').find((k) => k.text() === t)!
+    const wrong = String(answer + 1)
+    for (const d of wrong) await key(d).trigger('click')
+    expect(w.find('.question .fill-slot').text()).toBe(wrong)
+    expect(w.findAll('.question .vertical .answer .typed').map((c) => c.text()).join('')).toBe(wrong)
+    await key('✓').trigger('click')
+    await flushPromises()
+    expect(w.find('.question .fill-slot.done').text()).toBe(String(answer))
+    expect(w.find('.question .vertical .answer.done').exists()).toBe(true)
+    expect(w.findAll('.question .vertical .answer .typed').map((c) => c.text()).join('')).toBe(String(answer))
+    // 下一题：空又是「?」
+    await w.findAll('button').find((b) => shown(b) === '我知道了')!.trigger('click')
+    await flushPromises()
+    if (hasBlank(buildSession(kpId, 8, { seed })[1]!)) expect(w.find('.question .fill-slot').text()).toBe('?')
+    w.unmount()
   })
 
   it('无效的学科 / 年级 / 知识点地址都会被送回上一级或顶层', async () => {

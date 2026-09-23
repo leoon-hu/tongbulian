@@ -8,6 +8,8 @@ import { defineGenerator, numberQuestion } from '@/engine'
 
 const ITEMS = ['🍎', '🍬', '⭐', '🎈', '🍪', '🌸', '🎁', '🧁', '🥟', '🍓']
 const NAMES = ['🐰', '🐶', '🐱', '🐼', '🦊', '🐷']
+/** 配图最多画几个实物：再多手机上要换好几行，数圈不如直接算 */
+const PIC_MAX = 24
 
 function word(kpId: string, d: Difficulty, sig: string, text: LStr, value: number, rng: RNG, smart: number[], extra: StemPart[] = []): Question {
   return numberQuestion({ kpId, type: value > 9 ? 'multiply' : 'divide', difficulty: d, sig, stem: [{ kind: 'text', text }, ...extra], value, rng, min: 1, max: 81, smart })
@@ -22,8 +24,10 @@ defineGenerator('m2s2-03-times', (d, rng) => {
   const k = rng.int(2, d === 1 ? 4 : 9) // 几倍
   const roll = rng.next()
   if (roll < 0.4) {
-    // 是几倍（d1 配图：两行实物，第二行是第一行的几倍）
-    const extra: StemPart[] = d === 1 || rng.chance(0.4) ? [{ kind: 'compare-rows', rows: [{ icon: item, count: n }, { icon: item, count: n * k }] }] : []
+    // 是几倍（G6，d1 都配图、d2/d3 40% 且总数不多才配）：两行实物，每行开头是谁的，n 个一圈——第二行有几圈就是几倍
+    const pic = d === 1 || rng.chance(0.4)
+    const extra: StemPart[] =
+      pic && n * k <= PIC_MAX ? [{ kind: 'times-rows', icon: item, per: n, rows: [{ who: a1, count: n }, { who: a2, count: n * k }] }] : []
     return word(kpId, d, `times-${n}-${k}`, { k: 'q.times.howMany', p: { a1, a2, item, n, m: n * k } }, k, rng, [n * k - n, n, k + 1, k - 1], extra)
   }
   if (roll < 0.7) {
