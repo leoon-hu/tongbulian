@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
@@ -51,7 +52,9 @@ function analyticsTag(env: Record<string, string>): Plugin {
 /**
  * 朗读音频清单的紧凑版（N8）：src/audio/manifest.json 是「文本 → 文件名」全表（265 KB），页面里其实只需要知道
  * 「有哪些文件」——文件名是文本的 sha1 前 10 位（src/audio/clips.ts 在页面里算），所以这里把它压成每种语言一串
- * 排好序的哈希（约 65 KB），以虚拟模块 virtual:audio-clips 提供；dev / 构建 / 测试 / 脚本都走这一份
+ * 排好序的哈希（约 65 KB），以虚拟模块 virtual:audio-clips 提供；dev / 构建 / 测试 / 脚本都走这一份。
+ * 合成时换过读法的几条（scripts/build-audio.py 的 SAY_AS，多音字）文件名是换过的文字的哈希，另给一张别名表
+ * 「文本的哈希 → 文件的哈希」（zhAlias / enAlias）。
  */
 function audioClips(): Plugin {
   const VID = 'virtual:audio-clips'
@@ -64,12 +67,27 @@ function audioClips(): Plugin {
       if (id !== RID) return undefined
       this.addWatchFile(file)
       const m = JSON.parse(readFileSync(file, 'utf8')) as Record<string, Record<string, string>>
+      const hashOf = (file: string): string => file.slice(file.indexOf('-') + 1)
       const pack = (table: Record<string, string> | undefined): string =>
         Object.values(table ?? {})
-          .map((f) => f.slice(f.indexOf('-') + 1))
+          .map(hashOf)
           .sort()
           .join('')
-      return `export const zh = ${JSON.stringify(pack(m.zh))}\nexport const en = ${JSON.stringify(pack(m.en))}\n`
+      const alias = (table: Record<string, string> | undefined): Record<string, string> => {
+        const out: Record<string, string> = {}
+        for (const [text, file] of Object.entries(table ?? {})) {
+          const h = createHash('sha1').update(text, 'utf8').digest('hex').slice(0, hashOf(file).length)
+          if (h !== hashOf(file)) out[h] = hashOf(file)
+        }
+        return out
+      }
+      return [
+        `export const zh = ${JSON.stringify(pack(m.zh))}`,
+        `export const en = ${JSON.stringify(pack(m.en))}`,
+        `export const zhAlias = ${JSON.stringify(alias(m.zh))}`,
+        `export const enAlias = ${JSON.stringify(alias(m.en))}`,
+        '',
+      ].join('\n')
     },
   }
 }

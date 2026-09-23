@@ -16,8 +16,18 @@ describe('sha1Hex（音频文件名用）', () => {
     const table = manifest as unknown as { zh: Record<string, string>; en: Record<string, string> }
     for (const lang of ['zh', 'en'] as const) {
       const entries = Object.entries(table[lang])
-      for (const [text, file] of entries.slice(0, 300)) expect(clipFile(text, lang), text).toBe(file)
+      for (const [text, file] of entries) expect(clipFile(text, lang), text).toBe(file)
       expect(clipFile('这条肯定没有的片段 xyz', lang)).toBeNull()
     }
+  })
+
+  it('合成时换过读法的片段（多音字）文件名跟着读法走，clipFile 按别名找到', () => {
+    const zh = (manifest as unknown as { zh: Record<string, string> }).zh
+    for (const text of ['从前数第', '狮子从前数排第几个', '从上数第3个是谁']) {
+      expect(zh[text], text).not.toBe(`zh-${node(text).slice(0, 10)}`)
+      expect(clipFile(text, 'zh'), text).toBe(zh[text])
+    }
+    // 没换读法的还是文本的哈希
+    expect(zh['数一数']).toBe(`zh-${node('数一数').slice(0, 10)}`)
   })
 })

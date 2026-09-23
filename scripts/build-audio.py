@@ -9,6 +9,9 @@
   2. ffmpeg 解码为 24kHz 单声道 → 裁静音（噪声自适应，见 find_voiced）→ K 加权响度归一到 -18 dB
      （峰值不超过 -1 dBFS）→ libmp3lame 48kbps CBR。裁得干净，顺序拼播时片段之间才不会有长停顿。
   3. 文件名 <lang>-<sha1(文本)[:10]>.mp3；manifest.json 记录 文本 → 文件名。
+多音字在上下文里读错的片段，送给 edge-tts 的文字按 SAY_AS 换成同音的单音字（片段文本不变），文件名取换过的
+文字的哈希——内容变了地址就变，已经下过离线包的设备不会一直用缓存里读错的旧文件；页面按 manifest 里
+「文件名 ≠ 文本哈希」的几条做别名（vite.config.ts 的 audioClips 插件）。
 输出目录里不再属于语料的 mp3 会被删掉。重复运行结果一致（幂等）。
 
 用法
@@ -24,6 +27,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -59,6 +63,16 @@ TAIL_FADE_MS, TAIL_SILENCE_MS = 30, 60    # 结束后：淡出 + 数字静音
 TARGET_RMS_DB = -18.0        # 有声段的 K 加权 RMS（≈ LUFS）目标
 PEAK_LIMIT_DB = -1.0
 BITRATE = "48k"
+
+# 合成时的读法：片段文本不变，只改送给 edge-tts 的文字——多音字在某些上下文里读错，就换成读音唯一的同音字。
+# 文件名跟着换过的文字走（clip_name），所以改了这里下次运行会重做受影响的片段、删掉旧文件。
+SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
+    "zh": [
+        # 动词「数」shǔ：「从前数第 3 个」「狮子从上数排第几个」常读成 shù（「从前」被当成「以前」、「上数」被当成名词），
+        # 随前面的词时对时错；「鼠」只有 shǔ 一个读音。「数一数」「从左数」读得对，一起换也听不出区别
+        (re.compile(r"(?<=从[前后左右上下])数"), "鼠"),
+    ],
+}
 
 
 # ---------------------------------------------------------------------------
@@ -309,11 +323,20 @@ def process(ffmpeg: str, src: Path, dst: Path) -> int:
 # ---------------------------------------------------------------------------
 # 合成
 # ---------------------------------------------------------------------------
+def spoken(lang: str, text: str) -> str:
+    """送给 edge-tts 的文字（按 SAY_AS 换掉会读错的多音字）。"""
+    for pat, sub in SAY_AS.get(lang, []):
+        text = pat.sub(sub, text)
+    return text
+
+
 def clip_name(lang: str, text: str) -> str:
-    return f"{lang}-{hashlib.sha1(text.encode('utf-8')).hexdigest()[:10]}"
+    """<lang>-<sha1(读法)[:10]>：一般就是片段文本的哈希，按 SAY_AS 换过读法的取换过的文字的哈希。"""
+    return f"{lang}-{hashlib.sha1(spoken(lang, text).encode('utf-8')).hexdigest()[:10]}"
 
 
 def cache_path(cache: Path, lang: str, text: str) -> Path:
+    """text 是送给 edge-tts 的文字（spoken() 之后）。"""
     digest = hashlib.sha1(f"{VOICES[lang]}|{TTS_RATE}|{text}".encode("utf-8")).hexdigest()[:12]
     return cache / f"tts-{lang}-{digest}.mp3"
 
@@ -339,7 +362,7 @@ def synth_one(lang: str, text: str, dst: Path) -> str:
 
 
 def synth_all(todo: List[Tuple[str, str, Path]], jobs: int) -> Dict[Tuple[str, str], str]:
-    """并行合成一批 (lang, text, cache_file)；返回失败项 → 错误信息。"""
+    """并行合成一批 (lang, 送给 edge-tts 的文字, cache_file)；返回失败项 → 错误信息。"""
     errors: Dict[Tuple[str, str], str] = {}
     if not todo:
         return errors
@@ -398,7 +421,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     cache.mkdir(parents=True, exist_ok=True)
 
-    # 期望的文件集合；已经存在的成品不重做（文本相同 → 文件名相同 → 内容相同）
+    # 期望的文件集合；已经存在的成品不重做（读法相同 → 文件名相同 → 内容相同）
     wanted: Dict[str, Tuple[str, str]] = {}          # 文件名 → (lang, text)
     for lang, texts in corpus.items():
         if lang not in VOICES:
@@ -408,28 +431,30 @@ def main() -> int:
     existing = {p.stem for p in out.glob("*.mp3")}
     to_make = {name: lt for name, lt in wanted.items() if name not in existing}
     stale = sorted(existing - set(wanted))
-    to_synth = [(lang, text, cache_path(cache, lang, text)) for lang, text in to_make.values()
-                if not cache_path(cache, lang, text).is_file()]
+    to_synth = sorted({(lang, spoken(lang, text), cache_path(cache, lang, spoken(lang, text)))
+                       for lang, text in to_make.values() if not cache_path(cache, lang, spoken(lang, text)).is_file()})
     print(f"语料 {len(wanted)} 条：已有 {len(wanted) - len(to_make)}，待处理 {len(to_make)}（其中待合成 {len(to_synth)}），多余 {len(stale)}")
     if args.dry_run:
         for name, (lang, text) in sorted(to_make.items()):
-            print(f"  + {name}  [{lang}] {text}")
+            say = spoken(lang, text)
+            print(f"  + {name}  [{lang}] {text}" + (f"（读作 {say}）" if say != text else ""))
         for name in stale:
             print(f"  - {name}")
         return 0
 
     problems: List[str] = []
     errors = synth_all(to_synth, args.jobs)
-    for (lang, text), err in errors.items():
-        problems.append(f"合成失败 [{lang}]「{text}」：{err}")
+    for (lang, say), err in errors.items():
+        problems.append(f"合成失败 [{lang}]「{say}」：{err}")
 
     if to_make:
         print(f"处理 {len(to_make)} 条…")
     for name, (lang, text) in sorted(to_make.items()):
-        if (lang, text) in errors:
+        say = spoken(lang, text)
+        if (lang, say) in errors:
             continue
         try:
-            process(ffmpeg, cache_path(cache, lang, text), out / f"{name}.mp3")
+            process(ffmpeg, cache_path(cache, lang, say), out / f"{name}.mp3")
         except RuntimeError as e:
             problems.append(f"处理失败 [{lang}]「{text}」：{e}")
 

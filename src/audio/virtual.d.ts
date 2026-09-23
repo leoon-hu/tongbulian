@@ -2,4 +2,7 @@
 declare module 'virtual:audio-clips' {
   export const zh: string
   export const en: string
+  /** 文件名不是文本哈希的几条（合成时换过读法的多音字）：文本的哈希 → 文件的哈希 */
+  export const zhAlias: Record<string, string>
+  export const enAlias: Record<string, string>
 }
