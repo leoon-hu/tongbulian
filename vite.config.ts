@@ -153,6 +153,12 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          // 新 SW 装好马上接管（skipWaiting）、并接管已经开着的页面（clientsClaim）：engine/sw.ts 的「接管后自动重新载入」
+          // （B43 / N8 ⑦）靠它们。autoUpdate 本来会自动加，但只在 injectRegister 是 auto 时——上面改成 script-defer 后
+          // 插件就不加了（2026-09-22 到 09-23 线上的 sw.js 里没有它们：新版本装好一直等着、所有页面关掉才换上；
+          // 首次安装后页面要再打开一次才离线可用），所以这里显式写上，engine/__tests__/sw.test.ts 查着
+          skipWaiting: true,
+          clientsClaim: true,
           globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,json}'],
           // 子目录里的 html 是给搜索引擎的静态页（<学科>/<年级>/…），og.png 是分享图、screenshots/ 是安装对话框的截图，
           // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网），version.json 是「检查更新」要现取的：都不进离线包

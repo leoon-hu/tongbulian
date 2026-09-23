@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { UPDATE_CHECK_GAP_MS, setupSwUpdates, type SwLike } from '../sw'
 
@@ -83,5 +84,14 @@ describe('新版本 Service Worker 接管后重载页面（B43）', () => {
     const { flush } = setupSwUpdates(() => false, { sw: null, doc: null, reload })
     flush()
     expect(reload).not.toHaveBeenCalled()
+  })
+})
+
+describe('SW 配置（B43 / N8 ⑦）', () => {
+  it('generateSW 显式开着 skipWaiting / clientsClaim：injectRegister 不是 auto 时插件不会自动加，没有它们新版本装好不接管', () => {
+    const cfg = readFileSync(new URL('../../../vite.config.ts', import.meta.url), 'utf8')
+    expect(cfg).toMatch(/registerType: 'autoUpdate'/)
+    expect(cfg).toMatch(/^\s*skipWaiting: true,$/m)
+    expect(cfg).toMatch(/^\s*clientsClaim: true,$/m)
   })
 })
