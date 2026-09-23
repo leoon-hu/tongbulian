@@ -9,6 +9,8 @@ import RubyText from '@/components/ui/RubyText.vue'
 // 全局顶部栏：品牌标题 + 「🔑 加入对战」（B19，口令是全局的，不挂在某个知识点的对战页上）+ 主页 / 声音 / 语言切换。显示在每个页面上方（学科无关；竞技场里不显示）。
 // 品牌名在首页是 <h1>（首页没有别的一级标题，搜索引擎按它认页面），子页的一级标题是 PageHeader 里的页名。
 // 品牌画成「同步练」+ 主色药丸「对战版」（F3，2026-09-21 对战版定位）；<title> 用的完整名 brand.title 在 App.vue。
+// compact：练习页用，品牌与按钮都缩一号、上下留白收窄，题目和作答区尽量一屏放下（U1）。
+defineProps<{ compact?: boolean }>()
 const route = useRoute()
 const router = useRouter()
 const settings = useSettingsStore()
@@ -16,7 +18,7 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ compact }">
     <RouterLink class="brand" to="/">
       <span class="brand-icon">⚔️</span>
       <span class="brand-text">
@@ -130,6 +132,40 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
   font-weight: 800;
   color: var(--c-primary-dark);
 }
+/* 紧凑版（练习页）：品牌小一号、按钮 48px；手机上两行合起来约 110px（原来 164px） */
+.app-header.compact {
+  gap: 6px 12px;
+  padding: 6px 16px;
+}
+.compact .brand {
+  gap: 8px;
+}
+.compact .brand-icon {
+  font-size: 30px;
+}
+.compact .brand-title {
+  gap: 6px;
+  font-size: var(--fs-lg);
+}
+.compact .brand-badge {
+  padding: 1px 8px;
+  font-size: 13px;
+}
+.compact .brand-sub {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.compact .nav {
+  gap: 8px;
+}
+.compact .nav-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+}
+.compact .nav-btn.lang {
+  font-size: var(--fs-md);
+}
 /* 「🔑 加入对战」：药丸形，带注音 */
 .nav-btn.join {
   display: inline-flex;
@@ -142,5 +178,10 @@ const titleTag = computed(() => (route.path === '/' ? 'h1' : 'span'))
   font-weight: 800;
   color: var(--c-text);
   white-space: nowrap;
+}
+.compact .nav-btn.join {
+  width: auto;
+  padding: 0 14px;
+  font-size: var(--fs-sm);
 }
 </style>

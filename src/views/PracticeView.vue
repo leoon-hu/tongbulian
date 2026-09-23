@@ -209,10 +209,23 @@ function retry(): void {
 </template>
 
 <style scoped>
+/* 上下都收紧一点（U1，2026-09-23）：题目、教具与作答区尽量一屏放下，答错时「我知道了」也不用往下滚。
+   只改这一页的留白与字号，组件本身（对战竞技场也在用）不动，所以下面几处用 :deep() */
 .practice {
   max-width: 720px;
   margin: 0 auto;
-  padding-bottom: 32px;
+  padding-bottom: 16px;
+}
+.practice :deep(.page-header) {
+  gap: 10px;
+  padding: 2px 16px 4px;
+}
+.practice :deep(.page-header .body) {
+  gap: 2px;
+}
+.practice :deep(.page-header .back) {
+  width: 44px;
+  height: 44px;
 }
 .kp-icon {
   flex: none;
@@ -220,11 +233,12 @@ function retry(): void {
 .dots {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
+  padding: 2px 0;
 }
 .dot {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--c-line);
 }
@@ -242,10 +256,11 @@ function retry(): void {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 24px 16px 0;
+  gap: 14px;
+  padding: 8px 16px 0;
 }
 .question {
+  max-width: 100%;
   cursor: pointer;
   border-radius: var(--radius-md);
   transition: transform 0.08s ease;
@@ -253,21 +268,78 @@ function retry(): void {
 .question:active {
   transform: scale(0.985);
 }
+.question :deep(.stem) {
+  gap: 10px;
+}
+/* 算式按屏宽缩（手机上 56px 的「35 + 24 = ?」会把「?」挤到第二行）；竖式同样 */
+.question :deep(.stem-expr) {
+  font-size: min(var(--fs-huge), 12vw);
+  line-height: 1.3;
+}
+.question :deep(.stem-expr.long) {
+  font-size: min(40px, 9.5vw);
+}
+.question :deep(.vertical) {
+  font-size: min(var(--fs-huge), 12vw);
+  padding: 6px 16px 8px;
+}
+/* 竖排的队伍（从上往下数）：格子和间距小一点 */
+.question :deep(.lineup.col) {
+  gap: 4px;
+  padding: 8px;
+}
+.question :deep(.lineup-wrap.col) {
+  gap: 2px;
+}
+.question :deep(.lineup.col .slot) {
+  height: 48px;
+}
 .wrong-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   background: var(--c-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 20px 28px;
+  max-width: 100%;
+  padding: 10px 24px 14px;
+}
+/* 手机上答错讲解的十格阵（格子 + 右边的蓝点约 358px）连同左右留白会比屏幕宽：留白收窄、十格阵缩一点 */
+@media (max-width: 440px) {
+  .wrong-panel {
+    padding: 10px 12px 14px;
+  }
+  .wrong-panel :deep(.tenframe) {
+    zoom: 0.9;
+  }
 }
 .wrong-title {
   font-size: var(--fs-lg);
+  line-height: 1.4;
 }
 .wrong-title strong {
   color: var(--c-green);
   font-size: var(--fs-xl);
+}
+/* 数字键盘：显示框矮一点，键仍是 64px（--tap-min） */
+.stage :deep(.numpad) {
+  gap: 10px;
+}
+.stage :deep(.numpad .display) {
+  padding: 0 24px;
+  font-size: 48px;
+  line-height: 1.25;
+}
+.stage :deep(.numpad .grid) {
+  gap: 8px;
+}
+/* 选项卡：卡与卡之间、卡里上下的留白收一点（注音的行高不动，不然拼音会顶到卡的边框），卡仍 ≥ 72px */
+.stage :deep(.cards) {
+  gap: 10px;
+}
+.stage :deep(.cards .card) {
+  min-height: 72px;
+  padding: 2px 10px;
 }
 </style>

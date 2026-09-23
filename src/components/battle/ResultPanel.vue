@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // 结果页（B9）：胜方 + 成员、比分、用时、每人「答 n · 对 m」；输的一方写「差一点点！」；下一章最大（本册最后一个知识点时再来一局最大）
-// 回放条 + 我的错题（B69）：比分下面一条红蓝赛跑的小时间线（反超处打点），再下面列这台设备答错的题（点了朗读）+「再练一遍」
+// 回放条 + 我的错题（B69）：比分走势（红蓝两条阶梯线，反超处打点）与这台设备答错的题（点了朗读）+「再练一遍」
+// 排版（B9，2026-09-23 用户定「手机上三个按钮要在第一屏」）：上面一张战报卡——左边谁赢了 / 比分 / 每人答题 / 本章战绩，右边下一章 + 再来一局 + 不玩了 + 分享；
+// 比分走势和错题放在卡片下面，往下滚才看。窄屏（< 540px）卡片里上下排。
 import { computed } from 'vue'
 import type { MatchState, Team } from '@/battle/protocol'
 import { elapsedMs, formatElapsed, teamPlayers } from '@/battle/match'
@@ -113,42 +115,57 @@ function shareResult(): void {
 
 <template>
   <div class="result">
-    <div class="trophy">🏆</div>
-    <h2 class="title" :class="winner"><RubyText :text="{ k: `battle.win.${winner}` }" /></h2>
-    <p class="members">{{ teamPlayers(state, winner).map(nameOf).join('、') }}</p>
-    <p class="score">
-      <span class="red">{{ state.score.red }}</span> : <span class="blue">{{ state.score.blue }}</span>
-    </p>
-    <p class="time"><RubyText :text="{ k: 'battle.time' }" /> {{ elapsed }}</p>
-    <svg v-if="timeline && timeline.length" class="timeline" :viewBox="`0 0 ${TL_W} ${TL_H}`" preserveAspectRatio="none" role="img" :aria-label="ui('battle.timeline')">
-      <line x1="0" :y1="TL_H" :x2="TL_W" :y2="TL_H" class="tl-base" />
-      <polyline :points="tl.blue" class="tl-line blue" />
-      <polyline :points="tl.red" class="tl-line red" />
-      <circle v-for="(f, i) in tl.flips" :key="i" :cx="f.x" :cy="f.y" r="4" class="tl-flip" :class="f.team" />
-    </svg>
-    <p v-if="series && series.kpId === state.kpId" class="series">
-      <RubyText :text="{ k: 'battle.series' }" />：
-      <span class="red">{{ sideName('red') }}<template v-if="seriesLeader === 'red'"> 🏆</template> {{ series.wins.red }}</span>
-      :
-      <span class="blue">{{ series.wins.blue }} <template v-if="seriesLeader === 'blue'">🏆 </template>{{ sideName('blue') }}</span>
-    </p>
-    <ul class="stats">
-      <li v-for="p in state.players" :key="p.id" :class="p.team">
-        <span class="who">{{ nameOf(p) }}</span>
-        <span>{{ ui('battle.stats', { n: p.index, m: p.correct }) }}</span>
-        <span v-if="p.team === loser" class="close"><RubyText :text="{ k: 'battle.close' }" /></span>
-      </li>
-    </ul>
-    <p v-if="next" class="next-hint"><RubyText :text="{ k: 'battle.next' }" />：<RubyText :text="{ k: `kp.${next}` }" /></p>
-    <p v-else class="next-hint done"><RubyText :text="{ k: 'battle.lastChapter' }" /></p>
-    <div class="actions">
-      <BigButton v-if="next" color="green" class="next-btn" @click="emit('next')"><RubyText :text="{ k: 'battle.next' }" /> ▶</BigButton>
-      <BigButton :color="next ? 'blue' : 'green'" class="rematch-btn" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
-      <BigButton color="ghost" class="quit-btn" @click="emit('quit')"><RubyText :text="{ k: 'battle.quit' }" /></BigButton>
+    <div class="card" :class="winner">
+      <div class="summary">
+        <div class="head">
+          <span class="trophy" aria-hidden="true">🏆</span>
+          <div class="head-text">
+            <h2 class="title" :class="winner"><RubyText :text="{ k: `battle.win.${winner}` }" /></h2>
+            <p class="members">{{ teamPlayers(state, winner).map(nameOf).join('、') }}</p>
+          </div>
+        </div>
+        <div class="scoreline">
+          <p class="score">
+            <span class="red">{{ state.score.red }}</span> : <span class="blue">{{ state.score.blue }}</span>
+          </p>
+          <p class="time"><RubyText :text="{ k: 'battle.time' }" /> {{ elapsed }}</p>
+        </div>
+        <ul class="stats">
+          <li v-for="p in state.players" :key="p.id" :class="p.team">
+            <span class="who">{{ nameOf(p) }}</span>
+            <span>{{ ui('battle.stats', { n: p.index, m: p.correct }) }}</span>
+            <span v-if="p.team === loser" class="close"><RubyText :text="{ k: 'battle.close' }" /></span>
+          </li>
+        </ul>
+        <p v-if="series && series.kpId === state.kpId" class="series">
+          <RubyText :text="{ k: 'battle.series' }" />：
+          <span class="red">{{ sideName('red') }}<template v-if="seriesLeader === 'red'"> 🏆</template> {{ series.wins.red }}</span>
+          :
+          <span class="blue">{{ series.wins.blue }} <template v-if="seriesLeader === 'blue'">🏆 </template>{{ sideName('blue') }}</span>
+        </p>
+      </div>
+      <div class="side">
+        <p v-if="next" class="next-hint"><RubyText :text="{ k: 'battle.next' }" />：<RubyText :text="{ k: `kp.${next}` }" /></p>
+        <p v-else class="next-hint done"><RubyText :text="{ k: 'battle.lastChapter' }" /></p>
+        <div class="actions">
+          <BigButton v-if="next" color="green" class="next-btn" @click="emit('next')"><RubyText :text="{ k: 'battle.next' }" /> ▶</BigButton>
+          <BigButton :color="next ? 'blue' : 'green'" class="rematch-btn" @click="emit('rematch')"><RubyText :text="{ k: 'battle.rematch' }" /></BigButton>
+          <BigButton color="ghost" class="quit-btn" @click="emit('quit')"><RubyText :text="{ k: 'battle.quit' }" /></BigButton>
+        </div>
+        <button type="button" class="share-btn" @click="shareResult">📣 <RubyText :text="{ k: 'battle.share' }" /></button>
+      </div>
     </div>
-    <button type="button" class="share-btn" @click="shareResult">📣 <RubyText :text="{ k: 'battle.share' }" /></button>
-    <section v-if="wrongs" class="wrong">
-      <h3 class="wrong-title"><RubyText :text="{ k: 'battle.myWrong' }" /></h3>
+    <section v-if="timeline && timeline.length" class="panel trend">
+      <h3 class="panel-title"><RubyText :text="{ k: 'battle.timeline' }" /></h3>
+      <svg class="timeline" :viewBox="`0 0 ${TL_W} ${TL_H}`" preserveAspectRatio="none" role="img" :aria-label="ui('battle.timeline')">
+        <line x1="0" :y1="TL_H" :x2="TL_W" :y2="TL_H" class="tl-base" />
+        <polyline :points="tl.blue" class="tl-line blue" />
+        <polyline :points="tl.red" class="tl-line red" />
+        <circle v-for="(f, i) in tl.flips" :key="i" :cx="f.x" :cy="f.y" r="4" class="tl-flip" :class="f.team" />
+      </svg>
+    </section>
+    <section v-if="wrongs" class="panel wrong">
+      <h3 class="panel-title wrong-title"><RubyText :text="{ k: 'battle.myWrong' }" /></h3>
       <p v-if="!wrongList.length" class="wrong-none">🎉 <RubyText :text="{ k: 'battle.noWrong' }" /></p>
       <ul v-else class="wrong-list">
         <li v-for="w in wrongList" :key="w.key" class="wrong-item" :class="w.player.team" role="button" tabindex="0" @click="readWrong(w.question)" @keydown.enter.prevent="readWrong(w.question)">
@@ -163,16 +180,7 @@ function shareResult(): void {
 </template>
 
 <style scoped>
-.next-hint {
-  margin: 4px 0 0;
-  font-size: var(--fs-md);
-  font-weight: 700;
-  color: var(--c-text-light);
-  text-align: center;
-}
-.next-hint.done {
-  color: var(--c-primary-dark);
-}
+/* 盖住竞技场的一层：内容比屏幕高时从顶上开始滚（战报卡永远在第一屏），放得下就上下居中；不认识 safe 的浏览器保留上一行的居中 */
 .result {
   position: absolute;
   inset: 0;
@@ -181,20 +189,65 @@ function shareResult(): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 内容比屏幕高（回放条 + 错题，B69）时从顶上开始滚，别把奖杯裁掉；不认识 safe 的浏览器保留上一行的居中 */
   justify-content: safe center;
-  gap: 8px;
+  gap: 12px;
   padding: 16px;
-  background: rgba(253, 246, 236, 0.9);
+  background: rgba(253, 246, 236, 0.94);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   overflow: auto;
 }
+.result > * {
+  flex: none;
+  width: min(100%, 760px);
+}
+
+/* ── 战报卡：左边结果、右边按钮；胜方队色描边 ── */
+.card {
+  --win: var(--c-red);
+  --win-soft: #fff1ef;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px 20px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  border: 3px solid var(--win);
+  background: linear-gradient(160deg, var(--win-soft), var(--c-card) 55%);
+  box-shadow: var(--shadow-card);
+}
+.card.blue {
+  --win: var(--c-blue);
+  --win-soft: #edf5ff;
+}
+.summary,
+.side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.side {
+  justify-content: center;
+  padding-left: 20px;
+  border-left: 2px dashed var(--c-line);
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .trophy {
-  font-size: 64px;
+  flex: none;
+  font-size: 52px;
   line-height: 1;
   animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+.head-text {
+  min-width: 0;
+}
 .title {
   font-size: var(--fs-xl);
+  line-height: 1.2;
 }
 .title.red {
   color: var(--c-red);
@@ -203,11 +256,18 @@ function shareResult(): void {
   color: var(--c-blue);
 }
 .members {
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--c-text-light);
+  line-height: 1.3;
+}
+.scoreline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
 }
 .score {
-  font-size: var(--fs-huge);
+  font-size: 52px;
   font-weight: 900;
   line-height: 1.1;
 }
@@ -218,38 +278,22 @@ function shareResult(): void {
   color: var(--c-blue);
 }
 .time {
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   color: var(--c-text-light);
-}
-/* 本章战绩（B64） */
-.series {
-  margin: 0;
-  padding: 4px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
-  font-size: var(--fs-md);
-  font-weight: 800;
-  color: var(--c-text-light);
-}
-.series .red {
-  color: var(--c-red);
-}
-.series .blue {
-  color: var(--c-blue);
 }
 .stats {
   list-style: none;
   padding: 0;
-  margin: 4px 0;
+  margin: 0;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 18px;
+  flex-direction: column;
+  gap: 2px;
   font-size: var(--fs-sm);
 }
 .stats li {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 0 8px;
   align-items: baseline;
 }
 .who {
@@ -265,24 +309,51 @@ function shareResult(): void {
   color: var(--c-primary-dark);
   font-weight: 700;
 }
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 8px;
+/* 本章战绩（B64） */
+.series {
+  align-self: flex-start;
+  margin: 2px 0 0;
+  padding: 2px 12px;
+  /* 窄卡里会折成两行，不用药丸形 */
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--c-line);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--c-text-light);
 }
-@keyframes pop {
-  from {
-    transform: scale(0) rotate(-30deg);
-  }
-  to {
-    transform: scale(1) rotate(0);
-  }
+.series .red {
+  color: var(--c-red);
+}
+.series .blue {
+  color: var(--c-blue);
+}
+.next-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--c-text-light);
+  text-align: center;
+}
+.next-hint.done {
+  color: var(--c-primary-dark);
+}
+/* 下一章占一整行（最大），再来一局 + 不玩了并排；没有下一章时再来一局是绿的、和不玩了并排 */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.actions .big-btn {
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.actions .next-btn {
+  grid-column: 1 / -1;
 }
 .share-btn {
-  margin-top: 2px;
-  padding: 8px 12px;
+  align-self: center;
+  padding: 4px 12px;
   background: none;
   color: var(--c-text-light);
   font-size: var(--fs-sm);
@@ -290,12 +361,23 @@ function shareResult(): void {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-/* 回放条（B69）：一条红蓝赛跑的小时间线 */
+
+/* ── 卡片下面：比分走势、我的错题（B69） ── */
+.panel {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.8);
+}
+.panel-title {
+  margin: 0 0 6px;
+  font-size: var(--fs-md);
+  color: var(--c-text-light);
+  text-align: center;
+}
 .timeline {
-  width: min(100%, 360px);
+  display: block;
+  width: 100%;
   height: 64px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.7);
   overflow: visible;
 }
 .tl-base {
@@ -320,20 +402,6 @@ function shareResult(): void {
   fill: #fff;
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
-}
-/* 我的错题（B69） */
-.wrong {
-  width: min(100%, 640px);
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.7);
-}
-.wrong-title {
-  margin: 0 0 6px;
-  font-size: var(--fs-md);
-  color: var(--c-text-light);
-  text-align: center;
 }
 .wrong-none {
   margin: 0;
@@ -417,5 +485,52 @@ function shareResult(): void {
   color: var(--c-primary-dark);
   font-size: var(--fs-md);
   font-weight: 800;
+}
+@keyframes pop {
+  from {
+    transform: scale(0) rotate(-30deg);
+  }
+  to {
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* 窄屏：卡片里上下排，按钮在结果下面 */
+@media (max-width: 539px) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side {
+    padding: 12px 0 0;
+    border-left: none;
+    border-top: 2px dashed var(--c-line);
+  }
+}
+/* 手机横屏（与竞技场紧凑版同一个条件，B29）：留白与字号再收一档，战报卡整张放进一屏 */
+@media (max-height: 479px) {
+  .result {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .card {
+    gap: 10px 14px;
+    padding: 10px 14px;
+  }
+  .side {
+    gap: 4px;
+    padding-left: 14px;
+  }
+  .summary {
+    gap: 4px;
+  }
+  .trophy {
+    font-size: 38px;
+  }
+  .score {
+    font-size: 40px;
+  }
+  .actions {
+    gap: 8px;
+  }
 }
 </style>

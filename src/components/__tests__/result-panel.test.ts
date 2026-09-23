@@ -91,6 +91,24 @@ describe('结果页按钮（B9）', () => {
   })
 })
 
+describe('结果页排版（B9：手机上三个按钮在第一屏）', () => {
+  it('三个按钮与分享在战报卡里（结果旁边），比分走势与错题在卡片后面、往下滚才看', async () => {
+    const timeline = [{ t: 1000, red: 1, blue: 0 }]
+    const w = mount(ResultPanel, { props: { state: ended(), next: nextKp(KP), timeline, wrongs: [{ playerId: 'a', index: 0 }] } })
+    await flushPromises()
+    const card = w.find('.result > .card')
+    expect(card.findAll('.side .big-btn')).toHaveLength(3)
+    expect(card.find('.side .share-btn').exists()).toBe(true)
+    expect(card.find('.summary .score').exists()).toBe(true)
+    expect(card.find('.timeline').exists()).toBe(false)
+    expect(card.find('.wrong').exists()).toBe(false)
+    const order = [...w.element.children].map((e) => e.className)
+    expect(order[0]).toContain('card')
+    expect(order.slice(1).join(' ')).toMatch(/trend.*wrong/)
+    w.unmount()
+  })
+})
+
 describe('本章战绩（B64）', () => {
   it('有战绩就在用时下面写「本章战绩：小兔 2 : 1 小虎」，先赢两局的名字旁出 🏆；别的知识点的战绩不显示', async () => {
     const w = mount(ResultPanel, { props: { state: ended(), next: nextKp(KP), series: { kpId: KP, wins: { red: 2, blue: 1 } } } })

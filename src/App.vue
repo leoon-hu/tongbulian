@@ -90,7 +90,7 @@ watch(
 </script>
 
 <template>
-  <AppHeader v-if="!isArena" />
+  <AppHeader v-if="!isArena" :compact="route.name === 'practice'" />
   <JoinSheet v-if="joinOpen" @close="joinOpen = false" />
   <!-- 「分享给朋友」在没有系统分享面板的环境下弹的面板（F1），哪一页发起都在这里画 -->
   <SharePanel v-if="shareStore.panel" />
