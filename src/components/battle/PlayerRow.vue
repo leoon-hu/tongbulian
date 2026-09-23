@@ -138,15 +138,15 @@ watch(qEl, (el) => {
   }
 })
 // 换了题（或换了布局）再量一次；不按 player.index 触发——按下答案的那一刻题号就加一而显示的还是刚答的那道，
-// 那时重置缩放会让题目在反馈窗口里跳一下（2026-09-22 用户报「点答案时题目动来动去」）；量法与当前缩放无关，也不用先重置
-watch(
-  () => [props.question?.id, props.compact] as const,
-  () => nextTick(fitQuestion),
-)
+// 那时重置缩放会让题目在反馈窗口里跳一下（2026-09-22 用户报「点答案时题目动来动去」）；量法与当前缩放无关，也不用先重置。
+// 几个值分开写成数组（多源 watch 逐项比较）：一个 getter 返回新数组的话每次都算「变了」，player 对象一换回调就跑
+watch([() => props.question?.id, () => props.compact], () => nextTick(fitQuestion))
 onBeforeUnmount(() => ro?.disconnect())
 
+// 换题 / 开关反馈窗口时清空显示框、自动读题。必须是多源 watch：player 对象每按一个键（单设备 setInput）、每来一份快照（线上）
+// 都会换成新的，写成返回数组的 getter 会每次都触发——显示框刚写上就被清回「?」、题目从头再读（2026-09-23 用户截图）
 watch(
-  () => [props.question?.id, props.feedback === null, props.player.index] as const,
+  [() => props.question?.id, () => props.feedback === null, () => props.player.index],
   ([id, free]) => {
     typed.value = ''
     // 自动读的排在必须播完的那句后面（点了 🔊 的题读完再读新题），换题了只读最新的
