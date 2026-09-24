@@ -6,7 +6,6 @@ import { ROUND_SIZE, hasGenerator } from '@/engine'
 import { getCourse, getSubject, kpsOfUnit } from '@/engine/catalog'
 import { kpTitle, ui, unitTitle } from '@/engine/i18n'
 import { useProgressStore } from '@/stores/progress'
-import EntrySheet from '@/components/ui/EntrySheet.vue'
 
 // 某「学科×年级」的知识点地图。无效课程回顶层。
 const route = useRoute()
@@ -61,22 +60,10 @@ function statusOf(kp: KnowledgePoint): NodeStatus {
 
 const SEGMENTS = Array.from({ length: ROUND_SIZE }, (_, i) => i)
 
-// 点知识点先弹出「自己练，还是对战？」（B26）：选了才跳练习页 / 对战设置页
-const picking = ref<KnowledgePoint | null>(null)
-
+// 点知识点直接进它的设置页（B26）：自己练与三种对战都在「跟谁打」里选
 function tapNode(kp: KnowledgePoint): void {
   if (statusOf(kp) !== 'open') return
-  picking.value = kp
-}
-
-function goPractice(): void {
-  const kp = picking.value
-  if (kp) router.push(`/s/${subjectId.value}/g/${gradeId.value}/practice/${kp.id}`)
-}
-
-function goBattle(): void {
-  const kp = picking.value
-  if (kp) router.push(`/battle/new/${kp.id}`)
+  router.push(`/battle/new/${kp.id}`)
 }
 </script>
 
@@ -154,7 +141,6 @@ function goBattle(): void {
       </div>
     </section>
 
-    <EntrySheet v-if="picking" :kp="picking" @practice="goPractice" @battle="goBattle" @close="picking = null" />
   </div>
 </template>
 

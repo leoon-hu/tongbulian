@@ -76,10 +76,10 @@ export function helpSections(lang: Lang): HelpSection[] {
           {
             kind: 'steps',
             items: [
-              'Enter: tap a topic on the topic map and choose "⚔️ Battle mode" in the pop-up ("📖 Practice alone" is quiet practice).',
+              'Enter: tap a topic on the topic map and you land on its "Who do you play?" page: the first card, "Practice alone", is quiet practice, the other three are the battle modes below; pick one and tap Start. "Practice alone" is selected the first time; after that the page remembers the card you started with last time.',
               'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: one person taps "Create room" and gets three QR codes on screen — red team, blue team and watch, each with a link to copy; red players scan the red code, blue players the blue one, onlookers the watch one; if scanning is awkward, tap "🔑 Join a battle" in the top bar and type that role\'s 6-digit passcode (shown under each code); the match starts by itself once both teams are in; the device that created the room can also tap "Join as red/blue" to play once one team is in, otherwise it just watches; up to 6 per team).',
               `Games follow the chapter: a grade's topics take turns through the ${games} game scenes from the first topic of volume 1, carrying on into volume 2, so a new chapter means a new game; to switch for this match only (or 🎲 random), use ⚙️ Settings in the header — next time it goes back to the chapter's game.`,
-              'The first time you tap Start you are asked for a name; pick a ready-made one. It is not asked again; names and the robot speed are under ⚙️ Settings.',
+              'Nobody is asked for a name: tap Start and play. Each side gets a random animal and is called by it (Rabbit, Cat…), and the two sides always differ. To use your own name or animal, set it under ⚙️ Settings (🎲 goes back to random); the robot speed is there too.',
               'Start: the first time this device plays a game, it explains the rule in one sentence (not repeated within a day), then "Ready… 3, 2, 1, go!" and both sides get their first question.',
             ],
           },
@@ -195,7 +195,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Where is progress stored? Can it be lost?', a: 'Only in this device\'s browser; nothing is uploaded and devices do not sync. Clearing browser data clears it.' },
               { q: 'Do questions repeat?', a: 'They are generated randomly, so almost never. An unfinished round continues with the same questions; a finished one gets new ones.' },
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
-              { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the battle setup page; the right-hand name for two-on-one-device is there too.' },
+              { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the battle setup page, together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
               { q: 'Why no Chinese / English / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
@@ -217,10 +217,10 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'steps',
           items: [
-            '进入：在知识点地图上点一个知识点，弹出「自己练，还是对战？」，选「⚔️ 对战模式」（选「📖 自己练」就是安静地练）。',
+            '进入：在知识点地图上点一个知识点，直接到「跟谁打？」：第一张「自己练」是安静地练，后面三张是下面说的三种对战，选好点「开始」；第一次默认选着「自己练」，之后默认选着上次开始时选的那张。',
             '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：一个人点「建房间」，屏幕上出三个二维码——红队、蓝队、观战，各带链接可以复制；红队的人扫红队码、蓝队的人扫蓝队码，看热闹的扫观战码；不方便扫码就点顶栏的「🔑 加入对战」，输那个身份的 6 位口令（每个码下面写着）；两队都有人进来就自动开始，建房的那台默认只看，一队有人后也可以点「以另一队进入」自己上场；每队最多 6 人）。',
             `游戏按章节排定：一个年级的知识点从上册第一个起轮流用 ${games} 种游戏画面，下册接着上册排到的继续轮，换章节就换游戏；想这一次换一种或「🎲 随机」，在页头「⚙️ 配置」里选，只算这一次，下次又回到章节的游戏。`,
-            '第一次点「开始」会问名字，点一个现成的就行，以后不再问；改名字、机器人快慢也在「⚙️ 配置」里。',
+            '不用输名字：点「开始」就打。每一方随机分到一只小动物，名字就叫它（小兔、小猫……），两边一定不一样；想用自己的名字或小动物，在「⚙️ 配置」里改（「🎲 随机」回到随机），机器人快慢也在那里。',
             '开始：这台设备第一次玩这个游戏会先讲一句规则（一天内不重复），然后「预备…3、2、1，开始！」，两边同时拿到第一题。',
           ],
         },
@@ -336,7 +336,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '进度存在哪里？会不会丢？', a: '只存在这台设备的浏览器里，不上传，换设备不同步；清了浏览器数据就没了。' },
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
-            { q: '想改名字？', a: '在对战设置页页头的「⚙️ 配置」里改，两人一台的右边名字也在那里。' },
+            { q: '想改名字？', a: '在对战设置页页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
             { q: '为什么还没有语文 / 英语 / 三年级？', a: '内容按年级逐个做，陆续补充。' },
             {
               q: '收费吗？有广告吗？安全吗？',

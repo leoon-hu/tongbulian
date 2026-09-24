@@ -25,7 +25,7 @@ import { questionAt, questionsAhead } from '@/battle/stream'
 import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, RUNS_MAX, ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, blendPace, isAiLevel, isRunRecord, paceOfRun, planAnswer, robotLineFor, type AiLevel, type HumanPace, type RunAnswer, type RunRecord } from '@/battle/ai'
 import { cleanName } from '@/battle/names'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
-import { DEFAULT_AVATARS, isAvatarId, type AvatarId } from '@/battle/avatars'
+import { AVATAR_IDS, LEGACY_AVATARS, isAvatarId, pickIdentity, type AvatarId, type Identity } from '@/battle/avatars'
 import { calloutSfx, panOf, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 import { pickLine } from '@/battle/lines'
@@ -33,6 +33,9 @@ import { pickLine } from '@/battle/lines'
 export type LocalMode = 'ai' | 'duo'
 /** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
 export type BattleMode = LocalMode | 'online'
+/** 设置页「跟谁打」的四张卡（B27），按这个顺序排：自己练（B26：原来点知识点弹出的选择面板并进来的）在第一张，后面三种对战 */
+export type SetupMode = BattleMode | 'practice'
+export const SETUP_MODES: readonly SetupMode[] = ['practice', 'ai', 'duo', 'online']
 
 /** 线上模式往服务器发消息的口子（stores/room 注入；测试可注入假的） */
 export interface OnlineTransport {
@@ -65,20 +68,24 @@ function vibrate(pattern: number | number[]): void {
 }
 
 const KEY = 'tongbulian:battle'
+/** 偏好的格式版本（存成 v）：2 起小动物可以是「没选」；更早的存档里小熊 / 小猪是原来的默认值，读的时候当没选 */
+const PREFS_V = 2
 
 export interface BattlePrefs {
   clientId: string
-  /** me：本设备的名字（打机器人、也是两人同屏左边的默认）；left / right：两人同屏各自记住的 */
+  /** 自定义的名字（空 = 没自定义，用随机的，B17）。me：本设备的（打机器人、也是两人同屏左边的默认）；left / right：两人同屏各自记住的 */
   names: { me: string; left: string; right: string }
   aiLevel: AiLevel
   /** 每种游戏上次讲开场规则句的时间（ms）：本设备第一次进这个游戏才讲，一天内不重复（B6） */
   intros: Record<string, number>
-  /** 我的小动物（B66）：me = 本设备的（打机器人 / 两人一台左边 / 多设备），right = 两人一台右边的 */
-  avatars: { me: AvatarId; right: AvatarId }
+  /** 自定义的小动物（B66；null = 没选，用随机的，B17）：me = 本设备的（打机器人 / 两人一台左边 / 多设备），right = 两人一台右边的 */
+  avatars: { me: AvatarId | null; right: AvatarId | null }
   /** 上一次的记录（B67）：每个知识点最近一次打机器人的逐题记录，「跟着你」的起始节奏，最多 RUNS_MAX 个 */
   lastRuns: Record<string, RunRecord>
   /** 背景音乐（B68）：默认开；🔇 静音时也不放 */
   music: boolean
+  /** 设置页上次选的「跟谁打」（B27）：下次进来默认选着它；从来没开始过是自己练 */
+  mode: SetupMode
 }
 
 
@@ -128,9 +135,10 @@ function loadPrefs(): BattlePrefs {
     names: { me: '', left: '', right: '' },
     aiLevel: 'auto',
     intros: {},
-    avatars: { ...DEFAULT_AVATARS },
+    avatars: { me: null, right: null },
     lastRuns: {},
     music: true,
+    mode: 'practice',
   }
   try {
     const raw = localStorage.getItem(KEY)
@@ -148,24 +156,31 @@ function loadPrefs(): BattlePrefs {
           (kv): kv is [string, number] => typeof kv[1] === 'number' && Number.isFinite(kv[1]),
         ),
       ),
-      avatars: { me: isAvatarId(avatars.me) ? avatars.me : DEFAULT_AVATARS.me, right: isAvatarId(avatars.right) ? avatars.right : DEFAULT_AVATARS.right },
+      avatars: { me: avatarPref(avatars.me, 'me', p.v === PREFS_V), right: avatarPref(avatars.right, 'right', p.v === PREFS_V) },
       lastRuns: Object.fromEntries(
         Object.entries(typeof p.lastRuns === 'object' && p.lastRuns !== null ? (p.lastRuns as Record<string, unknown>) : {}).filter(
           (kv): kv is [string, RunRecord] => isRunRecord(kv[1]),
         ),
       ),
       music: typeof p.music === 'boolean' ? p.music : true,
+      mode: SETUP_MODES.includes(p.mode as SetupMode) ? (p.mode as SetupMode) : base.mode,
     }
   } catch {
     return base
   }
 }
 
+/** 存档里的小动物：不认识的当没选；旧格式里等于原来默认值的也当没选（那时不选也存着默认值，分不出是不是自己选的） */
+function avatarPref(v: unknown, which: 'me' | 'right', current: boolean): AvatarId | null {
+  if (!isAvatarId(v)) return null
+  return !current && v === LEGACY_AVATARS[which] ? null : v
+}
+
 function savePrefs(p: BattlePrefs): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(p))
+    localStorage.setItem(KEY, JSON.stringify({ ...p, v: PREFS_V }))
   } catch {
-    // 存不下就下次再问名字，无妨
+    // 存不下就下次用随机的名字，无妨
   }
 }
 
@@ -256,13 +271,33 @@ export const useBattleStore = defineStore('battle', () => {
     set.clear()
   }
 
+  /** 改名字（B17）：空串 = 回到随机 */
   function setName(which: keyof BattlePrefs['names'], name: string): void {
     prefs.value.names[which] = cleanName(name)
   }
 
-  /** 选小动物（B66）：me = 自己的，right = 两人一台右边的 */
-  function setAvatar(which: 'me' | 'right', id: AvatarId): void {
-    if (isAvatarId(id)) prefs.value.avatars = { ...prefs.value.avatars, [which]: id }
+  /** 选小动物（B66）：me = 自己的，right = 两人一台右边的；null = 回到随机（B17） */
+  function setAvatar(which: 'me' | 'right', id: AvatarId | null): void {
+    if (id === null || isAvatarId(id)) prefs.value.avatars = { ...prefs.value.avatars, [which]: id }
+  }
+
+  /** 没自定义时随机点选的顺序（B17）：页面打开时排一次，同一次打开里再来一局 / 下一章不变；不存本地 */
+  const autoOrder: readonly AvatarId[] = createRng().shuffle(AVATAR_IDS)
+
+  /**
+   * 这台设备上各方现在用的名字与小动物（B17）：自定义的优先，没有的随机、左右两边不一样。
+   * me = 本设备的（打机器人 / 两人一台左边 / 多设备），right = 两人一台右边的（避开左边，左边也避开右边自定义的）
+   */
+  function identities(): { me: Identity; right: Identity } {
+    const { names, avatars } = prefs.value
+    const me = pickIdentity({ name: names.me, avatar: avatars.me }, autoOrder, lang.value, [{ name: names.right, avatar: avatars.right ?? undefined }])
+    return { me, right: pickIdentity({ name: names.right, avatar: avatars.right }, autoOrder, lang.value, [me]) }
+  }
+
+  /** 多设备时发给服务器的（B17）：我的名字与小动物，以及哪几样是随机的（服务器按这个去重） */
+  function onlineIdentity(): Identity & { auto: { name?: true; avatar?: true } } {
+    const { names, avatars } = prefs.value
+    return { ...identities().me, auto: { ...(names.me ? {} : { name: true }), ...(avatars.me ? {} : { avatar: true }) } }
   }
 
   function seedsFor(players: PlayerInit[], given?: Record<string, number>): Record<string, number> {
@@ -545,7 +580,7 @@ export const useBattleStore = defineStore('battle', () => {
     react([e], s?.skin ?? '')
   }
 
-  /** 开一局单设备的比赛（进入倒数）。names 缺的用「我」的名字补，设置页会保证名字都有 */
+  /** 开一局单设备的比赛（进入倒数）。名字与小动物：自定义的优先，没有的随机、两边不一样（B17 / B18） */
   function startLocal(opts: {
     kpId: string
     mode: LocalMode
@@ -562,16 +597,16 @@ export const useBattleStore = defineStore('battle', () => {
     aiRng = createRng(opts.aiSeed)
     // 没指定就用按章节排到的游戏（B36）；设置页的「配置」里换的只影响这一次，不记偏好
     const skin = resolveSkin(opts.skin ?? chapterSkin(opts.kpId), createRng())
-    const me = prefs.value.names.me
+    const { me, right } = identities()
     const players: PlayerInit[] =
       opts.mode === 'ai'
         ? [
-            { id: 'left', name: me, team: 'red', avatar: prefs.value.avatars.me },
+            { id: 'left', name: me.name, team: 'red', avatar: me.avatar },
             { id: AI_ID, name: '', team: 'blue', kind: 'ai' },
           ]
         : [
-            { id: 'left', name: prefs.value.names.left || me, team: 'red', avatar: prefs.value.avatars.me },
-            { id: 'right', name: prefs.value.names.right, team: 'blue', avatar: prefs.value.avatars.right },
+            { id: 'left', name: prefs.value.names.left || me.name, team: 'red', avatar: me.avatar },
+            { id: 'right', name: right.name, team: 'blue', avatar: right.avatar },
           ]
     operable.value = players.filter((p) => p.kind !== 'ai').map((p) => p.id)
     const now = opts.now ?? Date.now()
@@ -763,6 +798,8 @@ export const useBattleStore = defineStore('battle', () => {
     now,
     setName,
     setAvatar,
+    identities,
+    onlineIdentity,
     startLocal,
     startOnline,
     syncOnline,

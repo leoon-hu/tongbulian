@@ -10,6 +10,7 @@ import { hasBlank } from '@/components/practice/blank'
 import { buildSession } from '@/engine'
 import { setLang, ui } from '@/engine/i18n'
 import { SKINS, chapterSkin, skinById } from '@/battle/skins'
+import { avatarEmoji } from '@/battle/avatars'
 import { liveCourses, nextKp } from '@/engine/catalog'
 import { REPO_URL, SISTER_SITES } from '@/engine/sites'
 import { coursePath } from '@/seo/site'
@@ -74,6 +75,13 @@ async function mountAt(path: string, before?: () => void) {
 }
 
 describe('App 集成冒烟', () => {
+  /** 路由跳转到按需加载的视图：轮询等条件成立（固定次数的 flushPromises 不够） */
+  const until = async (pred: () => boolean): Promise<void> => {
+    for (let i = 0; i < 200 && !pred(); i++) await flushPromises()
+    expect(pred()).toBe(true)
+    for (let i = 0; i < 5; i++) await flushPromises()
+  }
+
   it('顶层选择页列出各学科（数学可进，语文/英语占位）', async () => {
     const w = await mountAt('/')
     expect(shown(w)).toContain('同步练') // 品牌
@@ -219,11 +227,6 @@ describe('App 集成冒烟', () => {
   })
 
   it('当前册记在地址里：切到下册地址带 ?sem=2，从下册的练习页 / 对战设置页返回还在下册（2026-09-22 用户报「不管从哪返回都回上册」）', async () => {
-    const until = async (pred: () => boolean): Promise<void> => {
-      for (let i = 0; i < 200 && !pred(); i++) await flushPromises()
-      expect(pred()).toBe(true)
-      for (let i = 0; i < 5; i++) await flushPromises()
-    }
     const w = await mountAt(MAP)
     const tab = w.findAll('button.tab').find((b) => b.text() === '下册')!
     await tab.trigger('click')
@@ -235,9 +238,11 @@ describe('App 集成冒烟', () => {
       await w.findAll('.node-wrap').find((n) => shown(n).includes(title))!.find('.node').trigger('click')
       await flushPromises()
     }
-    // 点下册的知识点 → 自己练 → 练习页的返回键 → 还是下册
+    // 点下册的知识点 → 设置页选「自己练」开始 → 练习页的返回键 → 还是下册
     await tapNode('破十法')
-    await w.find('.entry-btn.practice').trigger('click')
+    await until(() => router.currentRoute.value.name === 'battle-setup')
+    await w.find('.mode[data-mode="practice"]').trigger('click')
+    await w.find('.start-btn').trigger('click')
     await until(() => router.currentRoute.value.name === 'practice')
     expect(router.currentRoute.value.params.kpId).toBe('s2-02-borrow-sub')
     await w.find('.page-header .back').trigger('click')
@@ -246,9 +251,8 @@ describe('App 集成冒烟', () => {
     expect(shown(w)).toContain('破十法')
     expect(shown(w)).not.toContain('凑十法')
 
-    // 对战设置页的返回键同样
+    // 设置页的返回键同样
     await tapNode('破十法')
-    await w.find('.entry-btn.battle').trigger('click')
     await until(() => router.currentRoute.value.name === 'battle-setup')
     await w.find('.page-header .back').trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
@@ -281,31 +285,32 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('点知识点弹出「自己练，还是对战？」：✕ 关掉留在地图，选「自己练」进练习页（没有解锁；页签行没有对战开关）', async () => {
+  it('点知识点直接到「跟谁打」（不弹选择面板，B26）：第一次默认选着「自己练」，点开始进练习页；下次进来默认选着上次开始时的那张卡（没有解锁；页签行没有对战开关）', async () => {
     const w = await mountAt(MAP)
     // 已去除解锁：地图上不再出现 🔒；也没有「⚔️ 对战」开关了（B26）
     expect(shown(w)).not.toContain('🔒')
     expect(w.find('.tab.battle').exists()).toBe(false)
     const nodes = w.findAll('button.node')
     expect(nodes.length).toBeGreaterThan(1)
-    expect(w.find('.entry-sheet').exists()).toBe(false)
     await nodes[1]!.trigger('click')
-    await flushPromises()
-    const sheet = w.find('.entry-sheet')
-    expect(sheet.exists()).toBe(true)
-    expect(shown(sheet)).toContain('自己练')
-    expect(shown(sheet)).toContain('对战模式')
-    await sheet.find('.close').trigger('click')
-    await flushPromises()
+    await until(() => router.currentRoute.value.name === 'battle-setup')
+    const kpId = String(router.currentRoute.value.params.kpId)
     expect(w.find('.entry-sheet').exists()).toBe(false)
-    expect(router.currentRoute.value.path).toBe(MAP)
-    await nodes[1]!.trigger('click')
-    await flushPromises()
-    await w.find('.entry-btn.practice').trigger('click')
-    await flushPromises()
-    await flushPromises()
-    expect(router.currentRoute.value.path).toContain('/practice/')
+    expect(shown(w)).toContain('跟谁打')
+    expect(w.findAll('.mode').map((m) => m.attributes('data-mode'))).toEqual(['practice', 'ai', 'duo', 'online'])
+    expect(w.find('.mode.on').attributes('data-mode')).toBe('practice') // 第一次默认自己练
+    expect(shown(w.find('.mode-desc'))).toContain('不用比快慢')
+    await w.find('.start-btn').trigger('click')
+    await until(() => router.currentRoute.value.name === 'practice')
+    expect(router.currentRoute.value.params.kpId).toBe(kpId)
+    expect(useBattleStore().prefs.mode).toBe('practice')
     w.unmount()
+    // 上次开始时选的是两人一台：下次进来默认选着它
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ mode: 'duo' }))
+    const w2 = await mountAt(`/battle/new/${kpId}`)
+    await until(() => w2.find('.mode.on').exists())
+    expect(w2.find('.mode.on').attributes('data-mode')).toBe('duo')
+    w2.unmount()
   })
 
   it('点中/EN 开关后顶层选择页切到英文', async () => {
@@ -650,12 +655,9 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     vi.useRealTimers()
   })
 
-  it('地图上点知识点 → 面板里选「⚔️ 对战模式」→ 设置页只有三张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；没名字点开始才问，问完直接进竞技场（无全局顶栏、标题带「对战」）', async () => {
+  it('地图上点知识点 → 设置页只有四张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；点开始不问名字直接进竞技场，名字是随机到的小动物（无全局顶栏、标题带「对战」）', async () => {
     const w = await mountAt(MAP)
     await w.find('.node.open').trigger('click')
-    await flushPromises()
-    expect(shown(w.find('.entry-sheet'))).toContain('对战模式')
-    await w.find('.entry-btn.battle').trigger('click')
     await until(pathIs('/battle/new/s1-00-count'))
     expect(shown(w)).toContain('跟谁打')
     expect(document.title).toContain('对战')
@@ -664,12 +666,13 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(shown(w)).not.toContain('机器人快慢')
     expect(w.find('.skins').exists()).toBe(false)
     expect(w.find('.name-chip').exists()).toBe(false)
-    // 三张「跟谁打」卡各有一幅示意图（B27）：前两张一台手机，第三张两台；只有打机器人那张画机器人
+    // 四张「跟谁打」卡各有一幅示意图（B27），自己练在第一张：自己练一台竖着的手机，打机器人 / 两人一台一台横着的，各用各的两台；只有打机器人那张画机器人、只有自己练画书
     const pics = w.findAll('.mode .mode-pic')
-    expect(pics.length).toBe(3)
-    expect(pics.map((p) => p.findAll('.phone').length)).toEqual([1, 1, 2])
-    expect(pics.map((p) => p.find('.robot').exists())).toEqual([true, false, false])
-    expect(pics.map((p) => p.findAll('.person').length)).toEqual([1, 2, 2])
+    expect(pics.length).toBe(4)
+    expect(pics.map((p) => p.findAll('.phone').length)).toEqual([1, 1, 1, 2])
+    expect(pics.map((p) => p.find('.robot').exists())).toEqual([false, true, false, false])
+    expect(pics.map((p) => p.find('.book').exists())).toEqual([true, false, false, false])
+    expect(pics.map((p) => p.findAll('.person').length)).toEqual([1, 1, 2, 2])
     // ⚙️ 配置：机器人快慢默认中、选游戏默认高亮按章节排到的那个（没有「按章节」这张卡）、名字
     await w.find('.config-btn').trigger('click')
     expect(shown(w.find('.config'))).toContain('机器人快慢')
@@ -681,21 +684,24 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     const onIndex = tiles.findIndex((t) => t.classes('on'))
     expect(SKINS[onIndex - 1]!.id).toBe(chapterSkin('s1-00-count'))
     expect(shown(w.find('.config'))).toContain('我的名字')
+    // 名字那一格显示现在随机到的名字与小动物，带 🎲（B17）
+    const ids = useBattleStore().identities()
+    expect(shown(w.find('.config .name-chip.red .nm'))).toBe(`${avatarEmoji(ids.me.avatar)}${ids.me.name}`)
+    expect(w.find('.config .name-chip.red .dice').exists()).toBe(true)
+    expect(ids.me.avatar).not.toBe(ids.right.avatar)
     const other = SKINS.find((sk) => sk.id !== chapterSkin('s1-00-count'))!
     await tiles[SKINS.indexOf(other) + 1]!.trigger('click') // 换一种，只算这一次
     await w.find('.config .done').trigger('click')
     expect(w.find('.config').exists()).toBe(false)
     const store = useBattleStore()
     expect(JSON.parse(localStorage.getItem(BATTLE_KEY) ?? '{}').skin).toBeUndefined() // 不记偏好
-    // 没名字：点开始才问，点一个现成名字就直接进竞技场
+    // 选打机器人（默认选着的是自己练）点开始：不问名字，直接进竞技场；名字与小动物是随机点选的（B17），不记进偏好
+    await w.find('.mode[data-mode="ai"]').trigger('click')
     await w.find('.start-btn').trigger('click')
-    expect(shown(w)).toContain('你叫什么')
-    const chip = w.find('.sheet .chip')
-    const picked = chip.text()
-    await chip.trigger('click')
-    await w.find('form.sheet').trigger('submit')
     await until(pathIs('/battle/local/s1-00-count'))
-    expect(JSON.parse(localStorage.getItem(BATTLE_KEY)!).names.me).toBe(picked)
+    expect(w.find('.sheet').exists()).toBe(false)
+    expect(store.state!.players[0]).toMatchObject({ name: ids.me.name, avatar: ids.me.avatar })
+    expect(JSON.parse(localStorage.getItem(BATTLE_KEY)!).names.me).toBe('')
     expect(router.currentRoute.value.query.mode).toBe('ai')
     expect(w.find('.app-header').exists()).toBe(false)
     expect(w.find('.arena').exists()).toBe(true)
@@ -777,8 +783,11 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(w.findAll('.row.operable')).toHaveLength(2)
     expect(w.findAll('.mask')).toHaveLength(0) // 两边都是自己：不盖遮罩、不标「我」
     expect(w.findAll('.me-tag')).toHaveLength(0)
-    expect(w.find('.team.red .team-name').text()).toBe('🐻小兔') // 名字前带默认的小动物（B66）
-    expect(w.find('.team.blue .team-name').text()).toBe('🐷小虎')
+    // 名字前带小动物（B66）：没选的是随机到的，两边不一样（B17）
+    const [redP, blueP] = store.state!.players
+    expect(redP!.avatar).not.toBe(blueP!.avatar)
+    expect(w.find('.team.red .team-name').text()).toBe(`${avatarEmoji(redP!.avatar)}小兔`)
+    expect(w.find('.team.blue .team-name').text()).toBe(`${avatarEmoji(blueP!.avatar)}小虎`)
     expect(w.find(`.strip.${skinById(chapterSkin(KP))!.slot}`).exists()).toBe(true) // 游戏按章节排定
 
     // 第一题从界面上答：数字键盘按数字再 ✓，选择题点正确的那张卡
@@ -853,13 +862,21 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     w.unmount()
   })
 
-  it('练习页页头没有 ⚔️ 了（入口只在地图的选择面板）；没有名字时直接打开竞技场地址会退回设置页', async () => {
+  it('练习页页头没有 ⚔️ 了（入口只在地图的选择面板）；没有名字时直接打开竞技场地址也直接开一局（随机的名字，左右不一样）', async () => {
     const w = await mountAt(practice(KP))
     expect(w.find('.battle-btn').exists()).toBe(false)
     w.unmount()
 
     const w2 = await mountAt(`/battle/local/${KP}?mode=duo`)
-    await until(pathIs(`/battle/new/${KP}`))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe(`/battle/local/${KP}`)
+    const store = useBattleStore()
+    const [l, r] = store.state!.players
+    expect(l!.name).toBeTruthy()
+    expect(r!.name).toBeTruthy()
+    expect(l!.name).not.toBe(r!.name)
+    expect(l!.avatar).not.toBe(r!.avatar)
+    expect(w2.find('.team.red .team-name').text()).toBe(`${avatarEmoji(l!.avatar)}${l!.name}`)
     w2.unmount()
   })
 })
@@ -895,7 +912,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     const battle = useBattleStore()
     room.useFactory((url) => new FakeWs(url))
     const me = battle.prefs.clientId
-    const online = w.findAll('.mode')[2]!
+    const online = w.find('.mode[data-mode="online"]')
     expect(online.attributes('disabled')).toBeUndefined()
     await online.trigger('click')
     expect(shown(w.find('.start-btn'))).toContain('建房间')
@@ -1050,7 +1067,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     const battle = useBattleStore()
     room.useFactory((url) => new FakeWs(url))
     const me = battle.prefs.clientId
-    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.mode[data-mode="online"]').trigger('click')
     await w.find('.start-btn').trigger('click')
     const ws = FakeWs.last()
     ws.open()
@@ -1100,7 +1117,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w = await mountAt(`/battle/new/${KP}`)
     room = useRoomStore()
     room.useFactory((url) => new FakeWs(url))
-    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.mode[data-mode="online"]').trigger('click')
     await w.find('.start-btn').trigger('click')
     ws = FakeWs.last()
     ws.open()
@@ -1144,7 +1161,7 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     const battle = useBattleStore()
     room.useFactory((url) => new FakeWs(url))
     const me = battle.prefs.clientId
-    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.mode[data-mode="online"]').trigger('click')
     await w.find('.start-btn').trigger('click')
     const ws = FakeWs.last()
     ws.open()
@@ -1199,7 +1216,11 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     await w.find('form.join-sheet').trigger('submit')
     let ws = FakeWs.last()
     ws.open()
-    expect(ws.msgs).toEqual([{ type: 'hello', clientId: me, name: '小兔', version: expect.any(String), avatar: 'bear' }, { type: 'lookup', pass: '123456' }])
+    // 小动物没选：带随机到的那只，并告诉服务器是随机的（B17）
+    expect(ws.msgs).toEqual([
+      { type: 'hello', clientId: me, name: '小兔', version: expect.any(String), avatar: battle.identities().me.avatar, auto: { avatar: true } },
+      { type: 'lookup', pass: '123456' },
+    ])
     expect(shown(w.find('.join-sheet .big-btn'))).toContain('正在连接')
     // 口令不对：留在面板里提示，按钮放开，连接断掉
     ws.receive({ type: 'error', error: 'noRoom' })
@@ -1230,17 +1251,15 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w.unmount()
   })
 
-  it('建房连不上服务：8 秒后提示、按钮放开；没名字点建房间才问，问完直接建房', async () => {
+  it('建房连不上服务：8 秒后提示、按钮放开；没名字点建房间也不问、直接建房', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     const w = await mountAt(`/battle/new/${KP}`)
     const room = useRoomStore()
     room.useFactory((url) => new FakeWs(url))
-    await w.findAll('.mode')[2]!.trigger('click')
-    expect(w.find('.sheet').exists()).toBe(false)
+    await w.find('.mode[data-mode="online"]').trigger('click')
     await w.find('.start-btn').trigger('click')
-    await w.find('.sheet .chip').trigger('click') // 点了建房间才问名字
-    await w.find('form.sheet').trigger('submit')
     await flushPromises()
+    expect(w.find('.sheet').exists()).toBe(false)
     expect(FakeWs.all).toHaveLength(1)
     vi.advanceTimersByTime(8100)
     await settle()
@@ -1250,19 +1269,16 @@ describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
     w.unmount()
   })
 
-  it('扫红队码进来：没有名字先问，选好名字后带房间号与身份 hello → 三方连接状态窗口（红队有我、蓝队还没有人）→ 蓝队进来服务器自动开始 → 只有自己那行可操作；房间关了给提示能回去', async () => {
-    const w = await mountAt(`/battle/${CODE}?t=red`)
-    const room = useRoomStore()
+  it('扫红队码进来：不问名字，带房间号与身份、随机的名字与小动物 hello → 三方连接状态窗口（红队有我、蓝队还没有人）→ 蓝队进来服务器自动开始 → 只有自己那行可操作；房间关了给提示能回去', async () => {
+    const w = await mountAt(`/battle/${CODE}?t=red`, () => useRoomStore().useFactory((url) => new FakeWs(url)))
     const battle = useBattleStore()
-    room.useFactory((url) => new FakeWs(url))
-    expect(shown(w)).toContain('你叫什么')
-    await w.find('.sheet .chip').trigger('click')
-    await w.find('form.sheet').trigger('submit')
     await settle()
+    expect(w.find('.sheet').exists()).toBe(false)
     const ws = FakeWs.last()
     ws.open()
     const me = battle.prefs.clientId
-    expect(ws.msgs[0]).toMatchObject({ type: 'hello', code: CODE, t: 'red' })
+    const id = battle.identities().me
+    expect(ws.msgs[0]).toMatchObject({ type: 'hello', code: CODE, t: 'red', name: id.name, avatar: id.avatar, auto: { name: true, avatar: true } })
     expect(shown(w)).toContain('正在连接')
 
     let r: Room = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: 'hhhhhh', name: '小兔' }, version: 'v1', now: 1000 })
@@ -1476,10 +1492,12 @@ describe('帮助页（F17）', () => {
   it('设置页「跟谁打」：选中哪张卡，下面出一行对应的说明；页头没有「加入对战」（它在全局顶栏）', async () => {
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
     const w = await mountAt('/battle/new/s1-05-carry-add')
+    expect(shown(w.find('.mode-desc'))).toContain('不用比快慢') // 默认选着自己练
+    await w.find('.mode[data-mode="ai"]').trigger('click')
     expect(shown(w.find('.mode-desc'))).toContain('机器人有自己的题')
-    await w.findAll('.mode')[1]!.trigger('click')
+    await w.find('.mode[data-mode="duo"]').trigger('click')
     expect(shown(w.find('.mode-desc'))).toContain('一台平板横着放')
-    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.mode[data-mode="online"]').trigger('click')
     expect(shown(w.find('.mode-desc'))).toContain('输口令')
     expect(w.find('.page-header .join-btn').exists()).toBe(false)
     expect(w.find('.app-header .nav-btn.join').exists()).toBe(true)
@@ -1650,7 +1668,7 @@ describe('结果页回放与错题（B69）', () => {
 })
 
 describe('我的小动物（B66）', () => {
-  it('配置面板里选小动物（我 / 两人一台右边各一排 6 只）记进偏好；竞技场队名条与结果页名字前带它', async () => {
+  it('配置面板里选小动物（我 / 两人一台右边各一排：🎲 随机 + 6 只）记进偏好；竞技场队名条与结果页名字前带它；🎲 回到随机', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
     const settle = async (): Promise<void> => {
@@ -1660,8 +1678,8 @@ describe('我的小动物（B66）', () => {
     await settle()
     await w.find('.config-btn').trigger('click')
     expect(w.findAll('.config .avatars')).toHaveLength(2)
-    expect(w.findAll('.config .avatars')[0]!.findAll('.avatar-btn')).toHaveLength(6)
-    expect(w.findAll('.config .avatars')[0]!.find('.avatar-btn.on').attributes('data-avatar')).toBe('bear')
+    expect(w.findAll('.config .avatars')[0]!.findAll('.avatar-btn')).toHaveLength(7)
+    expect(w.findAll('.config .avatars')[0]!.find('.avatar-btn.on').attributes('data-avatar')).toBe('random') // 默认没选 = 随机
     await w.findAll('.config .avatars')[0]!.find('[data-avatar="rabbit"]').trigger('click')
     await w.findAll('.config .avatars')[1]!.find('[data-avatar="cat"]').trigger('click')
     const store = useBattleStore()
@@ -1675,6 +1693,41 @@ describe('我的小动物（B66）', () => {
     expect(w2.find('.team.red .team-name').text()).toBe('🐰小兔')
     expect(w2.find('.team.blue .team-name').text()).toBe('🐱小虎')
     w2.unmount()
+    // 🎲 回到随机：偏好里是 null，开局时右边随机到一只不是左边的
+    const w3 = await mountAt('/battle/new/s1-04-simple-addsub')
+    await settle()
+    await w3.find('.config-btn').trigger('click')
+    await w3.findAll('.config .avatars')[1]!.find('[data-avatar="random"]').trigger('click')
+    const store3 = useBattleStore()
+    expect(store3.prefs.avatars).toEqual({ me: 'rabbit', right: null })
+    expect(store3.identities().right.avatar).not.toBe('rabbit')
+    w3.unmount()
+  })
+
+  it('配置里改名字：面板里有「🎲 随机」，没自定义时就选着它、输入框里提示现在随机到的名字；选了现成名字就用它，再点 🎲 存回随机', async () => {
+    const w = await mountAt('/battle/new/s1-04-simple-addsub')
+    await flushPromises()
+    const store = useBattleStore()
+    await w.find('.config-btn').trigger('click')
+    await w.find('.config .name-chip.red').trigger('click')
+    const sheet = w.find('form.sheet')
+    expect(sheet.find('.chip.random.on').exists()).toBe(true)
+    expect(sheet.findAll('.chip')).toHaveLength(6) // 🎲 + 5 个现成名字
+    expect(sheet.find('input').attributes('placeholder')).toBe(store.identities().me.name)
+    expect(sheet.find('.big-btn').attributes('disabled')).toBeUndefined()
+    const pick = sheet.findAll('.chip')[1]!
+    await pick.trigger('click')
+    expect(sheet.find('.chip.random.on').exists()).toBe(false)
+    await sheet.trigger('submit')
+    expect(store.prefs.names.me).toBe(pick.text())
+    expect(shown(w.find('.config .name-chip.red .nm'))).toContain(pick.text())
+    expect(w.find('.config .name-chip.red .dice').exists()).toBe(false)
+    await w.find('.config .name-chip.red').trigger('click')
+    await w.find('form.sheet .chip.random').trigger('click')
+    await w.find('form.sheet').trigger('submit')
+    expect(store.prefs.names.me).toBe('')
+    expect(w.find('.config .name-chip.red .dice').exists()).toBe(true)
+    w.unmount()
   })
 })
 

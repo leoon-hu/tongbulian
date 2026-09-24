@@ -27,7 +27,8 @@ async function settle(): Promise<void> {
 
 /** 挂载竞技场并换成指定皮肤的固定种子对局，返回盒子之外的 DOM（盒子内容清空）与盒子本身的属性 */
 async function snapshot(skin: SkinMeta, stateSkin?: string): Promise<{ outside: string; strip: string; host: boolean }> {
-  localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' }, skin: skin.id }))
+  // 名字与小动物都定死：没自定义的是每个新 store 随机的（B17），各次挂载会不一样
+  localStorage.setItem('tongbulian:battle', JSON.stringify({ v: 2, names: { me: '小兔', left: '', right: '小虎' }, avatars: { me: 'bear', right: 'pig' }, skin: skin.id }))
   const pinia = createPinia()
   await router.replace(`/battle/local/${KP}?mode=duo`)
   await router.isReady()

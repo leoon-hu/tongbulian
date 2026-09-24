@@ -1,22 +1,30 @@
 <script setup lang="ts">
-// 昵称面板（B17）：一个输入框 + 6 个现成名字（不识字也能点），最多 8 个字；打开时读「你叫什么？」（B39a）
-import { computed, onMounted, ref } from 'vue'
+// 改名字面板（B17）：「⚙️ 配置」里点名字才出现——一个输入框 + 「🎲 随机」+ 5 个现成名字（不识字也能点，两排三个），最多 8 个字；
+// 打开时读「你叫什么？」（B39a）。「🎲 随机」= 清掉自定义的名字，存成空串，开局时用随机点选的（current 是现在随机到的，写在输入框里当提示）
+import { computed, onMounted, ref, watch } from 'vue'
 import { createRng } from '@/engine'
 import { lang, ui } from '@/engine/i18n'
 import { sayKeys } from '@/engine/voice'
 import { NAME_MAX, cleanName, suggestNames } from '@/battle/names'
-import type { AvatarId } from '@/battle/avatars'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
-import AvatarPicker from './AvatarPicker.vue'
 
-/** avatar：传了就在名字下面顺便选小动物（B66），改了立刻 emit */
-const props = withDefaults(defineProps<{ initial?: string; taken?: string[]; avatar?: AvatarId | null }>(), { initial: '', taken: () => [], avatar: null })
-const emit = defineEmits<{ save: [name: string]; close: []; 'update:avatar': [id: AvatarId] }>()
+const props = withDefaults(defineProps<{ initial?: string; taken?: string[]; current?: string }>(), { initial: '', taken: () => [], current: '' })
+const emit = defineEmits<{ save: [name: string]; close: [] }>()
 
 const value = ref(props.initial)
-const suggestions = suggestNames(lang.value, createRng(), 6, props.taken)
+/** 选的是「🎲 随机」：没自定义过的打开就是它，输入了名字就不是了 */
+const random = ref(!props.initial)
+watch(value, (v) => {
+  if (v) random.value = false
+})
+function pickRandom(): void {
+  value.value = ''
+  random.value = true
+}
+const suggestions = suggestNames(lang.value, createRng(), 5, props.taken)
 const cleaned = computed(() => cleanName(value.value))
+const canSave = computed(() => !!cleaned.value || random.value)
 const input = ref<HTMLInputElement | null>(null)
 onMounted(() => {
   input.value?.focus()
@@ -24,7 +32,7 @@ onMounted(() => {
 })
 
 function save(): void {
-  if (cleaned.value) emit('save', cleaned.value)
+  if (canSave.value) emit('save', cleaned.value)
 }
 </script>
 
@@ -38,18 +46,15 @@ function save(): void {
         class="input"
         type="text"
         :maxlength="NAME_MAX * 2"
-        :placeholder="ui('battle.name.hint')"
+        :placeholder="random && current ? current : ui('battle.name.hint')"
         autocomplete="off"
         enterkeyhint="done"
       />
       <div class="suggest">
+        <button type="button" class="chip random" :class="{ on: random }" @click="pickRandom">🎲 <RubyText :text="{ k: 'avatar.random' }" /></button>
         <button v-for="n in suggestions" :key="n" type="button" class="chip" @click="value = n">{{ n }}</button>
       </div>
-      <template v-if="avatar">
-        <p class="pick-label"><RubyText :text="{ k: 'battle.avatar' }" /></p>
-        <AvatarPicker :model-value="avatar" @update:model-value="(id) => emit('update:avatar', id)" />
-      </template>
-      <BigButton color="green" :disabled="!cleaned"><RubyText :text="{ k: 'battle.name.ok' }" /></BigButton>
+      <BigButton color="green" :disabled="!canSave"><RubyText :text="{ k: 'battle.name.ok' }" /></BigButton>
     </form>
   </div>
 </template>
@@ -80,11 +85,6 @@ function save(): void {
 }
 .ask {
   font-size: var(--fs-lg);
-}
-.pick-label {
-  margin: 4px 0 -6px;
-  font-size: var(--fs-sm);
-  color: var(--c-text-light);
 }
 .input {
   width: 100%;
@@ -121,5 +121,9 @@ function save(): void {
 }
 .chip:active {
   transform: scale(0.94);
+}
+.chip.on {
+  box-shadow: inset 0 0 0 3px var(--c-primary);
+  background: #fff3e6;
 }
 </style>

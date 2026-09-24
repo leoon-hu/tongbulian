@@ -111,8 +111,8 @@ export const useRoomStore = defineStore('room', () => {
     client = new RoomClient({
       url,
       clientId: battle.prefs.clientId,
-      name: battle.prefs.names.me,
-      avatar: battle.prefs.avatars.me,
+      // 名字与小动物（B17）：自定义的优先，没有就随机点选的；哪样是随机的一起发，撞了服务器换
+      ...battle.onlineIdentity(),
       version: __BUILD__,
       onState,
       onEvent,

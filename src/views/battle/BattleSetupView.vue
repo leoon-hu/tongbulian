@@ -1,17 +1,18 @@
 <script setup lang="ts">
-// 对战设置页（B27）：跟谁打（打机器人 / 两人一台 / 各用各的）→ 开始；机器人快慢、选游戏、改名字都在页头「⚙️ 配置」的面板里，页面默认不展示；
-// 没输过名字的设备点「开始」才问一次（B17），问完直接开始。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来（输口令进房的「🔑 加入对战」在全局顶栏，不在这里）。
+// 知识点的设置页（B26 / B27）：地图上点知识点直接到这里。跟谁打（自己练 / 打机器人 / 两人一台 / 各用各的）→ 开始，自己练就进练习页；
+// 默认选着上次开始时选的那张卡（偏好 mode）。机器人快慢、选游戏、名字与小动物都在页头「⚙️ 配置」的面板里，页面默认不展示；
+// 点「开始」直接开始、不问名字（B17：没自定义的用随机点选的，两边不一样）。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来（输口令进房的「🔑 加入对战」在全局顶栏，不在这里）。
 // 选中哪张「跟谁打」的卡，卡下面出一行对应的说明（B27）；页面打开读「跟谁打？」+ 当前那张卡的说明，换卡读那张的说明，建房出错读错误提示（B39a）
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
-import { courseOfKp, mapPathOf } from '@/engine/catalog'
+import { courseOfKp, mapPathOf, practicePathOf } from '@/engine/catalog'
 import { kpTitleKey, lang, ui } from '@/engine/i18n'
 import { hush, sayKeys } from '@/engine/voice'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
 import { AUTOCREATE_KEY, remember, takeIntent } from '@/engine/update'
 import { chapterSkin, resolveSkin } from '@/battle/skins'
-import { useBattleStore, type BattleMode, type LocalMode } from '@/stores/battle'
+import { SETUP_MODES, useBattleStore, type LocalMode, type SetupMode } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
@@ -31,32 +32,25 @@ const ready = info !== undefined && hasGenerator(kpId)
 if (!ready) router.replace('/')
 const mapPath = mapPathOf(kpId)
 
-const mode = ref<BattleMode>('ai')
 /** 多设备（B46）：这个地址有没有对战服务（file:// 打开就没有） */
 const online = computed(() => room.available)
-/** 正在改谁的名字（NameSheet 打开时） */
+/** 选着哪张卡：上次开始时选的，从来没开始过是自己练（B27）；上次是各用各的而这里没有对战服务也回到自己练 */
+const mode = ref<SetupMode>(store.prefs.mode === 'online' && !online.value ? 'practice' : store.prefs.mode)
+/** 正在改谁的名字（「⚙️ 配置」里点了名字，NameSheet 打开时） */
 const asking = ref<'me' | 'right' | null>(null)
 const names = computed(() => store.prefs.names)
+/** 现在用的名字（没自定义的是随机点选的）：改名字面板里「🎲 随机」时当提示、现成名字避开对方的 */
+const ids = computed(() => store.identities())
 /** 「⚙️ 配置」面板 */
 const config = ref(false)
 /** 这一次用的游戏：默认按章节排到的那个（B36），配置里换了只影响这一次 */
 const skin = ref(chapterSkin(kpId))
-/** 点了「开始」但还缺名字：问完接着开始 */
-let pendingStart = false
 
 function saveName(name: string): void {
   const which = asking.value
   if (!which) return
   store.setName(which, name)
   asking.value = null
-  if (pendingStart) {
-    pendingStart = false
-    start()
-  }
-}
-function cancelName(): void {
-  asking.value = null
-  pendingStart = false
 }
 
 // ── 多设备（B19）：建房间 → 拿到快照就进大厅；连不上服务 CREATE_TIMEOUT_MS 后提示并放开按钮 ──
@@ -144,19 +138,14 @@ onBeforeUnmount(() => {
 })
 
 function start(): void {
-  // 从来没输过名字：现在问，问完接着开始（B17 / B18）
-  if (!names.value.me) {
-    pendingStart = true
-    asking.value = 'me'
+  store.prefs.mode = mode.value
+  // 自己练（B26）：进这个知识点的练习页，不试全屏
+  if (mode.value === 'practice') {
+    router.push(practicePathOf(kpId))
     return
   }
   if (mode.value === 'online') {
     createRoom()
-    return
-  }
-  if (mode.value === 'duo' && !names.value.right) {
-    pendingStart = true
-    asking.value = 'right'
     return
   }
   store.startLocal({ kpId, mode: mode.value as LocalMode, skin: skin.value })
@@ -183,18 +172,19 @@ function start(): void {
     <section class="block">
       <h2 class="label"><RubyText :text="{ k: 'battle.who' }" /></h2>
       <div class="modes">
-        <button type="button" class="mode" :class="{ on: mode === 'ai' }" @click="mode = 'ai'">
-          <ModeIcon mode="ai" />
-          <RubyText :text="{ k: 'battle.mode.ai' }" />
-        </button>
-        <button type="button" class="mode" :class="{ on: mode === 'duo' }" @click="mode = 'duo'">
-          <ModeIcon mode="duo" />
-          <RubyText :text="{ k: 'battle.mode.duo' }" />
-        </button>
-        <button type="button" class="mode" :class="{ on: mode === 'online', soon: !online }" :disabled="!online" @click="mode = 'online'">
-          <ModeIcon mode="online" />
-          <RubyText :text="{ k: 'battle.mode.online' }" />
-          <small v-if="!online">{{ ui('room.unavailable') }}</small>
+        <button
+          v-for="m in SETUP_MODES"
+          :key="m"
+          type="button"
+          class="mode"
+          :class="{ on: mode === m, soon: m === 'online' && !online }"
+          :data-mode="m"
+          :disabled="m === 'online' && !online"
+          @click="mode = m"
+        >
+          <ModeIcon :mode="m" />
+          <RubyText :text="{ k: `battle.mode.${m}` }" />
+          <small v-if="m === 'online' && !online">{{ ui('room.unavailable') }}</small>
         </button>
       </div>
       <p class="mode-desc" :key="mode"><RubyText :text="{ k: `battle.mode.${mode}.desc` }" /></p>
@@ -214,11 +204,10 @@ function start(): void {
     <NameSheet
       v-if="asking"
       :initial="asking === 'right' ? names.right : names.me"
-      :taken="asking === 'right' ? [names.me] : [names.right]"
-      :avatar="store.prefs.avatars[asking === 'right' ? 'right' : 'me']"
-      @update:avatar="(id) => store.setAvatar(asking === 'right' ? 'right' : 'me', id)"
+      :current="asking === 'right' ? ids.right.name : ids.me.name"
+      :taken="asking === 'right' ? [ids.me.name] : [ids.right.name]"
       @save="saveName"
-      @close="cancelName"
+      @close="asking = null"
     />
   </div>
 </template>
@@ -313,7 +302,7 @@ function start(): void {
 }
 .modes {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 .mode {
@@ -351,9 +340,24 @@ function start(): void {
   font-weight: 400;
   color: var(--c-text-light);
 }
-/* 三张卡的示意图（ModeIcon）：一台 / 两台手机，卡越宽图越大，最大 132px */
+/* 四张卡的示意图（ModeIcon）：一台 / 两台手机，卡越宽图越大，最大 132px */
 .mode :deep(.mode-pic) {
   margin-bottom: 2px;
+}
+/* 手机竖屏：四张卡两排各两张（一排四张每张不到 90px，示意图和注音都挤）；卡片收矮一点，「开始」留在第一屏。
+   要写在 .mode 的规则后面，同样的选择器后写的才盖得住 */
+@media (max-width: 640px) {
+  .modes {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .mode {
+    gap: 2px;
+    padding: 10px 8px;
+  }
+  .mode :deep(.mode-pic) {
+    max-width: 96px;
+  }
 }
 .start {
   display: flex;

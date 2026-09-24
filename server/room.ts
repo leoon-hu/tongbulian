@@ -6,11 +6,11 @@
  * 网络层（index.ts）只管连接、房间表、心跳、限流、节流广播；node 里能单测。
  */
 import { randomInt } from 'node:crypto'
-import type { ArenaEvent, ClientMsg, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
+import type { ArenaEvent, AutoIdentity, ClientMsg, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { answer, beginPlay, createMatch, setInput, startMatch } from '@/battle/match'
 import { cleanName } from '@/battle/names'
 import { VOICE_MAX } from '@/battle/voice'
-import type { AvatarId } from '@/battle/avatars'
+import { AVATAR_IDS, avatarNameLang, pickIdentity, type AvatarId } from '@/battle/avatars'
 
 /**
  * 房间号、口令、题目种子都用加密随机数（N6 ⑨）：Math.random 是可预测的 xorshift128+，种子又随快照广播给房间里
@@ -167,13 +167,19 @@ export function createRoom(opts: {
  * 加入（打开链接 / 重连）：同一 clientId 回来就接回原座位；没指定队就分到人少的队；比赛开始后只能观战；
  * 指定的队满了就进另一队、都满了观战。返回的 error 是给这个人的提示（started / teamFull 是提示，仍然加入；
  * version / full 是拒绝，room 不变）。
+ * who.auto：名字 / 小动物哪样是随机点选的（B17）——新进来的跟房间里的人撞了就换（distinctIdentity），回来的沿用座位上的
+ * （进房时可能换过；页面刷新后重新随机的不算数）。
  */
-export function join(room: Room, who: { clientId: string; name: string; t?: Role; version: string; avatar?: AvatarId }, now: number): { room: Room; error?: RoomError } {
+export function join(
+  room: Room,
+  who: { clientId: string; name: string; t?: Role; version: string; avatar?: AvatarId; auto?: AutoIdentity },
+  now: number,
+): { room: Room; error?: RoomError } {
   if (who.version !== room.version) return { room, error: 'version' }
   const existing = room.members.find((m) => m.clientId === who.clientId)
   if (existing) {
-    const name = cleanName(who.name) || existing.name
-    const avatar = who.avatar ?? existing.avatar
+    const name = who.auto?.name ? existing.name : cleanName(who.name) || existing.name
+    const avatar = who.auto?.avatar ? (existing.avatar ?? who.avatar) : (who.avatar ?? existing.avatar)
     // 刷新 / 重连回来的页面麦克风一定是关着的（新页面不会再发 voice:false）：座位上的 voice 跟着清掉，别留幽灵 🎤
     const members = room.members.map((m) => (m === existing ? { ...m, online: true, name, voice: false, ...(avatar ? { avatar } : {}) } : m))
     return { room: withMembers({ ...room, lastActive: now }, members) }
@@ -196,9 +202,21 @@ export function join(room: Room, who: { clientId: string; name: string; t?: Role
       }
     }
   }
-  const member: Member = { clientId: who.clientId, name: cleanName(who.name), role, ready: false, online: true, joinedAt: now, voice: false, ...(who.avatar ? { avatar: who.avatar } : {}) }
+  const { name, avatar } = distinctIdentity(room.members, cleanName(who.name), who.avatar, who.auto)
+  const member: Member = { clientId: who.clientId, name, role, ready: false, online: true, joinedAt: now, voice: false, ...(avatar ? { avatar } : {}) }
   const next: Room = withMembers({ ...room, lastActive: now }, [...room.members, member])
   return error ? { room: next, error } : { room: next }
+}
+
+/**
+ * 随机点选的名字 / 小动物跟房间里的人撞了就换（B17「双方不一样」）：从他那只往后轮着找第一只没人用的小动物，
+ * 名字是随机的就换成那只的名字（语言照他原来的名字）；自己选的不动。房间里超过 6 个人、换不开就算了
+ */
+function distinctIdentity(others: readonly Member[], name: string, avatar: AvatarId | undefined, auto: AutoIdentity | undefined): { name: string; avatar?: AvatarId } {
+  if (!avatar || !(auto?.name || auto?.avatar)) return { name, avatar }
+  const start = AVATAR_IDS.indexOf(avatar)
+  const order = AVATAR_IDS.map((_, i) => AVATAR_IDS[(start + i) % AVATAR_IDS.length]!)
+  return pickIdentity({ name: auto.name ? '' : name, avatar: auto.avatar ? null : avatar }, order, avatarNameLang(name) ?? 'zh', others)
 }
 
 /** 换成员名单，同时把比赛里对应的人的在线状态 / 名字跟上；离开房间的人在比赛里算掉线 */

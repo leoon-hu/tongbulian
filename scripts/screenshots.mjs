@@ -20,9 +20,10 @@ mkdirSync(outDir, { recursive: true });
 const profile = mkdtempSync(join(tmpdir(), "screenshots-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const BATTLE_PREFS = JSON.stringify({ names: { me: "🐰 小兔", left: "", right: "" }, aiLevel: "mid" });
+// 名字不填（= 小动物的名字）、小动物定死：没自定义的名字与小动物每次打开随机（B17），截图要一样
+const BATTLE_PREFS = JSON.stringify({ v: 2, names: { me: "", left: "", right: "" }, avatars: { me: "rabbit", right: "cat" }, aiLevel: "mid" });
 // 竞技场的题也是随机的：开打后把每个选手的 seed / index 换成固定的（题目流第 0 题），再摆一个中局比分——每次截出来一样
-// 每个新文档都跑：只压掉安装提示条；对战偏好按每张截图的 prefs 在导航前写（写在这里会把每张的覆盖冲掉）
+// 每个新文档都跑：只压掉安装提示条；对战偏好在每张截图导航前写（写在这里会把练习页那一轮的覆盖冲掉）
 const INIT = `try{localStorage.setItem('tongbulian:install','{"until":9007199254740991}')}catch(e){}`;
 const SHOTS = [
   {
@@ -32,13 +33,6 @@ const SHOTS = [
   {
     "name": "map",
     "path": "#/s/math/g/g1"
-  },
-  {
-    "name": "entry",
-    "path": "#/s/math/g/g1",
-    "steps": [
-      { "tap": ".node.open", "after": 700 }
-    ]
   },
   {
     "name": "practice",
@@ -79,8 +73,6 @@ const SHOTS = [
   {
     "name": "battle-ipad",
     "path": "#/battle/local/s1-05-carry-add?mode=duo&skin=tower",
-    // 两人一台要有右边的名字（带 prefs 就会写成 小兔 / 小虎），不然竞技场会退回设置页问名字（撞过：截出来是设置页）
-    "prefs": {},
     "w": 1024,
     "h": 768,
     "scale": 2,
@@ -119,7 +111,7 @@ await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceSc
 await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
 await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
 await send("Page.addScriptToEvaluateOnNewDocument", { source: INIT });
-// 只截几张：npm run screenshots -- map entry（不带参数就全截）
+// 只截几张：npm run screenshots -- map battle-setup（不带参数就全截）
 const only = process.argv.slice(2);
 const wanted = only.length ? SHOTS.filter((s) => only.includes(s.name)) : SHOTS;
 if (only.length && wanted.length !== only.length) throw new Error("没有这张截图：" + only.filter((n) => !SHOTS.some((s) => s.name === n)).join(" "));
@@ -131,10 +123,9 @@ try {
     // 每张可以指定自己的尺寸（对战竞技场要横屏）
     const [w, h, scale] = [s.w ?? W, s.h ?? H, s.scale ?? SCALE];
     await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: scale, mobile: true, screenOrientation: { type: w > h ? "landscapePrimary" : "portraitPrimary", angle: w > h ? 90 : 0 } });
-    const prefs = s.prefs ? JSON.stringify({ ...JSON.parse(BATTLE_PREFS), ...s.prefs, names: { me: "🐰 小兔", left: "🐰 小兔", right: "🐯 小虎" } }) : BATTLE_PREFS;
     // 练习页：这一轮的 seed 预先写进本地存储，进页面就是那道代表题（题目流第 0 题 = 练习页同 seed 的第 1 题）
     const round = s.kp ? JSON.stringify({ version: 2, progress: { completed: {}, rounds: { [s.kp]: { seed: s.seed, results: [] } } }, settings: { soundEnabled: true, lang: "zh" } }) : null;
-    const wrote = await ev(`try{localStorage.setItem('tongbulian:battle', ${JSON.stringify(prefs)});${round ? `localStorage.setItem('tongbulian:v1', ${JSON.stringify(round)});` : ""}'ok'}catch(e){'blank'}`);
+    const wrote = await ev(`try{localStorage.setItem('tongbulian:battle', ${JSON.stringify(BATTLE_PREFS)});${round ? `localStorage.setItem('tongbulian:v1', ${JSON.stringify(round)});` : ""}'ok'}catch(e){'blank'}`);
     if (wrote !== "ok") throw new Error("写不进本地存储：" + s.name);
     // 先去 about:blank 再进目标页：hash 路由只换 # 不会重新加载，上一张的比赛状态会留在内存里（撞过：截出来还是上一局）
     await send("Page.navigate", { url: "about:blank" });

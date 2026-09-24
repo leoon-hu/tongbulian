@@ -4,6 +4,7 @@
  */
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
+import { teamKinds } from '@/battle/avatars'
 import type { GameEvent, GameState } from '@/battle/game/contract'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
@@ -146,7 +147,7 @@ export class CarModel {
 
   setState(s: GameState): void {
     this.target = Math.max(1, s.target)
-    this.kinds = [s.avatars?.red ?? DRIVERS[0], s.avatars?.blue ?? DRIVERS[1]]
+    this.kinds = teamKinds(s.avatars, DRIVERS)
     const prevPhase = this.phase
     this.phase = s.phase
     this.winner = s.winner

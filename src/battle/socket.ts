@@ -3,7 +3,7 @@
  * 断线自动重连（1、2、4、8 秒退避，一直试），重连后用同一个 clientId 再 hello 进原房间接回座位；
  * 每 25 秒 ping（Cloudflare 代理 100 秒空闲会断）。WebSocket 与计时器可注入，node 里能测。
  */
-import type { ArenaEvent, ClientMsg, IceServer, Role, RoomError, RoomSnapshot, RtcSignal, ServerMsg } from './protocol'
+import type { ArenaEvent, AutoIdentity, ClientMsg, IceServer, Role, RoomError, RoomSnapshot, RtcSignal, ServerMsg } from './protocol'
 import { isEmoteId, type EmoteId } from './emotes'
 import type { AvatarId } from './avatars'
 import { cleanIceServers, isRtcSignal } from './voice'
@@ -39,6 +39,8 @@ export interface RoomClientOptions {
   version: string
   /** 我的小动物（B66）：随 hello 发给服务器 */
   avatar?: AvatarId
+  /** 名字 / 小动物哪样是随机的（B17）：随 hello 发，服务器按它去重 */
+  auto?: AutoIdentity
   onState(room: RoomSnapshot, you: string, now: number): void
   onEvent(e: ArenaEvent): void
   onError(error: RoomError): void
@@ -146,6 +148,7 @@ export class RoomClient {
       }, STABLE_MS)
       const hello: ClientMsg = { type: 'hello', clientId: this.opts.clientId, name: this.opts.name, version: this.opts.version }
       if (this.opts.avatar) hello.avatar = this.opts.avatar
+      if (this.opts.auto?.name || this.opts.auto?.avatar) hello.auto = this.opts.auto
       if (this.code) {
         hello.code = this.code
         hello.t = this.role

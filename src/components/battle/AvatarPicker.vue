@@ -1,15 +1,28 @@
 <script setup lang="ts">
-// 选小动物（需求 B66）：一排 6 个，emoji + 名字（注音），点了就记进偏好；配置面板与问名字的面板都用它
+// 选小动物（需求 B66）：一排 6 个，emoji + 名字（注音），点了就记进偏好；配置面板里用。
+// 最前面一个「🎲 随机」（B17）：null = 没选，每次打开页面随机一只、跟对方不一样
 import { AVATARS, type AvatarId } from '@/battle/avatars'
 import { ui } from '@/engine/i18n'
 import RubyText from '@/components/ui/RubyText.vue'
 
-defineProps<{ modelValue: AvatarId }>()
-const emit = defineEmits<{ 'update:modelValue': [id: AvatarId] }>()
+defineProps<{ modelValue: AvatarId | null }>()
+const emit = defineEmits<{ 'update:modelValue': [id: AvatarId | null] }>()
 </script>
 
 <template>
   <div class="avatars" role="radiogroup" :aria-label="ui('battle.avatar')">
+    <button
+      type="button"
+      class="avatar-btn random"
+      :class="{ on: modelValue === null }"
+      data-avatar="random"
+      role="radio"
+      :aria-checked="modelValue === null"
+      @click="emit('update:modelValue', null)"
+    >
+      <span class="avatar-emoji" aria-hidden="true">🎲</span>
+      <RubyText :text="{ k: 'avatar.random' }" />
+    </button>
     <button
       v-for="a in AVATARS"
       :key="a.id"
@@ -30,7 +43,7 @@ const emit = defineEmits<{ 'update:modelValue': [id: AvatarId] }>()
 <style scoped>
 .avatars {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
 .avatar-btn {
@@ -62,7 +75,7 @@ const emit = defineEmits<{ 'update:modelValue': [id: AvatarId] }>()
 }
 @media (max-width: 480px) {
   .avatars {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 </style>

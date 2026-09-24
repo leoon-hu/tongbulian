@@ -361,3 +361,36 @@ describe('自我保护（N6 ⑨）', () => {
     expect(isPasscode(makePasscode())).toBe(true)
   })
 })
+
+describe('随机的名字与小动物（B17）', () => {
+  const host = (): Room => createRoom({ code: 'ABC234', kpId: 's1-05-carry-add', skin: 'race', host: { clientId: 'host01', name: '小兔', avatar: 'rabbit' }, version: V, now: T0 })
+  const member = (r: Room, id: string) => r.members.find((m) => m.clientId === id)!
+
+  it('新进来的人随机的小动物跟房间里的撞了：换一只没人用的，名字跟着换（语言照原来的）；不撞就不动', () => {
+    let r = join(host(), { clientId: 'red001', name: '小兔', t: 'red', version: V, avatar: 'rabbit', auto: { name: true, avatar: true } }, T0 + 1).room
+    expect(member(r, 'red001')).toMatchObject({ name: '小猫', avatar: 'cat' }) // 从小兔往后轮着找：小猫没人用
+    r = join(r, { clientId: 'blue01', name: 'Cat', t: 'blue', version: V, avatar: 'cat', auto: { name: true, avatar: true } }, T0 + 2).room
+    expect(member(r, 'blue01')).toMatchObject({ name: 'Bear', avatar: 'bear' })
+    r = join(r, { clientId: 'watch1', name: '熊猫', t: 'watch', version: V, avatar: 'panda', auto: { name: true, avatar: true } }, T0 + 3).room
+    expect(member(r, 'watch1')).toMatchObject({ name: '熊猫', avatar: 'panda' })
+  })
+
+  it('自己选的不动：自定义的名字只换小动物；自定义的小动物只换名字；都自定义了撞了也不改；没带 auto 的老页面照旧', () => {
+    let r = join(host(), { clientId: 'red001', name: '阿狐', t: 'red', version: V, avatar: 'rabbit', auto: { avatar: true } }, T0 + 1).room
+    expect(member(r, 'red001')).toMatchObject({ name: '阿狐', avatar: 'cat' })
+    r = join(host(), { clientId: 'red001', name: '小兔', t: 'red', version: V, avatar: 'rabbit', auto: { name: true } }, T0 + 1).room
+    expect(member(r, 'red001').avatar).toBe('rabbit')
+    expect(member(r, 'red001').name).not.toBe('小兔')
+    r = join(host(), { clientId: 'red001', name: '小兔', t: 'red', version: V, avatar: 'rabbit' }, T0 + 1).room
+    expect(member(r, 'red001')).toMatchObject({ name: '小兔', avatar: 'rabbit' })
+  })
+
+  it('重连回来：随机的那几样沿用座位上的（页面刷新后重新随机的不算数），自定义的照新的', () => {
+    let r = join(host(), { clientId: 'red001', name: '小兔', t: 'red', version: V, avatar: 'rabbit', auto: { name: true, avatar: true } }, T0 + 1).room
+    r = setOnline(r, 'red001', false, T0 + 2).room
+    r = join(r, { clientId: 'red001', name: '小猪', version: V, avatar: 'pig', auto: { name: true, avatar: true } }, T0 + 3).room
+    expect(member(r, 'red001')).toMatchObject({ name: '小猫', avatar: 'cat', online: true })
+    r = join(r, { clientId: 'red001', name: '阿狐', version: V, avatar: 'monkey' }, T0 + 4).room
+    expect(member(r, 'red001')).toMatchObject({ name: '阿狐', avatar: 'monkey' })
+  })
+})

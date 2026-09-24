@@ -575,4 +575,23 @@ describe('我的小动物（B66）', () => {
     a.close()
     b.close()
   })
+
+  it('hello 的 auto（B17）：随机的名字 / 小动物跟房间里的人撞了换一只；形状不对的 auto 当没有', async () => {
+    const a = new Client(server.port)
+    const b = new Client(server.port)
+    const c = new Client(server.port)
+    await Promise.all([a.open(), b.open(), c.open()])
+    a.send({ type: 'hello', clientId: 'auto-a', name: '小兔', version: 'v1', avatar: 'rabbit', auto: { name: true, avatar: true } })
+    a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race' })
+    const code = (await a.state()).room.code
+    b.send({ type: 'hello', clientId: 'auto-b', name: '小兔', version: 'v1', code, t: 'red', avatar: 'rabbit', auto: { name: true, avatar: true } })
+    const joined = await b.state()
+    expect(joined.room.members.find((m) => m.clientId === joined.you)).toMatchObject({ name: '小猫', avatar: 'cat' })
+    c.send({ type: 'hello', clientId: 'auto-c', name: '小兔', version: 'v1', code, t: 'watch', avatar: 'rabbit', auto: 'yes' as never })
+    const watched = await c.state()
+    expect(watched.room.members.find((m) => m.clientId === watched.you)).toMatchObject({ name: '小兔', avatar: 'rabbit' })
+    a.close()
+    b.close()
+    c.close()
+  })
 })

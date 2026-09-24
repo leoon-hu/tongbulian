@@ -53,7 +53,8 @@ console.log(`${combos.length} 种组合`);
 
 // 2. 截图
 for (let i = 0; i < 120; i++) { try { await fetch(BASE + "/"); break; } catch { await sleep(500); } }
-const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, aiLevel: "mid" });
+// 小动物定死（没选的每次打开随机，B17）：赛车 / 开火车 / 热气球的司机乘客每次截出来一样
+const PREFS = JSON.stringify({ v: 2, clientId: "survey", names: { me: "A", left: "", right: "B" }, avatars: { me: "bear", right: "pig" }, aiLevel: "mid" });
 const LAYOUTS =
   PAGE === "battle"
     ? { iphone: { w: 852, h: 393, scale: 2, rows: 4 }, ipad: { w: 1024, h: 768, scale: 1.5, rows: 3 } }

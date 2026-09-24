@@ -1,7 +1,10 @@
 <script setup lang="ts">
-// 对战配置面板（B27 ③）：机器人快慢、选游戏、改名字——设置页默认不展示这些，页头「⚙️ 配置」才打开。
-// 快慢与名字改了立刻记进偏好；游戏是这一次的（默认按章节排到的那个，由设置页持有），不记偏好
+// 对战配置面板（B27 ③）：机器人快慢、选游戏、名字与小动物——设置页默认不展示这些，页头「⚙️ 配置」才打开。
+// 快慢、名字、小动物改了立刻记进偏好；游戏是这一次的（默认按章节排到的那个，由设置页持有），不记偏好。
+// 名字那一格显示现在用的名字与小动物（没自定义的是随机点选的，带 🎲，B17）
+import { computed } from 'vue'
 import { AI_LEVELS, type AiLevel } from '@/battle/ai'
+import { avatarEmoji } from '@/battle/avatars'
 import { ui } from '@/engine/i18n'
 import { useBattleStore } from '@/stores/battle'
 import BigButton from '@/components/ui/BigButton.vue'
@@ -13,6 +16,7 @@ defineProps<{ skin: string }>()
 const emit = defineEmits<{ close: []; rename: [which: 'me' | 'right']; 'update:skin': [id: string] }>()
 const store = useBattleStore()
 const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '🐰', fast: '🚀' }
+const ids = computed(() => store.identities())
 </script>
 
 <template>
@@ -50,12 +54,14 @@ const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '�
         <div class="names">
           <button type="button" class="name-chip red" @click="emit('rename', 'me')">
             <span class="who"><RubyText :text="{ k: 'battle.name.me' }" /></span>
-            <span class="nm">{{ store.prefs.names.me || '…' }}</span>
+            <span class="nm">{{ avatarEmoji(ids.me.avatar) }}{{ ids.me.name }}</span>
+            <span v-if="!store.prefs.names.me" class="dice" :title="ui('avatar.random')">🎲</span>
             <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
           </button>
           <button type="button" class="name-chip blue" @click="emit('rename', 'right')">
             <span class="who"><RubyText :text="{ k: 'battle.mode.duo' }" /> · <RubyText :text="{ k: 'battle.name.right' }" /></span>
-            <span class="nm">{{ store.prefs.names.right || '…' }}</span>
+            <span class="nm">{{ avatarEmoji(ids.right.avatar) }}{{ ids.right.name }}</span>
+            <span v-if="!store.prefs.names.right" class="dice" :title="ui('avatar.random')">🎲</span>
             <span class="edit" :aria-label="ui('battle.name.edit')">✏️</span>
           </button>
         </div>
@@ -215,7 +221,8 @@ const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '�
 .nm {
   font-size: var(--fs-lg);
 }
-.edit {
+.edit,
+.dice {
   font-size: var(--fs-sm);
 }
 .actions {

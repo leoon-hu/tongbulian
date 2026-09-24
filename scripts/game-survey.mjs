@@ -15,7 +15,8 @@ mkdirSync(outDir, { recursive: true });
 const only = process.argv[2];
 const KP = "s1-05-carry-add";
 const SKINS = ["race", "car", "train", "rocket", "balloon", "swim", "ladder", "dig", "fish", "tower", "flower", "egg", "bubble", "fruit", "stars", "puzzle", "tug", "seesaw", "flag", "ice", "castle"].filter((s) => !only || s === only);
-const PREFS = JSON.stringify({ clientId: "survey", names: { me: "A", left: "", right: "B" }, aiLevel: "mid" });
+// 小动物定死（没选的每次打开随机，B17）：赛车 / 开火车 / 热气球的司机乘客每次截出来一样
+const PREFS = JSON.stringify({ v: 2, clientId: "survey", names: { me: "A", left: "", right: "B" }, avatars: { me: "bear", right: "pig" }, aiLevel: "mid" });
 const HIDE = "(()=>{const s=document.createElement('style');s.textContent='.countdown,.victory,.result,.callout,.confirm-mask{display:none!important}';document.head.appendChild(s);return 'ok'})()";
 
 const POSES = [

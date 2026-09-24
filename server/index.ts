@@ -8,7 +8,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import type { IncomingMessage } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import { WebSocketServer, type WebSocket } from 'ws'
-import type { ClientMsg, IceServer, RoomError, ServerMsg } from '@/battle/protocol'
+import type { AutoIdentity, ClientMsg, IceServer, RoomError, ServerMsg } from '@/battle/protocol'
 import { EMOTE_SERVER_GAP_MS, isEmoteId } from '@/battle/emotes'
 import { isAvatarId, type AvatarId } from '@/battle/avatars'
 import { cleanName } from '@/battle/names'
@@ -68,6 +68,8 @@ interface Conn {
   lastEmote: number
   /** 他选的小动物（B66，hello 里带的，只认表里的） */
   avatar?: AvatarId
+  /** 名字 / 小动物哪样是随机点选的（B17，hello 里带的）：进房时跟别人撞了就换 */
+  auto: AutoIdentity
 }
 
 /** 一个时间窗里的计数（口令错几次） */
@@ -333,6 +335,8 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     c.clientId = id
     c.name = typeof msg.name === 'string' ? cleanName(msg.name) : ''
     c.avatar = isAvatarId(msg.avatar) ? msg.avatar : undefined
+    const auto = typeof msg.auto === 'object' && msg.auto !== null ? msg.auto : {}
+    c.auto = { ...(auto.name === true ? { name: true } : {}), ...(auto.avatar === true ? { avatar: true } : {}) }
     c.version = msg.version.slice(0, 40)
     if (msg.code === undefined) return
     const t = now()
@@ -353,7 +357,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
         other.ws.close(4000, 'replaced')
       }
     }
-    const res = join(room, { clientId: c.clientId, name: c.name, t: msg.t, version: c.version, avatar: c.avatar }, now())
+    const res = join(room, { clientId: c.clientId, name: c.name, t: msg.t, version: c.version, avatar: c.avatar, auto: c.auto }, now())
     if (res.error === 'version' || res.error === 'full') {
       fail(c.ws, res.error)
       return
@@ -582,7 +586,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
 
   wss.on('connection', (ws, req) => {
     const ip = clientIp(req)
-    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, rtcCount: 0, badPass: 0, lastEmote: 0 }
+    const c: Conn = { ws, clientId: null, name: '', version: '', code: null, ip, lastSeen: now(), windowStart: now(), count: 0, rtcCount: 0, badPass: 0, lastEmote: 0, auto: {} }
     conns.add(c)
     connsByIp.set(ip, (connsByIp.get(ip) ?? 0) + 1)
     // 每条消息 / 每次断开都兜住异常（N6 ⑨）：一条畸形消息把整个进程杀掉 = 所有在玩的房间清空

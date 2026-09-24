@@ -103,8 +103,9 @@ describe('房间 store（B19–B25）', () => {
     expect(ws.sent).toEqual([])
     ws.open()
     const me = battle.prefs.clientId
+    // 名字自定义了、小动物没选：带随机到的那只，并告诉服务器小动物是随机的（B17）
     expect(ws.msgs).toEqual([
-      { type: 'hello', clientId: me, name: '小兔', version: expect.any(String), avatar: 'bear' },
+      { type: 'hello', clientId: me, name: '小兔', version: expect.any(String), avatar: battle.identities().me.avatar, auto: { avatar: true } },
       { type: 'create', kpId: KP, skin: 'race' },
     ])
     const r = createRoom({ code: CODE, kpId: KP, skin: 'race', host: { clientId: me, name: '小兔' }, version: 'v1', now: 1000 })
@@ -171,12 +172,13 @@ describe('房间 store（B19–B25）', () => {
     const room = useRoomStore()
     const battle = useBattleStore()
     battle.setName('me', '小兔')
+    battle.setAvatar('me', 'cat')
     room.useFactory((url) => new FakeWs(url))
     room.lookup('123456')
     const ws = FakeWs.last()
     ws.open()
     expect(ws.msgs).toEqual([
-      { type: 'hello', clientId: battle.prefs.clientId, name: '小兔', version: expect.any(String), avatar: 'bear' },
+      { type: 'hello', clientId: battle.prefs.clientId, name: '小兔', version: expect.any(String), avatar: 'cat' },
       { type: 'lookup', pass: '123456' },
     ])
     expect(room.found).toBeNull()

@@ -20,14 +20,9 @@ const skin = typeof route.query.skin === 'string' ? route.query.skin : undefined
 const info = courseOfKp(kpId)
 /** 回地图：按当前这一局的知识点算（「下一章」跨到下册也回下册） */
 const mapPath = (): string => mapPathOf(store.state?.kpId ?? kpId)
-const setupPath = `/battle/new/${kpId}`
-
 if (!info || !hasGenerator(kpId)) router.replace('/')
-else if (!store.state || store.state.kpId !== kpId || store.mode !== mode) {
-  // 刷新或直接打开地址：名字都还在就直接开一局，缺名字回设置页
-  if (!store.prefs.names.me || (mode === 'duo' && !store.prefs.names.right)) router.replace(setupPath)
-  else store.startLocal({ kpId, mode, skin })
-}
+// 刷新或直接打开地址：直接开一局（没自定义的名字用随机点选的，B17）
+else if (!store.state || store.state.kpId !== kpId || store.mode !== mode) store.startLocal({ kpId, mode, skin })
 
 function exit(): void {
   const to = mapPath()

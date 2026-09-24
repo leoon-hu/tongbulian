@@ -71,34 +71,33 @@ afterEach(() => {
 })
 
 describe('知识点地图', () => {
-  it('点知识点弹出的「自己练，还是对战？」面板打开就读这一句；✕ 关掉停声', async () => {
+  it('地图本身不读；点知识点直接到设置页，读「跟谁打？」+ 选着的那张卡的说明（B26：没有中间的选择面板）', async () => {
     const w = await mountAt('/s/math/g/g1')
     expect(spoken()).toEqual([])
     await w.find('.node.open').trigger('click')
+    await until(() => w.find('.setup').exists())
     await settle()
-    expect(spoken()).toEqual([['entry.ask']])
-    vi.mocked(hush).mockClear()
-    await w.find('.entry-sheet .close').trigger('click')
+    expect(spoken()).toEqual([['battle.who', 'battle.mode.practice.desc']]) // 默认选着自己练
+    await w.find('.mode[data-mode="ai"]').trigger('click')
     await settle()
-    expect(hush).toHaveBeenCalled()
-    expect(w.find('.entry-sheet').exists()).toBe(false)
-    expect(spoken()).toEqual([['entry.ask']])
+    expect(lastSpoken()).toEqual(['battle.mode.ai.desc'])
     w.unmount()
   })
 })
 
 describe('对战设置页', () => {
-  it('打开读「跟谁打？」+ 当前卡的说明（切页动画后开口）；换卡读那张卡的说明；点开始没名字弹出问名字面板读「你叫什么？」；离开停声', async () => {
+  it('打开读「跟谁打？」+ 当前卡的说明（切页动画后开口）；换卡读那张卡的说明；配置里点名字弹出改名字面板读「你叫什么？」；离开停声', async () => {
     const w = await mountAt(`/battle/new/${KP}`)
-    expect(spoken()).toEqual([['battle.who', 'battle.mode.ai.desc']])
+    expect(spoken()).toEqual([['battle.who', 'battle.mode.practice.desc']])
     expect(vi.mocked(sayKeys).mock.calls[0]![2]).toBeGreaterThan(0)
-    await w.findAll('.mode')[1]!.trigger('click')
+    await w.find('.mode[data-mode="duo"]').trigger('click')
     await settle()
     expect(lastSpoken()).toEqual(['battle.mode.duo.desc'])
-    await w.findAll('.mode')[0]!.trigger('click')
+    await w.find('.mode[data-mode="ai"]').trigger('click')
     await settle()
     expect(lastSpoken()).toEqual(['battle.mode.ai.desc'])
-    await w.find('.start-btn').trigger('click')
+    await w.find('.config-btn').trigger('click')
+    await w.find('.config .name-chip.red').trigger('click')
     await settle()
     expect(w.find('form.sheet').exists()).toBe(true)
     expect(lastSpoken()).toEqual(['battle.name.ask'])
@@ -113,7 +112,7 @@ describe('对战设置页', () => {
     const w = await mountAt(`/battle/new/${KP}`, named)
     const room = useRoomStore()
     room.useFactory((url) => new FakeWs(url))
-    await w.findAll('.mode')[2]!.trigger('click')
+    await w.find('.mode[data-mode="online"]').trigger('click')
     await settle()
     expect(lastSpoken()).toEqual(['battle.mode.online.desc'])
     await w.find('.start-btn').trigger('click')
@@ -225,19 +224,15 @@ describe('多设备房间', () => {
     w.unmount()
   })
 
-  it('扫红队码进来：先问名字（面板自己读）→ 进房读连接状态窗口的两句 → 连太久读「连不上」→ 提示条（比赛已经开始）也读 → 房间关了读错误', async () => {
+  it('扫红队码进来：不问名字直接连 → 进房读连接状态窗口的两句 → 连太久读「连不上」→ 提示条（比赛已经开始）也读 → 房间关了读错误', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
-    const w = await mountAt(`/battle/${CODE}?t=red`)
-    const room = useRoomStore()
+    const w = await mountAt(`/battle/${CODE}?t=red`, () => useRoomStore().useFactory((url) => new FakeWs(url)))
     const battle = useBattleStore()
-    room.useFactory((url) => new FakeWs(url))
-    expect(spoken()).toEqual([['battle.name.ask']])
-    await w.find('.sheet .chip').trigger('click')
-    await w.find('form.sheet').trigger('submit')
     await settle()
+    expect(w.find('form.sheet').exists()).toBe(false)
     const ws = FakeWs.last()
     ws.open()
-    expect(spoken()).toHaveLength(1)
+    expect(spoken()).toHaveLength(0)
     vi.advanceTimersByTime(8100)
     await settle()
     expect(lastSpoken()).toEqual(['room.connect.slow'])

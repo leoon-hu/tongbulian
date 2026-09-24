@@ -100,6 +100,12 @@ export interface Member {
   avatar?: AvatarId
 }
 
+/** 名字 / 小动物哪样是随机点选的（B17）：没自定义过的 */
+export interface AutoIdentity {
+  name?: boolean
+  avatar?: boolean
+}
+
 /** 整份房间快照（B42：任何变化都发整份） */
 export interface RoomSnapshot {
   code: string
@@ -119,7 +125,8 @@ export interface RoomSnapshot {
 
 /** 客户端 → 服务器 */
 export type ClientMsg =
-  | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role; avatar?: AvatarId }
+  /** auto：名字 / 小动物哪样是随机的（B17）——随机的跟房间里别人撞了，服务器换一只没人用的 */
+  | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role; avatar?: AvatarId; auto?: AutoIdentity }
   | { type: 'create'; kpId: string; skin: string }
   /** 口令换房间号与身份（B19）；服务器回 found，客户端再按链接的方式进房 */
   | { type: 'lookup'; pass: string }

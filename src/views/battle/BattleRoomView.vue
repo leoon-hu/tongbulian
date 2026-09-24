@@ -4,8 +4,9 @@
 //   扫码进来的人先看「三方连接状态」窗口；红蓝两队都有人在线时服务器自动开始 → 竞技场（Arena）→ 结果。
 //   一队有人进来后，建房的设备也能点「以另一队进入」自己上场，或「以观战方进入」到状态窗口只看（B20）。
 // 房间的一切状态都来自服务器的快照（stores/room），这里只画；比赛部分由 stores/battle 的线上模式承接。
+// 打开就连、不问名字（B17：没自定义的用随机点选的，跟房间里的人撞了服务器换）。
 // 每换到一个画面就把上面的提示语读一遍（B39a）：二维码页的说明 / 「以另一队进入」提示、连接状态窗口的两句、连不上、致命错误、提示条；
-//   问名字由 NameSheet 自己读，竞技场里由倒数 / 读题接手。
+//   竞技场里由倒数 / 读题接手。
 // 模板只能有一个根元素、根上不能放 HTML 注释：App 的 <Transition mode="out-in"> 只给单根做过渡，多根（开发模式保留注释也算）会让过渡卡住、下一页空白。
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -17,7 +18,6 @@ import { useBattleStore } from '@/stores/battle'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import { useVoiceStore } from '@/stores/voice'
 import Arena from '@/components/battle/Arena.vue'
-import NameSheet from '@/components/battle/NameSheet.vue'
 import VoiceButton from '@/components/battle/VoiceButton.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import BigButton from '@/components/ui/BigButton.vue'
@@ -43,19 +43,9 @@ const TEAMS: readonly Team[] = ['red', 'blue']
 /** 链接里的身份（B20）：扫哪个码进哪队 */
 const linkRole = ROLES.find((r) => r === route.query.t)
 
-// 没有昵称先问（B17 / B21），问完再连
-const asking = ref(!battle.prefs.names.me)
-function connect(): void {
-  if (room.code !== code || !room.snapshot) room.enter(code, linkRole)
-}
 onMounted(() => {
-  if (!asking.value) connect()
+  if (room.code !== code || !room.snapshot) room.enter(code, linkRole)
 })
-function saveName(name: string): void {
-  battle.setName('me', name)
-  asking.value = false
-  connect()
-}
 
 const snap = computed(() => room.snapshot)
 const fatal = computed(() => (room.error && FATAL_ERRORS.includes(room.error) ? room.error : null))
@@ -68,12 +58,12 @@ const myRole = computed<Role>(() => me.value?.role ?? 'watch')
 const slow = ref(false)
 let slowTimer: ReturnType<typeof setTimeout> | null = null
 watch(
-  () => [snap.value, asking.value] as const,
-  ([s, a]) => {
+  snap,
+  (s) => {
     if (slowTimer) clearTimeout(slowTimer)
     slowTimer = null
     slow.value = false
-    if (!s && !a) slowTimer = setTimeout(() => (slow.value = true), SLOW_MS)
+    if (!s) slowTimer = setTimeout(() => (slow.value = true), SLOW_MS)
   },
   { immediate: true },
 )
@@ -129,7 +119,6 @@ const names = (ms: Member[]): string => ms.map((m) => `${m.clientId === room.you
 
 // ── 提示语朗读（B39a）：当前画面上的那几句，画面换了就读新的；同一画面不重复读 ──
 const hint = computed<string[] | null>(() => {
-  if (asking.value) return null
   if (fatal.value === 'version' && room.updating) return null
   if (fatal.value) return [`room.error.${fatal.value}`]
   if (!snap.value) return slow.value ? ['room.connect.slow'] : null
@@ -177,9 +166,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="room-page">
-  <NameSheet v-if="asking" :avatar="battle.prefs.avatars.me" @update:avatar="(id) => battle.setAvatar('me', id)" @save="saveName" @close="leave" />
-
-  <div v-else-if="fatal === 'version' && room.updating" class="room-msg">
+  <div v-if="fatal === 'version' && room.updating" class="room-msg">
     <p class="big">🔄</p>
     <p class="text"><RubyText :text="{ k: 'room.updating' }" /></p>
     <p class="dots big-dots" aria-hidden="true"><i /><i /><i /></p>

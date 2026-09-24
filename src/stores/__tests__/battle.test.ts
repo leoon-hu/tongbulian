@@ -475,10 +475,10 @@ describe('回放条与我的错题（B69）', () => {
   })
 })
 
-describe('我的小动物（B66）', () => {
-  it('偏好里记 me / right 两只（默认小熊 / 小猪），改了重开还在，坏的回默认；开局时真人带着自己的小动物、机器人没有', () => {
+describe('我的小动物（B66）与名字（B17）', () => {
+  it('偏好里记 me / right 两只（默认没选 = 随机），改了重开还在，null 回到随机，坏的当没选；开局时真人带着自己的小动物、机器人没有', () => {
     const s = useBattleStore()
-    expect(s.prefs.avatars).toEqual({ me: 'bear', right: 'pig' })
+    expect(s.prefs.avatars).toEqual({ me: null, right: null })
     s.setAvatar('me', 'rabbit')
     s.setAvatar('right', 'cat')
     s.setAvatar('me', 'dog' as never)
@@ -488,13 +488,69 @@ describe('我的小动物（B66）', () => {
     expect(again.prefs.avatars).toEqual({ me: 'rabbit', right: 'cat' })
     localStorage.setItem('tongbulian:battle', JSON.stringify({ avatars: { me: 'dog', right: 5 } }))
     setActivePinia(createPinia())
-    expect(useBattleStore().prefs.avatars).toEqual({ me: 'bear', right: 'pig' })
+    expect(useBattleStore().prefs.avatars).toEqual({ me: null, right: null })
     again.setName('me', '小兔')
     again.setName('right', '小虎')
     again.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
     expect(again.state!.players.map((p) => p.avatar)).toEqual(['rabbit', 'cat'])
     again.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 } })
     expect(again.state!.players.map((p) => p.avatar)).toEqual(['rabbit', undefined])
+    again.setAvatar('me', null)
+    expect(again.prefs.avatars.me).toBeNull()
+  })
+
+  it('旧偏好（没有 v）里的小熊 / 小猪是原来的默认值，读的时候当没选；新存的会带 v，自己选的小熊不会被当成默认', () => {
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小明', left: '', right: '' }, avatars: { me: 'bear', right: 'pig' } }))
+    const s = useBattleStore()
+    expect(s.prefs.avatars).toEqual({ me: null, right: null })
+    expect(s.prefs.names.me).toBe('小明') // 名字是自己输的，照旧
+    localStorage.setItem('tongbulian:battle', JSON.stringify({ avatars: { me: 'cat', right: 'pig' } }))
+    setActivePinia(createPinia())
+    expect(useBattleStore().prefs.avatars).toEqual({ me: 'cat', right: null })
+    const t = useBattleStore()
+    t.setAvatar('me', 'bear')
+    expect(JSON.parse(localStorage.getItem('tongbulian:battle')!).v).toBe(2)
+    setActivePinia(createPinia())
+    expect(useBattleStore().prefs.avatars.me).toBe('bear')
+  })
+
+  it('什么都没自定义：直接开局，名字就是随机到的小动物的名字，左右两边不一样；同一次打开里再来一局 / 换知识点不变', () => {
+    const names = { bear: '小熊', pig: '小猪', panda: '熊猫', monkey: '小猴', rabbit: '小兔', cat: '小猫' } as const
+    for (let i = 0; i < 20; i++) {
+      setActivePinia(createPinia())
+      const s = useBattleStore()
+      s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+      const [l, r] = s.state!.players
+      expect(l!.avatar).toBeTruthy()
+      expect(r!.avatar).toBeTruthy()
+      expect(l!.avatar).not.toBe(r!.avatar)
+      expect(l!.name).toBe(names[l!.avatar!])
+      expect(r!.name).toBe(names[r!.avatar!])
+      s.rematch()
+      expect(s.state!.players.map((p) => [p.name, p.avatar])).toEqual([[l!.name, l!.avatar], [r!.name, r!.avatar]])
+      s.startLocal({ kpId: 's1-04-simple-addsub', mode: 'ai', skin: 'race', seeds: { left: 1, ai: 2 } })
+      expect(s.state!.players[0]!.avatar).toBe(l!.avatar)
+      expect(s.state!.players[0]!.name).toBe(l!.name)
+    }
+  })
+
+  it('自定义的优先：只改了名字就用这个名字、小动物仍随机；右边自定义的小动物左边随机时会避开', () => {
+    const s = useBattleStore()
+    s.setName('me', '阿狐')
+    s.setAvatar('right', 'panda')
+    for (let i = 0; i < 10; i++) {
+      s.startLocal({ kpId: KP, mode: 'duo', skin: 'race', seeds: { left: 1, right: 2 } })
+      const [l, r] = s.state!.players
+      expect(l!.name).toBe('阿狐')
+      expect(l!.avatar).not.toBe('panda')
+      expect(r!.avatar).toBe('panda')
+      expect(r!.name).toBe('熊猫')
+    }
+    expect(s.onlineIdentity()).toEqual({ name: '阿狐', avatar: s.identities().me.avatar, auto: { avatar: true } })
+    s.setAvatar('me', 'cat')
+    expect(s.onlineIdentity()).toEqual({ name: '阿狐', avatar: 'cat', auto: {} })
+    s.setName('me', '')
+    expect(s.onlineIdentity()).toEqual({ name: '小猫', avatar: 'cat', auto: { name: true } })
   })
 })
 
