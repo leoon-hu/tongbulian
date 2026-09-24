@@ -4,8 +4,8 @@ import router from '@/router'
 import App from '@/App.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useInstallStore } from '@/stores/install'
-import { useOfflineStore } from '@/stores/offline'
 import { unlockAudio } from '@/engine/audio'
+import { pruneAudioCache } from '@/engine/audioCache'
 import { setupPageTracking } from '@/engine/analytics'
 import '@/styles/tokens.css'
 import '@/styles/themes.css'
@@ -25,5 +25,5 @@ app.use(router)
 app.mount('#app')
 // 访问统计（N7）：翻页由路由上报（房间号不进统计库、返回键不记两次）；没加统计标签时什么都不做
 setupPageTracking(router)
-// 离线朗读包（N8 ⑦）：页面空闲后在后台把当前语言的片段补进缓存
-useOfflineStore().setup()
+// 朗读片段只在读到时才下载（N8 ⑦）；页面打开一会儿后把缓存里已经不用的旧片段删掉（不联网）
+if (typeof caches !== 'undefined') setTimeout(() => void pruneAudioCache(), 10_000)

@@ -134,7 +134,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               'Two on one device: each side keeps to its own half. A grown-up can play along with a child.',
               'On own devices, scanning a code first shows who is in on each team; the match starts by itself once both teams are in. If the connection drops, keep the page open and it reconnects to the same seat. The link is the key, so only share it with your players.',
               'Practise the topic in practice mode first; then the battle is easier.',
-              'Install the site to the home screen: it opens full screen and works without internet.',
+              'Install the site to the home screen: it opens full screen like an app, one tap from the icon.',
             ],
           },
         ],
@@ -181,8 +181,8 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'No sound?', a: 'Check the 🔊 / 🔇 button in the top bar. On iPhone and iPad, flip the side mute switch. The first time, tap the screen once so the browser allows audio.' },
               { q: 'The battle does not fit on my phone?', a: 'The battle needs landscape. Held upright, the page asks you to turn the phone; sideways it switches to a compact layout.' },
               {
-                q: 'How do I install it on a tablet or phone for offline use?',
-                a: 'Use the install bar at the top of the home page ("Install" or "How"). On iPhone and iPad open it in Safari, tap Share → Add to Home Screen. Once installed, practice and battles work without internet.',
+                q: 'How do I install it on a tablet or phone?',
+                a: 'Use the install bar at the top of the home page ("Install" or "How"). On iPhone and iPad open it in Safari, tap Share → Add to Home Screen. Once installed it opens full screen from the home-screen icon, like an app.',
               },
               {
                 q: 'Can\'t hear the other side, or the mic will not turn on?',
@@ -275,7 +275,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             '两人一台时左右各管各的，别去按对方那边；大人可以陪小朋友一起玩。',
             '各用各的时，扫码或输口令进来先看到一个窗口，写着红队、蓝队各有谁，人齐了自动开始；掉线了别关页面，会自动接回原来的座位；链接本身就是钥匙，别发给不相干的人。',
             '先在练习模式把这个知识点做熟，再去对战更有把握。',
-            '把网站装到平板 / 手机的主屏幕，全屏打开、没有网也能玩。',
+            '把网站装到平板 / 手机的主屏幕，像 App 一样全屏打开，点图标就能玩。',
           ],
         },
       ],
@@ -322,8 +322,8 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '没有声音？', a: '看顶部栏是不是 🔇；iPhone / iPad 把侧面的静音键打开；第一次打开要先点一下屏幕，浏览器才允许出声。' },
             { q: '手机上进不了对战，或者画面挤？', a: '对战需要横屏，竖着拿会提示「请把手机横过来」；横过来会自动用紧凑版布局。' },
             {
-              q: '怎么装到平板 / 手机上离线用？',
-              a: '首页顶部的安装提示条点「安装」或「怎么做」；iPhone / iPad 用 Safari 打开，点分享 → 添加到主屏幕。装好后没有网也能练和对战。',
+              q: '怎么装到平板 / 手机上？',
+              a: '首页顶部的安装提示条点「安装」或「怎么做」；iPhone / iPad 用 Safari 打开，点分享 → 添加到主屏幕。装好后从桌面图标打开，像 App 一样全屏。',
             },
             {
               q: '语音听不到对方，或者开不了麦？',

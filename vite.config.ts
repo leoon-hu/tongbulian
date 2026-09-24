@@ -94,7 +94,7 @@ function audioClips(): Plugin {
 
 /**
  * 当前版本（F1「版本与更新」，engine/version.ts）：构建时刻的北京时间「2026-09-23 14:05」（与构建机器的时区无关）。
- * 页面里是 __APP_VERSION__；同一份写进 dist/version.json 给首页页脚的「检查更新」比对（不进离线包，见 globIgnores），
+ * 页面里是 __APP_VERSION__；同一份写进 dist/version.json 给首页页脚的「检查更新」比对（不进预缓存，见 globIgnores），
  * dev 服务器也回同一份。
  */
 function buildVersion(d = new Date()): string {
@@ -137,10 +137,10 @@ export default defineConfig(({ mode }) => {
       siteMeta(env.SITE_URL ?? ''),
       analyticsTag(env),
       versionFile(version),
-      // PWA：「添加到主屏幕」后离线可用。预缓存只有页面外壳（代码 / 字体 / 图标，几 MB，几秒装好）——新版本几秒就能换上；
-      // 朗读片段（中文 3400 条 29 MB、英文 3200 条 28 MB）不进预缓存：由页面在后台分批下进运行时缓存 audio
-      // （engine/offline.ts），SW 离线时从它取。以前 mp3 都在预缓存里，新版本要下完几十 MB 才能装好，老手机刷新多少次
-      // 都是旧版（N8 ⑦，2026-09-22 用户报的）
+      // PWA：预缓存只有页面外壳（代码 / 字体 / 图标，几 MB，几秒装好）——新版本几秒就能换上；
+      // 朗读片段（中文 3400 条 29 MB、英文 3200 条 28 MB）不预先下载：页面读到哪条才取哪条，经下面的运行时缓存 audio 存下，
+      // 再读就不用联网（N8 ⑦；不保证没有网也能用）。以前 mp3 都在预缓存里，新版本要下完几十 MB 才能装好（2026-09-22）；
+      // 之后改成页面在后台把整门语言下齐，2026-09-24 也去掉了——以后素材越来越多，只下页面用到的
       VitePWA({
         registerType: 'autoUpdate',
         // 注册脚本用 defer（默认是同步的 <script src>，会挡住 HTML 解析一个来回）
@@ -164,7 +164,7 @@ export default defineConfig(({ mode }) => {
             { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
             { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
-          // Chrome 有截图 + 描述才给完整的安装对话框（不然只有一条迷你信息栏）；两张图在 public/screenshots/，不进离线包
+          // Chrome 有截图 + 描述才给完整的安装对话框（不然只有一条迷你信息栏）；两张图在 public/screenshots/，不进预缓存
           screenshots: [
             { src: 'screenshots/battle-ipad.png', sizes: '2048x1536', type: 'image/png', form_factor: 'wide', label: '两人一台平板对战' },
             { src: 'screenshots/home.png', sizes: '780x1688', type: 'image/png', form_factor: 'narrow', label: '首页' },
@@ -174,12 +174,12 @@ export default defineConfig(({ mode }) => {
           // 新 SW 装好马上接管（skipWaiting）、并接管已经开着的页面（clientsClaim）：engine/sw.ts 的「接管后自动重新载入」
           // （B43 / N8 ⑦）靠它们。autoUpdate 本来会自动加，但只在 injectRegister 是 auto 时——上面改成 script-defer 后
           // 插件就不加了（2026-09-22 到 09-23 线上的 sw.js 里没有它们：新版本装好一直等着、所有页面关掉才换上；
-          // 首次安装后页面要再打开一次才离线可用），所以这里显式写上，engine/__tests__/sw.test.ts 查着
+          // 首次安装后页面要再打开一次才被 SW 接管），所以这里显式写上，engine/__tests__/sw.test.ts 查着
           skipWaiting: true,
           clientsClaim: true,
           globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2,json}'],
           // 子目录里的 html 是给搜索引擎的静态页（<学科>/<年级>/…），og.png 是分享图、screenshots/ 是安装对话框的截图，
-          // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网），version.json 是「检查更新」要现取的：都不进离线包
+          // qrcode-*.js 是大厅页的二维码库（多设备本来就要联网），version.json 是「检查更新」要现取的：都不进预缓存
           globIgnores: ['*/**/*.html', '404.html', 'og.png', 'screenshots/**', '**/qrcode-*.js', 'version.json'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           navigateFallback: 'index.html',
@@ -188,8 +188,8 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/[^/]+\//, /\.[a-z0-9]+$/i, /^\/[^/.]+$/],
           runtimeCaching: [
             {
-              // 朗读片段：缓存里有就用缓存，没有才取网络并存下（页面后台下载的也存在同一个缓存里）；
-              // 文件名是内容哈希，旧片段由 engine/offline.ts 下完一轮后清掉，这里不做过期
+              // 朗读片段：缓存里有就用缓存，没有才取网络并存下；
+              // 文件名是内容哈希（内容变了地址就变），不再用的旧片段由 engine/audioCache.ts 在页面打开后清掉，这里不做过期
               urlPattern: /\/audio\/(zh|en)-[a-z0-9]+\.mp3$/,
               handler: 'CacheFirst',
               options: { cacheName: 'audio', cacheableResponse: { statuses: [0, 200] } },
@@ -200,7 +200,7 @@ export default defineConfig(({ mode }) => {
     ],
     build: {
       rollupOptions: {
-        // 二维码库只有大厅页用，固定切成 qrcode-*.js，方便离线包排除（Vite 8 / rolldown 只认函数形式）
+        // 二维码库只有大厅页用，固定切成 qrcode-*.js，方便预缓存排除（Vite 8 / rolldown 只认函数形式）
         output: {
           manualChunks: (id: string) =>
             id.includes('/node_modules/qrcode/') || id.includes('/node_modules/dijkstrajs/') || id.includes('/node_modules/encode-utf8/') ? 'qrcode' : undefined,

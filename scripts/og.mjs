@@ -63,7 +63,7 @@ const html = `<!doctype html>
       <li>答对课本题就得分，谁先答对 8 题谁赢</li>
       <li>打机器人 · 两人一台 · 扫码多设备组队</li>
       <li>人教版${meta.grades}数学 ${meta.kpCount} 个知识点</li>
-      <li>汉字标拼音、自动朗读；免费、离线可用</li>
+      <li>汉字标拼音、自动朗读；免费、无广告</li>
     </ul>
   </div>
   <div class="card">

@@ -34,7 +34,7 @@ export const SHELL_ZH: Dict = {
   // 首页「选择学科」上方的对战 hero（F1）：每种游戏的图标 + 一句带拼音的话，静态、不出声
   'battle.hero': '答对课本题就得分，谁先答对 8 题谁赢！',
   // 首页底部给家长的一句说明 + 各年级知识点清单（静态页）的链接
-  'home.about': '把人教版课本的知识点测验变成游戏积分：打机器人、两人一台或各用各的设备，谁先答对 8 题谁赢；也能一个人安静地练。汉字标拼音、题目自动朗读；免费、无广告、离线可用。',
+  'home.about': '把人教版课本的知识点测验变成游戏积分：打机器人、两人一台或各用各的设备，谁先答对 8 题谁赢；也能一个人安静地练。汉字标拼音、题目自动朗读；免费、无广告、不用注册。',
   'help.title': '帮助与说明',
   // 首页页脚的版本卡片（F1「版本与更新」）：给家长看的，不注音、不朗读
   'version.label': '当前版本',
@@ -54,9 +54,6 @@ export const SHELL_ZH: Dict = {
   'version.stale': '还是旧版？',
   'version.reinstall': '重新安装',
   'version.reinstallHint': '（清掉本机缓存重新下载，学习记录不会丢）',
-  'version.offlinePack': '离线朗读包（{lang}）：已下载 {cached} / {total}',
-  'version.offlineDone': '离线朗读包（{lang}）：已备齐，没有网也能读题',
-  'version.offlineWait': '离线朗读包：打开页面后会在后台自动下载',
   'help.link': '❓ 帮助与说明：对战玩法、规则、技巧、学习内容、常见问题',
   'help.howto': '❓ 怎么玩',
   'home.topics': '{name}知识点清单',
@@ -113,7 +110,7 @@ export const SHELL_ZH: Dict = {
   'voice.right.3': '太棒了！',
   // 首页安装提示条（F16，给家长看的，不注音、不朗读）
   'install.title': '安装 {name}',
-  'install.desc': '全屏打开，没有网也能用',
+  'install.desc': '像 App 一样全屏打开，不用再找网址',
   'install.install': '安装',
   'install.how': '怎么做',
   'install.close': '关闭安装提示',
@@ -757,7 +754,7 @@ export const SHELL_EN: Dict = {
   'sem.1': 'Term 1',
   'sem.2': 'Term 2',
   'battle.hero': 'Answer textbook questions to score — first to 8 wins!',
-  'home.about': 'PEP textbook quizzes turned into game points: play the robot, two on one tablet or one device each, first to 8 wins; or practise quietly on your own. Pinyin on every character, every question read aloud; free, no ads, works offline.',
+  'home.about': 'PEP textbook quizzes turned into game points: play the robot, two on one tablet or one device each, first to 8 wins; or practise quietly on your own. Pinyin on every character, every question read aloud; free, no ads, no account needed.',
   'help.title': 'Help & guide',
   'version.label': 'Version',
   'version.check': 'Check for updates',
@@ -776,9 +773,6 @@ export const SHELL_EN: Dict = {
   'version.stale': 'Still the old version? ',
   'version.reinstall': 'Reinstall',
   'version.reinstallHint': ' (clears the cache and downloads again; progress is kept)',
-  'version.offlinePack': 'Offline speech pack ({lang}): {cached} / {total} downloaded',
-  'version.offlineDone': 'Offline speech pack ({lang}): complete, questions can be read without a network',
-  'version.offlineWait': 'Offline speech pack: downloads in the background after the page opens',
   'help.link': '❓ Help & guide: how the battle works, rules, tips, what to learn, FAQ',
   'help.howto': '❓ How to play',
   'home.topics': '{name} topic list',
@@ -829,7 +823,7 @@ export const SHELL_EN: Dict = {
   'voice.right.3': 'Awesome!',
   // 首页安装提示条（F16）
   'install.title': 'Install {name}',
-  'install.desc': 'Opens full screen and works offline',
+  'install.desc': 'Opens full screen like an app — no need to find the link again',
   'install.install': 'Install',
   'install.how': 'How?',
   'install.close': 'Dismiss install tip',

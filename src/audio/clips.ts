@@ -4,7 +4,7 @@
  * 每种语言一串排好序的 10 位哈希（virtual:audio-clips，约 65 KB、只在朗读模块里），这里算出哈希查一下有没有。
  * manifest.json 仍是生成脚本与 manifest 测试的依据，只是不再进页面。
  * 例外：合成时换过读法的片段（多音字，见 scripts/build-audio.py 的 SAY_AS）文件名是换过的文字的哈希——内容变了地址
- * 跟着变，离线缓存 / CDN 里读错的旧文件不会再被用到；这几条走别名表。
+ * 跟着变，浏览器缓存 / CDN 里读错的旧文件不会再被用到；这几条走别名表。
  */
 import type { Lang } from '@/types/models'
 import { sha1Hex } from '@/engine/sha1'
@@ -24,6 +24,11 @@ function setOf(lang: Lang): Set<string> {
     sets[lang] = s
   }
   return s
+}
+
+/** 这个哈希是不是这门语言现在的片段（engine/audioCache.ts 据此清掉缓存里的旧片段） */
+export function knownClip(lang: Lang, hash: string): boolean {
+  return setOf(lang).has(hash)
 }
 
 /** 这条片段的音频文件名（不带 .mp3）；没有这条音频就是 null */

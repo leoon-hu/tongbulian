@@ -1429,7 +1429,7 @@ describe('首页页脚的版本卡片（F1 版本与更新）', () => {
     expect(w.find('.ver-status').text()).toBe('✓ Up to date')
     setLang('zh')
     await flushPromises()
-    // 没网时点「重新安装」：先确认连不上，就不清缓存（清了离线包页面就打不开了），说没联网
+    // 没网时点「重新安装」：先确认连不上，就不清缓存（清了缓存页面就打不开了），说没联网
     const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     const del = vi.fn()
     vi.stubGlobal('caches', { keys: async () => ['audio'], delete: del })

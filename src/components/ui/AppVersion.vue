@@ -1,12 +1,11 @@
 <script setup lang="ts">
 // 首页页脚最上面的「版本与更新」卡片（需求 F1，child-education 三个静态站统一）：应用图标 + 当前版本 + 「检查更新」。
 // 有新版本就让 Service Worker 取新的、装好接管后自动重新载入；重新载入后卡片滚到眼前，说「已更新」或「更新没有完成」。
-// 检查过、慢、失败时给「重新安装」（先确认连得上服务器，再清掉缓存重新下载）。最下面一行是离线朗读包下到哪了（N8 ⑦）。
+// 检查过、慢、失败时给「重新安装」（先确认连得上服务器，再清掉缓存重新下载）。
 // 给家长看的：跟随界面语言，不注音、不朗读。逻辑在 engine/version.ts。
 import { computed, onMounted, ref } from 'vue'
-import { lang, ui } from '@/engine/i18n'
+import { ui } from '@/engine/i18n'
 import { APP_VERSION, applyUpdate, checkVersion, noteUpdate, reinstall, takeUpdateNote } from '@/engine/version'
-import { useOfflineStore } from '@/stores/offline'
 
 type State =
   | 'idle'
@@ -54,7 +53,7 @@ async function check(): Promise<void> {
   state.value = (await applyUpdate()) === 'slow' ? 'slow' : 'installFailed'
 }
 
-/** 重新安装前先确认连得上服务器：没网时清掉离线包，重新载入就打不开了 */
+/** 重新安装前先确认连得上服务器：没网时清掉缓存，重新载入就打不开了 */
 async function redo(): Promise<void> {
   if (busy.value) return
   state.value = 'reinstalling'
@@ -77,15 +76,6 @@ onMounted(() => {
   if (document.readyState === 'complete') show()
   else window.addEventListener('load', show, { once: true })
 })
-
-const offline = useOfflineStore()
-const offlineLine = computed(() => {
-  const r = offline.last
-  const name = lang.value === 'zh' ? '中文' : 'English'
-  if (!r) return ui('version.offlineWait')
-  if (r.cached >= r.total && r.total > 0) return ui('version.offlineDone', { lang: name })
-  return ui('version.offlinePack', { lang: name, cached: r.cached, total: r.total })
-})
 </script>
 
 <template>
@@ -102,7 +92,6 @@ const offlineLine = computed(() => {
     </div>
     <p class="ver-status" :class="tone" role="status">{{ message }}</p>
     <p v-if="canReinstall" class="ver-more">{{ ui('version.stale') }}<button type="button" class="ver-redo" @click="redo">{{ ui('version.reinstall') }}</button>{{ ui('version.reinstallHint') }}</p>
-    <p class="ver-offline">{{ offlineLine }}</p>
   </section>
 </template>
 
@@ -210,13 +199,5 @@ const offlineLine = computed(() => {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-.ver-offline {
-  margin: 10px 0 0;
-  padding-top: 8px;
-  border-top: 1px dashed var(--c-line);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--c-text-light);
 }
 </style>
