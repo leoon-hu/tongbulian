@@ -179,6 +179,106 @@ describe('拔河 · 模型（B36d）', () => {
   })
 })
 
+describe('拔河 · 一题里的表演（B72）', () => {
+  it('等答题一仰一回；按键亮灯泡、蹬地更往后仰；红队答对使劲一拽、蓝队答错脚下一滑往前一栽冒汗；绳子与蝴蝶结只看比分；画得出来', () => {
+    const m = new TugModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(0, 0, 'countdown'))
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.sides
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    // 一起一拉：后仰一直在变，同队后面那个慢半拍
+    const leans: number[] = []
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      leans.push(m.leanOf(r))
+    }
+    expect(Math.max(...leans) - Math.min(...leans)).toBeGreaterThan(0.15)
+    expect(m.leanOf(r, 1)).not.toBeCloseTo(m.leanOf(r, 0), 3)
+    const bowX = m.bow.value
+    const hands = m.anchors()
+    const before = m.leanOf(r) - m.actLean(r)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.3)
+    expect(r.act.typing).toBeGreaterThan(0.8)
+    expect(m.actLean(r) - 0.16 * Math.sin(r.heave)).toBeGreaterThan(0.2) // 蹬地更往后仰
+    expect(m.strainOf(r)).toBeGreaterThan(0.6)
+    m.setState(snap(3, 2))
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    let maxYank = -Infinity
+    let minBlue = Infinity
+    let maxSlip = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    let dynMax = 0
+    for (let i = 0; i < 70; i++) {
+      m.step(1 / 60)
+      maxYank = Math.max(maxYank, m.leanOf(r) - before)
+      minBlue = Math.min(minBlue, m.leanOf(b))
+      maxSlip = Math.max(maxSlip, m.slipOf(b))
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      expect(m.slipOf(r)).toBe(0)
+      if (i % 10 === 0) {
+        const n = ctx.calls.length
+        renderDynamic(ctx, m)
+        dynMax = Math.max(dynMax, ctx.calls.length - n)
+      }
+    }
+    expect(maxYank).toBeGreaterThan(0.4)
+    expect(maxSlip).toBe(1)
+    expect(minBlue).toBeLessThan(0)
+    expect(maxSweat).toBe(1)
+    // 比分没变：蝴蝶结与手抓绳的地方都不动（表演只落在身子上）
+    expect(m.bow.value).toBeCloseTo(bowX, 6)
+    const after = m.anchors()
+    expect(after.redFront.x).toBeCloseTo(hands.redFront.x, 6)
+    expect(after.blueFront.x).toBeCloseTo(hands.blueFront.x, 6)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    expect(dynMax).toBeLessThan(1400) // 表演的每一帧也在绘制调用上限内
+    // 过了答错那一拍（1.2 秒）站回来
+    settle(m, 1)
+    expect(m.slipOf(b)).toBe(0)
+  })
+
+  it('点一下角色：蹦的是被点的那一队两个人，另一队不动（原来按第几个人算，两队各蹦一个）', () => {
+    const m = new TugModel(createRng(4))
+    m.layout(1000, 120, false)
+    m.setState(snap(0, 0, 'countdown'))
+    m.setState(snap(2, 2))
+    settle(m, 1)
+    m.poke('red')
+    m.step(1 / 60)
+    const [r, b] = m.sides
+    expect(m.liftOf(r, 0)).toBeGreaterThan(m.geo.size * 0.2)
+    expect(m.liftOf(r, 1)).toBeGreaterThan(m.geo.size * 0.2)
+    expect(m.liftOf(b, 0)).toBe(0)
+    expect(m.liftOf(b, 1)).toBe(0)
+    // 抓绳的手跟着蹦
+    expect(m.anchors().redBack.y).toBeLessThan(m.geo.ropeY - m.geo.size * 0.2)
+    expect(m.anchors().blueBack.y).toBeCloseTo(m.geo.ropeY, 6)
+  })
+
+  it('减少动画：不仰不滑不跳，只留表情与头顶图标', () => {
+    const m = new TugModel(createRng(5), { reducedMotion: true })
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    for (let i = 0; i < 30; i++) {
+      m.step(1 / 60)
+      expect(m.actLean(m.sides[0])).toBe(0)
+      expect(m.slipOf(m.sides[1])).toBe(0)
+      expect(m.liftOf(m.sides[0], 0)).toBe(0)
+    }
+    expect(m.sides[0].act.pose().bulb).toBeGreaterThan(0)
+    expect(m.sides[1].act.pose().wide).toBeGreaterThan(0.5)
+  })
+})
+
 describe('拔河 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new TugModel(createRng(2))

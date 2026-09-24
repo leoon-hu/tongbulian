@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { Actor, WRONG_TIME, actEvent, actState, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Blinker, Decay, advancePhase } from '@/battle/game/engine/rig'
 import { ease, Tween } from '@/battle/game/engine/tween'
@@ -77,6 +78,8 @@ export interface Tower {
   roof: Tween | null
   /** 亮起的窗户层数 */
   lit: number
+  /** 一题里的表演（B72） */
+  act: Actor
 }
 
 export interface Cloud {
@@ -103,6 +106,10 @@ export const STAGGER = 0.12
 export const SPRINT_FROM = 2
 export const FIREWORK_ROUNDS = 3
 export const FIREWORK_GAP = 0.5
+/**
+ * 等答题时工人的小动作（B72）：wave = 拿锤子轻敲脚下的砖、scratch = 擦汗、stretch = 伸懒腰、look = 手搭凉棚张望
+ */
+export const BUILDER_GESTURES: readonly Gesture[] = ['wave', 'scratch', 'stretch', 'look']
 
 export class TowerModel {
   geo: TowerGeometry = layoutTower(150, 700, false)
@@ -149,6 +156,7 @@ export class TowerModel {
       moodT: 0,
       roof: null,
       lit: 0,
+      act: new Actor(this.rng, BUILDER_GESTURES, !this.opts.reducedMotion),
     }
   }
 
@@ -224,6 +232,7 @@ export class TowerModel {
   }
 
   setState(s: GameState): void {
+    actState(s, (team) => this.tower(team).act)
     this.target = Math.max(1, s.target)
     this.phase = s.phase
     this.winner = s.winner
@@ -301,6 +310,7 @@ export class TowerModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (team) => this.tower(team).act)
     switch (e.type) {
       case 'countdown':
         for (const t of this.towers) this.setMood(t, 'ready')
@@ -396,6 +406,7 @@ export class TowerModel {
     }
     for (const t of this.towers) {
       t.moodT += dt
+      t.act.step(dt)
       t.squash.step(dt)
       t.dust.step(dt)
       t.hop.step(dt)
@@ -442,6 +453,16 @@ export class TowerModel {
     if (t.mood === 'ready') return Math.abs(Math.sin(t.hammer * 2)) * g.size * 0.35
     if (t.mood === 'win') return Math.abs(Math.sin(t.hammer)) * g.size * 0.45
     return t.hop.value * g.size * 0.4
+  }
+
+  /**
+   * 答错（B72）：脚下最上面那块砖晃了晃（绕砖底中点来回摇，越摇越轻），工人站在上面跟着晃——
+   * 是「哎呀，没站稳」，不掉砖、不砸手（U4）；减少动画时不晃
+   */
+  wobbleOf(t: Tower): number {
+    if (!this.animated || t.act.wrongT < 0) return 0
+    const q = t.act.wrongT / WRONG_TIME
+    return 0.13 * Math.sin(q * Math.PI * 6) * (1 - q) * (1 - q)
   }
 
   /** 整座楼的压缩比（落砖瞬间） */

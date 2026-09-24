@@ -167,6 +167,67 @@ describe('爬梯子 · 模型（B36j）', () => {
   })
 })
 
+describe('爬梯子 · 一题里的表演（B72）', () => {
+  it('等久了两腿晃、冒泡泡，按键亮灯泡往上够；红队答对握拳欢呼、蓝队答错手一滑往下出溜再爬回原处；只演自己那一队；画得出来', () => {
+    const m = new LadderModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.climbers
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.legsOf(r)).toBeGreaterThan(0.5)
+    m.setState({ ...snap(3, 2), inputs: { blue: '1' } })
+    expect(b.act.bulbT).toBe(0)
+    expect(r.act.bulbT).toBe(-1)
+    settle(m, 0.4)
+    expect(b.act.typing).toBeGreaterThan(0.9)
+    expect(m.legsOf(b)).toBeLessThan(0.1)
+    m.setState(snap(3, 2))
+    const home = b.pos.value
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    expect(m.shake[1].value).toBeGreaterThan(0.4) // 手一滑，梯子晃一下
+    expect(m.shake[0].value).toBe(0)
+    let maxArms = 0
+    let maxSlip = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 80; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxArms = Math.max(maxArms, pr.arms)
+      maxSlip = Math.max(maxSlip, m.slipOf(b))
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      expect(m.slipOf(r)).toBe(0)
+      expect(pb.arms).toBe(0)
+      expect(b.pos.value).toBe(home) // 不后退：分数对应的位置不动，只是表演里往下出溜一点
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxSlip).toBeGreaterThan(m.geo.size * 0.15)
+    expect(maxSlip).toBeLessThan(m.geo.size * 0.3)
+    expect(maxSweat).toBe(1)
+    expect(m.slipOf(b)).toBe(0) // 1.3 秒后已经爬回原处
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 减少动画：不出溜、不晃腿
+    const quiet = new LadderModel(createRng(4), { reducedMotion: true })
+    quiet.layout(96, 350, true)
+    quiet.setState(snap(3, 2))
+    settle(quiet, 1)
+    expect(quiet.legsOf(quiet.climbers[0])).toBe(0)
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.slipOf(quiet.climbers[1])).toBe(0)
+      expect(quiet.climbers[1].act.pose().wide).toBeGreaterThan(0)
+    }
+    const c = stubCtx()
+    renderDynamic(c, quiet)
+    expect(c.count('save')).toBe(c.count('restore'))
+  })
+})
+
 describe('爬梯子 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new LadderModel(createRng(2))

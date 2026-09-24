@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -95,6 +96,12 @@ export const SPARKLE_ROUNDS = 3
 export const SPARKLE_GAP = 0.5
 export const RAINBOW_TIME = 0.8
 const MOTES = 6
+/**
+ * 等答题时的小动作（B72）：nod = 蘸一下脚边的泡泡水、look = 抬头看泡泡、wave = 腮帮子一鼓一鼓、hop = 蹦一下
+ */
+export const BLOWER_GESTURES: readonly Gesture[] = ['nod', 'look', 'wave', 'hop']
+/** 答错时旁边那颗小泡泡：鼓出来 → 啪地破掉（秒） */
+export const POP_TIME = 0.55
 
 export class BubbleModel {
   geo: BubbleGeometry = layoutBubble(150, 700, false)
@@ -130,7 +137,7 @@ export class BubbleModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.blowers = [new Racer('red', rng), new Racer('blue', rng)]
+    this.blowers = [new Racer('red', rng, ease.outBack, BLOWER_GESTURES), new Racer('blue', rng, ease.outBack, BLOWER_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -272,7 +279,16 @@ export class BubbleModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.blower(t).act)
     switch (e.type) {
+      case 'answered': {
+        // 一题里的表演（B72）：答对使劲吹一口；答错泡泡差点破——晃得厉害（旁边那颗小的啪地破掉，见 popOf）
+        if (this.phase !== 'playing') break
+        const i = e.team === 'red' ? 0 : 1
+        if (e.correct) this.puff[i]!.kick(1.3)
+        else this.wobble[i]!.kick(1.7)
+        break
+      }
       case 'countdown':
         for (const b of this.blowers) b.setMood('ready')
         break
@@ -422,6 +438,20 @@ export class BubbleModel {
     if (b.mood === 'ready') return Math.abs(Math.sin(b.hop)) * g.size * 0.12
     if (b.mood === 'win') return Math.abs(Math.sin(b.phase)) * g.size * 0.1
     return 0
+  }
+
+  /** 蘸泡泡水（B72 等答题的小动作 nod）：手伸到脚边的瓶子里停一下再回来，0…1 */
+  dipOf(b: Racer): number {
+    const a = b.act
+    if (!this.animated || a.gesture !== 'nod') return 0
+    return Math.min(1, 1.5 * Math.sin(Math.PI * Math.min(1, a.gestureT)))
+  }
+
+  /** 答错时泡泡旁边那颗小泡泡的进度（0…1，前 0.4 鼓出来、之后破掉），不在这一拍 / 减少动画时 null */
+  popOf(b: Racer): number | null {
+    const t = b.act.wrongT
+    if (!this.animated || t < 0 || t > POP_TIME) return null
+    return t / POP_TIME
   }
 
   /** 输了又吹出的那颗小泡泡：在泡泡棒上方慢慢飘 */

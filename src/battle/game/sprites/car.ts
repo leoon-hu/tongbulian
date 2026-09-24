@@ -1,7 +1,7 @@
 /** 赛车：队色车身、车顶座舱里探出司机的脑袋、尾翼、车灯、两个会转的轮子、氮气尾焰。原点在轮子着地的中点，朝右。 */
 import type { Team } from '@/battle/protocol'
 import { circle, fillRoundRect, withAlpha, withTransform } from '../engine/draw'
-import { drawCritter, type CritterKind } from './scenery'
+import { drawCritter, type CritterKind, type CritterPose } from './scenery'
 
 const TEAM: Record<Team, { main: string; dark: string; light: string }> = {
   red: { main: '#ff6b6b', dark: '#c94444', light: '#ffa3a3' },
@@ -20,6 +20,16 @@ export interface CarPose {
   blink: number
   /** 司机回头 0…1 */
   look: number
+  /** 司机的头再歪多少（弧度，正 = 往前探：踩油门前倾、点头、摇头，B72） */
+  headTilt?: number
+  /** 司机往上探（px，欢呼时） */
+  headLift?: number
+  /** 司机挥手 0…1 */
+  wave?: number
+  /** 司机的表情与手（举手、挠头、笑、一愣） */
+  face?: CritterPose
+  /** 车灯亮度 0…1（熄火时暗下去；不传 = 亮） */
+  lamp?: number
 }
 
 export function drawCar(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, team: Team, kind: CritterKind, p: CarPose): void {
@@ -57,18 +67,26 @@ export function drawCar(ctx: CanvasRenderingContext2D, x: number, y: number, s: 
     fillRoundRect(ctx, -s * 0.3, -s * 0.58, s * 0.44, s * 0.26, s * 0.08, c.dark)
     fillRoundRect(ctx, -s * 0.26, -s * 0.55, s * 0.36, s * 0.18, s * 0.05, '#cfeeff')
     // 司机的脑袋（探出车窗）
-    withTransform(ctx, -s * 0.08 + p.look * s * 0.03, -s * 0.36, p.look * 0.25, 1, 1, () => {
-      drawCritter(ctx, 0, 0, s * 0.5, kind, 0, 0)
-      if (p.blink > 0.5) {
+    const face = p.face
+    const eyesBusy = (face?.wide ?? 0) > 0.3 || (face?.happy ?? 0) > 0.4
+    withTransform(ctx, -s * 0.08 + p.look * s * 0.03, -s * 0.36 - (p.headLift ?? 0), p.look * 0.25 + (p.headTilt ?? 0), 1, 1, () => {
+      drawCritter(ctx, 0, 0, s * 0.5, kind, 0, p.wave ?? 0, face)
+      if (p.blink > 0.5 && !eyesBusy) {
         ctx.fillStyle = kind === 'panda' ? '#000' : '#2b2b2b'
         ctx.fillRect(-s * 0.09, -s * 0.2, s * 0.06, Math.max(1, s * 0.015))
         ctx.fillRect(s * 0.03, -s * 0.2, s * 0.06, Math.max(1, s * 0.015))
       }
     })
-    // 车灯
+    // 车灯（熄火时暗下去）
     ctx.fillStyle = '#ffe27a'
     circle(ctx, s * 0.47, -s * 0.25, s * 0.045)
     ctx.fill()
+    if (p.lamp !== undefined && p.lamp < 0.98) {
+      withAlpha(ctx, (1 - p.lamp) * 0.8, () => {
+        ctx.fillStyle = '#6b6b6b'
+        ctx.fill()
+      })
+    }
     ctx.fillStyle = '#d94c4c'
     ctx.fillRect(-s * 0.5, -s * 0.28, s * 0.04, s * 0.06)
     // 轮子

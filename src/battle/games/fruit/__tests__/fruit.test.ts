@@ -188,6 +188,69 @@ describe('摘果子 · 模型（B36p）', () => {
   })
 })
 
+describe('摘果子 · 一题里的表演（B72）', () => {
+  it('上半身露出篮口；等久了冒泡泡、按键只亮自己那一队的灯泡；红队答对蓄力再跳起来举手、蓝队答错一片叶子飘到头上冒汗摇头；画得出来', () => {
+    for (const [W, H, compact] of [
+      [150, 700, false],
+      [96, 350, true],
+    ] as const) {
+      const g = layoutFruit(W, H, compact)
+      expect(g.kidY - 0.6 * g.size).toBeLessThan(g.basketTop - g.basketH * 0.22) // 肩膀在篮口后沿上面
+    }
+    const m = new FruitModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.pickers
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    m.setState(snap(4, 2))
+    m.onEvent({ type: 'point', team: 'red', playerId: 'r', streak: 1 })
+    expect(m.liftOf(r, 0)).toBe(0) // 先蓄力，不再一下弹到最高
+    let maxLift = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let maxShake = 0
+    let fell = false
+    let landed = false
+    const ctx = stubCtx()
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxArms = Math.max(maxArms, pr.arms)
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      expect(pb.arms).toBe(0)
+      const leaf = m.leafOf(b)
+      if (leaf.y > 0.5) fell = true
+      if (leaf.y === 0 && leaf.amount === 1) landed = true
+      expect(m.leafOf(r).amount).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(fell && landed).toBe(true)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    settle(m, 1)
+    expect(m.leafOf(b).amount).toBe(0) // 站好时叶子滑下去了
+    // 减少动画：叶子直接在头上、不飘
+    const quiet = new FruitModel(createRng(4), { reducedMotion: true })
+    quiet.setState(snap(1, 1))
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    quiet.step(0.1)
+    expect(quiet.leafOf(quiet.pickers[1])).toEqual({ amount: 1, y: 0, x: 0, rot: 0 })
+    expect(quiet.pickers[1].act.pose().shake).toBe(0)
+  })
+})
+
 describe('摘果子 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new FruitModel(createRng(2))

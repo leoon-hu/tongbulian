@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { Actor, RIGHT_TIME, WRONG_TIME, actEvent, actState, teamInput, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
 import { clamp, ease, Tween } from '@/battle/game/engine/tween'
@@ -72,7 +73,12 @@ export interface Rocket {
   moodT: number
   /** 冒烟计时 */
   smokeT: number
+  /** 一题里的表演（B72）：火箭自己就是角色（没有脸），身子一伸一缩、摆一摆、蹿一下都落到机身与尾焰上 */
+  act: Actor
 }
+
+/** 等答题时火箭的小动作（B72）：往上蹿两下、朝对面歪头看一眼 */
+export const ROCKET_GESTURES: readonly Gesture[] = ['hop', 'look']
 
 export interface Star {
   x: number
@@ -125,6 +131,8 @@ export class RocketModel {
   particles: ParticlePool
   quality = 0
   private nextShooting = 4
+  /** 每队上一份快照里正在按的内容：变了且不空 = 按了一下 */
+  private inputs: [string, string] = ['', '']
   private fireworksLeft = 0
   private fireworkT = 0
   private readonly rng: RNG
@@ -150,6 +158,7 @@ export class RocketModel {
       mood: 'idle',
       moodT: 0,
       smokeT: 0,
+      act: new Actor(this.rng, ROCKET_GESTURES, !this.opts.reducedMotion),
     }
   }
 
@@ -197,6 +206,13 @@ export class RocketModel {
   }
 
   setState(s: GameState): void {
+    actState(s, (t) => this.rocket(t).act)
+    this.rockets.forEach((r, i) => {
+      // 按了一下（B72）：火苗蹿一下（在 flameAct 里），喷嘴底下冒一小口烟
+      const input = s.phase === 'playing' ? teamInput(s, r.team) : ''
+      if (input && input !== this.inputs[i]) this.puff(r, 2, false)
+      this.inputs[i] = input
+    })
     this.target = Math.max(1, s.target)
     const prevPhase = this.phase
     this.phase = s.phase
@@ -235,6 +251,26 @@ export class RocketModel {
       this.fireworksLeft = 0
       this.rays = 0
     }
+  }
+
+  /** 喷嘴底下的一口烟：按键是一小口白烟；答错火苗哑了是一口灰烟，慢慢往上飘 */
+  private puff(r: Rocket, n: number, gray: boolean): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    this.particles.emit({
+      x: g.colX[r.team === 'red' ? 0 : 1],
+      y: this.yOf(r) + g.size * 0.05,
+      count: n,
+      speed: (gray ? 22 : 30) * g.k,
+      angle: gray ? -Math.PI / 2 : Math.PI / 2,
+      spread: gray ? Math.PI * 0.9 : Math.PI * 0.6,
+      life: gray ? 1.1 : 0.5,
+      size: (gray ? 5 : 2.6) * g.k,
+      // 灰烟在深紫的夜空里要看得出来：用偏亮的灰
+      colors: gray ? ['#a4a4b4', '#c2c2ce', '#8a8a9a'] : ['#e8e8f0', '#c9c9d8'],
+      gravity: gray ? -18 * g.k : 10 * g.k,
+      drag: 2,
+    })
   }
 
   private go(): void {
@@ -281,7 +317,12 @@ export class RocketModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.rocket(t).act)
     switch (e.type) {
+      case 'answered':
+        // 答错（B72）：火苗一下哑了（flameAct）、冒一口灰烟、机身晃两下（演员的摇头）
+        if (!e.correct && this.phase === 'playing') this.puff(this.rocket(e.team), 4, true)
+        break
       case 'countdown':
         for (const r of this.rockets) this.setMood(r, 'ready')
         break
@@ -377,6 +418,8 @@ export class RocketModel {
     }
     for (const r of this.rockets) {
       r.moodT += dt
+      r.act.animated = animated
+      r.act.step(dt)
       r.y.step(dt)
       r.burst.step(dt)
       r.shake.step(dt)
@@ -417,7 +460,9 @@ export class RocketModel {
     const g = this.geo
     let y = r.y.value
     if (!this.animated) return y
+    // 悬停时轻轻起伏；得过分之后（心情停在「跑」）停稳了也照样起伏（B72）
     if (r.mood === 'idle') y += Math.sin(r.phase) * g.size * 0.06
+    else if (r.mood === 'run') y += Math.sin(r.phase) * g.size * 0.06 * (1 - r.moving)
     else if (r.mood === 'win') y += Math.sin(r.phase) * g.size * 0.1
     else if (r.mood === 'lose') y += Math.min(1, r.moodT / 1.5) * g.size * 0.35 + Math.sin(r.moodT * 9) * g.size * 0.02
     return y
@@ -437,6 +482,27 @@ export class RocketModel {
     if (r.mood === 'lose') return this.animated ? (Math.sin(r.moodT * 12) > 0.3 ? 0.35 : 0) : 0.2
     const base = r.mood === 'ready' ? 0.5 : 0.4
     return base + r.moving * 0.6 + r.burst.value * 0.7 + (this.sprint ? 0.1 : 0)
+  }
+
+  /**
+   * 一题里的表演落到尾焰上（B72）：base 是 flameOf 的火。等答题时一呼一吸；按键时旺一点、每按一下蹿一下；
+   * 答对先收一下（蓄力）再喷大火；答错一下哑了（断断续续冒两下），再慢慢旺回来。减少动画时照旧
+   */
+  flameAct(r: Rocket, base: number): number {
+    if (!this.animated || !r.act.playing) return base
+    const a = r.act.pose()
+    let f = base + clamp((a.sy - 1) * 4, -0.15, 0.15) + a.typing * 0.2 + a.press * 0.9
+    if (r.act.rightT >= 0) {
+      const q = r.act.rightT / RIGHT_TIME
+      f += q < 0.1 ? -0.25 : q < 0.5 ? 0.3 + 1.1 * Math.sin((Math.PI * (q - 0.1)) / 0.4) : 0.3 * (1 - q)
+    }
+    if (r.act.wrongT >= 0) {
+      const q = r.act.wrongT / WRONG_TIME
+      if (q < 0.45) f = Math.sin(r.act.t * 38) > 0.75 ? 0.22 : 0.05
+      else if (q < 0.75) f *= (q - 0.45) / 0.3
+    }
+    // 表演加的火别比原来的大火还长太多（得分的爆燃 + 答对的大火叠在一起时收一收）
+    return Math.max(0, Math.min(f, Math.max(base, 2.2)))
   }
 
   tiltOf(r: Rocket): number {

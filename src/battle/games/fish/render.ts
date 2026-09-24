@@ -2,12 +2,13 @@
  * 钓鱼的渲染：renderBackground 画不动的部分（天空、水、沙地、贝壳与海星、两段码头），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳、云、水面亮纹、水草、气泡、杂鱼、鱼线、浮漂、两条鱼、粒子、两个钓鱼人）。
  */
-import { gradient } from '@/battle/game/engine/draw'
+import { WRONG_TIME, drawActFx } from '@/battle/game/engine/act'
+import { gradient, withTransform } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawAngler, drawBobber, drawBubble, drawDock, drawLine, drawMinnow, drawSeaweed, drawShell, drawStarfish, drawTeamFish } from '@/battle/game/sprites/fish'
 import { drawCloud, drawSun, skyGradient } from '@/battle/game/sprites/scenery'
 import { drawShimmer } from '@/battle/game/sprites/swim'
-import type { FishGeometry, FishModel } from './model'
+import { bodyPoint, type FishGeometry, type FishModel } from './model'
 
 const WEED: [number, number, string][] = [
   [0.06, 1.2, '#3ea36b'],
@@ -70,19 +71,37 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: FishModel): void
   })
   m.particles.draw(ctx)
   // 钓鱼人先画，鱼在后面画：举到手里的鱼要在人前面
+  const s = g.size
   m.fishes.forEach((f, i) => {
-    drawAngler(ctx, g.anglerX[i]!, g.dockY, g.size, f.team, m.kinds[i]!, {
-      facing: g.facing[i]!,
-      bend: m.bend[i]!.value,
-      reel: m.reel[i]!,
-      laid: m.laidOf(f),
-      lift: m.liftOf(f),
-      cheer: f.mood === 'win' && f.moodT >= REEL_TIME_FOR_CHEER ? 1 : 0,
-      scratch: m.scratchOf(f),
-      swing: m.animated ? t * 2.2 + i : 0,
-      blink: f.blink.value,
-      look: f.look.value,
-    })
+    // 一题里的表演（B72）：整体按 bodyOf 变换（竿子在 rodOf 里是同一个变换），手势与表情接到钓鱼人的姿势上
+    const act = f.act
+    const a = act.pose()
+    const b = m.bodyOf(i)
+    const wait = m.waitOf(f)
+    const wrong = act.wrongT >= 0
+    withTransform(ctx, b.x, b.y, b.rot, b.sx, b.sy, () =>
+      drawAngler(ctx, 0, 0, s, f.team, m.kinds[i]!, {
+        facing: g.facing[i]!,
+        bend: m.rodBend(i),
+        reel: m.reel[i]!,
+        laid: m.laidOf(f),
+        lift: m.liftOf(f),
+        cheer: f.mood === 'win' && f.moodT >= REEL_TIME_FOR_CHEER ? 1 : 0,
+        scratch: Math.max(m.scratchOf(f), a.scratch),
+        swing: m.animated ? m.legPhase[i]! : 0,
+        blink: f.blink.value,
+        look: Math.max(f.look.value, a.look),
+        yank: m.yankOf(f),
+        raise: act.rightT >= 0 ? a.arms : 0,
+        kick: 0.08 + 0.06 * wait,
+        gaze: act.gesture === 'look' ? 0 : wait * (act.gesture === 'nod' ? 1 : 0.6),
+        turn: wrong && act.wrongT / WRONG_TIME > 0.12 ? a.shake * 1.8 : 0,
+        happy: a.happy,
+        wide: a.wide,
+      }),
+    )
+    const head = fxAt(bodyPoint(b, 0, -m.liftOf(f) - s * 1.22), s, i === 0 ? 1 : -1)
+    drawActFx(ctx, head.x, head.y, s, a, { side: i === 0 ? 1 : -1, quality: m.quality })
   })
   m.fishes.forEach((f, i) => {
     const p = fishXY[i]!
@@ -95,6 +114,12 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: FishModel): void
       mouth: m.mouthOf(f, i),
     })
   })
+}
+
+/** 头顶图标别出盒子（紧凑版头顶离上沿很近）：放不下就往下挪到放得下、再往旁边让开脸（B72） */
+function fxAt(p: { x: number; y: number }, s: number, side: 1 | -1): { x: number; y: number } {
+  const r = Math.max(s, 22)
+  return p.y >= r * 0.6 ? p : { x: p.x + side * r * 0.4, y: r * 0.6 }
 }
 
 /** 鱼飞到手里之后才举手（与模型里的位移时长一致） */

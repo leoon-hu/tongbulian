@@ -76,8 +76,8 @@ export function helpSections(lang: Lang): HelpSection[] {
           {
             kind: 'steps',
             items: [
-              'Enter: tap a topic on the topic map and you land on its "Who do you play?" page: the first card, "Practice alone", is quiet practice, the other three are the battle modes below; pick one and tap Start. "Practice alone" is selected the first time; after that the page remembers the card you started with last time.',
-              'Who to play: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: one person taps "Create room" and gets three QR codes on screen — red team, blue team and watch, each with a link to copy; red players scan the red code, blue players the blue one, onlookers the watch one; if scanning is awkward, tap "🔑 Join a battle" in the top bar and type that role\'s 6-digit passcode (shown under each code); the match starts by itself once both teams are in; the device that created the room can also tap "Join as red/blue" to play once one team is in, otherwise it just watches; up to 6 per team).',
+              'Enter: tap a topic on the topic map and you land on its "How do you want to practice?" page: the first card, "Practice alone", is quiet practice, the other three are the battle modes below; pick one and tap Start. "Practice alone" is selected the first time; after that the page remembers the card you started with last time.',
+              'The three battle modes: "vs robot" (the robot has its own questions and three speeds 🐢 🐰 🚀) or "two on one device" (one tablet sideways, each side answers its own questions and can tap at the same time). "Own devices" (one device each: one person taps "Create room" and gets three QR codes on screen — red team, blue team and watch, each with a link to copy; red players scan the red code, blue players the blue one, onlookers the watch one; if scanning is awkward, tap "🔑 Join a battle" in the top bar and type that role\'s 6-digit passcode (shown under each code); the match starts by itself once both teams are in; the device that created the room can also tap "Join as red/blue" to play once one team is in, otherwise it just watches; up to 6 per team).',
               `Games follow the chapter: a grade's topics take turns through the ${games} game scenes from the first topic of volume 1, carrying on into volume 2, so a new chapter means a new game; to switch for this match only (or 🎲 random), use ⚙️ Settings in the header — next time it goes back to the chapter's game.`,
               'Nobody is asked for a name: tap Start and play. Each side gets a random animal and is called by it (Rabbit, Cat…), and the two sides always differ. To use your own name or animal, set it under ⚙️ Settings (🎲 goes back to random); the robot speed is there too.',
               'Start: the first time this device plays a game, it explains the rule in one sentence (not repeated within a day), then "Ready… 3, 2, 1, go!" and both sides get their first question.',
@@ -93,7 +93,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with the same three buttons in every mode: "next chapter" (on to the next topic in this book with that chapter\'s game, all the way to the last topic), "play again" (same people and game, new questions) and "stop playing" (back to the map). In a room everyone sees the same three, and whoever taps first decides for all: "next chapter" moves the same room on with no new room or rescanning; "stop playing" closes the room and everyone returns to the map. To pick a different game, use Settings on the setup page.',
+            text: 'When it ends, the result page shows the winner, score, time and each player\'s "answered n · correct m", with the same three buttons in every mode: "next chapter" (on to the next topic in this book with that chapter\'s game, all the way to the last topic), "play again" (same people and game, new questions) and "stop playing" (back to the map). In a room everyone sees the same three, and whoever taps first decides for all: "next chapter" moves the same room on with no new room or rescanning; "stop playing" closes the room and everyone returns to the map. To pick a different game, use ⚙️ Settings on the topic\'s Practice page.',
           },
           {
             kind: 'p',
@@ -113,7 +113,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               'A correct answer scores 1 point and moves the game scene one step. A wrong answer costs nothing: the correct answer shows for about a second and the next question comes.',
               '3 or 5 in a row pops "n in a row!"; going from behind to ahead pops "Took the lead!"; 4 points pops "halfway!"; 7 points pops "One more!" and the scene sprints.',
               'At 8 points the match ends at once: victory animation, "Red / Blue team wins!" plus one line from the game, then the result page.',
-              'Battles do not change practice progress and are not recorded. The robot speed can be changed on the setup page any time.',
+              'Battles do not change practice progress and are not recorded. The robot speed can be changed under ⚙️ Settings on the topic\'s Practice page any time.',
             ],
           },
           { kind: 'games' },
@@ -195,7 +195,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Where is progress stored? Can it be lost?', a: 'Only in this device\'s browser; nothing is uploaded and devices do not sync. Clearing browser data clears it.' },
               { q: 'Do questions repeat?', a: 'They are generated randomly, so almost never. An unfinished round continues with the same questions; a finished one gets new ones.' },
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
-              { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the battle setup page, together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
+              { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the topic\'s Practice page (the one you land on after tapping a topic), together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
               { q: 'Why no Chinese / English / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
@@ -217,8 +217,8 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'steps',
           items: [
-            '进入：在知识点地图上点一个知识点，直接到「跟谁打？」：第一张「自己练」是安静地练，后面三张是下面说的三种对战，选好点「开始」；第一次默认选着「自己练」，之后默认选着上次开始时选的那张。',
-            '跟谁打：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：一个人点「建房间」，屏幕上出三个二维码——红队、蓝队、观战，各带链接可以复制；红队的人扫红队码、蓝队的人扫蓝队码，看热闹的扫观战码；不方便扫码就点顶栏的「🔑 加入对战」，输那个身份的 6 位口令（每个码下面写着）；两队都有人进来就自动开始，建房的那台默认只看，一队有人后也可以点「以另一队进入」自己上场；每队最多 6 人）。',
+            '进入：在知识点地图上点一个知识点，直接到「怎么练？」：第一张「自己练」是安静地练，后面三张是下面说的三种对战，选好点「开始」；第一次默认选着「自己练」，之后默认选着上次开始时选的那张。',
+            '三种对战：「打机器人」（机器人有自己的题，🐢 慢 / 🐰 中 / 🚀 快三档）或「两人一台」（一台平板横着放，左右各答各的，可以同时按）；「各用各的」（每人一台设备：一个人点「建房间」，屏幕上出三个二维码——红队、蓝队、观战，各带链接可以复制；红队的人扫红队码、蓝队的人扫蓝队码，看热闹的扫观战码；不方便扫码就点顶栏的「🔑 加入对战」，输那个身份的 6 位口令（每个码下面写着）；两队都有人进来就自动开始，建房的那台默认只看，一队有人后也可以点「以另一队进入」自己上场；每队最多 6 人）。',
             `游戏按章节排定：一个年级的知识点从上册第一个起轮流用 ${games} 种游戏画面，下册接着上册排到的继续轮，换章节就换游戏；想这一次换一种或「🎲 随机」，在页头「⚙️ 配置」里选，只算这一次，下次又回到章节的游戏。`,
             '不用输名字：点「开始」就打。每一方随机分到一只小动物，名字就叫它（小兔、小猫……），两边一定不一样；想用自己的名字或小动物，在「⚙️ 配置」里改（「🎲 随机」回到随机），机器人快慢也在那里。',
             '开始：这台设备第一次玩这个游戏会先讲一句规则（一天内不重复），然后「预备…3、2、1，开始！」，两边同时拿到第一题。',
@@ -234,7 +234,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；三种模式都是「下一章」「再来一局」「不玩了」三个键：「下一章」接着打这一册的下一个知识点（游戏也换成那一章的），可以一直打到这一册最后一个知识点；「再来一局」同样的人和游戏换一组题；「不玩了」回地图。「各用各的」时三个角色看到的一样，谁先点就按谁的、大家一起变：「下一章」在同一个房间换，不用重新建房、重新扫码；「不玩了」关掉房间，大家一起回地图。想换游戏，在设置页的「⚙️ 配置」里选。',
+          text: '结束后是结果页：谁赢、比分、用时、每人「答 n · 对 m」；三种模式都是「下一章」「再来一局」「不玩了」三个键：「下一章」接着打这一册的下一个知识点（游戏也换成那一章的），可以一直打到这一册最后一个知识点；「再来一局」同样的人和游戏换一组题；「不玩了」回地图。「各用各的」时三个角色看到的一样，谁先点就按谁的、大家一起变：「下一章」在同一个房间换，不用重新建房、重新扫码；「不玩了」关掉房间，大家一起回地图。想换游戏，在知识点的「练习」页的「⚙️ 配置」里选。',
         },
         {
           kind: 'p',
@@ -254,7 +254,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             '答对一题得 1 分，游戏画面走一步；答错不扣分、不锁题，1 秒多显示正确答案就出下一题。',
             '连对 3 题、5 题弹出「连对 n 题！」；从落后变成领先弹「反超啦！」；到 4 分弹「到一半啦！」；到 7 分弹「还差一分！」，画面进入冲刺状态。',
             '到 8 分立刻结束：胜利动画、播报「红队 / 蓝队获胜」并接一句游戏话，再进结果页。',
-            '对战不改练习进度，也不存战绩；机器人的速度随时可以在设置页改。',
+            '对战不改练习进度，也不存战绩；机器人的速度随时可以在知识点的「练习」页的「⚙️ 配置」里改。',
           ],
         },
         { kind: 'games' },
@@ -336,7 +336,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '进度存在哪里？会不会丢？', a: '只存在这台设备的浏览器里，不上传，换设备不同步；清了浏览器数据就没了。' },
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
-            { q: '想改名字？', a: '在对战设置页页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
+            { q: '想改名字？', a: '在知识点的「练习」页（点知识点就到）页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
             { q: '为什么还没有语文 / 英语 / 三年级？', a: '内容按年级逐个做，陆续补充。' },
             {
               q: '收费吗？有广告吗？安全吗？',

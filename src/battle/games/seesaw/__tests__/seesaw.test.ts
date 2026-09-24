@@ -4,7 +4,7 @@ import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
 import { createSeesawGame } from '..'
 import { DROP_TIME, SeesawModel, STAGGER, TILT_TIME, layoutSeesaw } from '../model'
-import { renderBackground, renderDynamic } from '../render'
+import { fitLift, renderBackground, renderDynamic } from '../render'
 
 const snap = (red: number, blue: number, phase: GameState['phase'] = 'playing', winner: GameState['winner'] = null): GameState => ({
   red,
@@ -148,6 +148,87 @@ describe('跷跷板 · 模型（B36s）', () => {
     const t0 = performance.now()
     for (let i = 0; i < 10000; i++) m.step(1 / 60)
     expect(performance.now() - t0).toBeLessThan(300)
+  })
+})
+
+describe('跷跷板 · 一题里的表演（B72）', () => {
+  it('两个人一直晃腿；按键亮灯泡、抓紧扶手前倾不晃腿；红队答对在座上一弹举手、蓝队答错晃一晃害怕冒汗；只演自己那一队；画得出来', () => {
+    const m = new SeesawModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.riders
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.kickOf(r)).toBeGreaterThan(0.5)
+    expect(m.kickOf(b)).toBeGreaterThan(0.5)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.3)
+    expect(r.act.pose().lean).toBeGreaterThan(0.1)
+    expect(m.kickOf(r)).toBeLessThan(m.kickOf(b))
+    m.setState(snap(3, 2))
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    let maxLift = 0
+    let maxArms = 0
+    let maxWide = 0
+    let maxShake = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    let dynMax = 0
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxArms = Math.max(maxArms, pr.arms)
+      maxWide = Math.max(maxWide, pb.wide)
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      expect(pb.arms).toBe(0)
+      expect(pr.sweat).toBe(0)
+      if (i % 10 === 0) {
+        const n = ctx.calls.length
+        renderDynamic(ctx, m)
+        dynMax = Math.max(dynMax, ctx.calls.length - n)
+      }
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxWide).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    expect(dynMax).toBeLessThan(1200) // 表演的每一帧也在绘制调用上限内
+  })
+
+  it('翘到高处的那头跳起来也不出盒子；减少动画时不跳不晃腿', () => {
+    const m = new SeesawModel(createRng(4))
+    m.layout(820, 56, true)
+    m.setState(snap(0, 7))
+    settle(m)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    const g = m.geo
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      const a = m.angle()
+      const seatY = g.pivotY + g.seat[0] * Math.sin(a) + (-g.thick / 2) * Math.cos(a)
+      const [p, lift] = fitLift(m.riders[0].act.pose(), m.liftOf(m.riders[0], 0), seatY, g.size)
+      // 坐着时头顶就只剩不到 2px 的话就不跳了
+      const rest = seatY - 1.1 * p.sy * g.size
+      expect(seatY - lift - (p.lift + 1.1 * p.sy) * g.size).toBeGreaterThanOrEqual(Math.min(1.99, rest))
+    }
+    const quiet = new SeesawModel(createRng(4), { reducedMotion: true })
+    quiet.layout(1000, 120, false)
+    quiet.setState(snap(3, 2))
+    quiet.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.riders[0].act.pose().lift).toBe(0)
+      expect(quiet.kickOf(quiet.riders[0])).toBe(0)
+    }
+    expect(quiet.riders[0].act.pose().arms).toBeGreaterThan(0.3)
   })
 })
 

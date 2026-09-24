@@ -5,9 +5,10 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { Actor, RIGHT_TIME, WRONG_TIME, actEvent, actState, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Blinker, Decay, advancePhase } from '@/battle/game/engine/rig'
-import { clamp, ease, lerp, Tween } from '@/battle/game/engine/tween'
+import { clamp, clamp01, ease, lerp, Tween } from '@/battle/game/engine/tween'
 import type { CritterKind } from '@/battle/game/sprites/scenery'
 
 export interface TugGeometry {
@@ -102,6 +103,10 @@ export interface Side {
   moodT: number
   /** 原地蹦 / 欢呼跳的相位 */
   hop: number
+  /** 一题里的表演（B72）：一队一个演员，两个人一起演 */
+  act: Actor
+  /** 等答题时按呼吸的节奏一起一拉的相位 */
+  heave: number
 }
 
 export interface Cloud {
@@ -144,6 +149,13 @@ export const DRAG_TIME = 0.9
 export const SPRINT_FROM = 2
 
 const CROWD = 4
+/**
+ * 等答题时的小动作（B72）：拔河的手不离开绳子，所以换成——使一把劲（nod 那一拍）、重新握一下绳（scratch 那一拍）、
+ * 回头张望、脚下挪一挪（hop 那一拍）
+ */
+export const TUG_GESTURES: readonly Gesture[] = ['nod', 'scratch', 'look', 'hop']
+/** 同队第二个人比第一个慢这么多（弧度），一起一拉时不是完全同步 */
+const MEMBER_LAG = 0.7
 const KINDS: Record<Team, [CritterKind, CritterKind]> = { red: ['bear', 'pig'], blue: ['panda', 'monkey'] }
 
 export class TugModel {
@@ -203,6 +215,8 @@ export class TugModel {
       mood: 'idle',
       moodT: 0,
       hop: this.rng.next() * Math.PI * 2,
+      act: new Actor(this.rng, TUG_GESTURES, !this.opts.reducedMotion),
+      heave: this.rng.next() * Math.PI * 2,
     }
   }
 
@@ -272,6 +286,7 @@ export class TugModel {
   }
 
   setState(s: GameState): void {
+    actState(s, (t) => this.side(t).act)
     this.target = Math.max(1, s.target)
     const prevPhase = this.phase
     this.phase = s.phase
@@ -337,7 +352,12 @@ export class TugModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.side(t).act)
     switch (e.type) {
+      case 'answered':
+        // 答错（B72）：脚下一滑往前一栽，前脚那儿扬一小撮土
+        if (e.team && !e.correct && this.phase === 'playing') this.slipDust(this.side(e.team))
+        break
       case 'countdown':
         for (const side of this.sides) this.setMood(side, 'ready')
         break
@@ -412,6 +432,27 @@ export class TugModel {
     if (level >= 2) this.particles.clear()
   }
 
+  /** 答错时前脚滑出去扬的一小撮土 */
+  private slipDust(side: Side): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const facing = side.team === 'red' ? 1 : -1
+    const m = side.members[0]
+    this.particles.emit({
+      x: m.x.value + facing * g.size * 0.45,
+      y: g.groundY,
+      count: 5,
+      speed: 50 * g.k,
+      angle: facing > 0 ? 0 : Math.PI,
+      spread: Math.PI * 0.6,
+      life: 0.5,
+      size: 2.6 * g.k,
+      colors: ['#e6d3a8', '#f3e5c2'],
+      gravity: -20 * g.k,
+      drag: 2.5,
+    })
+  }
+
   private splash(side: Side, m: Puller): void {
     const g = this.geo
     m.splashed = true
@@ -460,6 +501,8 @@ export class TugModel {
     }
     for (const side of this.sides) {
       side.moodT += dt
+      side.act.step(dt)
+      if (animated && this.phase === 'playing') side.heave = advancePhase(side.heave, dt, 0.55)
       side.strain.step(dt)
       side.stumble.step(dt)
       side.sweat.step(dt)
@@ -500,8 +543,8 @@ export class TugModel {
     this.particles.step(dt)
   }
 
-  /** 后仰程度（负数是被拉得前倾） */
-  leanOf(side: Side): number {
+  /** 后仰程度（负数是被拉得前倾）；i 是第几个人（一起一拉时后面那个慢半拍） */
+  leanOf(side: Side, i = 0): number {
     if (!this.animated) return side.mood === 'idle' ? 0.35 : 0.1
     switch (side.mood) {
       case 'ready':
@@ -511,13 +554,58 @@ export class TugModel {
       case 'lose':
         return -0.3
       default:
-        return clamp(0.3 + side.strain.value * 0.55 - side.stumble.value * 0.5 + (this.sprint ? 0.12 + Math.sin(this.time * 30) * 0.04 : 0), -0.4, 1)
+        return clamp(0.3 + side.strain.value * 0.55 - side.stumble.value * 0.5 + (this.sprint ? 0.12 + Math.sin(this.time * 30) * 0.04 : 0) + this.actLean(side, i), -0.8, 1.1)
     }
   }
 
-  /** 离地高度（倒数原地蹦、赢了跳） */
+  /**
+   * 一题里的表演（B72）叠到后仰上：等答题时按呼吸一仰一回、隔一会儿使一把劲；按键脚跟蹬地更往后仰（每按一下再仰一下）；
+   * 答对先往前一送再使劲一拽；答错脚下一滑往前一栽再站回来（手不离开绳子，绳子与蝴蝶结只看比分）
+   */
+  actLean(side: Side, i = 0): number {
+    const a = side.act
+    if (!this.animated || !a.playing) return 0
+    let l = 0.16 * Math.sin(side.heave - i * MEMBER_LAG) + 0.24 * a.typing + 0.14 * a.press.value
+    if (a.gesture === 'nod') l += 0.28 * Math.sin(Math.PI * clamp01(a.gestureT))
+    if (a.rightT >= 0) {
+      const q = a.rightT / RIGHT_TIME
+      l += q < 0.1 ? -0.18 * (q / 0.1) : 0.6 * Math.sin(Math.PI * clamp01((q - 0.1) / 0.6))
+    }
+    l -= 0.9 * this.slipOf(side)
+    return l
+  }
+
+  /** 答错脚下一滑的程度 0…1：一下滑出去，愣一会儿，再慢慢站回来 */
+  slipOf(side: Side): number {
+    const a = side.act
+    if (!this.animated || a.wrongT < 0) return 0
+    const q = a.wrongT / WRONG_TIME
+    if (q < 0.15) return ease.outCubic(q / 0.15)
+    if (q < 0.45) return 1
+    return 1 - ease.inOutSine((q - 0.45) / 0.55)
+  }
+
+  /** 用力（眯眼咬牙）：得分猛拉、按键蓄力、答对那一拽 */
+  strainOf(side: Side): number {
+    const a = side.act
+    const yank = a.rightT >= 0 && a.rightT < RIGHT_TIME * 0.55 ? 1 : 0
+    return Math.max(side.strain.value, a.typing * 0.7, yank)
+  }
+
+  /** 脚下挪一挪（hop 那一拍）0…1 */
+  shuffleOf(side: Side): number {
+    const a = side.act
+    return this.animated && a.gesture === 'hop' ? Math.sin(Math.PI * clamp01(a.gestureT)) : 0
+  }
+
+  /** 离地高度（倒数原地蹦、赢了跳、被点了一下那一队蹦一下、答对拽完蹦两下） */
   liftOf(side: Side, i: number): number {
-    return this.liftOfBase(side, i) + this.pokeHop[i]!.value * this.geo.size * 0.3
+    const g = this.geo
+    const t = side.team === 'red' ? 0 : 1
+    const a = side.act
+    // 表演的跳：答对那一拍收一收（手还抓着绳），脚下挪一挪那一拍只是小碎步，答错不跳
+    const act = a.wrongT >= 0 || a.gesture === 'hop' ? 0 : a.pose().lift * 0.4
+    return this.liftOfBase(side, i) + (this.pokeHop[t]!.value * 0.3 + act) * g.size
   }
 
   private liftOfBase(side: Side, i: number): number {

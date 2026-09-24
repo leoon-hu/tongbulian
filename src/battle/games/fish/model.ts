@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { RIGHT_TIME, WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -109,6 +110,28 @@ export const CONFETTI_ROUNDS = 3
 export const CONFETTI_GAP = 0.5
 export const CAST_TIME = 0.5
 const BUBBLES = 6
+/** 等答题时的小动作（B72）：挠头、nod = 探身盯着浮漂一起一伏、张望、在码头上颠一下 */
+export const FISH_GESTURES: readonly Gesture[] = ['scratch', 'nod', 'look', 'hop']
+/** 坐着拿竿子跳不高：表演里的「跳」只离座这么多（× 演员给的高度），竿尖别跳出盒子 */
+export const SEAT_HOP = 0.45
+
+/** 钓鱼人整体的变换（B72）：坐着的原点、离座、绕屁股前倾 / 晃、压扁拉长；竿子跟着一起变，鱼线才接得上 */
+export interface AnglerBody {
+  x: number
+  y: number
+  rot: number
+  sx: number
+  sy: number
+}
+
+/** 钓鱼人身上的一点（本地坐标，原点在坐着的码头面）→ 画面坐标：与 withTransform(x, y, rot, sx, sy) 同一个变换 */
+export function bodyPoint(b: AnglerBody, lx: number, ly: number): { x: number; y: number } {
+  const c = Math.cos(b.rot)
+  const n = Math.sin(b.rot)
+  const px = lx * b.sx
+  const py = ly * b.sy
+  return { x: b.x + px * c - py * n, y: b.y + px * n + py * c }
+}
 
 export class FishModel {
   geo: FishGeometry = layoutFish(150, 700, false)
@@ -128,6 +151,8 @@ export class FishModel {
   bobberGlow: [Decay, Decay] = [new Decay(1), new Decay(1)]
   private splashed: [boolean, boolean] = [false, false]
   private bubbleT: [number, number] = [0, 0]
+  /** 两腿晃的相位（等答题时晃得更快，B72） */
+  legPhase: [number, number] = [0, 1]
   clouds: Cloud[] = []
   bubbles: Bubble[] = []
   minnow: Minnow | null = null
@@ -148,7 +173,7 @@ export class FishModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.fishes = [new Racer('red', rng), new Racer('blue', rng)]
+    this.fishes = [new Racer('red', rng, undefined, FISH_GESTURES), new Racer('blue', rng, undefined, FISH_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -300,6 +325,13 @@ export class FishModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.fish(t).act)
+    // 答错（B72）：鱼挣了一下，竿子一弹（弹的样子在 rodBend）
+    if (e.type === 'answered' && !e.correct && this.fish(e.team).act.wrongT === 0) {
+      const i = e.team === 'red' ? 0 : 1
+      this.thrash[i]!.kick(0.9)
+      this.bubblesFrom(i, 2)
+    }
     switch (e.type) {
       case 'countdown':
         for (const f of this.fishes) f.setMood('ready')
@@ -395,6 +427,7 @@ export class FishModel {
     }
     this.fishes.forEach((f, i) => {
       f.step(dt, 2, animated)
+      if (animated) this.legPhase[i] = this.legPhase[i]! + dt * (2.2 + 2.2 * this.waitOf(f))
       this.cast[i]!.step(dt)
       const bend = this.bend[i]!.step(dt)
       this.thrash[i]!.step(dt)
@@ -449,10 +482,62 @@ export class FishModel {
     return { x: rod.tipX + (fishX - rod.tipX) * c, y: rod.tipY + (fishY - rod.tipY) * c }
   }
 
+  /** 竿子在画面里的几何：在钓鱼人本地坐标里算好，再按 bodyOf 变过去（前倾 / 离座时竿尖与鱼线跟着走） */
   rodOf(i: number): RodGeometry {
     const g = this.geo
     const f = this.fishes[i]!
-    return rodGeometry(g.anglerX[i]!, g.dockY - this.liftOf(f), g.size, g.facing[i]!, this.bend[i]!.value, this.laidOf(f))
+    const b = this.bodyOf(i)
+    const r = rodGeometry(0, -this.liftOf(f), g.size, g.facing[i]!, this.rodBend(i), this.laidOf(f), this.yankOf(f))
+    const pivot = bodyPoint(b, r.pivotX, r.pivotY)
+    const tip = bodyPoint(b, r.tipX, r.tipY)
+    const ctrl = bodyPoint(b, r.ctrlX, r.ctrlY)
+    return { pivotX: pivot.x, pivotY: pivot.y, tipX: tip.x, tipY: tip.y, ctrlX: ctrl.x, ctrlY: ctrl.y }
+  }
+
+  /**
+   * 钓鱼人整体（B72）：一题里的表演交给它——跳 = 离座、前倾 = 往水那边探身、晃 = 左右摆一点、压扁拉长；
+   * 往后一拽时身子往后仰。坐着拿竿子不翻跟头（连对改成拽得更猛）
+   */
+  bodyOf(i: number): AnglerBody {
+    const g = this.geo
+    const f = this.fishes[i]!
+    const a = f.act.pose()
+    const facing = g.facing[i]!
+    // 帽顶别跳出盒子（紧凑版头顶本来就贴着上沿）
+    const room = Math.max(0, g.dockY - this.liftOf(f) - g.size * 1.3 * a.sy - 1)
+    const hop = Math.min(a.lift * g.size * SEAT_HOP, room)
+    // 往后仰只要一点：两个人都坐在盒子边上，仰多了头就出去了
+    const lean = a.lean >= 0 ? a.lean : a.lean * 0.35
+    return { x: g.anglerX[i]!, y: g.dockY - hop, rot: facing * (lean + a.shake * 0.4 - this.yankOf(f) * 0.07), sx: a.sx, sy: a.sy }
+  }
+
+  /** 竿子弯多少：收线的弯 + 一题里的表演（B72：按一下往下点一下；答错竿子一弹一弹） */
+  rodBend(i: number): number {
+    const f = this.fishes[i]!
+    const a = f.act
+    let bend = this.bend[i]!.value
+    if (!this.animated) return bend
+    bend += a.press.value * 0.35
+    if (a.wrongT >= 0) {
+      const q = a.wrongT / WRONG_TIME
+      if (q < 0.7) bend += Math.sin((q / 0.7) * Math.PI * 4) * (1 - q / 0.7) * 0.9
+    }
+    return bend
+  }
+
+  /** 往后一拽 0…1（B72 答对）：0.1 秒蓄力后一下拽起来、停一会、慢慢放回；连对拽得更猛 */
+  yankOf(f: Racer): number {
+    const a = f.act
+    if (!this.animated || a.rightT < 0) return 0
+    const q = a.rightT / RIGHT_TIME
+    const k = q < 0.1 ? 0 : q < 0.25 ? (q - 0.1) / 0.15 : q < 0.55 ? 1 : q < 0.9 ? 1 - (q - 0.55) / 0.35 : 0
+    return k * (a.big ? 1.25 : 1)
+  }
+
+  /** 等答题的程度（B72）：比赛中、没在按——两腿晃得更欢、盯着浮漂 */
+  waitOf(f: Racer): number {
+    if (f.mood !== 'idle' && f.mood !== 'run') return 0
+    return 1 - f.act.typing
   }
 
   /** 钓鱼人离座的高度（倒数 / 胜利蹦） */

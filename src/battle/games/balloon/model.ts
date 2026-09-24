@@ -6,10 +6,11 @@ import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import { teamKinds } from '@/battle/avatars'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { WRONG_TIME, actEvent, teamInput, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
-import { clamp } from '@/battle/game/engine/tween'
+import { clamp, ease } from '@/battle/game/engine/tween'
 
 export interface BalloonGeometry {
   W: number
@@ -64,6 +65,24 @@ export const SPRINT_FROM = 2
 export const CONFETTI_ROUNDS = 3
 export const CONFETTI_GAP = 0.5
 
+/** 等答题时乘客的小动作（B72）：张望、挥手、探头（往上一冒）、挠头；平时趴在篮边晃 */
+export const PASSENGER_GESTURES: readonly Gesture[] = ['look', 'wave', 'hop', 'scratch']
+
+/**
+ * 一题里的表演落到气球上（B72）：dy = 整只气球上下（px，负 = 往上：答对往上一蹿；答错往下一沉再回来）；
+ * sx / sy = 球囊跟着呼吸一鼓一缩、答对先压扁再拉长（以颈口为基准）；
+ * 乘客从篮边往外探头（px，往对面那只气球那边）、歪头 / 摇头（弧度）、身子的压扁（不往上拉长：头顶就是颈口和火苗）
+ */
+export interface BalloonBody {
+  dy: number
+  sx: number
+  sy: number
+  headDx: number
+  headTilt: number
+  bodySx: number
+  bodySy: number
+}
+
 const PASSENGERS: [import('@/battle/game/sprites/scenery').CritterKind, import('@/battle/game/sprites/scenery').CritterKind] = ['bear', 'pig']
 
 export class BalloonModel {
@@ -87,6 +106,8 @@ export class BalloonModel {
   /** 两位乘客（B66：按快照里两队的小动物换） */
   passengers: typeof PASSENGERS = PASSENGERS
   private nextBird = 3
+  /** 每队上一份快照里正在按的内容：变了且不空 = 按了一下（烧嘴喷一下火） */
+  private inputs: [string, string] = ['', '']
   private confettiLeft = 0
   private confettiT = 0
   private readonly rng: RNG
@@ -96,7 +117,7 @@ export class BalloonModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.balloons = [new Racer('red', rng), new Racer('blue', rng)]
+    this.balloons = [new Racer('red', rng, ease.outBack, PASSENGER_GESTURES), new Racer('blue', rng, ease.outBack, PASSENGER_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -146,6 +167,10 @@ export class BalloonModel {
         this.burst[i]!.kick(0.8)
         this.sparks(b)
       }
+      // 按了一下（B72）：烧嘴喷一下火（flameOf 里的 press）、迸两颗火星
+      const input = s.phase === 'playing' ? teamInput(s, b.team) : ''
+      if (input && input !== this.inputs[i]) this.sparks(b, 2)
+      this.inputs[i] = input
     })
     if (prevPhase === 'countdown' && s.phase === 'playing') this.go()
     if (s.phase === 'countdown' || s.phase === 'lobby') {
@@ -156,13 +181,13 @@ export class BalloonModel {
   }
 
   /** 烧嘴的火星 */
-  private sparks(b: Racer): void {
+  private sparks(b: Racer, n = 5): void {
     if (!this.animated || this.quality >= 2) return
     const g = this.geo
     this.particles.emit({
       x: g.colX[b.team === 'red' ? 0 : 1],
       y: b.pos.value - g.size * 0.2,
-      count: 5,
+      count: n,
       speed: 40 * g.k,
       angle: -Math.PI / 2,
       spread: Math.PI * 0.6,
@@ -203,7 +228,15 @@ export class BalloonModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.balloon(t).act)
     switch (e.type) {
+      case 'answered':
+        // 答对（B72）：烧嘴大火（往上一蹿在 body 里）；答错往下一沉也在 body 里
+        if (e.correct && this.phase === 'playing') {
+          this.burst[e.team === 'red' ? 0 : 1]!.kick(1.4)
+          this.sparks(this.balloon(e.team), 6)
+        }
+        break
       case 'countdown':
         for (const b of this.balloons) b.setMood('ready')
         break
@@ -332,7 +365,36 @@ export class BalloonModel {
     if (b.mood === 'lose') return 0
     const flicker = this.animated ? 0.15 * Math.sin(this.time * 25 + i) : 0
     const base = b.mood === 'ready' ? 0.35 : 0.3
-    return base + b.moving * 0.5 + this.burst[i]!.value * 0.8 + (this.sprint ? 0.15 : 0) + flicker
+    // 按键（B72）：每按一下喷一下火
+    const press = this.animated && b.act.playing ? b.act.press.value * 1.1 + b.act.typing * 0.1 : 0
+    return base + b.moving * 0.5 + this.burst[i]!.value * 0.8 + (this.sprint ? 0.15 : 0) + flicker + press
+  }
+
+  /** 一题里的表演落到气球与乘客上（B72，见 BalloonBody）；减少动画时都不动 */
+  body(b: Racer): BalloonBody {
+    const still = { dy: 0, sx: 1, sy: 1, headDx: 0, headTilt: 0, bodySx: 1, bodySy: 1 }
+    if (!this.animated) return still
+    const g = this.geo
+    const a = b.act.pose()
+    const cs = g.size * 0.34
+    const right = b.act.rightT >= 0
+    let dy = right ? -a.lift * g.size * 0.3 : 0
+    const w = b.act.wrongT
+    if (w >= 0) {
+      const q = w / WRONG_TIME
+      dy += g.size * 0.1 * (q < 0.25 ? ease.outQuad(q / 0.25) : 1 - ease.inOutSine((q - 0.25) / 0.75))
+    }
+    const side = b.team === 'red' ? 1 : -1
+    return {
+      dy,
+      sx: 1 + (a.sx - 1) * 0.6,
+      sy: 1 + (a.sy - 1) * 0.6,
+      // 探头：小动作里的「蹦两下」是乘客从篮边往外一探（往上是颈口和火苗，不往上冒）；按键时也探出来一点
+      headDx: side * ((right ? 0 : a.lift) * cs * 1.1 + a.typing * cs * 0.12),
+      headTilt: a.shake * 1.3 + side * (a.lean * 0.5 + (right ? 0 : a.lift) * 0.8),
+      bodySx: a.sx,
+      bodySy: Math.min(a.sy, 1.02),
+    }
   }
 
   deflateOf(b: Racer): number {

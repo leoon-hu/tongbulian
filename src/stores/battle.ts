@@ -26,14 +26,14 @@ import { AI_ID, AI_KEY_MS, AI_SUBMIT_MS, RUNS_MAX, ROBOT_LINE_DELAY_MS, ROBOT_SA
 import { cleanName } from '@/battle/names'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS, botEventEmote, botReply, type EmoteId } from '@/battle/emotes'
 import { AVATAR_IDS, LEGACY_AVATARS, isAvatarId, pickIdentity, type AvatarId, type Identity } from '@/battle/avatars'
-import { calloutSfx, panOf, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
+import { KEY_GAIN, KEY_GAP_MS, calloutSfx, panOf, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 import { pickLine } from '@/battle/lines'
 
 export type LocalMode = 'ai' | 'duo'
 /** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
 export type BattleMode = LocalMode | 'online'
-/** 设置页「跟谁打」的四张卡（B27），按这个顺序排：自己练（B26：原来点知识点弹出的选择面板并进来的）在第一张，后面三种对战 */
+/** 设置页「怎么练」的四张卡（B27），按这个顺序排：自己练（B26：原来点知识点弹出的选择面板并进来的）在第一张，后面三种对战 */
 export type SetupMode = BattleMode | 'practice'
 export const SETUP_MODES: readonly SetupMode[] = ['practice', 'ai', 'duo', 'online']
 
@@ -84,7 +84,7 @@ export interface BattlePrefs {
   lastRuns: Record<string, RunRecord>
   /** 背景音乐（B68）：默认开；🔇 静音时也不放 */
   music: boolean
-  /** 设置页上次选的「跟谁打」（B27）：下次进来默认选着它；从来没开始过是自己练 */
+  /** 设置页上次选的「怎么练」（B27）：下次进来默认选着它；从来没开始过是自己练 */
   mode: SetupMode
 }
 
@@ -635,7 +635,21 @@ export const useBattleStore = defineStore('battle', () => {
     if (mode.value === 'ai') aiStep()
   }
 
+  /** 按键声（B73）：每人上一次放的时刻，最密 KEY_GAP_MS 一次 */
+  const keySfxAt = new Map<string, number>()
+  function keySound(playerId: string, input: string): void {
+    const s = state.value
+    const p = s ? findPlayer(s, playerId) : undefined
+    // 只给本设备的真人：机器人按键、别的设备的人按键不出声；清空不算按
+    if (!s || !p || p.kind !== 'human' || !input || s.phase !== 'playing') return
+    const t = now()
+    if (t - (keySfxAt.get(playerId) ?? -Infinity) < KEY_GAP_MS) return
+    keySfxAt.set(playerId, t)
+    for (const x of skinSfx(s.skin, skinById(s.skin)?.kind).key) playSfx(x, 1, KEY_GAIN, panOf(p.team))
+  }
+
   function setInput(playerId: string, input: string): void {
+    keySound(playerId, input)
     if (mode.value === 'online') {
       // 正在按的内容发给服务器（节流 100 ms，B42）；自己的显示框由键盘组件管
       inputPending = input
@@ -699,6 +713,7 @@ export const useBattleStore = defineStore('battle', () => {
     }
     if (p.kind === 'human') vibrate(ok ? VIBRATE_RIGHT : VIBRATE_WRONG)
     // 答错的声音按游戏换（B70）：火车刹车、气球漏气、火箭哑火……没有专属的仍是「咚」
+    // 答错：这个游戏的「哎呀」一声（B73），不是罚
     if (!ok) for (const x of skinSfx(s.skin, skinById(s.skin)?.kind).wrong) playSfx(x, 1, 1, panOf(p.team))
     later(
       timers,

@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { NEUTRAL_POSE, actEvent, type ActPose, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -103,6 +104,14 @@ export const BLOOM_TIME = 0.8
 export const LEAVES = 6
 export const BUD_AT = 6
 const BUTTERFLY_COLORS = ['#ffb347', '#a78bfa', '#ff8fb1', '#7cf7c4']
+/**
+ * 等答题时的小动作（B72）：花盆上的小脸是角色——wave = 一片叶子招一招、look = 小脸往对面瞧、
+ * stretch = 叶子全举起来伸个懒腰、hop = 花盆蹦一下
+ */
+export const FLOWER_GESTURES: readonly Gesture[] = ['wave', 'look', 'stretch', 'hop']
+/** 花盆跟着表演歪 / 压扁的比例：盆是重的，只做一小半，茎根跟着盆里的土走 */
+const POT_TILT = 0.4
+const POT_SQUASH = 0.7
 
 export class FlowerModel {
   geo: FlowerGeometry = layoutFlower(150, 700, false)
@@ -124,6 +133,8 @@ export class FlowerModel {
   sprint = false
   particles: ParticlePool
   quality = 0
+  /** 每帧一份两株的表演姿势（B72）：step 里取，茎 / 叶 / 花盆都按它画 */
+  acts: [ActPose, ActPose] = [{ ...NEUTRAL_POSE }, { ...NEUTRAL_POSE }]
   private dropT: [number, number] = [0, 0]
   private nextBee = 4
   private sparkleLeft = 0
@@ -135,7 +146,7 @@ export class FlowerModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.plants = [new Racer('red', rng), new Racer('blue', rng)]
+    this.plants = [new Racer('red', rng, ease.outBack, FLOWER_GESTURES), new Racer('blue', rng, ease.outBack, FLOWER_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -277,6 +288,7 @@ export class FlowerModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.plant(t).act)
     switch (e.type) {
       case 'countdown':
         for (const p of this.plants) p.setMood('ready')
@@ -365,6 +377,7 @@ export class FlowerModel {
     }
     this.plants.forEach((p, i) => {
       p.step(dt, 1.5, animated)
+      this.acts[i] = p.act.pose()
       const w = this.water[i]!.step(dt)
       this.bloom[i]!.step(dt)
       this.budGlow[i]!.step(dt)
@@ -396,9 +409,58 @@ export class FlowerModel {
     return p.mood === 'lose' ? Math.min(1, p.moodT / 1.5) : 0
   }
 
-  /** 花盆离地（倒数蹦） */
+  /** 花盆离地（倒数蹦、点一下、表演里的跳，B72） */
   liftOf(p: Racer): number {
-    return this.liftOfBase(p) + p.poke.value * this.geo.potH * 0.25
+    return this.liftOfBase(p) + p.poke.value * this.geo.potH * 0.25 + this.actOf(p).lift * this.geo.potH
+  }
+
+  private actOf(p: Racer): ActPose {
+    return this.acts[p === this.plants[0] ? 0 : 1]
+  }
+
+  /** 花盆跟着表演歪的角度（绕盆底中点，B72）；dir 朝对面 */
+  potTilt(i: number): number {
+    const a = this.acts[i]!
+    return (a.lean + a.shake) * POT_TILT * (i === 0 ? 1 : -1)
+  }
+
+  /** 花盆跟着表演压扁拉长（sx, sy） */
+  potScale(i: number): [number, number] {
+    const a = this.acts[i]!
+    return [1 + (a.sx - 1) * POT_SQUASH, 1 + (a.sy - 1) * POT_SQUASH]
+  }
+
+  /** 答错耷拉一下（0…1，B72）：一愣时最低，之后慢慢立起来；减少动画时茎不动（叶子照样耷拉，见 leafRaise） */
+  droopOf(i: number): number {
+    return this.animated ? this.acts[i]!.wide * 0.45 : 0
+  }
+
+  /** 答对整株往上一伸（px，B72）：跟着表演里的跳，盆离地之外茎再多伸一截 */
+  reachOf(i: number): number {
+    return this.acts[i]!.lift * this.geo.potH * 0.8
+  }
+
+  /**
+   * 叶子往上举的角度（弧度，负 = 耷拉，B72）：按键立起来、每按一下再抬一下，答对举起来，答错耷拉；
+   * 平时跟着呼吸一抬一落；top = 最上面那片，招一招的就是它
+   */
+  leafRaise(i: number, top: boolean): number {
+    const a = this.acts[i]!
+    let r = 0.55 * a.typing + 0.35 * a.press + 0.8 * a.arms - 0.9 * a.wide
+    if (this.animated) {
+      r += Math.sin(this.time * 2.4 + i * 1.7) * 0.08
+      if (top) r += 0.6 * Math.sin(a.beat * 2) * a.wave
+    }
+    return r
+  }
+
+  /** 茎根（盆里的土面中点）：跟着花盆离地、歪、压扁走 */
+  rootOf(i: number): { x: number; y: number } {
+    const g = this.geo
+    const p = this.plants[i]!
+    const base = g.groundY - this.liftOf(p)
+    const h = (g.groundY - g.soilY) * this.potScale(i)[1]
+    return { x: g.plantX[i]! + Math.sin(this.potTilt(i)) * h, y: base - h }
   }
 
   private liftOfBase(p: Racer): number {
@@ -411,27 +473,17 @@ export class FlowerModel {
     return this.animated ? Math.sin(p.hop) * 0.15 : 0
   }
 
-  /** 茎上离土面 h 高的那一点（茎是二次曲线：土面 → 控制点 → 茎尖；输了茎尖垂下来） */
+  /** 茎上离土面 h 高的那一点（茎是二次曲线：土面 → 控制点 → 茎尖；输了茎尖垂下来，答错耷拉一下） */
   stemPoint(i: number, h: number): StemPoint {
-    const g = this.geo
-    const p = this.plants[i]!
-    const H = this.stemH(p)
-    const x0 = g.plantX[i]!
-    const y0 = g.soilY - this.liftOf(p)
-    if (H < 0.5) return { x: x0, y: y0, ang: -Math.PI / 2 }
-    const swayX = this.swayOf(p, i) * H
-    const wilt = this.wiltOf(p)
-    const dir = i === 0 ? 1 : -1
-    const x1 = x0 + swayX + wilt * g.potW * 0.35 * dir
-    const y1 = y0 - H + wilt * g.pitch * 0.9
-    const cx = x0 + swayX * 0.25
-    const cy = y0 - H * 0.55
+    const c = this.stemCurve(i)
+    const H = this.stemH(this.plants[i]!) + this.reachOf(i)
+    if (H < 0.5) return { x: c.x0, y: c.y0, ang: -Math.PI / 2 }
     const t = clamp01(h / H)
     const u = 1 - t
-    const x = u * u * x0 + 2 * u * t * cx + t * t * x1
-    const y = u * u * y0 + 2 * u * t * cy + t * t * y1
-    const dx = 2 * u * (cx - x0) + 2 * t * (x1 - cx)
-    const dy = 2 * u * (cy - y0) + 2 * t * (y1 - cy)
+    const x = u * u * c.x0 + 2 * u * t * c.cx + t * t * c.x1
+    const y = u * u * c.y0 + 2 * u * t * c.cy + t * t * c.y1
+    const dx = 2 * u * (c.cx - c.x0) + 2 * t * (c.x1 - c.cx)
+    const dy = 2 * u * (c.cy - c.y0) + 2 * t * (c.y1 - c.cy)
     return { x, y, ang: Math.atan2(dy, dx) }
   }
 
@@ -439,11 +491,10 @@ export class FlowerModel {
   stemCurve(i: number): { x0: number; y0: number; cx: number; cy: number; x1: number; y1: number } {
     const g = this.geo
     const p = this.plants[i]!
-    const H = this.stemH(p)
-    const x0 = g.plantX[i]!
-    const y0 = g.soilY - this.liftOf(p)
+    const H = this.stemH(p) + this.reachOf(i)
+    const { x: x0, y: y0 } = this.rootOf(i)
     const swayX = this.swayOf(p, i) * H
-    const wilt = this.wiltOf(p)
+    const wilt = Math.max(this.wiltOf(p), this.droopOf(i))
     const dir = i === 0 ? 1 : -1
     return { x0, y0, cx: x0 + swayX * 0.25, cy: y0 - H * 0.55, x1: x0 + swayX + wilt * g.potW * 0.35 * dir, y1: y0 - H + wilt * g.pitch * 0.9 }
   }

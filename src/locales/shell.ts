@@ -129,7 +129,9 @@ export const SHELL_ZH: Dict = {
   'install.step.menu3': '确认添加，桌面上就会出现图标',
   // 对战（B，需求 §8）：设置页 / 竞技场 / 结果页，孩子看得到的都注音；昵称不注音不朗读
   'battle.title': '对战',
-  'battle.who': '跟谁打？',
+  // 设置页（点知识点就进来，B26 / B27）：自己练和三种对战都在这一页选，所以标题是「练习」、问「怎么练？」
+  'battle.setupTitle': '练习',
+  'battle.how': '怎么练？',
   'battle.mode.ai': '打机器人',
   'battle.mode.duo': '两人一台',
   'battle.mode.online': '各用各的',
@@ -439,7 +441,8 @@ export const SHELL_PINYIN: Record<string, string> = {
   // 对战与皮肤名
   'battle.hero': 'dá duì kè běn tí jiù dé fēn shuí xiān dá duì tí shuí yíng',
   'battle.title': 'duì zhàn',
-  'battle.who': 'gēn shuí dǎ',
+  'battle.setupTitle': 'liàn xí',
+  'battle.how': 'zěn me liàn',
   'battle.mode.ai': 'dǎ jī qì rén',
   'battle.mode.duo': 'liǎng rén yì tái',
   'battle.mode.online': 'gè yòng gè de',
@@ -842,7 +845,8 @@ export const SHELL_EN: Dict = {
   'install.step.menu3': 'Confirm — the icon appears on your home screen',
   // 对战（B）
   'battle.title': 'Battle',
-  'battle.who': 'Who do you play?',
+  'battle.setupTitle': 'Practice',
+  'battle.how': 'How do you want to practice?',
   'battle.mode.ai': 'vs Robot',
   'battle.mode.duo': 'Two on one device',
   'battle.mode.online': 'Each on own device',

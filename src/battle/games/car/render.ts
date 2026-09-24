@@ -2,6 +2,7 @@
  * 赛车的渲染：renderBackground 画不动的部分（天空、山丘、树、草地、柏油路、路肩、车道线、起点线、格子终点线、终点柱），
  * index.ts 缓存到离屏 canvas；renderDynamic 每帧画会动的部分（太阳、云、发令员、观众、旗、粒子、速度线、两辆车）。
  */
+import { drawActFx, withActBody } from '@/battle/game/engine/act'
 import { gradient } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawCar } from '@/battle/game/sprites/car'
@@ -98,13 +99,29 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: CarModel): void 
         ctx.stroke()
       }
     }
-    drawCar(ctx, x, y, g.size, c.team, m.kinds[i]!, {
-      wheel: m.wheel[i]!,
-      bounce: m.lift(c),
-      tilt: m.tilt(c),
-      nitro: m.nitro(c),
-      blink: c.blink.value,
-      look: c.look.value,
-    })
+    // 一题里的表演（B72）：车身的跳 / 翘头 / 翻跟头 / 压扁交给 withActBody，司机的头、手、表情接到车的姿势上，头顶图标最后画
+    const s = g.size
+    const a = c.act.pose()
+    const b = m.body(i as 0 | 1)
+    const bounce = m.lift(c) + b.rumble
+    withActBody(ctx, x, y, s * 0.7, { ...a, lift: b.lift / (s * 0.7), lean: b.tilt, shake: 0, spin: b.spin, sx: b.sx, sy: b.sy }, 1, () =>
+      drawCar(ctx, 0, 0, s, c.team, m.kinds[i]!, {
+        wheel: m.wheel[i]!,
+        bounce,
+        tilt: m.tilt(c),
+        nitro: m.nitro(c),
+        blink: c.blink.value,
+        look: Math.max(c.look.value, a.look),
+        headTilt: a.lean * 1.6 + a.shake * 1.2,
+        headLift: a.arms * s * 0.06,
+        wave: a.wave,
+        face: { happy: a.happy, wide: a.wide, arms: a.arms, scratch: a.scratch, beat: a.beat * 2 },
+        lamp: b.lamp,
+      }),
+    )
+    // 司机头顶：离盒子顶边太近就往下挪一点，泡泡 / 灯泡 / 亮片别被裁掉
+    const r = Math.max(s * 0.5, 22)
+    const headTop = y - b.lift - bounce - s * (0.69 + a.arms * 0.06)
+    drawActFx(ctx, x - s * 0.08, Math.max(headTop, r * 0.56), s * 0.5, a, { side: 1, quality: m.quality })
   })
 }

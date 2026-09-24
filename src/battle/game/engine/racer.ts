@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameState } from '../contract'
+import { Actor, DEFAULT_GESTURES, teamInput, type Gesture } from './act'
 import { Blinker, Decay, advancePhase } from './rig'
 import { ease, Tween, type Ease } from './tween'
 
@@ -36,14 +37,18 @@ export class Racer {
   moodT = 0
   /** 原地蹦 / 待机起伏的相位 */
   hop: number
+  /** 一题里的表演（B72）：等答题 / 正在按 / 答对 / 答错，游戏按自己的角色用 */
+  act: Actor
   private readonly fn: Ease
 
   constructor(
     readonly team: Team,
     rng: RNG,
     fn: Ease = ease.outBack,
+    gestures: readonly Gesture[] = DEFAULT_GESTURES,
   ) {
     this.fn = fn
+    this.act = new Actor(rng, gestures)
     this.pos = new Tween(0, fn)
     this.blink = new Blinker(rng)
     this.hop = rng.next() * Math.PI * 2
@@ -61,6 +66,8 @@ export class Racer {
    * 结束时胜方滑到 posFor(score, true)、负方 lose；其它情况 idle。返回这次是不是前进了。
    */
   apply(s: GameState, posFor: (score: number, won: boolean) => number, t: RacerTiming): boolean {
+    this.act.animated = t.animated
+    this.act.sync(s.phase, teamInput(s, this.team))
     const score = this.team === 'red' ? s.red : s.blue
     if (s.phase === 'lobby' || s.phase === 'countdown') {
       this.score = score
@@ -88,6 +95,8 @@ export class Racer {
   /** 每帧：位置补间、推进强度、相位（每秒 cycles 圈 × 推进强度，连对更快）、各种衰减 */
   step(dt: number, cycles: number, animated: boolean): void {
     this.moodT += dt
+    this.act.animated = animated
+    this.act.step(dt)
     this.pos.step(dt)
     const boost = this.boost.step(dt)
     const running = !this.pos.done && this.mood !== 'win' && this.mood !== 'lose'

@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { RIGHT_TIME, WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
@@ -82,6 +83,12 @@ export const WIN_EXTRA = 0.26
 export const SPRINT_FROM = 2
 export const DIVE_TIME = 0.55
 const CROWD = 4
+/** 等答题时的小动作（B72）：张望、出水挥手、冒出水面蹦一下、手往前伸 */
+export const SWIM_GESTURES: readonly Gesture[] = ['look', 'wave', 'hop', 'stretch']
+/** 答对那一拍落回水里（× RIGHT_TIME）：拍起一大片水花 */
+export const SPLASH_AT = 0.5
+/** 答错那一拍吐出那口水（× WRONG_TIME） */
+export const SPIT_AT = 0.42
 
 export class SwimModel {
   geo: SwimGeometry = layoutSwim(1000, 120, false)
@@ -91,6 +98,9 @@ export class SwimModel {
   dive: [Tween, Tween] = [new Tween(1, ease.outQuad), new Tween(1, ease.outQuad)]
   private splashed: [boolean, boolean] = [true, true]
   private kickT: [number, number] = [0, 0]
+  /** 上一帧答对 / 答错那一拍进行到哪（秒），看有没有走过拍水花 / 吐水的时刻 */
+  private lastRight: [number, number] = [-1, -1]
+  private lastWrong: [number, number] = [-1, -1]
   clouds: Cloud[] = []
   time = 0
   /** 水纹相位 */
@@ -116,7 +126,7 @@ export class SwimModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.swimmers = [new Racer('red', rng), new Racer('blue', rng)]
+    this.swimmers = [new Racer('red', rng, undefined, SWIM_GESTURES), new Racer('blue', rng, undefined, SWIM_GESTURES)]
     this.layout(1000, 120, false)
   }
 
@@ -159,8 +169,11 @@ export class SwimModel {
     this.winner = s.winner
     this.sprint = Math.max(s.red, s.blue) >= this.target - SPRINT_FROM && s.phase !== 'ended'
     this.swimmers.forEach((sw, i) => {
+      const pressed = sw.act.press.value
       const forward = sw.apply(s, (score, won) => this.xFor(score, won), this.timing)
       if (forward) this.splash(i, 4 + Math.round(sw.boost.value * 3))
+      // 按了一下（B72）：往前那只手划一下，带起一点水
+      if (sw.act.press.value > pressed + 0.2) this.paddle(i)
     })
     if (prevPhase === 'countdown' && s.phase === 'playing') this.go()
     if (s.phase === 'countdown' || s.phase === 'lobby') {
@@ -193,6 +206,46 @@ export class SwimModel {
       colors: ['#ffffff', '#d5f1ff', '#a9dcff'],
       gravity: 0,
       drag: 3,
+    })
+  }
+
+  /** 按键时手往前一划（B72）：头前面溅两滴 */
+  private paddle(i: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const sw = this.swimmers[i]!
+    this.particles.emit({
+      x: this.xOf(sw, i) + g.size * 0.15,
+      y: g.laneY[i]! + (i === 0 ? -1 : 1) * g.size * 0.2,
+      count: 2,
+      speed: 45 * g.k,
+      angle: 0,
+      spread: Math.PI * 0.8,
+      life: 0.35,
+      size: 2.2 * g.k,
+      colors: ['#ffffff', '#d5f1ff'],
+      gravity: 0,
+      drag: 3,
+    })
+  }
+
+  /** 答错呛了一口水（B72）：往前吐出一小股 */
+  private spit(i: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const sw = this.swimmers[i]!
+    this.particles.emit({
+      x: this.xOf(sw, i) + g.size * 0.35,
+      y: g.laneY[i]! + this.bobOf(sw, i),
+      count: 8,
+      speed: 100 * g.k,
+      angle: 0,
+      spread: Math.PI * 0.35,
+      life: 0.55,
+      size: 3.6 * g.k,
+      colors: ['#ffffff', '#e6f7ff', '#ffffff'],
+      gravity: 0,
+      drag: 3.5,
     })
   }
 
@@ -229,6 +282,7 @@ export class SwimModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.swimmer(t).act)
     switch (e.type) {
       case 'countdown':
         for (const s of this.swimmers) s.setMood('ready')
@@ -320,6 +374,14 @@ export class SwimModel {
         this.kickT[i] = 0
         this.splash(i, 1 + Math.round(sw.boost.value * 2) + (this.sprint ? 1 : 0))
       }
+      // 一题里的表演（B72）：答对跃起落回水里拍起一大片水花；答错呛水后吐出来
+      const a = sw.act
+      const land = SPLASH_AT * RIGHT_TIME
+      if (a.rightT >= land && this.lastRight[i]! < land) this.splash(i, 12, this.xOf(sw, i) - g.size * 0.45, true)
+      const spit = SPIT_AT * WRONG_TIME
+      if (a.wrongT >= spit && this.lastWrong[i]! < spit) this.spit(i)
+      this.lastRight[i] = a.rightT
+      this.lastWrong[i] = a.wrongT
     })
     this.particles.step(dt)
   }
@@ -354,6 +416,12 @@ export class SwimModel {
 
   floatOf(sw: Racer): number {
     return sw.mood === 'lose' ? Math.min(1, sw.moodT / 1.2) : 0
+  }
+
+  /** 踩水的程度（B72）：比赛中停在水里等答题时手脚慢慢划；按键时收起来摆好架势 */
+  treadOf(sw: Racer): number {
+    if (!this.animated || (sw.mood !== 'idle' && sw.mood !== 'run')) return 0
+    return (1 - sw.moving) * (1 - sw.act.typing * 0.8)
   }
 
   /** 头前的白浪强度 */

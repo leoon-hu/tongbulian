@@ -46,7 +46,7 @@ describe('比赛状态机（B1–B9）', () => {
     let r = answer(m, 'a', 0, false, '3', 2000)
     expect(r.state.score).toEqual({ red: 0, blue: 0 })
     expect(r.state.players[0]).toMatchObject({ index: 1, correct: 0 })
-    expect(r.events).toEqual([{ type: 'answered', playerId: 'a', index: 0, correct: false, given: '3' }])
+    expect(r.events).toEqual([{ type: 'answered', playerId: 'a', team: 'red', index: 0, correct: false, given: '3' }])
     m = r.state
     // 连对 3 / 5 题弹提示，到 7 分弹「还差一分」；0 : 0 平局起步不算「反超」
     const extra: Record<number, string[]> = { 3: ['streak'], 4: ['half'], 5: ['streak'], 7: ['nearWin'] }

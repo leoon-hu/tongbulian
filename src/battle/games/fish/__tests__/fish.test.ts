@@ -172,6 +172,87 @@ describe('钓鱼 · 模型（B36l）', () => {
   })
 })
 
+describe('钓鱼 · 一题里的表演（B72）', () => {
+  it('等久了腿晃得更欢、冒泡泡，按键亮灯泡往水那边探身；红队答对往后一拽竿子举手、蓝队答错竿子一弹鱼挣一下；竿尖跟着人走；只演自己那一队；画得出来', () => {
+    const m = new FishModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.fishes
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.waitOf(r)).toBe(1)
+    const tip0 = m.rodOf(0)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.4)
+    expect(m.bodyOf(0).rot).toBeGreaterThan(0.08) // 往水那边（红队朝右）探身
+    expect(Math.abs(m.bodyOf(1).rot)).toBeLessThan(0.08)
+    expect(m.rodOf(0).tipX).toBeGreaterThan(tip0.tipX) // 竿子跟着探出去
+    m.setState(snap(3, 2))
+    settle(m, 0.3)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    expect(m.thrash[1].value).toBeGreaterThan(0.8) // 鱼挣了一下
+    expect(m.thrash[0].value).toBeLessThan(0.1)
+    let maxYank = 0
+    let maxRaise = 0
+    let maxHop = 0
+    let minBend = Infinity
+    let maxSweat = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 70; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxYank = Math.max(maxYank, m.yankOf(r))
+      maxRaise = Math.max(maxRaise, pr.arms)
+      maxHop = Math.max(maxHop, m.geo.dockY - m.bodyOf(0).y)
+      minBend = Math.min(minBend, m.rodBend(1))
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      expect(m.yankOf(b)).toBe(0)
+      expect(pb.arms).toBe(0)
+      // 竿尖一直在握竿的手上方，鱼线接在竿尖上
+      const rod = m.rodOf(0)
+      expect(rod.tipY).toBeLessThan(rod.pivotY)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxYank).toBeGreaterThan(0.9)
+    expect(maxRaise).toBeGreaterThan(0.9)
+    expect(maxHop).toBeGreaterThan(m.geo.size * 0.1)
+    expect(minBend).toBeLessThan(-0.2) // 竿子往上一弹
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 紧凑版：跳起来帽顶也不出盒子
+    const small = new FishModel(createRng(5))
+    small.layout(96, 350, true)
+    small.setState(snap(3, 2))
+    settle(small, 1)
+    small.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    for (let i = 0; i < 40; i++) {
+      small.step(1 / 60)
+      expect(small.bodyOf(0).y - small.liftOf(small.fishes[0]) - small.geo.size * 1.3 * small.fishes[0].act.pose().sy).toBeGreaterThanOrEqual(0)
+    }
+    // 减少动画：不探身、不拽、竿子不弹
+    const quiet = new FishModel(createRng(4), { reducedMotion: true })
+    quiet.layout(96, 350, true)
+    quiet.setState(snap(3, 2))
+    settle(quiet, 1)
+    quiet.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.yankOf(quiet.fishes[0])).toBe(0)
+      expect(quiet.bodyOf(0).y).toBe(quiet.geo.dockY)
+      expect(quiet.bodyOf(0).rot).toBe(0)
+      expect(quiet.rodBend(1)).toBe(quiet.bend[1].value)
+    }
+    const c = stubCtx()
+    renderDynamic(c, quiet)
+    expect(c.count('save')).toBe(c.count('restore'))
+  })
+})
+
 describe('钓鱼 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new FishModel(createRng(2))

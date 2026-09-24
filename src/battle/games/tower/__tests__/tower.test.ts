@@ -143,6 +143,58 @@ describe('盖楼 · 模型（B36c）', () => {
   })
 })
 
+describe('盖楼 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡、按键亮灯泡；红队答对跳起来举手、蓝队答错冒汗摇头且脚下的砖晃一晃；只演自己那一队；画得出来', () => {
+    const m = new TowerModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.towers
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    let maxLift = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let maxShake = 0
+    let maxWob = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxArms = Math.max(maxArms, pr.arms)
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      maxWob = Math.max(maxWob, Math.abs(m.wobbleOf(b)))
+      expect(pb.arms).toBe(0)
+      expect(m.wobbleOf(r)).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.5)
+    expect(maxSweat).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(maxWob).toBeGreaterThan(0.05)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 减少动画：不跳不晃，砖也不晃，只留举手与表情
+    const quiet = new TowerModel(createRng(3), { reducedMotion: true })
+    quiet.setState(snap(3, 2))
+    quiet.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.towers[0].act.pose().lift).toBe(0)
+      expect(quiet.wobbleOf(quiet.towers[1])).toBe(0)
+    }
+    expect(quiet.towers[0].act.pose().arms).toBeGreaterThan(0.5)
+  })
+})
+
 describe('盖楼 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new TowerModel(createRng(2))

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// 知识点的设置页（B26 / B27）：地图上点知识点直接到这里。跟谁打（自己练 / 打机器人 / 两人一台 / 各用各的）→ 开始，自己练就进练习页；
+// 知识点的设置页（B26 / B27）：地图上点知识点直接到这里。怎么练（自己练 / 打机器人 / 两人一台 / 各用各的）→ 开始，自己练就进练习页；
 // 默认选着上次开始时选的那张卡（偏好 mode）。机器人快慢、选游戏、名字与小动物都在页头「⚙️ 配置」的面板里，页面默认不展示；
 // 点「开始」直接开始、不问名字（B17：没自定义的用随机点选的，两边不一样）。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来（输口令进房的「🔑 加入对战」在全局顶栏，不在这里）。
-// 选中哪张「跟谁打」的卡，卡下面出一行对应的说明（B27）；页面打开读「跟谁打？」+ 当前那张卡的说明，换卡读那张的说明，建房出错读错误提示（B39a）
+// 选中哪张「怎么练」的卡，卡下面出一行对应的说明（B27）；页面打开读「怎么练？」+ 当前那张卡的说明，换卡读那张的说明，建房出错读错误提示（B39a）
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
@@ -109,7 +109,7 @@ onMounted(() => {
     return
   }
   // 切页动画后再开口（与练习页读题一样）
-  sayKeys(['battle.who', `battle.mode.${mode.value}.desc`], lang.value, 350)
+  sayKeys(['battle.how', `battle.mode.${mode.value}.desc`], lang.value, 350)
 })
 watch(mode, (m) => {
   if (!creating.value) sayKeys([`battle.mode.${m}.desc`], lang.value)
@@ -160,7 +160,7 @@ function start(): void {
     <PageHeader :back="mapPath">
       <template #title>
         <span class="kp-icon">⚔️</span>
-        <RubyText class="battle-word" :text="{ k: 'battle.title' }" />
+        <RubyText class="title-word" :text="{ k: 'battle.setupTitle' }" />
         <span class="kp-name">{{ info.kp.icon }} <RubyText :text="{ k: kpTitleKey(info.kp) }" /></span>
       </template>
       <template #actions>
@@ -170,7 +170,7 @@ function start(): void {
     </PageHeader>
 
     <section class="block">
-      <h2 class="label"><RubyText :text="{ k: 'battle.who' }" /></h2>
+      <h2 class="label"><RubyText :text="{ k: 'battle.how' }" /></h2>
       <div class="modes">
         <button
           v-for="m in SETUP_MODES"
@@ -280,8 +280,8 @@ function start(): void {
 .kp-icon {
   flex: none;
 }
-/* 「对战」两个字不许被挤成竖排（手机上知识点名长时，flex 按最小内容宽度把它压成一字一行） */
-.battle-word {
+/* 标题「练习」两个字不许被挤成竖排（手机上知识点名长时，flex 按最小内容宽度把它压成一字一行） */
+.title-word {
   flex: none;
   white-space: nowrap;
 }

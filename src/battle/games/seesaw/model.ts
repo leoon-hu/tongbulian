@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
@@ -86,6 +87,8 @@ export const STAGGER = 0.1
 export const SPRINT_FROM = 2
 export const CONFETTI_ROUNDS = 3
 export const CONFETTI_GAP = 0.5
+/** 等答题时的小动作（B72）：张望、挥手、在座位上颠一颠、挠头 */
+export const SEESAW_GESTURES: readonly Gesture[] = ['look', 'wave', 'hop', 'scratch']
 
 export class SeesawModel {
   geo: SeesawGeometry = layoutSeesaw(1000, 120, false)
@@ -118,7 +121,7 @@ export class SeesawModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.riders = [new Racer('red', rng), new Racer('blue', rng)]
+    this.riders = [new Racer('red', rng, ease.outBack, SEESAW_GESTURES), new Racer('blue', rng, ease.outBack, SEESAW_GESTURES)]
     this.layout(1000, 120, false)
   }
 
@@ -247,6 +250,7 @@ export class SeesawModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.rider(t).act)
     switch (e.type) {
       case 'countdown':
         for (const r of this.riders) r.setMood('ready')
@@ -372,6 +376,12 @@ export class SeesawModel {
   /** 输了被翘在高处瞪眼 */
   scaredOf(r: Racer): number {
     return r.mood === 'lose' ? Math.min(1, r.moodT / 0.6) : 0
+  }
+
+  /** 一题里的表演（B72）：两个人一直晃腿（坐着时一踢一踢），按键抓紧扶手时停下来；输了吓得不敢动 */
+  kickOf(r: Racer): number {
+    if (!this.animated || r.mood === 'lose') return 0
+    return 0.8 * (1 - 0.8 * r.act.typing)
   }
 
   waveOf(r: Racer): number {

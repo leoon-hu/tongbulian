@@ -7,6 +7,7 @@ import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import { teamKinds } from '@/battle/avatars'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { RIGHT_TIME, WRONG_TIME, actEvent, teamInput, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
@@ -16,6 +17,13 @@ import type { CritterKind } from '@/battle/game/sprites/scenery'
 
 /** 默认的两位司机；选了小动物（B66）就换成他们的 */
 export const DRIVERS: [CritterKind, CritterKind] = ['bear', 'pig']
+
+/** 等答题时司机的小动作（B72）：张望、挥手、点头 */
+export const DRIVER_GESTURES: readonly Gesture[] = ['look', 'wave', 'nod']
+/** 答对那一跳：车厢一节比一节晚这么久跟着跳（秒） */
+export const HOP_DELAY = 0.05
+/** 答错漏气：前这么多秒两侧低处冒白汽 */
+export const LEAK_TIME = WRONG_TIME * 0.6
 
 export interface TrainGeometry {
   W: number
@@ -117,6 +125,8 @@ const PUFF_GAP = 0.14
 const IDLE_PUFF_GAP = 0.9
 /** 输了：熄火冒黑烟 */
 const DARK_PUFF_GAP = 0.5
+/** 比赛中停着：跟着呼吸冒的小口烟最少隔多久 */
+const BREATH_PUFF_GAP = 0.6
 
 export class TrainModel {
   geo: TrainGeometry = layoutTrain(1000, 120, false)
@@ -133,6 +143,12 @@ export class TrainModel {
   whistle: [Decay, Decay] = [new Decay(0.35), new Decay(0.35)]
   private lastX: [number, number] = [0, 0]
   private puffT: [number, number] = [0, 0]
+  /** 每队上一份快照里正在按的内容：变了且不空 = 按了一下（「嚓」地喷一口蒸汽） */
+  private inputs: [string, string] = ['', '']
+  /** 呼吸：上一帧的身高比例与它的变化（吸到顶时冒一口烟） */
+  private lastSy: [number, number] = [1, 1]
+  private lastDsy: [number, number] = [0, 0]
+  private leakT: [number, number] = [0, 0]
   clouds: Cloud[] = []
   time = 0
   phase: GameState['phase'] = 'lobby'
@@ -158,7 +174,7 @@ export class TrainModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.trains = [new Racer('red', rng, ease.outCubic), new Racer('blue', rng, ease.outCubic)]
+    this.trains = [new Racer('red', rng, ease.outCubic, DRIVER_GESTURES), new Racer('blue', rng, ease.outCubic, DRIVER_GESTURES)]
     this.layout(1000, 120, false)
   }
 
@@ -234,6 +250,10 @@ export class TrainModel {
         this.arrived[i] = false
       }
       if (forward) this.puff(c, 3)
+      // 按了一下（B72）：「嚓」地喷一口蒸汽（车身一颠在 body 里）
+      const input = s.phase === 'playing' ? teamInput(s, c.team) : ''
+      if (input && input !== this.inputs[i]) this.steam(c, i as 0 | 1, 2)
+      this.inputs[i] = input
     })
     if ((prevPhase === 'countdown' || prevPhase === 'lobby') && s.phase === 'playing') this.go()
     if (s.phase !== 'ended') this.arrived = [false, false]
@@ -274,6 +294,30 @@ export class TrainModel {
       gravity: -36 * g.k,
       drag: 2.2,
     })
+  }
+
+  /** 车头底下气缸往两边喷白汽：按键「嚓」一口，答错两侧漏气 */
+  private steam(c: Racer, i: 0 | 1, n: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    for (const [dx, a] of [
+      [-0.12, 0],
+      [-0.62, Math.PI],
+    ] as const) {
+      this.particles.emit({
+        x: c.pos.value + dx * g.size,
+        y: g.laneY[i] - g.size * 0.1,
+        count: n,
+        speed: 55 * g.k,
+        angle: a - (a === 0 ? 0.25 : -0.25),
+        spread: 0.5,
+        life: 0.5,
+        size: 3 * g.k,
+        colors: ['#ffffff', '#eef0f4'],
+        gravity: -30 * g.k,
+        drag: 3,
+      })
+    }
   }
 
   /** 「开始」：信号变绿，两列火车鸣笛、从隧道口冒一大团烟（开出来的位移由 setState 里的快照定） */
@@ -329,7 +373,13 @@ export class TrainModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.train(t).act)
     switch (e.type) {
+      case 'answered':
+        // 答对（B72）：汽笛喷白汽（火车一跳在 body 里）；答错的漏气在 step 里一口一口冒
+        if (e.correct && this.phase === 'playing') this.whistle[e.team === 'red' ? 0 : 1].kick(1)
+        else if (!e.correct) this.leakT[e.team === 'red' ? 0 : 1] = 1
+        break
       case 'countdown':
         for (const c of this.trains) c.setMood('ready')
         break
@@ -428,9 +478,28 @@ export class TrainModel {
           this.puffT[i] = 0
           this.puff(c, 1, true)
         }
+      } else if (c.act.playing && animated) {
+        // 比赛中停着（B72）：跟着呼吸冒小口烟——身子吸到最高、开始往回落的那一下呼出一口
+        const sy = c.act.pose().sy
+        const d = sy - this.lastSy[i]
+        if (this.lastDsy[i] > 0 && d <= 0 && this.puffT[i] > BREATH_PUFF_GAP) {
+          this.puffT[i] = 0
+          this.puff(c, 1, false, true)
+        }
+        this.lastSy[i] = sy
+        this.lastDsy[i] = d
       } else if (this.phase !== 'lobby' && this.puffT[i] > IDLE_PUFF_GAP) {
         this.puffT[i] = 0
         this.puff(c, 1, false, true)
+      }
+      // 答错两侧漏气（B72）：前 LEAK_TIME 秒一口一口冒
+      const w = c.act.wrongT
+      if (w >= 0 && w < LEAK_TIME) {
+        this.leakT[i] += dt
+        if (this.leakT[i] > 0.14) {
+          this.leakT[i] = 0
+          this.steam(c, i, 1)
+        }
       }
       if (c.mood === 'win' && c.pos.done && !this.arrived[i]) this.arrive(c, i)
     })
@@ -448,6 +517,40 @@ export class TrainModel {
     const i = c.team === 'red' ? 0 : 1
     if (c.mood === 'win' && this.arrived[i]) return Math.abs(Math.sin(c.phase)) * g.size * 0.04
     return Math.abs(Math.sin(c.phase * 2)) * g.size * 0.015 * this.roll[i]
+  }
+
+  /** 答对那一跳（B72）在第 delay 秒之后的样子：与演员的跳同一条曲线（蓄力后 0.4 拍腾空），单位 = 演员的离地 */
+  hopAt(c: Racer, delay: number): number {
+    const t = c.act.rightT - delay
+    if (!this.animated || c.act.rightT < 0 || t <= 0) return 0
+    const q = t / RIGHT_TIME
+    if (q <= 0.1 || q >= 0.5) return 0
+    return (c.act.big ? 0.75 : 0.5) * Math.sin((Math.PI * (q - 0.1)) / 0.4)
+  }
+
+  /**
+   * 一题里的表演落到车头上（B72）：离地（px，按盒子顶边收住，车厢按 hopAt 一节节跟着跳）、
+   * 按键一颠、答错一抖（左右 / 上下的小抖动，px）、压扁拉长（以车尾为基准，车厢挂钩对得上）
+   */
+  body(i: 0 | 1): { lift: number; room: number; dx: number; dy: number; sx: number; sy: number } {
+    const g = this.geo
+    const c = this.trains[i]
+    const a = c.act.pose()
+    const s = g.size
+    if (!this.animated) return { lift: 0, room: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
+    // 车头连司机约 0.95 个车长高（烟囱、驾驶室顶、举起的手）
+    const room = Math.max(0, g.laneY[i] - s * 0.95 - this.lift(c) - 2)
+    const lift = Math.min(a.lift * s * 0.7 + a.press * s * 0.06, room)
+    const w = c.act.wrongT
+    const shiver = w >= 0 && w < WRONG_TIME * 0.65 ? 1 - w / (WRONG_TIME * 0.65) : 0
+    return {
+      lift,
+      room,
+      dx: Math.sin(this.time * 70) * s * 0.03 * shiver,
+      dy: Math.abs(Math.sin(this.time * 55)) * s * 0.03 * shiver,
+      sx: 1 + (a.sx - 1) * 0.5,
+      sy: 1 + (a.sy - 1) * 0.8,
+    }
   }
 
   /** 车灯：隧道里最亮，跑的时候亮，停着微亮，熄火了几乎不亮 */

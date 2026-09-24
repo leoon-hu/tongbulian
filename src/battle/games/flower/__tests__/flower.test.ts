@@ -189,6 +189,55 @@ describe('种花 · 模型（B36m）', () => {
   })
 })
 
+describe('种花 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡、按键亮灯泡叶子立起来；红队答对整株往上一伸、叶子举起；蓝队答错冒汗、茎和叶子耷拉一下再立起来；只演自己那一队；画得出来', () => {
+    const m = new FlowerModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.plants
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    const rest = m.leafRaise(0, false)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.3)
+    expect(m.leafRaise(0, false)).toBeGreaterThan(rest + 0.3)
+    const tip0 = m.tip(0).y
+    const tipB = m.tip(1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    m.setState(snap(3, 2))
+    let rise = 0
+    let maxRaise = 0
+    let maxSweat = 0
+    let maxDroop = 0
+    let minLeafB = Infinity
+    const ctx = stubCtx()
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      rise = Math.max(rise, tip0 - m.tip(0).y)
+      maxRaise = Math.max(maxRaise, m.leafRaise(0, false))
+      maxSweat = Math.max(maxSweat, m.acts[1].sweat)
+      maxDroop = Math.max(maxDroop, m.tip(1).y - tipB.y)
+      minLeafB = Math.min(minLeafB, m.leafRaise(1, false))
+      expect(m.acts[1].arms).toBe(0)
+      expect(m.acts[0].sweat).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(rise).toBeGreaterThan(m.geo.potH * 0.5)
+    expect(maxRaise).toBeGreaterThan(0.5)
+    expect(maxSweat).toBe(1)
+    expect(maxDroop).toBeGreaterThan(m.geo.pitch * 0.2)
+    expect(minLeafB).toBeLessThan(-0.5)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 1.2 秒后重新立好
+    settle(m, 1.2)
+    expect(m.droopOf(1)).toBe(0)
+    expect(Math.abs(m.tip(1).y - tipB.y)).toBeLessThan(m.geo.pitch * 0.05)
+  })
+})
+
 describe('种花 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new FlowerModel(createRng(2))

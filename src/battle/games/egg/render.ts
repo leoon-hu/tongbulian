@@ -2,9 +2,10 @@
  * 孵蛋的渲染：renderBackground 画不动的部分（天空、谷仓、木栅栏、干草地），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳、云、小鸟、母鸡、草窝、蛋、小鸡、粒子）。
  */
-import { gradient } from '@/battle/game/engine/draw'
+import { drawActFx, withActBody } from '@/battle/game/engine/act'
+import { gradient, withAlpha } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
-import { drawBarn, drawChick, drawEgg, drawHen, drawNest, drawWoodFence } from '@/battle/game/sprites/egg'
+import { drawBarn, drawChick, drawEgg, drawFeather, drawHen, drawNest, drawWoodFence } from '@/battle/game/sprites/egg'
 import { drawCloud, drawHill, drawSun, skyGradient } from '@/battle/game/sprites/scenery'
 import { drawBird } from '@/battle/game/sprites/town'
 import type { EggGeometry, EggModel } from './model'
@@ -48,13 +49,27 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: EggModel): void 
   }
   m.eggs.forEach((e, i) => {
     const dir: 1 | -1 = i === 0 ? 1 : -1
-    drawHen(ctx, g.henX[i]!, g.henY, g.henS, e.team, {
-      flap: m.henFlap(e, i),
-      lift: m.henLift(e),
-      tilt: m.henTilt(e),
-      blink: e.blink.value,
-      dir,
-    })
+    // 母鸡是角色（B72）：整体（跳 / 前倾 / 晃 / 压扁）交给 withActBody，翅膀、歪头、啄地、回头、表情接到姿势上
+    const a = e.act.pose()
+    const s = g.henS
+    const lift = m.henLift(e)
+    // 按键翅膀微张、每按一下扑一下；答对扑着翅膀跳；抖羽毛时翅膀一抖一抖
+    let flap = m.henFlap(e, i) + a.typing * 0.35 + a.press * 0.45 + a.arms * (0.9 + 0.5 * Math.sin(a.beat * 4))
+    if (a.scratch > 0.02) flap += a.scratch * (0.35 + 0.35 * Math.sin(a.beat * 5))
+    withActBody(ctx, g.henX[i]!, g.henY, s, a, dir, () =>
+      drawHen(ctx, 0, 0, s, e.team, {
+        flap: Math.min(1.5, flap),
+        lift,
+        tilt: Math.max(m.henTilt(e), a.wave * 0.9),
+        blink: e.blink.value,
+        dir,
+        peck: m.peckOf(e),
+        back: a.look,
+        happy: a.happy,
+        wide: a.wide,
+      }),
+    )
+    drawActFx(ctx, g.henX[i]! + dir * s * 0.26, g.henY - lift - (a.lift + 1.18) * s, s, a, { side: dir, quality: m.quality })
     drawNest(ctx, g.laneX[i]!, g.nestY, g.nestW, g.nestH, 'back')
     const h = m.hatch[i]!.value
     drawEgg(ctx, g.laneX[i]!, g.eggY, g.eggW, g.eggH, {
@@ -81,5 +96,9 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: EggModel): void 
       })
     }
   })
+  for (const f of m.feathersDown) {
+    const at = m.featherAt(f)
+    withAlpha(ctx, at.alpha, () => drawFeather(ctx, at.x, at.y, Math.max(7, g.henS * 0.3), at.rot))
+  }
   m.particles.draw(ctx)
 }

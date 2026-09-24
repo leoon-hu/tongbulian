@@ -2,6 +2,7 @@
  * 拔河的渲染：renderBackground 画不动的部分（天空、山丘、小树、草地、中线、水坑），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳、云、观众、涟漪、汗珠、四只角色、绳子、手、蝴蝶结、粒子）。
  */
+import { drawActFx } from '@/battle/game/engine/act'
 import { gradient } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawCloud, drawCritter, drawHill, drawSun, drawTree, skyGradient, type CritterKind } from '@/battle/game/sprites/scenery'
@@ -83,14 +84,19 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: TugModel): void 
     drawRipple(ctx, m.rippleX, py, g.puddleRx * 0.8, g.puddleRy * 0.8, m.rippleT / 1.2, Math.max(1, 1.5 * k))
     drawRipple(ctx, m.rippleX, py, g.puddleRx * 0.8, g.puddleRy * 0.8, (m.rippleT - 0.35) / 1.0, Math.max(1, 1.2 * k))
   }
-  // 四只角色
+  // 四只角色。一题里的表演（B72）：拔河的手不离开绳子，所以不整体转——表演都落在后仰、脚、手、脸上（两个人一起演，后面那个慢半拍）
   const a = m.anchors()
   const sides: Side[] = [m.sides[0], m.sides[1]]
   for (const side of sides) {
     const facing = side.team === 'red' ? 1 : -1
-    const lean = m.leanOf(side)
     const cheer = m.cheerOf(side)
+    const act = side.act.pose()
+    const playing = m.phase === 'playing'
+    const strain = m.strainOf(side)
+    const slip = m.slipOf(side)
+    const shuffle = m.shuffleOf(side)
     side.members.forEach((p, i) => {
+      const lean = m.leanOf(side, i)
       const lift = m.liftOf(side, i)
       const x = p.x.value
       if (side.sweat.value > 0.05 && p.fallen.value === 0) {
@@ -103,24 +109,43 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: TugModel): void 
         handY: g.ropeY - g.groundY,
         cheer,
         fallen: p.fallen.value,
-        strain: side.strain.value,
+        strain,
         blink: p.blink.value,
+        dig: playing ? side.act.typing : 0,
+        slip,
+        shuffle,
+        step: m.time * 9 + i * 1.6,
+        regrip: i === 0 ? act.scratch : 0,
+        look: act.look,
+        happy: act.happy,
+        wide: act.wide,
       })
     })
   }
-  // 绳子（压在手臂上），再把手画到绳子上
+  // 绳子（压在手臂上），再把手画到绳子上（重新握绳时前面那只手抬起来往前挪）
   strokeRope(ctx, Math.max(3, (g.compact ? 4 : 6) * k), () => ropePath(ctx, a, g))
   for (const side of sides) {
     const facing = side.team === 'red' ? 1 : -1
     const holding = side.release.value < 0.5
+    const regrip = side.act.pose().scratch
     side.members.forEach((p, i) => {
       if (!holding || p.fallen.value > 0) return
       const pt = side.team === 'red' ? (i === 0 ? a.redFront : a.redBack) : i === 0 ? a.blueFront : a.blueBack
-      drawHands(ctx, pt.x, pt.y, g.size, p.kind, facing)
+      drawHands(ctx, pt.x, pt.y, g.size, p.kind, facing, i === 0 ? regrip : 0)
     })
   }
   // 蝴蝶结
   const tilt = m.animated ? Math.sin(t * 40) * 0.35 * m.bowKick.value : 0
   drawBow(ctx, a.bow.x, a.bow.y, g.size * 0.5, tilt, m.animated ? m.bowGlow.value * (0.6 + breathe(t, 0.8) * 0.4) : m.bowGlow.value)
   m.particles.draw(ctx)
+  // 头顶的小图标画在前排那个人头上，泡泡往场地中间冒（后面是队友）
+  const room = Math.max(g.size, 22) * 0.56 + 1
+  for (const side of sides) {
+    const facing = side.team === 'red' ? 1 : -1
+    const front = side.members[0]
+    if (front.fallen.value > 0) continue
+    const lean = m.leanOf(side, 0)
+    const top = g.groundY - m.liftOf(side, 0) - 1.26 * g.size
+    drawActFx(ctx, front.x.value - facing * lean * 0.48 * g.size, Math.max(top, room), g.size, side.act.pose(), { side: facing, quality: m.quality })
+  }
 }

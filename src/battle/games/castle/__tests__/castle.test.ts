@@ -188,6 +188,55 @@ describe('拆城堡 · 模型（B36u）', () => {
   })
 })
 
+describe('拆城堡 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡；按键只亮自己那一队的灯泡、守卫往炮那边挪一步；红队答对蓄力再跳起来举手、蓝队答错大炮只冒一小团烟、守卫冒汗摇头；画得出来', () => {
+    const m = new CastleModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.guards
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    const x0 = m.guardX(0)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    for (let i = 0; i < 30; i++) m.step(1 / 60)
+    expect(m.guardX(0) - x0).toBeGreaterThan(m.geo.size * 0.15) // 红队的炮在右边
+    const bx = m.guardX(1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    expect(m.fizzle[1].value).toBe(1)
+    expect(m.fizzle[0].value).toBe(0)
+    m.setState(snap(4, 2))
+    m.onEvent({ type: 'point', team: 'red', playerId: 'r', streak: 1 })
+    let maxLift = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let maxShake = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      maxLift = Math.max(maxLift, r.act.pose().lift)
+      maxArms = Math.max(maxArms, r.act.pose().arms)
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      maxShake = Math.max(maxShake, Math.abs(b.act.pose().shake))
+      expect(m.guardX(1)).toBe(bx) // 答错不后退
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(m.fizzle[1].value).toBeLessThan(0.5)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 倒数时收掉；比赛外的答错不冒烟
+    m.setState(snap(0, 0, 'countdown'))
+    expect(m.fizzle[1].value).toBe(0)
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    expect(m.fizzle[1].value).toBe(0)
+  })
+})
+
 describe('拆城堡 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new CastleModel(createRng(2))

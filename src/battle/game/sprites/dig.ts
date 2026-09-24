@@ -211,6 +211,33 @@ export interface DiggerPose {
   look: number
   /** 左右晃 −1…1 */
   sway: number
+  /** 左手举起来欢呼 0…1（答对，B72；镐还在右手里） */
+  raise?: number
+  /** 左手擦额头上的汗 0…1 与来回擦的相位 */
+  wipe?: number
+  beat?: number
+  /** 抬头往上看 0…1 */
+  up?: number
+  /** 甩手 0…1（镐碰到石头震了手） */
+  flap?: number
+  /** 头往两边摆（弧度，摇头） */
+  turn?: number
+  /** 张嘴笑 / 瞪大眼嘴成 o 0…1 */
+  happy?: number
+  wide?: number
+}
+
+/** 井底碰到的一块石头（答错那一拍镐刨到它弹回来，B72）：灰色圆石 + 高光；alpha 淡入淡出 */
+export function drawRock(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number): void {
+  if (alpha < 0.02) return
+  withAlpha(ctx, alpha, () => {
+    ctx.fillStyle = '#8e8e9a'
+    ellipse(ctx, x, y, r, r * 0.72)
+    ctx.fill()
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'
+    ellipse(ctx, x - r * 0.3, y - r * 0.25, r * 0.35, r * 0.22)
+    ctx.fill()
+  })
 }
 
 /** 鼹鼠 / 獾：戴安全帽 + 头灯、队色背心、拿镐；原点在脚下正中，面朝观众 */
@@ -244,16 +271,36 @@ export function drawDigger(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.fill()
     ctx.fillStyle = '#ffd54a'
     ctx.fillRect(-0.2 * s, shY + 0.16 * s, 0.4 * s, 0.05 * s)
-    // 左手（欢呼举起 / 挠头 / 扶着）
+    // 左手（欢呼举起 / 挠头 / 扶着；答对举起来、擦汗、甩手，B72）
     ctx.strokeStyle = sk.fur
     ctx.lineWidth = Math.max(1.5, s * 0.1)
     const leftUp = p.cheer > 0 ? 1 : 0
+    let lx = -0.3 * s
+    let ly = shY + 0.3 * s
+    if (leftUp) {
+      lx = -0.34 * s
+      ly = shY - 0.34 * s
+    } else if (p.look > 0.3) {
+      lx = -0.2 * s
+      ly = shY - 0.3 * s
+    }
+    const beat = p.beat ?? 0
+    const to = (tx: number, ty: number, k: number): void => {
+      lx += (tx - lx) * k
+      ly += (ty - ly) * k
+    }
+    if ((p.wipe ?? 0) > 0.01) to(-0.02 * s + Math.sin(beat * 3) * 0.1 * s, -0.98 * s, p.wipe ?? 0)
+    if ((p.flap ?? 0) > 0.01) to(-0.44 * s, shY + 0.05 * s + Math.sin(beat * 5) * 0.2 * s, p.flap ?? 0)
+    if ((p.raise ?? 0) > 0.01) to(-0.44 * s, shY - 0.56 * s - Math.abs(Math.sin(beat * 1.5)) * 0.06 * s, p.raise ?? 0)
     ctx.beginPath()
     ctx.moveTo(-0.16 * s, shY + 0.05 * s)
-    if (leftUp) ctx.lineTo(-0.34 * s, shY - 0.34 * s)
-    else if (p.look > 0.3) ctx.lineTo(-0.2 * s, shY - 0.3 * s)
-    else ctx.lineTo(-0.3 * s, shY + 0.3 * s)
+    ctx.lineTo(lx, ly)
     ctx.stroke()
+    if ((p.raise ?? 0) > 0.3 || (p.wipe ?? 0) > 0.3) {
+      ctx.fillStyle = sk.fur
+      circle(ctx, lx, ly, s * 0.065)
+      ctx.fill()
+    }
     // 右手 + 镐（绕手转）
     const hx = 0.24 * s
     const hy = shY + 0.12 * s
@@ -278,8 +325,11 @@ export function drawDigger(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.fillStyle = sk.fur
     circle(ctx, hx, hy, s * 0.065)
     ctx.fill()
-    // 头
-    withTransform(ctx, 0, -0.86 * s, -p.look * 0.3, 1, 1, () => {
+    // 头（抬头往上看时往上一点、眼睛往上）
+    const up = p.up ?? 0
+    const happy = p.happy ?? 0
+    const wide = p.wide ?? 0
+    withTransform(ctx, 0, (-0.86 - up * 0.03) * s, -p.look * 0.3 + (p.turn ?? 0), 1, 1, () => {
       ctx.fillStyle = sk.fur
       circle(ctx, 0, 0, 0.26 * s)
       ctx.fill()
@@ -305,22 +355,43 @@ export function drawDigger(ctx: CanvasRenderingContext2D, x: number, y: number, 
         circle(ctx, 0, 0.14 * s, 0.04 * s)
         ctx.fill()
       }
-      ctx.fillStyle = kind === 'badger' ? '#ffffff' : '#2b2b2b'
-      const er = kind === 'mole' ? 0.025 * s : 0.035 * s
+      const eyeC = kind === 'badger' ? '#ffffff' : '#2b2b2b'
+      ctx.fillStyle = eyeC
+      const er = (kind === 'mole' ? 0.025 * s : 0.035 * s) * (1 + wide * 0.6)
+      const ey = -0.03 * s - up * 0.03 * s
       for (const d of [-1, 1] as const) {
-        if (p.blink > 0.5) ctx.fillRect(d * 0.1 * s - er, -0.03 * s, er * 2, Math.max(1, 0.02 * s))
-        else {
-          circle(ctx, d * 0.1 * s, -0.03 * s, er)
+        if (p.blink > 0.5 && wide < 0.3) ctx.fillRect(d * 0.1 * s - er, ey, er * 2, Math.max(1, 0.02 * s))
+        else if (happy > 0.4 && wide < 0.3) {
+          // 笑眯眯：眼睛弯成 ∩
+          ctx.strokeStyle = eyeC
+          ctx.lineWidth = Math.max(1, 0.025 * s)
+          ctx.beginPath()
+          ctx.arc(d * 0.1 * s, ey + 0.015 * s, 0.035 * s, Math.PI, 0)
+          ctx.stroke()
+        } else {
+          circle(ctx, d * 0.1 * s, ey, er)
           ctx.fill()
         }
       }
-      // 嘴
+      // 嘴：平时笑；欢呼 / 答对张嘴笑；答错嘴成 o
       ctx.strokeStyle = '#5a3a2a'
       ctx.lineWidth = Math.max(1, 0.03 * s)
-      ctx.beginPath()
-      if (p.cheer > 0) ctx.arc(0, 0.16 * s, 0.05 * s, 0, Math.PI)
-      else ctx.arc(0, 0.17 * s, 0.05 * s, 0.2, Math.PI - 0.2)
-      ctx.stroke()
+      if (wide > 0.3) {
+        ctx.fillStyle = '#5a3a2a'
+        ellipse(ctx, 0, 0.19 * s, 0.035 * s, 0.045 * s)
+        ctx.fill()
+      } else if (happy > 0.3) {
+        ctx.fillStyle = '#c0392b'
+        ctx.beginPath()
+        ctx.arc(0, 0.16 * s, 0.06 * s, 0, Math.PI)
+        ctx.closePath()
+        ctx.fill()
+      } else {
+        ctx.beginPath()
+        if (p.cheer > 0) ctx.arc(0, 0.16 * s, 0.05 * s, 0, Math.PI)
+        else ctx.arc(0, 0.17 * s, 0.05 * s, 0.2, Math.PI - 0.2)
+        ctx.stroke()
+      }
       // 安全帽 + 头灯
       ctx.fillStyle = c.main
       ctx.beginPath()

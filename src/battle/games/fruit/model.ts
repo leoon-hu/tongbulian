@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -22,6 +23,8 @@ export interface FruitGeometry {
   size: number
   fruitR: number
   groundY: number
+  /** 角色脚下的 y：站在篮子后面，篮口到腰，上半身露出来（B72；原来只露个头） */
+  kidY: number
   /** 树冠中心与半径（宽 / 高）、树干 */
   canopyX: number
   canopyY: number
@@ -86,6 +89,7 @@ export function layoutFruit(W: number, H: number, compact: boolean): FruitGeomet
     basketTop,
     basketW,
     basketH,
+    kidY: basketTop + size * 0.08,
     treeSlots: [slots(-1), slots(1)],
     pileSlots: pile.map((p) => ({ dx: p.dx * basketW, dy: p.dy * basketH })),
   }
@@ -135,6 +139,8 @@ export const SPRINT_FROM = 2
 export const SPARKLE_ROUNDS = 3
 export const SPARKLE_GAP = 0.5
 const LEAVES = 3
+/** 等答题时的小动作（B72）：张望、挠头、踮脚伸手够（伸懒腰换的）、抬头看树（点头换的） */
+export const FRUIT_GESTURES: readonly Gesture[] = ['look', 'scratch', 'stretch', 'nod']
 
 export class FruitModel {
   geo: FruitGeometry = layoutFruit(150, 700, false)
@@ -171,7 +177,7 @@ export class FruitModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.pickers = [new Racer('red', rng), new Racer('blue', rng)]
+    this.pickers = [new Racer('red', rng, ease.outBack, FRUIT_GESTURES), new Racer('blue', rng, ease.outBack, FRUIT_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -356,6 +362,7 @@ export class FruitModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.picker(t).act)
     switch (e.type) {
       case 'countdown':
         for (const p of this.pickers) p.setMood('ready')
@@ -497,12 +504,13 @@ export class FruitModel {
     return Math.sin(this.time * 18) * this.shake.value * 4 * this.geo.k + (this.sprint ? Math.sin(this.time * 2.5) * 2 * this.geo.k : 0)
   }
 
-  /** 角色离地：倒数蹦、够果子跳、胜利蹦 */
+  /** 角色离地：倒数蹦、够果子跳、胜利蹦；答对那一拍由表演来跳（B72：蓄力 → 跳 → 落地，不再一下弹到最高） */
   liftOf(p: Racer, i: number): number {
     const g = this.geo
     if (!this.animated) return 0
     if (p.mood === 'ready') return Math.abs(Math.sin(p.hop)) * g.size * 0.12
     if (p.mood === 'win') return Math.abs(Math.sin(p.phase)) * g.size * 0.1
+    if (p.act.rightT >= 0) return 0
     return this.jump[i]!.value * g.size * 0.35
   }
 
@@ -521,5 +529,23 @@ export class FruitModel {
   /** 输了：一片叶子落到头上 */
   leafOnHead(p: Racer): number {
     return p.mood === 'lose' ? clamp((p.moodT - 1) / 0.6, 0, 1) : 0
+  }
+
+  /**
+   * 头上的叶子（B72）：答错时一片叶子从树上飘下来落在头上（左右飘着转），快站好时滑下去；输了那片一直在。
+   * amount 0…1；y / x 离头顶多高、往旁边偏多少（单位 = 身高）；减少动画时直接在头上、不飘。
+   */
+  leafOf(p: Racer): { amount: number; y: number; x: number; rot: number } {
+    const lose = this.leafOnHead(p)
+    const t = p.act.wrongT
+    if (t < 0 || lose > 0) return { amount: lose, y: 0, x: 0, rot: 0 }
+    const q = t / WRONG_TIME
+    const out = q < 0.82 ? 0 : (q - 0.82) / 0.18
+    if (!this.animated) return { amount: 1 - out, y: 0, x: 0, rot: 0 }
+    if (q < 0.4) {
+      const k = q / 0.4
+      return { amount: Math.min(1, q / 0.06), y: 1.4 * (1 - ease.outQuad(k)), x: Math.sin(k * Math.PI * 3) * 0.22 * (1 - k), rot: Math.sin(k * Math.PI * 3) * 0.7 }
+    }
+    return { amount: 1 - out, y: -out * 0.12, x: out * 0.2, rot: out * 1.2 }
   }
 }

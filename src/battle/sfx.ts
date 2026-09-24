@@ -1,5 +1,6 @@
 /**
- * 对战音效（需求 B38）：用 WebAudio 振荡器与噪声现场合成——不要音频文件、没有授权问题、离线可用。
+ * 对战音效（需求 B38 / B73）：用 WebAudio 振荡器与噪声现场合成——不要音频文件、没有授权问题。
+ * 每个游戏一整套（skinSfx）：得分、连对、胜利、答错（这个游戏的「哎呀」）、开始、按键。
  * 用 engine/audio 的共享 AudioContext（首次触摸已解锁）；静音开关（engine/voice）关着时什么都不放。
  */
 import { audioContext } from '@/engine/audio'
@@ -9,8 +10,6 @@ import type { SkinKind } from './skins'
 
 export type Sfx =
   | 'ding' // 得分
-  | 'dingSoft' // 别人得分（小声）
-  | 'dong' // 答错
   | 'tick' // 倒数
   | 'go' // 开始
   | 'pop' // 弹出提示
@@ -50,6 +49,38 @@ export type Sfx =
   | 'brake' // 答错（开火车 / 赛车）：刹车吱——（B70）
   | 'hiss' // 答错（热气球 / 吹泡泡）：漏气嘶——（B70）
   | 'fizzle' // 答错（火箭）：哑火噗——（B70）
+  // ── B73：连对、开始、按键、各游戏的「哎呀」──
+  | 'sparkle' // 连对 / 亮晶晶：一串上行的叮叮叮
+  | 'oops' // 答错（默认）：「哎—哟」两个轻轻的下行音
+  | 'stall' // 答错（赛车）：熄火噗噗噗
+  | 'steam' // 按键（开火车）：嚓地喷一口蒸汽
+  | 'flame' // 按键（火箭）：火苗呼一下
+  | 'puff' // 按键（热气球）：烧嘴呼一下（小）
+  | 'rev' // 按键 / 开始（赛车）：踩一脚油门
+  | 'pistol' // 开始（赛跑 / 游泳）：发令枪啪
+  | 'drop' // 按键（游泳 / 种花）：一滴水
+  | 'gulp' // 答错（游泳）：呛水咕嘟咕嘟
+  | 'slip' // 答错（爬梯子）：往下一溜嗖——
+  | 'clink' // 答错（挖宝）：镐碰到石头叮
+  | 'twang' // 答错（钓鱼）：竿子一弹嘣
+  | 'wobble' // 答错（盖楼）：晃一晃咿呜咿呜
+  | 'wilt' // 答错（种花）：耷拉一下的轻滑音
+  | 'bawk' // 答错（孵蛋）：咯咯哒一惊
+  | 'cluck' // 按键 / 开始（孵蛋）：咯
+  | 'burst' // 答错（吹泡泡）：小泡泡啪地破
+  | 'rustle' // 开始 / 答错（摘果子）：树叶沙沙
+  | 'pff' // 答错（点亮星星）：魔法棒噗
+  | 'hmm' // 答错（拼图）：「嗯？」
+  | 'skid' // 答错（拔河 / 融冰）：脚下一滑吱溜
+  | 'creak' // 答错（跷跷板）：吱呀一晃
+  | 'trip' // 答错（抢旗）：一绊「哎——哟」
+  | 'poof' // 答错（拆城堡）：大炮噗地一小团烟
+  | 'bugle' // 开始（抢旗）：小号嗒嗒嗒——
+  | 'horn' // 开始（拆城堡）：号角嘟——
+  | 'cast' // 开始（钓鱼）：甩竿嗖—噗通
+  | 'hammer' // 按键 / 开始（盖楼）：小锤嗒
+  | 'tap' // 按键（默认）：很轻的一下
+  | 'tink' // 按键（融冰）：冰叮
 
 interface Note {
   /** 频率（Hz） */
@@ -80,8 +111,6 @@ interface Pattern {
 
 const PATTERNS: Record<Sfx, Pattern> = {
   ding: { notes: [{ f: 880, at: 0, d: 0.12 }, { f: 1320, at: 0.1, d: 0.22 }] },
-  dingSoft: { notes: [{ f: 880, at: 0, d: 0.1, gain: 0.35 }, { f: 1320, at: 0.09, d: 0.18, gain: 0.35 }] },
-  dong: { notes: [{ f: 180, at: 0, d: 0.35, type: 'triangle', gain: 0.9, to: 120 }] },
   tick: { notes: [{ f: 660, at: 0, d: 0.09, type: 'square', gain: 0.45 }] },
   go: { notes: [{ f: 990, at: 0, d: 0.32, type: 'square', gain: 0.5 }] },
   pop: { notes: [{ f: 520, at: 0, d: 0.1, type: 'triangle', gain: 0.6, to: 1040 }] },
@@ -228,47 +257,164 @@ const PATTERNS: Record<Sfx, Pattern> = {
   brake: { noise: [{ at: 0, d: 0.45, gain: 0.45, f: 3400, q: 3 }], notes: [{ f: 2400, at: 0, d: 0.45, type: 'sawtooth', gain: 0.12, to: 1500 }] },
   hiss: { noise: [{ at: 0, d: 0.5, gain: 0.4, f: 5200, q: 0.8 }], notes: [{ f: 420, at: 0, d: 0.45, type: 'sine', gain: 0.3, to: 160 }] },
   fizzle: { noise: [{ at: 0, d: 0.35, gain: 0.5, f: 900, q: 0.7 }], notes: [{ f: 220, at: 0, d: 0.4, type: 'triangle', gain: 0.6, to: 70 }] },
+  sparkle: { notes: [1320, 1660, 1980, 2640].map((f, i) => ({ f, at: i * 0.05, d: 0.14, type: 'sine' as const, gain: 0.3 })) },
+  oops: {
+    notes: [
+      { f: 587, at: 0, d: 0.13, type: 'triangle', gain: 0.45 },
+      { f: 440, at: 0.14, d: 0.24, type: 'triangle', gain: 0.4, to: 415 },
+    ],
+  },
+  stall: {
+    notes: [0, 0.12, 0.24].map((at, i) => ({ f: 75 - i * 6, at, d: 0.08, type: 'sawtooth' as const, gain: 0.3 - i * 0.06, to: 55 })),
+    noise: [{ at: 0.02, d: 0.35, gain: 0.25, f: 400, q: 0.5 }],
+  },
+  steam: { noise: [{ at: 0, d: 0.18, gain: 0.35, f: 4200, q: 0.7 }] },
+  flame: { noise: [{ at: 0, d: 0.16, gain: 0.4, f: 700, q: 0.6 }], notes: [{ f: 110, at: 0, d: 0.15, type: 'triangle', gain: 0.25, to: 180 }] },
+  puff: { noise: [{ at: 0, d: 0.2, gain: 0.35, f: 900, q: 0.6 }] },
+  rev: { notes: [{ f: 95, at: 0, d: 0.16, type: 'sawtooth', gain: 0.22, to: 190 }], noise: [{ at: 0, d: 0.12, gain: 0.12, f: 400, q: 0.8 }] },
+  pistol: { noise: [{ at: 0, d: 0.06, gain: 0.8, f: 2200, q: 0.4 }], notes: [{ f: 200, at: 0, d: 0.12, type: 'triangle', gain: 0.5, to: 70 }] },
+  drop: { notes: [{ f: 1500, at: 0, d: 0.07, type: 'sine', gain: 0.3, to: 900 }] },
+  gulp: {
+    notes: [
+      { f: 320, at: 0, d: 0.1, type: 'sine', gain: 0.45, to: 160 },
+      { f: 360, at: 0.16, d: 0.1, type: 'sine', gain: 0.4, to: 170 },
+    ],
+    noise: [{ at: 0.05, d: 0.15, gain: 0.15, f: 900, q: 1 }],
+  },
+  slip: {
+    notes: [
+      { f: 900, at: 0, d: 0.32, type: 'triangle', gain: 0.35, to: 260 },
+      { f: 180, at: 0.34, d: 0.08, type: 'triangle', gain: 0.4, to: 120 },
+    ],
+    noise: [{ at: 0, d: 0.3, gain: 0.15, f: 2500, q: 0.8 }],
+  },
+  clink: {
+    notes: [
+      { f: 2400, at: 0, d: 0.12, type: 'sine', gain: 0.35 },
+      { f: 3150, at: 0.005, d: 0.18, type: 'sine', gain: 0.25 },
+      { f: 700, at: 0.02, d: 0.08, type: 'triangle', gain: 0.2, to: 500 },
+    ],
+  },
+  twang: {
+    notes: [
+      { f: 240, at: 0, d: 0.25, type: 'triangle', gain: 0.45, to: 180 },
+      { f: 480, at: 0, d: 0.2, type: 'sine', gain: 0.2, to: 360 },
+    ],
+  },
+  wobble: { notes: [0, 0.1, 0.2, 0.3].map((at, i) => ({ f: i % 2 ? 392 : 330, at, d: 0.1, type: 'triangle' as const, gain: 0.3, to: i % 2 ? 330 : 392 })) },
+  wilt: { notes: [{ f: 660, at: 0, d: 0.45, type: 'sine', gain: 0.3, to: 330 }] },
+  bawk: {
+    notes: [
+      { f: 880, at: 0, d: 0.06, type: 'square', gain: 0.25, to: 660 },
+      { f: 900, at: 0.09, d: 0.06, type: 'square', gain: 0.25, to: 640 },
+      { f: 1100, at: 0.2, d: 0.14, type: 'square', gain: 0.3, to: 700 },
+    ],
+    noise: [{ at: 0.05, d: 0.3, gain: 0.15, f: 1500, q: 0.8 }],
+  },
+  cluck: { notes: [{ f: 800, at: 0, d: 0.05, type: 'square', gain: 0.22, to: 600 }] },
+  burst: { noise: [{ at: 0, d: 0.03, gain: 0.5, f: 4000, q: 1 }], notes: [{ f: 1400, at: 0, d: 0.05, type: 'sine', gain: 0.25, to: 500 }] },
+  rustle: {
+    noise: [
+      { at: 0, d: 0.3, gain: 0.25, f: 3200, q: 0.6 },
+      { at: 0.12, d: 0.2, gain: 0.18, f: 2500, q: 0.6 },
+    ],
+  },
+  pff: { noise: [{ at: 0, d: 0.22, gain: 0.3, f: 700, q: 0.5 }], notes: [{ f: 260, at: 0, d: 0.15, type: 'triangle', gain: 0.2, to: 140 }] },
+  hmm: {
+    notes: [
+      { f: 330, at: 0, d: 0.14, type: 'triangle', gain: 0.35 },
+      { f: 330, at: 0.18, d: 0.2, type: 'triangle', gain: 0.35, to: 415 },
+    ],
+  },
+  skid: { noise: [{ at: 0, d: 0.3, gain: 0.3, f: 3000, q: 3 }], notes: [{ f: 700, at: 0, d: 0.3, type: 'sawtooth', gain: 0.08, to: 500 }] },
+  creak: {
+    notes: [
+      { f: 160, at: 0, d: 0.22, type: 'sawtooth', gain: 0.1, to: 230 },
+      { f: 230, at: 0.22, d: 0.2, type: 'triangle', gain: 0.12, to: 170 },
+    ],
+  },
+  trip: {
+    notes: [
+      { f: 520, at: 0.02, d: 0.1, type: 'triangle', gain: 0.3, to: 700 },
+      { f: 700, at: 0.13, d: 0.22, type: 'triangle', gain: 0.3, to: 350 },
+    ],
+    noise: [{ at: 0, d: 0.06, gain: 0.4, f: 300, q: 0.8 }],
+  },
+  poof: { noise: [{ at: 0, d: 0.3, gain: 0.35, f: 500, q: 0.5 }], notes: [{ f: 150, at: 0, d: 0.2, type: 'sine', gain: 0.25, to: 90 }] },
+  bugle: {
+    notes: [
+      { f: 523, at: 0, d: 0.12, type: 'square', gain: 0.3 },
+      { f: 523, at: 0.14, d: 0.12, type: 'square', gain: 0.3 },
+      { f: 659, at: 0.28, d: 0.12, type: 'square', gain: 0.3 },
+      { f: 784, at: 0.42, d: 0.35, type: 'square', gain: 0.3 },
+    ],
+  },
+  horn: {
+    notes: [
+      { f: 196, at: 0, d: 0.15, type: 'sawtooth', gain: 0.25 },
+      { f: 262, at: 0.15, d: 0.45, type: 'sawtooth', gain: 0.25 },
+    ],
+  },
+  cast: {
+    noise: [
+      { at: 0, d: 0.2, gain: 0.3, f: 2800, q: 0.8 },
+      { at: 0.3, d: 0.1, gain: 0.2, f: 900, q: 1 },
+    ],
+    notes: [{ f: 600, at: 0.3, d: 0.1, type: 'sine', gain: 0.35, to: 200 }],
+  },
+  hammer: { notes: [{ f: 1000, at: 0, d: 0.04, type: 'triangle', gain: 0.3, to: 700 }], noise: [{ at: 0, d: 0.03, gain: 0.2, f: 2500, q: 1 }] },
+  tap: { notes: [{ f: 1100, at: 0, d: 0.03, type: 'triangle', gain: 0.25, to: 900 }] },
+  tink: { notes: [{ f: 2600, at: 0, d: 0.08, type: 'sine', gain: 0.2 }] },
 }
 
-/** 一种皮肤的音效：得分、连对、胜利、答错各放哪几声（B38 / B70，按游戏各不一样） */
+/**
+ * 一种皮肤的音效（B38 / B70 / B73，按游戏各不一样）：得分、连对（得分声之外再加的；得分声照样放）、胜利、答错、
+ * 开始（倒数到「开始」时，代替通用的「嘟」）、按键（本设备的真人每按一下数字键，很轻）
+ */
 export interface SkinSounds {
   score: Sfx[]
   streak: Sfx[]
   win: Sfx[]
-  /** 答错（B70）：没有专属的仍是「咚」 */
   wrong: Sfx[]
+  go: Sfx[]
+  key: Sfx[]
 }
 
 const KIND_SOUNDS: Record<SkinKind, SkinSounds> = {
-  race: { score: ['whoosh'], streak: ['whoosh'], win: ['cheer'], wrong: ['dong'] },
-  tug: { score: ['heave'], streak: ['heave', 'whoosh'], win: ['splash', 'cheer'], wrong: ['dong'] },
-  consume: { score: ['crack'], streak: ['crack'], win: ['splash', 'cheer'], wrong: ['dong'] },
-  grow: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'], wrong: ['dong'] },
+  race: { score: ['whoosh'], streak: ['sparkle'], win: ['cheer'], wrong: ['oops'], go: ['go'], key: ['tap'] },
+  tug: { score: ['heave'], streak: ['sparkle'], win: ['splash', 'cheer'], wrong: ['oops'], go: ['go'], key: ['tap'] },
+  consume: { score: ['crack'], streak: ['sparkle'], win: ['splash', 'cheer'], wrong: ['oops'], go: ['go'], key: ['tap'] },
+  grow: { score: ['thud'], streak: ['sparkle'], win: ['fireworks', 'cheer'], wrong: ['oops'], go: ['go'], key: ['tap'] },
 }
 
+/** 每个游戏一整套（B73）；按键没写的都是很轻的「嗒」 */
 const SKIN_SOUNDS: Record<string, Partial<SkinSounds>> = {
-  race: { score: ['patter'], streak: ['patter', 'whoosh'] },
-  car: { score: ['vroom'], streak: ['nitro'], wrong: ['brake'] },
-  train: { score: ['chug'], streak: ['whistle', 'chug'], win: ['whistle', 'cheer'], wrong: ['brake'] },
-  rocket: { score: ['launch'], streak: ['launch'], win: ['fireworks', 'cheer'], wrong: ['fizzle'] },
-  balloon: { score: ['burner'], streak: ['burner'], wrong: ['hiss'] },
-  swim: { score: ['stroke'], streak: ['stroke', 'whoosh'], win: ['splash', 'cheer'] },
-  ladder: { score: ['rung'], streak: ['rung', 'whoosh'], win: ['fireworks', 'cheer'] },
-  dig: { score: ['pick'], streak: ['pick', 'whoosh'], win: ['fireworks', 'cheer'] },
-  fish: { score: ['reel'], streak: ['reel', 'whoosh'], win: ['splash', 'cheer'] },
-  flower: { score: ['sprout'], streak: ['sprout', 'whoosh'], win: ['fireworks', 'cheer'] },
-  egg: { score: ['crack'], streak: ['crack', 'whoosh'], win: ['peep', 'cheer'] },
-  bubble: { score: ['bloop'], streak: ['bloop', 'whoosh'], win: ['fireworks', 'cheer'], wrong: ['hiss'] },
-  fruit: { score: ['plop'], streak: ['plop', 'whoosh'], win: ['fireworks', 'cheer'] },
-  stars: { score: ['twinkle'], streak: ['twinkle', 'whoosh'], win: ['fireworks', 'cheer'] },
-  puzzle: { score: ['snap'], streak: ['snap', 'whoosh'], win: ['fireworks', 'cheer'] },
-  tower: { score: ['thud'], streak: ['thud'], win: ['fireworks', 'cheer'] },
-  tug: { score: ['heave'], streak: ['heave', 'whoosh'] },
-  seesaw: { score: ['clunk'], streak: ['clunk', 'whoosh'], win: ['thud', 'cheer'] },
-  flag: { score: ['hup'], streak: ['hup', 'whoosh'], win: ['fireworks', 'cheer'] },
-  castle: { score: ['boom'], streak: ['boom', 'crack'], win: ['thud', 'fireworks', 'cheer'] },
-  ice: { score: ['crack', 'drip'], streak: ['crack', 'drip'], win: ['splash', 'cheer'] },
+  race: { score: ['patter'], win: ['cheer'], wrong: ['oops'], go: ['pistol'] },
+  car: { score: ['vroom'], streak: ['nitro', 'sparkle'], win: ['nitro', 'cheer'], wrong: ['stall'], go: ['vroom'], key: ['rev'] },
+  train: { score: ['chug'], streak: ['whistle'], win: ['whistle', 'cheer'], wrong: ['hiss'], go: ['whistle'], key: ['steam'] },
+  rocket: { score: ['launch'], win: ['fireworks', 'cheer'], wrong: ['fizzle'], go: ['launch'], key: ['flame'] },
+  balloon: { score: ['burner'], win: ['burner', 'cheer'], wrong: ['hiss'], go: ['burner'], key: ['puff'] },
+  swim: { score: ['stroke'], win: ['splash', 'cheer'], wrong: ['gulp'], go: ['pistol'], key: ['drop'] },
+  ladder: { score: ['rung'], win: ['fireworks', 'cheer'], wrong: ['slip'], go: ['hup'] },
+  dig: { score: ['pick'], win: ['sparkle', 'cheer'], wrong: ['clink'], go: ['pick'] },
+  fish: { score: ['reel'], win: ['splash', 'cheer'], wrong: ['twang'], go: ['cast'] },
+  tower: { score: ['thud'], win: ['fireworks', 'cheer'], wrong: ['wobble'], go: ['hammer'], key: ['hammer'] },
+  flower: { score: ['sprout'], win: ['sparkle', 'cheer'], wrong: ['wilt'], go: ['sprout'], key: ['drop'] },
+  egg: { score: ['crack'], win: ['peep', 'cheer'], wrong: ['bawk'], go: ['cluck'], key: ['cluck'] },
+  bubble: { score: ['bloop'], win: ['sparkle', 'cheer'], wrong: ['burst'], go: ['bloop'], key: ['bloop'] },
+  fruit: { score: ['plop'], win: ['fireworks', 'cheer'], wrong: ['rustle', 'oops'], go: ['rustle'] },
+  stars: { score: ['twinkle'], win: ['sparkle', 'twinkle', 'cheer'], wrong: ['pff'], go: ['sparkle'], key: ['twinkle'] },
+  puzzle: { score: ['snap'], win: ['fireworks', 'cheer'], wrong: ['hmm'], go: ['snap'], key: ['snap'] },
+  tug: { score: ['heave'], win: ['splash', 'cheer'], wrong: ['skid'], go: ['heave'] },
+  seesaw: { score: ['clunk'], win: ['thud', 'cheer'], wrong: ['creak'], go: ['boing'] },
+  flag: { score: ['hup'], win: ['fireworks', 'cheer'], wrong: ['trip'], go: ['bugle'] },
+  ice: { score: ['crack', 'drip'], win: ['splash', 'cheer'], wrong: ['skid'], go: ['crack'], key: ['tink'] },
+  castle: { score: ['boom'], win: ['thud', 'fireworks', 'cheer'], wrong: ['poof'], go: ['horn'] },
 }
+
+/** 按键的声音音量（很轻）与最密的间隔（毫秒） */
+export const KEY_GAIN = 0.35
+export const KEY_GAP_MS = 70
 
 /** 某种皮肤的音效表：先按类别给一套，再按皮肤覆盖 */
 export function skinSfx(skinId: string, kind: SkinKind = 'race'): SkinSounds {

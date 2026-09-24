@@ -135,6 +135,69 @@ describe('热气球 · 模型（B36h）', () => {
   })
 })
 
+describe('热气球 · 一题里的表演（B72）', () => {
+  const answered = (team: 'red' | 'blue', correct: boolean) => ({ type: 'answered' as const, playerId: team[0]!, team, index: 0, correct, given: '1' })
+
+  it('等久了冒泡泡；按键亮灯泡、烧嘴喷一下火；红队答对大火、往上一蹿、乘客举手；蓝队答错往下一沉再回来、冒汗；只演自己那一队；画得出来', () => {
+    const m = new BalloonModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.balloons
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    const f0 = m.flameOf(r, 0)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    expect(m.flameOf(r, 0)).toBeGreaterThan(f0 + 0.8) // 喷一下火
+    settle(m, 0.5)
+    m.onEvent(answered('red', true))
+    m.onEvent(answered('blue', false))
+    expect(m.burst[0].value).toBeGreaterThan(1.3) // 烧嘴大火
+    const g = m.geo
+    let up = 0
+    let down = 0
+    let maxArms = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      up = Math.min(up, m.body(r).dy)
+      down = Math.max(down, m.body(b).dy)
+      maxArms = Math.max(maxArms, r.act.pose().arms)
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      expect(m.body(r).dy).toBeLessThanOrEqual(0)
+      expect(b.act.pose().arms).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(up).toBeLessThan(-g.size * 0.1)
+    expect(down).toBeGreaterThan(g.size * 0.08)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    settle(m, 1.5)
+    expect(Math.abs(m.body(b).dy)).toBeLessThan(0.01) // 沉下去又回来了
+  })
+
+  it('减少动画时气球与乘客都不动，只留举手与表情', () => {
+    const quiet = new BalloonModel(createRng(4), { reducedMotion: true })
+    quiet.layout(96, 350, true)
+    quiet.setState(snap(2, 2))
+    settle(quiet, 2)
+    quiet.onEvent(answered('red', true))
+    quiet.onEvent(answered('blue', false))
+    let arms = 0
+    for (let i = 0; i < 40; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.body(quiet.balloons[0])).toEqual({ dy: 0, sx: 1, sy: 1, headDx: 0, headTilt: 0, bodySx: 1, bodySy: 1 })
+      expect(quiet.body(quiet.balloons[1]).dy).toBe(0)
+      arms = Math.max(arms, quiet.balloons[0].act.pose().arms)
+    }
+    expect(arms).toBeGreaterThan(0.9)
+    expect(quiet.particles.count).toBe(0)
+  })
+})
+
 describe('热气球 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new BalloonModel(createRng(2))

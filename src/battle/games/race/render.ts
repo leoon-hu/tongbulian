@@ -3,6 +3,7 @@
  * 分两层：renderBackground 画不动的部分（天空、山丘、草地、跑道、起点线、终点柱、拱门横杆），index.ts 会把它缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳光晕、云、亮起的标记、发令员、彩旗、旗子、观众、两只角色、粒子、速度线）。
  */
+import { drawActFx, withActBody } from '@/battle/game/engine/act'
 import { fillRoundRect, gradient } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawHare } from '@/battle/game/sprites/hare'
@@ -155,26 +156,51 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: RaceModel): void
       }
     }
   }
-  drawTortoise(ctx, red.x.value, g.laneY[0] + g.laneH * 0.95, g.size, {
-    phase: red.phase,
-    run: pr.run,
-    blink: pr.blink,
-    hide: red.mood === 'lose' ? Math.min(1, red.moodT * 2) * (red.moodT > 2.5 ? 0.5 : 1) : 0,
-    spin: red.mood === 'win' && m.animated ? (red.moodT * Math.PI * 2) % (Math.PI * 2) : 0,
-    look: pr.look,
-    lift: pr.lift,
-  })
+  // 一题里的表演（B72）：整体（跳 / 前倾 / 晃 / 压扁）交给 withActBody，手势与表情接到各自的姿势上，头顶图标最后画
+  const s = g.size
+  const ar = red.act.pose()
+  const ab = blue.act.pose()
+  const groundR = g.laneY[0] + g.laneH * 0.95
+  const groundB = g.laneY[1] + g.laneH * 0.95
+  // 原地没在跑时腿自己动：按键时原地小碎步，答对腾空时蹬腿
+  const march = (r: Runner, a: typeof ar) => (r.moving > 0.02 ? { phase: r.phase, run: 0 } : { phase: a.t * (a.arms > 0.3 ? 16 : 9), run: Math.max(a.typing * 0.35, a.arms * 0.6) })
+  const mr = march(red, ar)
+  withActBody(ctx, red.x.value, groundR, s, ar, 1, () =>
+    drawTortoise(ctx, 0, 0, s, {
+      phase: red.moving > 0.02 ? red.phase : mr.phase,
+      run: Math.max(pr.run, mr.run),
+      blink: pr.blink,
+      hide: red.mood === 'lose' ? Math.min(1, red.moodT * 2) * (red.moodT > 2.5 ? 0.5 : 1) : ar.wide * 0.45,
+      spin: red.mood === 'win' && m.animated ? (red.moodT * Math.PI * 2) % (Math.PI * 2) : 0,
+      look: Math.max(pr.look, ar.look),
+      lift: pr.lift,
+      neck: Math.max(ar.arms, red.act.typing * 0.5),
+      happy: ar.happy,
+      wide: ar.wide,
+    }),
+  )
   const landing = blue.moving > 0.02 ? Math.max(0, 1 - Math.abs(Math.sin(blue.phase)) * 4) : 0
-  drawHare(ctx, blue.x.value, g.laneY[1] + g.laneH * 0.95, g.size, {
-    phase: blue.phase,
-    run: pb.run,
-    blink: pb.blink,
-    earBack: pb.run,
-    earTwitch: m.animated && blue.twitch < 0 ? Math.sin(t * 40) * 0.25 : 0,
-    squash: landing * pb.run,
-    flip: blue.mood === 'win' && m.animated ? -((blue.moodT * Math.PI * 2 * 1.25) % (Math.PI * 2)) : 0,
-    sit: blue.mood === 'lose' ? Math.min(1, blue.moodT * 2) : 0,
-    look: pb.look,
-    lift: pb.lift,
-  })
+  withActBody(ctx, blue.x.value, groundB, s, ab, 1, () =>
+    drawHare(ctx, 0, 0, s, {
+      phase: blue.phase,
+      run: pb.run,
+      blink: pb.blink,
+      earBack: Math.max(pb.run, blue.act.typing * 0.6),
+      earTwitch: (m.animated && blue.twitch < 0 ? Math.sin(t * 40) * 0.25 : 0) + ab.wave * Math.sin(ab.beat * 2) * 0.45,
+      squash: landing * pb.run,
+      flip: blue.mood === 'win' && m.animated ? -((blue.moodT * Math.PI * 2 * 1.25) % (Math.PI * 2)) : 0,
+      sit: blue.mood === 'lose' ? Math.min(1, blue.moodT * 2) : 0,
+      look: Math.max(pb.look, ab.look),
+      lift: pb.lift,
+      pawsUp: ab.arms,
+      pawsFace: ab.scratch,
+      rub: ab.beat * 2,
+      droop: ab.wide,
+      happy: ab.happy,
+      wide: ab.wide,
+    }),
+  )
+  const fx = { side: 1 as const, quality: m.quality }
+  drawActFx(ctx, red.x.value + s * 0.45, groundR - pr.lift - (ar.lift + 0.72) * s, s, ar, fx)
+  drawActFx(ctx, blue.x.value + s * 0.2, groundB - pb.lift - (ab.lift + 1.2) * s, s, ab, { ...fx, side: -1 })
 }

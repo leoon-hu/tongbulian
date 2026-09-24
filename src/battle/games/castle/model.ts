@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -82,6 +83,8 @@ export const SPRINT_FROM = 2
 export const FIREWORK_ROUNDS = 3
 export const FIREWORK_GAP = 0.5
 export const COLLAPSE_TIME = 0.8
+/** 等答题时的小动作（B72）：张望、敬礼（挥手换的）、伸懒腰、原地踏步（蹦两下换的），渲染里接 */
+export const CASTLE_GESTURES: readonly Gesture[] = ['look', 'wave', 'stretch', 'hop']
 
 export class CastleModel {
   geo: CastleGeometry = layoutCastle(150, 700, false)
@@ -98,6 +101,8 @@ export class CastleModel {
   smoke: [Decay, Decay] = [new Decay(0.5), new Decay(0.5)]
   /** 只剩一块砖时那块闪 */
   alarm: [Decay, Decay] = [new Decay(1), new Decay(1)]
+  /** 答错（B72）：大炮「噗」地只冒一小团灰烟、炮口耷拉一下 */
+  fizzle: [Decay, Decay] = [new Decay(0.4), new Decay(0.4)]
   /** 塌掉：塔顶落到地上 */
   collapsed: [boolean, boolean] = [false, false]
   flagWave = 0
@@ -122,7 +127,7 @@ export class CastleModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.guards = [new Racer('red', rng), new Racer('blue', rng)]
+    this.guards = [new Racer('red', rng, ease.outBack, CASTLE_GESTURES), new Racer('blue', rng, ease.outBack, CASTLE_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -210,6 +215,7 @@ export class CastleModel {
       this.particles.clear()
       this.fireworkLeft = 0
       for (const a of this.alarm) a.value = 0
+      for (const f of this.fizzle) f.value = 0
       this.celebrated = false
     }
     if (s.phase !== 'ended') this.celebrated = false
@@ -306,7 +312,11 @@ export class CastleModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.guard(t).act)
     switch (e.type) {
+      case 'answered':
+        if (!e.correct && e.team && this.phase === 'playing') this.fizzle[e.team === 'red' ? 0 : 1]!.kick(1)
+        break
       case 'countdown':
         for (const gd of this.guards) gd.setMood('ready')
         break
@@ -404,6 +414,7 @@ export class CastleModel {
       gd.step(dt, 1.5, animated)
       this.recoil[i]!.step(dt)
       this.smoke[i]!.step(dt)
+      this.fizzle[i]!.step(dt)
       this.alarm[i]!.step(dt)
       this.topY[i]!.step(dt)
       const bricks = this.bricks[i]!
@@ -475,6 +486,13 @@ export class CastleModel {
     if (gd.mood === 'ready') return Math.abs(Math.sin(gd.hop)) * g.size * 0.15
     if (gd.mood === 'win') return Math.abs(Math.sin(gd.phase)) * g.size * 0.12
     return 0
+  }
+
+  /** 守卫站的 x：正在按（B72）时往大炮那边挪一步、一只手搭在炮上 */
+  guardX(i: number): number {
+    const g = this.geo
+    const dir = i === 0 ? 1 : -1
+    return g.towerX[i]! - dir * g.brickW * 0.2 + dir * this.guards[i]!.act.typing * g.size * 0.22
   }
 
   /** 坐在废墟上头顶转小星星 */

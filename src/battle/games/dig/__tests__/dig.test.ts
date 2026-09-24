@@ -177,6 +177,76 @@ describe('挖宝 · 模型（B36k）', () => {
   })
 })
 
+describe('挖宝 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡、按键亮灯泡举起镐；红队答对使劲刨下去土块飞、蓝队答错镐碰到石头弹回来迸火星；只演自己那一队；画得出来', () => {
+    const m = new DigModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.diggers
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.4)
+    expect(m.swingOf(r)).toBeLessThan(-1.2) // 举起镐
+    expect(m.swingOf(b)).toBeGreaterThan(-1)
+    m.setState(snap(3, 2))
+    settle(m, 0.3)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    m.particles.clear()
+    let maxLift = 0
+    let maxArms = 0
+    let dug = -Infinity
+    let bounced = Infinity
+    let rock = 0
+    let maxSweat = 0
+    let burst = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 70; i++) {
+      const before = m.particles.count
+      m.step(1 / 60)
+      burst = Math.max(burst, m.particles.count - before)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxArms = Math.max(maxArms, pr.arms)
+      dug = Math.max(dug, m.swingOf(r))
+      if (b.act.wrongT > 0.15) bounced = Math.min(bounced, m.swingOf(b))
+      rock = Math.max(rock, m.rockOf(b))
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      expect(m.rockOf(r)).toBe(0)
+      expect(pb.arms).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(dug).toBeGreaterThan(0.9) // 使劲刨下去
+    expect(bounced).toBeLessThan(-0.6) // 碰到石头弹回来
+    expect(rock).toBe(1)
+    expect(maxSweat).toBe(1)
+    expect(burst).toBeGreaterThanOrEqual(7) // 刨下去土块飞
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 减少动画：镐不抡、人不跳，只留举手与表情
+    const quiet = new DigModel(createRng(4), { reducedMotion: true })
+    quiet.layout(96, 350, true)
+    quiet.setState(snap(3, 2))
+    settle(quiet, 1)
+    const still = quiet.swingOf(quiet.diggers[0])
+    quiet.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.swingOf(quiet.diggers[0])).toBe(still)
+      expect(quiet.diggers[0].act.pose().lift).toBe(0)
+    }
+    expect(quiet.particles.count).toBe(0)
+    const c = stubCtx()
+    renderDynamic(c, quiet)
+    expect(c.count('save')).toBe(c.count('restore'))
+  })
+})
+
 describe('挖宝 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new DigModel(createRng(2))

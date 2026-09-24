@@ -60,7 +60,7 @@ function statusOf(kp: KnowledgePoint): NodeStatus {
 
 const SEGMENTS = Array.from({ length: ROUND_SIZE }, (_, i) => i)
 
-// 点知识点直接进它的设置页（B26）：自己练与三种对战都在「跟谁打」里选
+// 点知识点直接进它的设置页（B26）：自己练与三种对战都在「怎么练」里选
 function tapNode(kp: KnowledgePoint): void {
   if (statusOf(kp) !== 'open') return
   router.push(`/battle/new/${kp.id}`)

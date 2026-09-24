@@ -71,13 +71,13 @@ afterEach(() => {
 })
 
 describe('知识点地图', () => {
-  it('地图本身不读；点知识点直接到设置页，读「跟谁打？」+ 选着的那张卡的说明（B26：没有中间的选择面板）', async () => {
+  it('地图本身不读；点知识点直接到设置页，读「怎么练？」+ 选着的那张卡的说明（B26：没有中间的选择面板）', async () => {
     const w = await mountAt('/s/math/g/g1')
     expect(spoken()).toEqual([])
     await w.find('.node.open').trigger('click')
     await until(() => w.find('.setup').exists())
     await settle()
-    expect(spoken()).toEqual([['battle.who', 'battle.mode.practice.desc']]) // 默认选着自己练
+    expect(spoken()).toEqual([['battle.how', 'battle.mode.practice.desc']]) // 默认选着自己练
     await w.find('.mode[data-mode="ai"]').trigger('click')
     await settle()
     expect(lastSpoken()).toEqual(['battle.mode.ai.desc'])
@@ -86,9 +86,9 @@ describe('知识点地图', () => {
 })
 
 describe('对战设置页', () => {
-  it('打开读「跟谁打？」+ 当前卡的说明（切页动画后开口）；换卡读那张卡的说明；配置里点名字弹出改名字面板读「你叫什么？」；离开停声', async () => {
+  it('打开读「怎么练？」+ 当前卡的说明（切页动画后开口）；换卡读那张卡的说明；配置里点名字弹出改名字面板读「你叫什么？」；离开停声', async () => {
     const w = await mountAt(`/battle/new/${KP}`)
-    expect(spoken()).toEqual([['battle.who', 'battle.mode.practice.desc']])
+    expect(spoken()).toEqual([['battle.how', 'battle.mode.practice.desc']])
     expect(vi.mocked(sayKeys).mock.calls[0]![2]).toBeGreaterThan(0)
     await w.find('.mode[data-mode="duo"]').trigger('click')
     await settle()

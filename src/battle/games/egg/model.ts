@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -86,6 +87,19 @@ export interface Bird {
   flap: number
 }
 
+/** 母鸡答错一惊时掉下来的羽毛（B72）：左右飘着慢慢落 */
+export interface Feather {
+  x: number
+  y: number
+  vy: number
+  /** 左右飘的相位与幅度 */
+  sway: number
+  amp: number
+  rot: number
+  age: number
+  life: number
+}
+
 export interface EggOptions {
   reducedMotion: boolean
 }
@@ -100,6 +114,11 @@ export const HATCH_TIME = 0.7
 export const HOLE_AT = 3
 export const BEAK_AT = 3.5
 export const LIFT_FROM = 5
+/**
+ * 等答题时母鸡的小动作（B72）：nod = 低头啄一啄（面前就是窝，啄到蛋顶）、scratch = 抖抖羽毛、wave = 歪头、look = 回头张望
+ */
+export const HEN_GESTURES: readonly Gesture[] = ['nod', 'scratch', 'wave', 'look']
+const FEATHER_LIFE = 1.4
 
 export class EggModel {
   geo: EggGeometry = layoutEgg(150, 700, false)
@@ -113,6 +132,8 @@ export class EggModel {
   /** 小鸡跳出来的进度 */
   hatch: [Tween, Tween] = [new Tween(0, ease.outBack), new Tween(0, ease.outBack)]
   private hatched: [boolean, boolean] = [false, false]
+  /** 答错一惊掉的一两根羽毛（B72） */
+  feathersDown: Feather[] = []
   clouds: Cloud[] = []
   bird: Bird | null = null
   time = 0
@@ -132,7 +153,7 @@ export class EggModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.eggs = [new Racer('red', rng), new Racer('blue', rng)]
+    this.eggs = [new Racer('red', rng, ease.outBack, HEN_GESTURES), new Racer('blue', rng, ease.outBack, HEN_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -184,6 +205,7 @@ export class EggModel {
     if (prevPhase === 'countdown' && s.phase === 'playing') this.go()
     if (s.phase === 'countdown' || s.phase === 'lobby') {
       this.particles.clear()
+      this.feathersDown = []
       for (const g of this.eggGlow) g.value = 0
     }
     if (s.phase !== 'ended') {
@@ -254,6 +276,34 @@ export class EggModel {
     this.featherT = 0
   }
 
+  /** 母鸡身上掉一两根羽毛：减少动画 / 降级 2 级不掉 */
+  private dropFeathers(i: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const n = 1 + (this.rng.next() < 0.5 ? 1 : 0)
+    for (let k = 0; k < n; k++) {
+      if (this.feathersDown.length >= 4) this.feathersDown.shift()
+      this.feathersDown.push({
+        // 从背上 / 尾巴那边扬起来，往外飘（不挡蛋）
+        x: g.henX[i]! - (i === 0 ? 1 : -1) * g.henS * (0.1 + this.rng.next() * 0.1),
+        y: g.henY - g.henS * (0.7 + this.rng.next() * 0.25),
+        vy: -g.henS * (0.6 + this.rng.next() * 0.4),
+        sway: this.rng.next() * Math.PI * 2,
+        amp: g.henS * (0.08 + this.rng.next() * 0.06),
+        rot: (this.rng.next() - 0.5) * 1.2,
+        age: 0,
+        life: FEATHER_LIFE * (0.85 + this.rng.next() * 0.3),
+      })
+    }
+  }
+
+  /** 羽毛此刻的位置与转角（夹在盒子里） */
+  featherAt(f: Feather): { x: number; y: number; rot: number; alpha: number } {
+    const sw = Math.sin(f.sway + f.age * 5)
+    const pad = this.geo.henS * 0.2
+    return { x: clamp(f.x + sw * f.amp, pad, this.geo.W - pad), y: f.y, rot: f.rot + sw * 0.6, alpha: Math.min(1, (1 - f.age / f.life) * 3) }
+  }
+
   private go(): void {
     this.eggs.forEach((e, i) => {
       e.boost.kick(0.5)
@@ -263,7 +313,19 @@ export class EggModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.egg(t).act)
     switch (e.type) {
+      case 'answered': {
+        // 一题里的表演（B72）：答对母鸡扑翅膀跳一下、蛋跟着晃；答错一惊扑腾一下、掉一两根羽毛，蛋抖一抖
+        if (this.phase !== 'playing') break
+        const i = e.team === 'red' ? 0 : 1
+        this.wobble[i]!.kick(e.correct ? 0.8 : 0.6)
+        if (!e.correct) {
+          this.flap[i]!.kick(1.1)
+          this.dropFeathers(i)
+        }
+        break
+      }
       case 'countdown':
         for (const egg of this.eggs) egg.setMood('ready')
         break
@@ -315,7 +377,10 @@ export class EggModel {
   degrade(level: number): void {
     this.quality = level
     if (level >= 1) this.bird = null
-    if (level >= 2) this.particles.clear()
+    if (level >= 2) {
+      this.particles.clear()
+      this.feathersDown = []
+    }
   }
 
   step(dt: number): void {
@@ -357,6 +422,17 @@ export class EggModel {
       this.hatch[i]!.step(dt)
       if (e.mood === 'win' && !this.hatched[i] && e.pos.done) this.doHatch(i)
     })
+    for (let k = this.feathersDown.length - 1; k >= 0; k--) {
+      const f = this.feathersDown[k]!
+      f.age += dt
+      if (f.age >= f.life) {
+        this.feathersDown.splice(k, 1)
+        continue
+      }
+      // 先往上一扬，再慢慢飘下来
+      f.vy = Math.min(f.vy + g.henS * 3 * dt, g.henS * 0.45)
+      f.y += f.vy * dt
+    }
     this.particles.step(dt)
   }
 
@@ -419,6 +495,14 @@ export class EggModel {
     if (e.mood === 'win') f += 0.6 + Math.sin(this.time * 10) * 0.4
     else if (this.sprint) f += 0.3 + Math.sin(this.time * 6 + i) * 0.3
     return Math.min(1.5, f)
+  }
+
+  /** 啄一啄（B72 等答题的小动作 nod）：头往前下方一啄一啄（啄到窝里的蛋顶），0…1 */
+  peckOf(e: Racer): number {
+    const a = e.act
+    if (!this.animated || a.gesture !== 'nod') return 0
+    const q = a.gestureT
+    return Math.max(0, Math.sin(q * Math.PI * 6)) * Math.sin(Math.PI * Math.min(1, q))
   }
 
   /** 母鸡歪头：被反超 / 输了 */

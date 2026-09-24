@@ -1,5 +1,5 @@
 /**
- * README 用的预览图：用无头 Chrome（CDP）截到 screenshots/——iPhone 竖屏（390×844 @2x，触屏）：首页、地图、练习 × 2、「跟谁打」、帮助页；
+ * README 用的预览图：用无头 Chrome（CDP）截到 screenshots/——iPhone 竖屏（390×844 @2x，触屏）：首页、地图、练习 × 2、「怎么练」、帮助页；
  * 手机横屏（852×393 @3x）：打机器人的竞技场；iPad 横屏（1024×768 @2x）：开局规则句、两人一台的竞技场。
  * 用法：npm run dev 后执行 `npm run screenshots`（环境变量 BASE_URL、CHROME 可改）。
  * 安装提示条不进预览图：预先把静默期写成永久；对战的小动物预先定死（没选的每次打开随机，截出来会不一样）。

@@ -184,6 +184,19 @@ export interface PenguinPose {
   kick: number
   /** 落地压扁 0…1 */
   squash: number
+  /** 以下是一题里的表演（B72），都可选 */
+  /** 左右摇摆着踩脚：相位与幅度 0…1（两只脚轮流抬） */
+  step?: number
+  stomp?: number
+  /** 脚下打滑 0…1（两只脚往外撇） */
+  splay?: number
+  /** 张望 -1…1（眼睛和嘴往一边看） */
+  look?: number
+  /** 低头往前探 0…1（按键时蓄力：脸往下挪一点） */
+  bow?: number
+  /** 笑眯眯 0…1（答对）/ 瞪大眼、嘴成 o（答错一愣） */
+  happy?: number
+  wide?: number
 }
 
 /** 企鹅：原点在脚下正中，正面朝观众，s 是身高 */
@@ -192,12 +205,14 @@ export function drawPenguin(ctx: CanvasRenderingContext2D, x: number, y: number,
   withTransform(ctx, x, y - p.lift + p.float * s * 0.5, p.tilt, 1, 1 - p.squash * 0.12, () => {
     // 漂在水里时绕身体中心转成仰面
     withTransform(ctx, 0, -s * 0.5, -1.35 * p.float, 1, 1, () => {
-      // 脚
+      // 脚（踩脚时两只轮流抬，打滑时往外撇）
       ctx.fillStyle = '#ff9f43'
       const kick = Math.sin(p.kick) * p.float * s * 0.06
-      ellipse(ctx, -s * 0.14, s * 0.47 + kick, s * 0.12, s * 0.05)
+      const ph = Math.sin(p.step ?? 0) * (p.stomp ?? 0)
+      const splay = (p.splay ?? 0) * s * 0.08
+      ellipse(ctx, -s * 0.14 - splay, s * 0.47 + kick - Math.max(0, ph) * s * 0.08, s * 0.12, s * 0.05)
       ctx.fill()
-      ellipse(ctx, s * 0.14, s * 0.47 - kick, s * 0.12, s * 0.05)
+      ellipse(ctx, s * 0.14 + splay, s * 0.47 - kick - Math.max(0, -ph) * s * 0.08, s * 0.12, s * 0.05)
       ctx.fill()
       // 身体与肚皮
       ctx.fillStyle = '#2b2f3a'
@@ -221,35 +236,56 @@ export function drawPenguin(ctx: CanvasRenderingContext2D, x: number, y: number,
       fillRoundRect(ctx, -s * 0.26, -s * 0.1, s * 0.52, s * 0.1, s * 0.05, c.main)
       ctx.fillStyle = c.dark
       ctx.fillRect(s * 0.1, -s * 0.04, s * 0.1, s * 0.2)
-      // 眼睛（眨眼是两条线）
-      for (const d of [-1, 1] as const) {
-        ctx.fillStyle = '#2b2f3a'
-        if (p.blink > 0.5) ctx.fillRect(d * s * 0.1 - s * 0.04, -s * 0.28, s * 0.08, Math.max(1, s * 0.02))
-        else {
-          circle(ctx, d * s * 0.1, -s * 0.28, s * 0.045)
-          ctx.fill()
-          ctx.fillStyle = '#ffffff'
-          circle(ctx, d * s * 0.1 + s * 0.015, -s * 0.295, s * 0.015)
-          ctx.fill()
+      // 脸：低头往前探时整张脸往下挪一点
+      withTransform(ctx, 0, (p.bow ?? 0) * s * 0.05, 0, 1, 1, () => {
+        // 眼睛（眨眼是两条线；答对笑眯眯、答错瞪大；张望时往一边看）
+        const happy = (p.happy ?? 0) * (1 - p.float)
+        const wide = (p.wide ?? 0) * (1 - p.float)
+        const glance = (p.look ?? 0) * s * 0.06
+        for (const d of [-1, 1] as const) {
+          ctx.fillStyle = '#2b2f3a'
+          if (happy > 0.4 && wide < 0.3) {
+            ctx.strokeStyle = '#2b2f3a'
+            ctx.lineWidth = Math.max(1, s * 0.035)
+            ctx.beginPath()
+            ctx.arc(d * s * 0.1, -s * 0.27, s * 0.04, Math.PI, 0)
+            ctx.stroke()
+          } else if (p.blink > 0.5 && wide < 0.3) ctx.fillRect(d * s * 0.1 - s * 0.04, -s * 0.28, s * 0.08, Math.max(1, s * 0.02))
+          else {
+            const r = s * 0.045 * (1 + wide * 0.35)
+            circle(ctx, d * s * 0.1 + glance, -s * 0.28, r)
+            ctx.fill()
+            ctx.fillStyle = '#ffffff'
+            circle(ctx, d * s * 0.1 + glance + s * 0.015, -s * 0.295, s * 0.015)
+            ctx.fill()
+          }
+          if (p.worry > 0.1) {
+            ctx.strokeStyle = '#2b2f3a'
+            ctx.lineWidth = Math.max(1, s * 0.03)
+            ctx.beginPath()
+            ctx.moveTo(d * s * 0.16, -s * 0.37 + p.worry * s * 0.02)
+            ctx.lineTo(d * s * 0.05, -s * 0.35 - p.worry * s * 0.03)
+            ctx.stroke()
+          }
         }
-        if (p.worry > 0.1) {
-          ctx.strokeStyle = '#2b2f3a'
-          ctx.lineWidth = Math.max(1, s * 0.03)
+        // 嘴：欢呼 / 惊讶时张开；答错一愣时是个小 o
+        ctx.fillStyle = '#ff9f43'
+        if (wide > 0.3 && p.cheer === 0) {
+          circle(ctx, glance, -s * 0.16, s * 0.045)
+          ctx.fill()
+          ctx.fillStyle = '#c0392b'
+          circle(ctx, glance, -s * 0.16, s * 0.022)
+          ctx.fill()
+        } else {
+          const open = Math.max(p.cheer, p.float, happy) * s * 0.06
           ctx.beginPath()
-          ctx.moveTo(d * s * 0.16, -s * 0.37 + p.worry * s * 0.02)
-          ctx.lineTo(d * s * 0.05, -s * 0.35 - p.worry * s * 0.03)
-          ctx.stroke()
+          ctx.moveTo(-s * 0.07 + glance, -s * 0.2)
+          ctx.lineTo(s * 0.07 + glance, -s * 0.2)
+          ctx.lineTo(glance, -s * 0.12 + open)
+          ctx.closePath()
+          ctx.fill()
         }
-      }
-      // 嘴：欢呼 / 惊讶时张开
-      ctx.fillStyle = '#ff9f43'
-      const open = Math.max(p.cheer, p.float) * s * 0.06
-      ctx.beginPath()
-      ctx.moveTo(-s * 0.07, -s * 0.2)
-      ctx.lineTo(s * 0.07, -s * 0.2)
-      ctx.lineTo(0, -s * 0.12 + open)
-      ctx.closePath()
-      ctx.fill()
+      })
     })
   })
 }

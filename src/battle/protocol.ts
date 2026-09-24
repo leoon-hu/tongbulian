@@ -56,7 +56,8 @@ export interface MatchState {
  * half：到目标分的一半。结束那一题不再发这几种。
  */
 export type MatchEvent =
-  | { type: 'answered'; playerId: string; index: number; correct: boolean; given: string }
+  /** 有人答了一题（对错都发）；team 给游戏的角色做「答对 / 答错」的表演（B72） */
+  | { type: 'answered'; playerId: string; team: Team; index: number; correct: boolean; given: string }
   | { type: 'point'; team: Team; playerId: string; streak: number }
   | { type: 'streak'; playerId: string; team: Team; n: number }
   | { type: 'lead'; team: Team }

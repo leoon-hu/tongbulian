@@ -3,6 +3,7 @@
  * renderBackground 画不动的部分（星空渐变、行星、月亮、导轨、发射台底座），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（闪烁的星星、流星、目标星、发射台闪光、粒子、两枚火箭）。
  */
+import { drawActFx, withActBody } from '@/battle/game/engine/act'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawRocket } from '@/battle/game/sprites/rocket'
 import { drawGoalStar, drawLaunchPad, drawMoon, drawPlanet, drawShootingStar, drawTwinkle, spaceGradient } from '@/battle/game/sprites/space'
@@ -54,13 +55,21 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: RocketModel): vo
   }
   // 粒子（烟、烟花）
   m.particles.draw(ctx)
-  // 两枚火箭
+  // 两枚火箭。一题里的表演（B72）：火箭自己是角色——蹿 / 摆 / 翻跟头 / 压扁拉长交给 withActBody（朝上，
+  // 「张望」= 朝对面那枚歪一下），尾焰跟着一呼一吸、按键蹿、答对喷大火、答错哑火；头顶图标画在鼻锥上面
   for (const r of m.rockets) {
-    const x = g.colX[r.team === 'red' ? 0 : 1] + m.xOffset(r)
-    drawRocket(ctx, x, m.yOf(r), g.size, r.team, {
-      tilt: m.tiltOf(r),
-      flame: m.flameOf(r),
-      flicker: m.animated ? 0.5 + 0.5 * Math.sin(t * 40 + r.phase) : 0,
-    })
+    const i = r.team === 'red' ? 0 : 1
+    const x = g.colX[i] + m.xOffset(r)
+    const y = m.yOf(r)
+    const a = r.act.pose()
+    const toCenter = i === 0 ? 1 : -1
+    withActBody(ctx, x, y, g.size, { ...a, lean: a.look * 0.2 * toCenter, shake: a.shake * 1.4 }, 1, () =>
+      drawRocket(ctx, 0, 0, g.size, r.team, {
+        tilt: m.tiltOf(r),
+        flame: m.flameAct(r, m.flameOf(r)),
+        flicker: m.animated ? 0.5 + 0.5 * Math.sin(t * 40 + r.phase) : 0,
+      }),
+    )
+    drawActFx(ctx, x, y - (a.lift + 1.18 * a.sy) * g.size, g.size * 0.6, a, { side: toCenter, quality: m.quality })
   }
 }

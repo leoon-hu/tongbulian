@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
@@ -49,6 +50,8 @@ export function layoutPuzzle(W: number, H: number, compact: boolean): PuzzleGeom
   const boardX = (W - boardW) / 2
   const top0 = pad
   const top1 = H - pad - boardH
+  // 中间空出来的地方够的话，红队的角色再往下站一点：答对跳起来（约半个身高，B72）头不撞到红板
+  const drop = compact ? 0 : clamp((top1 - top0 - boardH - kidRoom * 2 - midGap) / 2, 0, size)
   return {
     W,
     H,
@@ -63,7 +66,7 @@ export function layoutPuzzle(W: number, H: number, compact: boolean): PuzzleGeom
     border: Math.max(2, 4 * k),
     size,
     kidX: [boardX + boardW * 0.5, boardX + boardW * 0.5],
-    kidY: [top0 + boardH + kidRoom, top1 - kidRoom + size * 1.1],
+    kidY: [top0 + boardH + kidRoom + drop, top1 - kidRoom + size * 1.1],
   }
 }
 
@@ -88,6 +91,8 @@ export const SPRINT_FROM = 2
 export const SPARKLE_ROUNDS = 3
 export const SPARKLE_GAP = 0.5
 export const LIT_TIME = 0.8
+/** 等答题时的小动作（B72）：张望、挠头、伸懒腰；等久了冒泡泡时手托下巴（渲染里接） */
+export const PUZZLE_GESTURES: readonly Gesture[] = ['look', 'scratch', 'stretch']
 
 export class PuzzleModel {
   geo: PuzzleGeometry = layoutPuzzle(150, 700, false)
@@ -119,7 +124,7 @@ export class PuzzleModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.kids = [new Racer('red', rng), new Racer('blue', rng)]
+    this.kids = [new Racer('red', rng, ease.outBack, PUZZLE_GESTURES), new Racer('blue', rng, ease.outBack, PUZZLE_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -268,6 +273,7 @@ export class PuzzleModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.kid(t).act)
     switch (e.type) {
       case 'countdown':
         for (const kid of this.kids) kid.setMood('ready')
@@ -386,11 +392,14 @@ export class PuzzleModel {
     if (!this.animated || g.size === 0) return 0
     if (kid.mood === 'ready') return Math.abs(Math.sin(kid.hop)) * g.size * 0.15
     if (kid.mood === 'win') return Math.abs(Math.sin(kid.phase)) * g.size * 0.12
-    if (kid.mood === 'run') return Math.max(0, Math.sin(Math.min(1, kid.moodT / 0.4) * Math.PI)) * g.size * 0.3
+    // 答对那一拍由表演来跳（B72：蓄力 → 跳 → 落地）
+    if (kid.mood === 'run' && kid.act.rightT < 0) return Math.max(0, Math.sin(Math.min(1, kid.moodT / 0.4) * Math.PI)) * g.size * 0.3
     return 0
   }
 
+  /** 挠头：输了一直挠；答错那一拍（B72）挠一挠 */
   scratchOf(kid: Racer): number {
-    return kid.mood === 'lose' ? Math.min(1, kid.moodT / 0.8) : 0
+    if (kid.mood === 'lose') return Math.min(1, kid.moodT / 0.8)
+    return kid.act.wrongT >= 0 ? Math.sin(Math.PI * Math.min(1, kid.act.wrongT / WRONG_TIME)) : 0
   }
 }

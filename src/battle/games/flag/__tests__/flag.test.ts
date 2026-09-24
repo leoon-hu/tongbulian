@@ -173,6 +173,58 @@ describe('抢旗 · 模型（B36t）', () => {
   })
 })
 
+describe('抢旗 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡、踏步不离地；按键只亮自己那一队的灯泡；红队答对蓄力再跳起来欢呼、蓝队答错脚下一绊冒汗（不后退）；画得出来', () => {
+    const m = new FlagModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.kids
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    b.act.forceGesture('hop') // 原地踏步
+    const ctx = stubCtx()
+    m.step(0.3)
+    renderDynamic(ctx, m)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    const flagX = m.flag.value
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    m.setState(snap(4, 2))
+    m.onEvent({ type: 'point', team: 'red', playerId: 'r', streak: 1 })
+    expect(m.liftOf(r, 0)).toBe(0) // 先蓄力，不再一下弹到最高
+    let maxLift = 0
+    let maxArms = 0
+    let maxTrip = 0
+    let maxSweat = 0
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      maxLift = Math.max(maxLift, r.act.pose().lift)
+      maxArms = Math.max(maxArms, r.act.pose().arms)
+      maxTrip = Math.max(maxTrip, m.tripOf(b))
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      expect(m.tripOf(r)).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxTrip).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(m.flag.target).toBeLessThan(flagX) // 旗子只跟着比分走：红队得分往红队挪，答错不往回挪
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    settle(m, 1)
+    expect(m.tripOf(b)).toBe(0)
+    // 减少动画：不绊（只冒汗、瞪眼）
+    const quiet = new FlagModel(createRng(4), { reducedMotion: true })
+    quiet.setState(snap(1, 1))
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    quiet.step(0.1)
+    expect(quiet.tripOf(quiet.kids[1])).toBe(0)
+    expect(quiet.kids[1].act.pose().sweat).toBe(1)
+  })
+})
+
 describe('抢旗 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new FlagModel(createRng(2))

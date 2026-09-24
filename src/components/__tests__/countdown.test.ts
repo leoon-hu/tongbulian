@@ -6,6 +6,7 @@ import { SKINS, finishKey, ruleKey } from '@/battle/skins'
 import Countdown, { RULE_MAX_MS, RULE_MIN_MS } from '@/components/battle/Countdown.vue'
 
 vi.mock('@/engine/voice', () => ({ say: vi.fn(() => Promise.resolve()), hush: vi.fn(), warmUp: vi.fn(), isVoiceEnabled: () => false }))
+vi.mock('@/battle/sfx', async (orig) => ({ ...(await orig<typeof import('@/battle/sfx')>()), playSfx: vi.fn() }))
 
 afterEach(() => {
   vi.useRealTimers()
@@ -38,6 +39,24 @@ describe('开局倒数（B6）：先讲规则再倒数', () => {
     vi.advanceTimersByTime(600)
     expect(w.emitted('done')).toHaveLength(1)
     w.unmount()
+  })
+
+  it('「开始」时放这个游戏开始的一声（B73：赛跑发令枪、火车汽笛）；不知道是哪个游戏就是通用的「嘟」', async () => {
+    const { playSfx } = await import('@/battle/sfx')
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    for (const [skin, sounds] of [
+      ['race', ['pistol']],
+      ['train', ['whistle']],
+      [null, ['go']],
+    ] as const) {
+      vi.mocked(playSfx).mockClear()
+      const w = mount(Countdown, { props: { rule: null, skin } })
+      vi.advanceTimersByTime(3800)
+      await flushPromises()
+      const played = vi.mocked(playSfx).mock.calls.map((c) => c[0]).filter((x) => x !== 'tick')
+      expect(played, String(skin)).toEqual(sounds)
+      w.unmount()
+    }
   })
 
   it('没传 rule（再来一局）直接从「预备…」开始；总时长还是 4.4 秒', async () => {

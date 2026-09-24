@@ -54,10 +54,27 @@ const phase = computed(() => state.value?.phase)
 /** 皮肤 id 来自建房者（服务器只透传）：不认识的就用这一章排到的游戏，别让竞技场没有画面 */
 const skin = computed(() => (state.value ? (skinById(state.value.skin) ?? skinById(chapterSkin(state.value.kpId))) : undefined))
 /** 游戏只拿这份快照（B34）：与皮肤 props 同一个类型 */
+// 每队正在按的内容拼在一起（B72）：游戏的角色看它变没变做「有主意了、蓄力」的表演
+const teamInputOf = (team: Team) =>
+  state.value
+    ? teamPlayers(state.value, team)
+        .map((p) => p.input)
+        .filter(Boolean)
+        .join('|')
+    : ''
 const skinProps = computed(() => {
   const s = state.value
   return s
-    ? { red: s.score.red, blue: s.score.blue, target: s.target, phase: s.phase, winner: s.winner, lastPoint: s.lastPoint, avatars: teamAvatars(s.players) }
+    ? {
+        red: s.score.red,
+        blue: s.score.blue,
+        target: s.target,
+        phase: s.phase,
+        winner: s.winner,
+        lastPoint: s.lastPoint,
+        avatars: teamAvatars(s.players),
+        inputs: { red: teamInputOf('red'), blue: teamInputOf('blue') },
+      }
     : null
 })
 
@@ -90,15 +107,15 @@ const myTeam = computed<Team | null>(() => {
 })
 /** 只观战的设备（多设备里建房的那台 / 扫观战码的）：顶栏标一下 */
 const watching = computed(() => store.mode === 'online' && store.operable.length === 0)
-// ── 背景音乐（B68）：比赛中按游戏类别放，冲刺加快，结果页 / 倒数停；配置里关了或 🔇 静音不放 ──
+// ── 背景音乐（B68 / B73）：比赛中放这个游戏自己的曲子，冲刺加快，结果页 / 倒数停；配置里关了或 🔇 静音不放 ──
 const sprinting = computed(() => {
   const s = state.value
   return !!s && s.phase === 'playing' && Math.max(s.score.red, s.score.blue) >= s.target - 2
 })
 watch(
-  () => [phase.value, skin.value?.kind, store.prefs.music, settings.soundEnabled] as const,
-  ([p, kind, music, sound]) => {
-    if (p === 'playing' && kind && music && sound) startMusic(kind, sprinting.value)
+  () => [phase.value, skin.value?.id, store.prefs.music, settings.soundEnabled] as const,
+  ([p, id, music, sound]) => {
+    if (p === 'playing' && id && music && sound) startMusic(id, sprinting.value)
     else stopMusic()
   },
   { immediate: true },
@@ -359,7 +376,7 @@ onBeforeUnmount(() => {
 
     <EmoteLayer :emotes="store.emotes" />
     <Callout :callout="store.callout" />
-    <Countdown v-if="phase === 'countdown'" :rule="store.intro && skin ? ruleKey(skin.id) : null" @done="store.beginPlay()" />
+    <Countdown v-if="phase === 'countdown'" :rule="store.intro && skin ? ruleKey(skin.id) : null" :skin="skin?.id" @done="store.beginPlay()" />
     <VictoryOverlay v-if="phase === 'ended' && state.winner" :team="state.winner" :quiet="showResult" />
     <ResultPanel
       v-if="showResult"

@@ -51,12 +51,15 @@ export interface RodGeometry {
   ctrlY: number
 }
 
-/** 钓竿的几何：手握处、竿尖（弯了竿尖往下往回一点）；x, y 是钓鱼人的原点 */
-export function rodGeometry(x: number, y: number, s: number, facing: 1 | -1, bend: number, laid: number): RodGeometry {
-  const pivotX = x + facing * 0.22 * s
-  const pivotY = y - 0.5 * s
+/**
+ * 钓竿的几何：手握处、竿尖（弯了竿尖往下往回一点；bend 为负是竿子往上弹）；x, y 是钓鱼人的原点。
+ * yank 0…1 是往后一拽（B72 答对）：握竿的手往回往上收、竿子立起来
+ */
+export function rodGeometry(x: number, y: number, s: number, facing: 1 | -1, bend: number, laid: number, yank = 0): RodGeometry {
+  const pivotX = x + facing * (0.22 - yank * 0.12) * s
+  const pivotY = y - (0.5 + yank * 0.12) * s
   const L = ROD_LEN * s
-  const a = ROD_ANGLE + laid * 0.9
+  const a = ROD_ANGLE + laid * 0.9 - yank * 0.35
   const dx = facing * Math.sin(a) * L
   const dy = -Math.cos(a) * L
   const tipX = pivotX + dx - facing * bend * L * 0.12
@@ -268,13 +271,27 @@ export interface AnglerPose {
   blink: number
   /** 回头 0…1 */
   look: number
+  /** 往后一拽竿子 0…1（答对，B72） */
+  yank?: number
+  /** 空着的那只手举起来 0…1（答对） */
+  raise?: number
+  /** 两腿晃的幅度（× 坐高，默认 0.08；等答题时晃得更欢） */
+  kick?: number
+  /** 盯着浮漂 0…1：眼睛往前下方看 */
+  gaze?: number
+  /** 头往两边摆（弧度，摇头） */
+  turn?: number
+  /** 张嘴笑 / 瞪大眼嘴成 o 0…1 */
+  happy?: number
+  wide?: number
 }
 
 /** 坐在码头边钓鱼的小猫 / 小熊：原点在坐着的码头面、身体正中，本地朝右，蓝队 facing = −1 镜像 */
 export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, team: Team, kind: AnglerKind, p: AnglerPose): void {
   const c = TEAM[team]
   const sk = SKIN[kind]
-  const rod = rodGeometry(x, y - p.lift, s, p.facing, p.bend, p.laid)
+  const yank = p.yank ?? 0
+  const rod = rodGeometry(x, y - p.lift, s, p.facing, p.bend, p.laid, yank)
   // 钓竿（先画，手在上面）
   ctx.strokeStyle = '#6b4f2e'
   ctx.lineCap = 'round'
@@ -299,7 +316,7 @@ export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.strokeStyle = sk.fur
     ctx.lineWidth = Math.max(1.5, s * 0.13)
     for (const d of [-1, 1] as const) {
-      const sw = Math.sin(p.swing + (d < 0 ? Math.PI : 0)) * s * 0.08
+      const sw = Math.sin(p.swing + (d < 0 ? Math.PI : 0)) * s * (p.kick ?? 0.08)
       ctx.beginPath()
       ctx.moveTo(d * 0.1 * s + 0.1 * s, -0.12 * s)
       ctx.lineTo(d * 0.1 * s + 0.24 * s + sw, 0.32 * s)
@@ -318,9 +335,21 @@ export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.fill()
     ctx.fillStyle = 'rgba(255,255,255,0.35)'
     ctx.fillRect(-0.14 * s, -0.5 * s, 0.28 * s, 0.05 * s)
-    // 手臂：握竿 / 举鱼 / 挠头
+    // 手臂：握竿 / 举鱼 / 挠头；答对往后一拽、空着的手举起来（B72）
     ctx.strokeStyle = sk.fur
     ctx.lineWidth = Math.max(1.5, s * 0.1)
+    const gripX = (0.22 - yank * 0.12) * s
+    const gripY = -(0.5 + yank * 0.12) * s
+    const raise = p.cheer > 0 ? 0 : (p.raise ?? 0)
+    let fx = 0.1 * s
+    let fy = -0.42 * s
+    if (p.scratch > 0.3) {
+      fx = -0.2 * s
+      fy = -1.02 * s
+    }
+    // 举起来的手在帽子上方、偏水那边（两个人都坐在盒子边上，往外举会出盒子）
+    fx += (0.2 * s - fx) * raise
+    fy += (-1.5 * s - fy) * raise
     ctx.beginPath()
     if (p.cheer > 0) {
       ctx.moveTo(0.14 * s, -0.6 * s)
@@ -329,14 +358,16 @@ export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.lineTo(-0.1 * s, -1.08 * s)
     } else {
       ctx.moveTo(0.14 * s, -0.6 * s)
-      ctx.lineTo(0.22 * s, -0.5 * s)
+      ctx.lineTo(gripX, gripY)
       ctx.moveTo(-0.14 * s, -0.6 * s)
-      if (p.scratch > 0.3) ctx.lineTo(-0.2 * s, -1.02 * s)
-      else ctx.lineTo(0.1 * s, -0.42 * s)
+      ctx.lineTo(fx, fy)
     }
     ctx.stroke()
     // 头
-    withTransform(ctx, 0, -0.86 * s, -p.look * 0.4 + p.scratch * 0.1, 1, 1, () => {
+    const gaze = p.gaze ?? 0
+    const happy = p.happy ?? 0
+    const wide = p.wide ?? 0
+    withTransform(ctx, 0, -0.86 * s, -p.look * 0.4 + p.scratch * 0.1 + (p.turn ?? 0), 1, 1, () => {
       ctx.fillStyle = sk.fur
       if (kind === 'cat') {
         for (const d of [-1, 1] as const) {
@@ -371,10 +402,19 @@ export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, 
         ctx.stroke()
       }
       ctx.fillStyle = '#2b2b2b'
+      // 眼睛：盯着浮漂时往前下方看；答错瞪大；答对笑眯眯
+      const ex = gaze * 0.025 * s
+      const ey = -0.03 * s + gaze * 0.02 * s
       for (const d of [-1, 1] as const) {
-        if (p.blink > 0.5) ctx.fillRect(d * 0.1 * s - 0.035 * s, -0.03 * s, 0.07 * s, Math.max(1, 0.02 * s))
-        else {
-          circle(ctx, d * 0.1 * s, -0.03 * s, 0.035 * s)
+        if (p.blink > 0.5 && wide < 0.3) ctx.fillRect(d * 0.1 * s - 0.035 * s, -0.03 * s, 0.07 * s, Math.max(1, 0.02 * s))
+        else if (happy > 0.4 && wide < 0.3) {
+          ctx.strokeStyle = '#2b2b2b'
+          ctx.lineWidth = Math.max(1, 0.025 * s)
+          ctx.beginPath()
+          ctx.arc(d * 0.1 * s, -0.015 * s, 0.035 * s, Math.PI, 0)
+          ctx.stroke()
+        } else {
+          circle(ctx, d * 0.1 * s + ex, ey, 0.035 * s * (1 + wide * 0.5))
           ctx.fill()
         }
       }
@@ -382,10 +422,22 @@ export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.fill()
       ctx.strokeStyle = '#8a5a3a'
       ctx.lineWidth = Math.max(1, 0.03 * s)
-      ctx.beginPath()
-      if (p.cheer > 0) ctx.arc(0, 0.1 * s, 0.06 * s, 0, Math.PI)
-      else ctx.arc(0, 0.09 * s, 0.05 * s, 0.2, Math.PI - 0.2)
-      ctx.stroke()
+      if (wide > 0.3) {
+        ctx.fillStyle = '#7a3b2e'
+        ellipse(ctx, 0, 0.13 * s, 0.035 * s, 0.045 * s)
+        ctx.fill()
+      } else if (happy > 0.3) {
+        ctx.fillStyle = '#c94f4f'
+        ctx.beginPath()
+        ctx.arc(0, 0.1 * s, 0.065 * s, 0, Math.PI)
+        ctx.closePath()
+        ctx.fill()
+      } else {
+        ctx.beginPath()
+        if (p.cheer > 0) ctx.arc(0, 0.1 * s, 0.06 * s, 0, Math.PI)
+        else ctx.arc(0, 0.09 * s, 0.05 * s, 0.2, Math.PI - 0.2)
+        ctx.stroke()
+      }
       // 队色渔夫帽
       ctx.fillStyle = c.main
       ctx.beginPath()
@@ -397,10 +449,14 @@ export function drawAngler(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.fill()
       fillRoundRect(ctx, -0.34 * s, -0.19 * s, 0.68 * s, 0.07 * s, 0.035 * s, c.dark)
     })
-    // 握竿的手
+    // 握竿的手（空着的那只举起来时也画个拳头）
     ctx.fillStyle = sk.fur
-    circle(ctx, 0.22 * s, -0.5 * s, s * 0.065)
+    circle(ctx, gripX, gripY, s * 0.065)
     ctx.fill()
+    if (raise > 0.3) {
+      circle(ctx, fx, fy, s * 0.075)
+      ctx.fill()
+    }
     if (p.cheer > 0) {
       circle(ctx, 0.12 * s, -1.08 * s, s * 0.065)
       ctx.fill()

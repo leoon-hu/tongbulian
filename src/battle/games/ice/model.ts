@@ -6,6 +6,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { Actor, WRONG_TIME, actEvent, actState, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Blinker, Decay, advancePhase } from '@/battle/game/engine/rig'
 import { lerp, Tween } from '@/battle/game/engine/tween'
@@ -87,6 +88,10 @@ export interface Side {
   splashed: boolean
   /** 漂在水里多久（蹬腿 / 起伏的相位） */
   floatT: number
+  /** 一题里的表演（B72） */
+  act: Actor
+  /** 左右摇摆着踩脚的相位 */
+  waddle: number
 }
 
 export interface Flake {
@@ -111,6 +116,8 @@ export const SPARKLE_ROUNDS = 3
 export const SPARKLE_GAP = 0.5
 
 const inQuad = (t: number): number => t * t
+/** 等答题时的小动作（B72）：拍拍翅膀、张望、蹦一下 */
+export const PENGUIN_GESTURES: readonly Gesture[] = ['wave', 'look', 'hop']
 
 export class IceModel {
   geo: IceGeometry = layoutIce(150, 700, false)
@@ -164,6 +171,8 @@ export class IceModel {
       drop: new Tween(0, inQuad),
       splashed: false,
       floatT: 0,
+      act: new Actor(this.rng, PENGUIN_GESTURES, !this.opts.reducedMotion),
+      waddle: this.rng.next() * Math.PI * 2,
     }
   }
 
@@ -260,6 +269,7 @@ export class IceModel {
   }
 
   setState(s: GameState): void {
+    actState(s, (t) => this.side(t).act)
     this.target = Math.max(1, Math.min(LEVELS, s.target))
     const prevPhase = this.phase
     this.phase = s.phase
@@ -319,7 +329,12 @@ export class IceModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.side(t).act)
     switch (e.type) {
+      case 'answered':
+        // 答错（B72）：脚下一滑，脚底下迸几粒冰碴
+        if (e.team && !e.correct && this.phase === 'playing') this.chips(this.side(e.team))
+        break
       case 'countdown':
         for (const side of this.sides) this.setMood(side, 'ready')
         break
@@ -382,6 +397,24 @@ export class IceModel {
     this.quality = level
     if (level >= 1) this.fishJumpT = -1
     if (level >= 2) this.particles.clear()
+  }
+
+  /** 脚下打滑迸的冰碴 */
+  private chips(side: Side): void {
+    if (!this.animated || this.quality >= 2 || side.splashed) return
+    const g = this.geo
+    this.particles.emit({
+      x: g.colX[side.team === 'red' ? 0 : 1],
+      y: this.penguinY(side),
+      count: 6,
+      speed: 45 * g.k,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 0.9,
+      life: 0.45,
+      size: 2 * g.k,
+      colors: ['#ffffff', '#d9f1ff'],
+      gravity: 200 * g.k,
+    })
   }
 
   private splash(side: Side): void {
@@ -470,6 +503,9 @@ export class IceModel {
     }
     for (const side of this.sides) {
       side.moodT += dt
+      side.act.step(dt)
+      // 左右摇摆着踩脚：比赛中一直有，按键时站定（摆得慢），冲刺摆得快
+      if (animated) side.waddle = advancePhase(side.waddle, dt, (this.sprint ? 1.7 : 1.2) * (1 - 0.6 * side.act.typing))
       side.flap.step(dt)
       side.wobble.step(dt)
       side.worry.step(dt)
@@ -538,6 +574,32 @@ export class IceModel {
     if (side.mood === 'ready') return Math.abs(Math.sin(side.hop)) * g.size * 0.3
     if (side.mood === 'win') return Math.abs(Math.sin(side.hop)) * g.size * 0.45
     return 0
+  }
+
+  /** 一题里的表演（B72）：踩脚的幅度 0…1（比赛中站在冰上才踩） */
+  stompOf(side: Side): number {
+    if (!this.animated || side.splashed || this.phase !== 'playing') return 0
+    return 1 - 0.7 * side.act.typing
+  }
+
+  /** 答错脚下一滑（左右打滑）：身子横着滑出去多少（px），越滑越小，站好为止 */
+  slideOf(side: Side): number {
+    const a = side.act
+    if (!this.animated || a.wrongT < 0) return 0
+    const q = a.wrongT / WRONG_TIME
+    if (q > 0.75) return 0
+    return Math.sin((q / 0.75) * Math.PI * 4) * (1 - q / 0.75) * this.geo.size * 0.24
+  }
+
+  /** 翅膀：得分 / 开打拍一下、赢了一直拍；按键张开；答对跳起来使劲拍；等答题时的小动作拍两下 */
+  flapOf(side: Side): number {
+    const a = side.act
+    const p = a.pose()
+    let f = Math.max(side.flap.value, side.mood === 'win' ? 0.5 + Math.sin(side.hop) * 0.5 : 0, a.typing * 0.55)
+    const beat = this.animated ? 0.5 + 0.5 * Math.sin(this.time * 24) : 1
+    f = Math.max(f, p.arms * (0.45 + 0.55 * beat))
+    if (p.wave > 0.05) f = Math.max(f, p.wave * (0.2 + 0.6 * (this.animated ? 0.5 + 0.5 * Math.sin(p.beat * 2) : 1)))
+    return f
   }
 
   /** 只剩一块冰时那块冰的报警闪烁 0…1 */

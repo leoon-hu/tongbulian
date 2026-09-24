@@ -77,7 +77,7 @@ export const HELP_PATH = 'help/'
 const HELP_ROOT = '../'
 const appMap = (c: Course): string => `${ROOT}#/s/${c.subjectId}/g/${c.gradeId}`
 const appPractice = (c: Course, kp: KnowledgePoint): string => `${appMap(c)}/practice/${kp.id}`
-/** 对战设置页（选跟谁打）：知识点页的主按钮深链到这里 */
+/** 知识点的设置页（选怎么练：自己练或三种对战）：知识点页的主按钮深链到这里 */
 const appBattle = (kp: KnowledgePoint): string => `${ROOT}#/battle/new/${kp.id}`
 
 // ── 示例题：固定种子，三档难度各取几道不重复的题 ─────────────────────────

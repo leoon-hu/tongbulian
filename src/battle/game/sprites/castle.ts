@@ -88,11 +88,11 @@ export function drawBattlement(ctx: CanvasRenderingContext2D, x: number, top: nu
   })
 }
 
-/** 小炮：炮身 + 轮子；(x, y) 是轮子着地点，dir 是炮口朝向，recoil 0…1 后坐 */
-export function drawCannon(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, dir: 1 | -1, recoil: number): void {
+/** 小炮：炮身 + 轮子；(x, y) 是轮子着地点，dir 是炮口朝向，recoil 0…1 后坐，droop 0…1 炮口耷拉下来（哑炮，B72） */
+export function drawCannon(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, dir: 1 | -1, recoil: number, droop = 0): void {
   withTransform(ctx, x - dir * recoil * s * 0.15, y, 0, dir, 1, () => {
     ctx.fillStyle = '#3d3d4a'
-    withTransform(ctx, 0, -s * 0.32, -0.35, 1, 1, () => {
+    withTransform(ctx, 0, -s * 0.32, -0.35 + droop * 0.45, 1, 1, () => {
       fillRoundRect(ctx, -s * 0.28, -s * 0.13, s * 0.75, s * 0.26, s * 0.1, '#3d3d4a')
       ctx.fillStyle = '#5a5a6a'
       ctx.fillRect(s * 0.3, -s * 0.15, s * 0.17, s * 0.3)
@@ -133,10 +133,10 @@ export function drawRubble(ctx: CanvasRenderingContext2D, x: number, groundY: nu
   }
 }
 
-/** 炮口的烟：一团淡白 */
-export function drawPuffSmoke(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number): void {
+/** 炮口的烟：一团淡白（哑炮那一小团是灰的） */
+export function drawPuffSmoke(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number, color = '#f4f4f8'): void {
   withAlpha(ctx, alpha, () => {
-    ctx.fillStyle = '#f4f4f8'
+    ctx.fillStyle = color
     circle(ctx, x, y, r)
     ctx.fill()
     ellipse(ctx, x + r * 0.7, y - r * 0.3, r * 0.7, r * 0.55)

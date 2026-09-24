@@ -135,6 +135,91 @@ describe('赛车 · 模型（B36g）', () => {
   })
 })
 
+describe('赛车 · 一题里的表演（B72）', () => {
+  const answered = (team: 'red' | 'blue', correct: boolean) => ({ type: 'answered' as const, playerId: team[0]!, team, index: 0, correct, given: '1' })
+
+  it('等久了冒泡泡；按键亮灯泡、踩油门冒一口烟；红队答对翘着车头跳起来、司机举手；蓝队答错熄火冒黑烟、车灯暗、冒汗；只演自己那一队；画得出来', () => {
+    const m = new CarModel(createRng(3))
+    m.layout(1000, 120, false)
+    const g = m.geo
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.cars
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.body(0).rumble).toBeGreaterThan(0) // 怠速微微抖
+    m.particles.clear()
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    expect(m.particles.count).toBeGreaterThan(0) // 踩一脚油门
+    m.step(1 / 60)
+    expect(m.body(0).tilt).toBeLessThan(0) // 车尾一沉
+    m.onEvent(answered('red', true))
+    m.onEvent(answered('blue', false))
+    expect(m.particles.items.some((p) => p.color === '#2c2c33' || p.color === '#5a5a63')).toBe(true) // 熄火的黑烟
+    let maxLift = 0
+    let minTilt = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let minLamp = 1
+    const ctx = stubCtx()
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      const br = m.body(0)
+      const bb = m.body(1)
+      maxLift = Math.max(maxLift, br.lift)
+      minTilt = Math.min(minTilt, br.tilt)
+      maxArms = Math.max(maxArms, r.act.pose().arms)
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      minLamp = Math.min(minLamp, bb.lamp)
+      expect(bb.rumble).toBe(0) // 熄火了不抖
+      expect(b.act.pose().arms).toBe(0)
+      expect(br.lamp).toBe(1)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(g.size * 0.25)
+    expect(minTilt).toBeLessThan(-0.15)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(minLamp).toBeLessThan(0.5)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 站好后重新打着火
+    settle(m, 1)
+    expect(m.body(1).stall).toBe(0)
+    expect(m.body(1).rumble).toBeGreaterThan(0)
+  })
+
+  it('跳的高度按盒子顶边收住；减少动画时车身不跳不抖，只留举手与表情', () => {
+    const m = new CarModel(createRng(4))
+    m.layout(820, 56, true)
+    m.setState(snap(2, 2))
+    settle(m)
+    m.onEvent({ type: 'streak', team: 'red', playerId: 'r', n: 3 })
+    m.onEvent(answered('red', true))
+    m.onEvent({ type: 'streak', team: 'red', playerId: 'r', n: 3 })
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      expect(m.geo.laneY[0] - m.geo.size * 0.9 - m.body(0).lift).toBeGreaterThanOrEqual(0)
+      expect(m.body(0).spin).toBe(0) // 上面那条道没地方翻跟头
+    }
+    const quiet = new CarModel(createRng(4), { reducedMotion: true })
+    quiet.layout(1000, 120, false)
+    quiet.setState(snap(2, 2))
+    settle(quiet)
+    quiet.onEvent(answered('red', true))
+    let arms = 0
+    for (let i = 0; i < 40; i++) {
+      quiet.step(1 / 60)
+      const q = quiet.body(0)
+      expect(q.lift).toBe(0)
+      expect(q.tilt).toBe(0)
+      expect(q.rumble).toBe(0)
+      arms = Math.max(arms, quiet.cars[0].act.pose().arms)
+    }
+    expect(arms).toBeGreaterThan(0.9)
+  })
+})
+
 describe('赛车 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new CarModel(createRng(2))

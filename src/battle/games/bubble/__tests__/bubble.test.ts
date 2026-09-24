@@ -181,6 +181,71 @@ describe('吹泡泡 · 模型（B36o）', () => {
   })
 })
 
+describe('吹泡泡 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡、按键亮灯泡；红队答对使劲吹一口、跳起来举手；蓝队答错冒汗摇头、泡泡晃得厉害、旁边一颗小的破掉；只演自己那一队；画得出来', () => {
+    const m = new BubbleModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.blowers
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    expect(m.puff[0].value).toBeGreaterThan(1)
+    expect(m.wobble[1].value).toBeGreaterThan(1.5)
+    expect(m.wobble[0].value).toBeLessThan(0.1)
+    let maxLift = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let maxShake = 0
+    let maxStretch = 0
+    let popped = false
+    const ctx = stubCtx()
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxArms = Math.max(maxArms, pr.arms)
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      maxStretch = Math.max(maxStretch, Math.abs(m.wobbleOf(1)[0] - 1))
+      if ((m.popOf(b) ?? 0) > 0.4) popped = true
+      expect(m.popOf(r)).toBeNull()
+      expect(pb.arms).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.5)
+    expect(maxSweat).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(maxStretch).toBeGreaterThan(0.15)
+    expect(popped).toBe(true)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    settle(m, 1)
+    expect(m.popOf(b)).toBeNull()
+    // 蘸泡泡水是等答题时的小动作
+    b.act.forceGesture('nod')
+    let dip = 0
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      dip = Math.max(dip, m.dipOf(b))
+      if (i % 20 === 0) renderDynamic(ctx, m)
+    }
+    expect(dip).toBe(1)
+    // 减少动画：不蘸水、小泡泡不破
+    const quiet = new BubbleModel(createRng(3), { reducedMotion: true })
+    quiet.setState(snap(3, 2))
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    quiet.step(0.1)
+    expect(quiet.popOf(quiet.blowers[1])).toBeNull()
+    expect(quiet.wobbleOf(1)).toEqual([1, 1])
+  })
+})
+
 describe('吹泡泡 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new BubbleModel(createRng(2))

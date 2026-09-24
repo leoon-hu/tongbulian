@@ -19,6 +19,12 @@ export interface TortoisePose {
   look: number
   /** 原地小跳的高度（px） */
   lift: number
+  /** 脖子再往前上方伸 0…1（伸懒腰 / 蓄力 / 欢呼，B72） */
+  neck?: number
+  /** 张嘴笑 0…1（答对） */
+  happy?: number
+  /** 瞪大眼、嘴成 o 0…1（答错一愣） */
+  wide?: number
 }
 
 const SHELL = '#5fa64b'
@@ -71,9 +77,12 @@ export function drawTortoise(ctx: CanvasRenderingContext2D, x: number, y: number
     ctx.roundRect(-0.5 * s, -0.38 * s, 1.0 * s, 0.16 * s, 0.07 * s)
     ctx.fill()
     // 头 + 脖子（可缩进）
-    const hx = (0.52 - p.hide * 0.3) * s
-    const hy = -0.46 * s
-    const turn = p.look * 0.6
+    const neck = p.neck ?? 0
+    const happy = p.happy ?? 0
+    const wide = p.wide ?? 0
+    const hx = (0.52 - p.hide * 0.3 + neck * 0.12) * s
+    const hy = (-0.46 - neck * 0.12) * s
+    const turn = p.look * 0.6 + neck * 0.25
     ctx.fillStyle = SKIN
     ctx.beginPath()
     ctx.roundRect(0.25 * s, hy - 0.08 * s, hx - 0.2 * s, 0.18 * s, 0.06 * s)
@@ -87,26 +96,44 @@ export function drawTortoise(ctx: CanvasRenderingContext2D, x: number, y: number
       ctx.beginPath()
       ctx.roundRect(-0.2 * s, 0.04 * s, 0.4 * s, 0.09 * s, 0.04 * s)
       ctx.fill()
-      // 眼睛
+      // 眼睛（答错一愣时瞪大、眼珠变小）
       ctx.fillStyle = '#fff'
-      circle(ctx, 0.06 * s, -0.05 * s, 0.07 * s)
+      circle(ctx, 0.06 * s, -0.05 * s, 0.07 * s * (1 + wide * 0.35))
       ctx.fill()
-      if (p.blink > 0.5) {
+      if (p.blink > 0.5 && wide < 0.3) {
         ctx.strokeStyle = SKIN_DARK
         ctx.beginPath()
         ctx.moveTo(0.0 * s, -0.05 * s)
         ctx.lineTo(0.12 * s, -0.05 * s)
         ctx.stroke()
+      } else if (happy > 0.4 && wide < 0.3) {
+        // 笑眯眯：眼睛弯成 ∩
+        ctx.strokeStyle = '#2b2b2b'
+        ctx.beginPath()
+        ctx.arc(0.07 * s, -0.03 * s, 0.035 * s, Math.PI, 0)
+        ctx.stroke()
       } else {
         ctx.fillStyle = '#2b2b2b'
-        circle(ctx, 0.08 * s, -0.05 * s, 0.035 * s)
+        circle(ctx, 0.08 * s, -0.05 * s, 0.035 * s * (1 - wide * 0.3))
         ctx.fill()
       }
-      // 笑
-      ctx.strokeStyle = SKIN_DARK
-      ctx.beginPath()
-      ctx.arc(0.06 * s, 0.03 * s, 0.07 * s, 0.15, Math.PI - 0.6)
-      ctx.stroke()
+      // 嘴：平时笑，答对张嘴笑，答错嘴成 o
+      if (wide > 0.3) {
+        ctx.fillStyle = '#7a3b2e'
+        ellipse(ctx, 0.1 * s, 0.07 * s, 0.03 * s, 0.04 * s)
+        ctx.fill()
+      } else if (happy > 0.3) {
+        ctx.fillStyle = '#c94f4f'
+        ctx.beginPath()
+        ctx.arc(0.07 * s, 0.03 * s, 0.075 * s, 0.1, Math.PI - 0.5)
+        ctx.closePath()
+        ctx.fill()
+      } else {
+        ctx.strokeStyle = SKIN_DARK
+        ctx.beginPath()
+        ctx.arc(0.06 * s, 0.03 * s, 0.07 * s, 0.15, Math.PI - 0.6)
+        ctx.stroke()
+      }
     })
     // 壳
     ctx.fillStyle = SHELL

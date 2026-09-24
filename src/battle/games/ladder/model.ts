@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay, advancePhase } from '@/battle/game/engine/rig'
@@ -106,6 +107,10 @@ export const CONFETTI_GAP = 0.5
 export const WIN_WALK = 0.5
 const LEAVES = 3
 const LEAF_COLORS = ['#7ccf62', '#5fb84a', '#ffb347', '#e6a23c']
+/** 等答题时的小动作（B72）：空出一只手挥手 / 挠头、张望、往上看（两腿一直晃着） */
+export const LADDER_GESTURES: readonly Gesture[] = ['wave', 'scratch', 'look', 'stretch']
+/** 答错手一滑往下出溜多少（× 身高），马上又抓住爬回来 */
+export const SLIP_DROP = 0.2
 
 export class LadderModel {
   geo: LadderGeometry = layoutLadder(150, 700, false)
@@ -139,7 +144,7 @@ export class LadderModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.climbers = [new Racer('red', rng), new Racer('blue', rng)]
+    this.climbers = [new Racer('red', rng, undefined, LADDER_GESTURES), new Racer('blue', rng, undefined, LADDER_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -261,6 +266,9 @@ export class LadderModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.climber(t).act)
+    // 答错手一滑（B72）：梯子跟着晃一下
+    if (e.type === 'answered' && !e.correct && this.climber(e.team).act.wrongT === 0) this.shake[e.team === 'red' ? 0 : 1]!.kick(0.45)
     switch (e.type) {
       case 'countdown':
         for (const c of this.climbers) c.setMood('ready')
@@ -414,6 +422,21 @@ export class LadderModel {
 
   hangOf(c: Racer): number {
     return c.mood === 'lose' ? Math.min(1, c.moodT / 0.8) : 0
+  }
+
+  /** 答错手一滑往下出溜的距离（px，往下为正，B72）：0.1 秒滑下去、停一下、0.3 秒爬回原处 */
+  slipOf(c: Racer): number {
+    const a = c.act
+    if (!this.animated || a.wrongT < 0) return 0
+    const q = a.wrongT / WRONG_TIME
+    const k = q < 0.1 ? Math.sin((q / 0.1) * (Math.PI / 2)) : q < 0.35 ? 1 : q < 0.65 ? 0.5 + 0.5 * Math.cos(((q - 0.35) / 0.3) * Math.PI) : 0
+    return k * SLIP_DROP * this.geo.size
+  }
+
+  /** 等答题时两腿晃的程度（B72）：比赛中停在梯子上、没在按 */
+  legsOf(c: Racer): number {
+    if (!this.animated || (c.mood !== 'idle' && c.mood !== 'run')) return 0
+    return (1 - c.moving) * (1 - c.act.typing) * 0.7
   }
 
   /** 待机时轻轻晃 */

@@ -306,6 +306,30 @@ export interface HenPose {
   tilt: number
   blink: number
   dir: 1 | -1
+  /** 啄地 0…1：头往前下方伸（B72） */
+  peck?: number
+  /** 回头张望 0…1：头转向身后 */
+  back?: number
+  /** 笑眯眯 0…1（答对）：眼睛弯、嘴张开 */
+  happy?: number
+  /** 一惊 0…1（答错）：眼睛瞪圆、嘴张开 */
+  wide?: number
+}
+
+/** 一根羽毛：细长的白叶形（描一道浅褐边，飘在白母鸡身上也看得见）+ 一道羽轴；原点在羽毛中间 */
+export function drawFeather(ctx: CanvasRenderingContext2D, x: number, y: number, len: number, rot: number): void {
+  withTransform(ctx, x, y, rot, 1, 1, () => {
+    ctx.fillStyle = '#fbf8f0'
+    ellipse(ctx, 0, 0, len * 0.5, len * 0.22)
+    ctx.fill()
+    ctx.strokeStyle = '#c9b994'
+    ctx.lineWidth = Math.max(0.8, len * 0.06)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(-len * 0.6, 0)
+    ctx.lineTo(len * 0.45, 0)
+    ctx.stroke()
+  })
 }
 
 /** 母鸡：白身子、红冠、黄嘴、队色头巾；原点在脚下正中，本地朝右 */
@@ -342,6 +366,23 @@ export function drawHen(ctx: CanvasRenderingContext2D, x: number, y: number, s: 
       ellipse(ctx, -s * 0.12, s * 0.06, s * 0.24, s * 0.12)
       ctx.fill()
     })
+    // 头：啄的时候往前下方点（前面就是窝里的蛋，只点到蛋顶，头不整个藏到蛋后面），回头张望时整个头转到身后那边
+    const peck = p.peck ?? 0
+    const back = p.back ?? 0
+    const wide = p.wide ?? 0
+    const happy = (p.happy ?? 0) * (1 - wide)
+    const hx = s * (0.26 + 0.12 * peck)
+    const hy = -s * (0.9 - 0.28 * peck)
+    if (peck > 0.05) {
+      ctx.fillStyle = '#fbf8f0'
+      ctx.beginPath()
+      ctx.moveTo(s * 0.12, -s * 0.72)
+      ctx.lineTo(hx, hy - s * 0.12)
+      ctx.lineTo(hx, hy + s * 0.12)
+      ctx.lineTo(s * 0.3, -s * 0.5)
+      ctx.closePath()
+      ctx.fill()
+    }
     // 头巾（脖子）
     fillRoundRect(ctx, s * 0.1, -s * 0.78, s * 0.26, s * 0.1, s * 0.05, c.main)
     ctx.fillStyle = c.dark
@@ -352,7 +393,7 @@ export function drawHen(ctx: CanvasRenderingContext2D, x: number, y: number, s: 
     ctx.closePath()
     ctx.fill()
     // 头
-    withTransform(ctx, s * 0.26, -s * 0.9, p.tilt * 0.3, 1, 1, () => {
+    withTransform(ctx, hx, hy, p.tilt * 0.3 + peck * 0.8, Math.cos(Math.PI * back), 1, () => {
       ctx.fillStyle = '#fbf8f0'
       circle(ctx, 0, 0, s * 0.2)
       ctx.fill()
@@ -367,18 +408,46 @@ export function drawHen(ctx: CanvasRenderingContext2D, x: number, y: number, s: 
       }
       ellipse(ctx, s * 0.14, s * 0.16, s * 0.05, s * 0.08)
       ctx.fill()
+      // 嘴：平时合着；笑 / 一惊时张开（上下两片）
+      const open = Math.max(happy, wide) * 0.35
       ctx.fillStyle = ORANGE
-      ctx.beginPath()
-      ctx.moveTo(s * 0.16, -s * 0.02)
-      ctx.lineTo(s * 0.36, s * 0.05)
-      ctx.lineTo(s * 0.16, s * 0.1)
-      ctx.closePath()
-      ctx.fill()
-      ctx.fillStyle = '#2b2b2b'
-      if (p.blink > 0.5) ctx.fillRect(s * 0.02, -s * 0.05, s * 0.09, Math.max(1, s * 0.025))
-      else {
-        circle(ctx, s * 0.07, -s * 0.05, s * 0.04)
+      for (const [a, ty, y1] of [
+        [-open, 0.01, -0.06],
+        [open, 0.01, 0.06],
+      ] as const) {
+        withTransform(ctx, s * 0.16, s * 0.04, a, 1, 1, () => {
+          ctx.beginPath()
+          ctx.moveTo(0, 0)
+          ctx.lineTo(s * 0.2, s * ty)
+          ctx.lineTo(0, s * y1)
+          ctx.closePath()
+          ctx.fill()
+        })
+      }
+      // 眼睛：一惊瞪圆，笑眯眯弯成 ∩
+      if (wide > 0.3) {
+        // 头是白的：瞪圆的眼睛描一圈深色边才看得出来
+        ctx.strokeStyle = '#2b2b2b'
+        ctx.lineWidth = Math.max(1, s * 0.025)
+        circle(ctx, s * 0.07, -s * 0.05, s * 0.075)
+        ctx.stroke()
+        ctx.fillStyle = '#2b2b2b'
+        circle(ctx, s * 0.08, -s * 0.05, s * 0.03)
         ctx.fill()
+      } else if (happy > 0.4) {
+        ctx.strokeStyle = '#2b2b2b'
+        ctx.lineWidth = Math.max(1, s * 0.03)
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.arc(s * 0.07, -s * 0.03, s * 0.045, Math.PI, 0)
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = '#2b2b2b'
+        if (p.blink > 0.5) ctx.fillRect(s * 0.02, -s * 0.05, s * 0.09, Math.max(1, s * 0.025))
+        else {
+          circle(ctx, s * 0.07, -s * 0.05, s * 0.04)
+          ctx.fill()
+        }
       }
     })
   })

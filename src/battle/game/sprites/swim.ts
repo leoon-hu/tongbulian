@@ -158,12 +158,33 @@ export interface SwimmerPose {
   look: number
   /** 仰面时蹬腿的相位 */
   kick: number
+  /** 踩水 0…1（等答题时手在两边慢慢划、腿慢慢蹬，B72）与它的相位 */
+  tread?: number
+  treadT?: number
+  /** 摆好划水的架势 0…1：一只手往前伸、一只往后摆（正在按 / 伸展） */
+  reach?: number
+  /** 刚按了一下 0…1：往前那只手划一下 */
+  press?: number
+  /** 挥手 0…1（外侧那只手出水挥）与挥动的相位；waveSide 是外侧（红队在上 −1、蓝队在下 1） */
+  wave?: number
+  waveSide?: 1 | -1
+  beat?: number
+  /** 挠头 0…1（里侧那只手搭到泳帽上） */
+  scratch?: number
+  /** 头往两边摆（弧度，摇头） */
+  turn?: number
+  /** 张嘴笑 0…1（答对） */
+  happy?: number
+  /** 瞪大眼、嘴成 o 0…1（答错一愣） */
+  wide?: number
+  /** 呛了一口水 0…1：嘴前冒一串泡泡 */
+  gulp?: number
 }
 
-/** 泳镜：两片镜片 + 绕过帽子的带子；pushed = 推到帽子上（仰面漂时） */
-function drawGoggles(ctx: CanvasRenderingContext2D, r: number, blink: number, look: number, pushed: number): void {
+/** 泳镜：两片镜片 + 绕过帽子的带子；pushed = 推到帽子上（仰面漂时）；wide = 瞪大眼（镜片里的眼睛变大、眼珠变小，B72） */
+function drawGoggles(ctx: CanvasRenderingContext2D, r: number, blink: number, look: number, pushed: number, wide = 0): void {
   const gx = r * (0.5 - pushed * 0.75)
-  const lens = r * (0.3 - pushed * 0.08)
+  const lens = r * (0.3 - pushed * 0.08) * (1 + wide * 0.3)
   ctx.strokeStyle = '#2b2b2b'
   ctx.lineWidth = Math.max(1, r * 0.09)
   ctx.beginPath()
@@ -179,9 +200,9 @@ function drawGoggles(ctx: CanvasRenderingContext2D, r: number, blink: number, lo
     ctx.stroke()
     if (pushed < 0.5) {
       ctx.fillStyle = '#2b2b2b'
-      if (blink > 0.5) ctx.fillRect(gx - lens * 0.5, d * r * 0.5 - Math.max(0.5, lens * 0.12), lens, Math.max(1, lens * 0.24))
+      if (blink > 0.5 && wide < 0.3) ctx.fillRect(gx - lens * 0.5, d * r * 0.5 - Math.max(0.5, lens * 0.12), lens, Math.max(1, lens * 0.24))
       else {
-        circle(ctx, gx + lens * 0.25 - look * lens * 0.6, d * r * 0.5, lens * 0.32)
+        circle(ctx, gx + lens * 0.25 - look * lens * 0.6, d * r * 0.5, lens * 0.32 * (1 - wide * 0.4))
         ctx.fill()
       }
     }
@@ -217,11 +238,13 @@ export function drawSwimmer(ctx: CanvasRenderingContext2D, x: number, y: number,
     ctx.scale(1, roll)
     const bodyLen = s * 0.42 * (1 - p.crouch * 0.4)
     const hipX = -s * 0.72 * (1 - p.crouch * 0.4)
-    // 腿：在后面打水（蹲着时收起来）
+    const tread = p.tread ?? 0
+    const treadT = p.treadT ?? 0
+    // 腿：在后面打水（蹲着时收起来；踩水时慢慢蹬）
     ctx.strokeStyle = sk.limb
     ctx.lineWidth = Math.max(1.5, s * 0.075)
     for (const d of [-1, 1] as const) {
-      const kick = Math.sin(p.phase * 2 + (d < 0 ? Math.PI : 0)) * s * 0.1 * p.swim
+      const kick = Math.sin(p.phase * 2 + (d < 0 ? Math.PI : 0)) * s * 0.1 * p.swim + Math.sin(treadT * 1.5 + (d < 0 ? Math.PI : 0)) * s * 0.07 * tread
       const fx = hipX - s * 0.26 * (1 - p.crouch * 0.6)
       ctx.beginPath()
       ctx.moveTo(hipX, d * s * 0.07)
@@ -239,27 +262,57 @@ export function drawSwimmer(ctx: CanvasRenderingContext2D, x: number, y: number,
     ctx.fillRect(-s * 0.56 * (1 - p.crouch * 0.4), -s * 0.15, s * 0.13, s * 0.3)
     // 水下拉水的手臂（半透明）先画，出水回摆的那只在头之后画
     const arms: { d: 1 | -1; tipX: number; tipY: number; above: boolean }[] = []
+    const L = s * 0.32
+    // 肩膀出发、角度 ang（0 = 朝前）、长 len 的手尖
+    const tipAt = (d: 1 | -1, ang: number, len: number): [number, number] => [-s * 0.28 + Math.cos(ang) * len, d * (s * 0.14 + Math.sin(ang) * len * 0.9)]
+    const lerp = (a: number, b: number, t: number): number => a + (b - a) * t
+    const reach = p.reach ?? 0
+    const wave = p.wave ?? 0
+    const scratch = p.scratch ?? 0
+    const outer = p.waveSide ?? -1
     for (const d of [-1, 1] as const) {
       let a = (p.phase + (d < 0 ? Math.PI : 0)) % (Math.PI * 2)
       if (a < 0) a += Math.PI * 2
-      const L = s * 0.32
       let tipX: number
       let tipY: number
       let above: boolean
-      if (p.cheer > 0) {
-        const w = Math.sin(p.phase * 2 + d) * 0.15
-        tipX = -s * 0.28 + Math.cos(0.55 + w) * L
-        tipY = d * (s * 0.14 + Math.sin(0.9 + w) * L)
-        above = true
-      } else if (p.swim < 0.05) {
-        tipX = -s * 0.28 + Math.cos(0.35) * L
-        tipY = d * (s * 0.14 + Math.sin(0.35) * L * 0.9)
+      if (p.swim < 0.05) {
+        // 漂着 / 踩水：两只手在身边慢慢往外划、往里收（B72）
+        ;[tipX, tipY] = tipAt(d, 0.35 + tread * 0.3 * Math.sin(treadT + (d < 0 ? 0 : Math.PI)), L)
         above = true
       } else {
         const pull = a <= Math.PI
         tipX = -s * 0.28 + Math.cos(a) * L
         tipY = d * (s * 0.14 + Math.abs(Math.sin(a)) * L * (pull ? 0.2 : 0.7))
         above = !pull
+      }
+      // 摆好划水的架势：外侧那只往前伸（按一下往回划一点），里侧那只往后贴着身子
+      if (reach > 0.01) {
+        const [rx, ry] = d === outer ? tipAt(d, 0.12 + (p.press ?? 0) * 0.45, L * 1.3) : tipAt(d, Math.PI - 0.3, L)
+        tipX = lerp(tipX, rx, reach)
+        tipY = lerp(tipY, ry, reach)
+        above = above || reach > 0.5
+      }
+      // 挥手：外侧那只出水往外伸、来回摆；挠头：里侧那只搭到泳帽上搓
+      if (wave > 0.01 && d === outer) {
+        const [wx, wy] = tipAt(d, 0.95 + Math.sin((p.beat ?? 0) * 2) * 0.32, L * 1.1)
+        tipX = lerp(tipX, wx, wave)
+        tipY = lerp(tipY, wy, wave)
+        above = above || wave > 0.3
+      }
+      if (scratch > 0.01 && d !== outer) {
+        const rub = Math.sin((p.beat ?? 0) * 3) * s * 0.04
+        tipX = lerp(tipX, -s * 0.05 + rub, scratch)
+        tipY = lerp(tipY, d * s * 0.1, scratch)
+        above = above || scratch > 0.3
+      }
+      // 欢呼：两只手举出水面往前伸着挥（答对那一拍按 cheer 的大小过渡过去）
+      if (p.cheer > 0) {
+        const w = Math.sin(p.phase * 2 + d) * 0.15
+        const k = Math.min(1, p.cheer)
+        tipX = lerp(tipX, -s * 0.28 + Math.cos(0.55 + w) * L, k)
+        tipY = lerp(tipY, d * (s * 0.14 + Math.sin(0.9 + w) * L), k)
+        above = above || k > 0.3
       }
       arms.push({ d, tipX, tipY, above })
     }
@@ -278,7 +331,9 @@ export function drawSwimmer(ctx: CanvasRenderingContext2D, x: number, y: number,
     }
     for (const arm of arms) if (!arm.above) drawArm(arm, 0.5)
     // 头
-    withTransform(ctx, 0, 0, -p.look * 0.35, 1, 1, () => {
+    const happy = p.happy ?? 0
+    const wide = p.wide ?? 0
+    withTransform(ctx, 0, 0, -p.look * 0.35 + (p.turn ?? 0), 1, 1, () => {
       ctx.fillStyle = sk.body
       circle(ctx, 0, 0, r)
       ctx.fill()
@@ -296,8 +351,8 @@ export function drawSwimmer(ctx: CanvasRenderingContext2D, x: number, y: number,
           ctx.fill()
         }
       }
-      if (p.cheer > 0) {
-        // 欢呼：抬头看天，张着嘴
+      if ((p.cheer > 0.4 || happy > 0.4) && wide < 0.3) {
+        // 欢呼 / 答对：抬头看天，张着嘴
         ctx.fillStyle = '#2b2b2b'
         for (const d of [-1, 1] as const) {
           circle(ctx, r * 0.35, d * r * 0.42, r * 0.11)
@@ -306,7 +361,30 @@ export function drawSwimmer(ctx: CanvasRenderingContext2D, x: number, y: number,
         ctx.fillStyle = '#c0392b'
         ellipse(ctx, r * 0.72, 0, r * 0.18, r * 0.14)
         ctx.fill()
-      } else drawGoggles(ctx, r, p.blink, p.look, 0)
+      } else {
+        drawGoggles(ctx, r, p.blink, p.look, 0, wide)
+        if (wide > 0.3) {
+          // 呛了一口水：嘴成 o
+          ctx.fillStyle = '#7a3b2e'
+          ellipse(ctx, r * (kind === 'duck' ? 1.3 : 0.86), 0, r * 0.13, r * 0.17)
+          ctx.fill()
+        }
+      }
+      // 嘴前冒一串泡泡（呛水）
+      const gulp = p.gulp ?? 0
+      if (gulp > 0.02) {
+        withAlpha(ctx, Math.min(1, gulp * 1.5), () => {
+          ctx.fillStyle = 'rgba(255,255,255,0.55)'
+          ctx.strokeStyle = '#ffffff'
+          ctx.lineWidth = Math.max(1, r * 0.08)
+          for (let j = 0; j < 3; j++) {
+            const out = (1 - gulp) * r * 0.8
+            circle(ctx, r * (kind === 'duck' ? 1.8 : 1.3) + j * r * 0.5 + out, (j - 1) * r * 0.45, r * (0.18 + j * 0.07) * (0.7 + (1 - gulp) * 0.5))
+            ctx.fill()
+            ctx.stroke()
+          }
+        })
+      }
     })
     for (const arm of arms) if (arm.above) drawArm(arm, 1)
     ctx.restore()

@@ -2,6 +2,7 @@
  * 热气球的渲染：renderBackground 画不动的部分（天空渐变、山丘、草地），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳、云、目标云层与光晕、小鸟、粒子、两只气球）。
  */
+import { drawActFx } from '@/battle/game/engine/act'
 import { gradient, withAlpha } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawBalloon } from '@/battle/game/sprites/balloon'
@@ -49,14 +50,36 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: BalloonModel): v
   }
   if (m.bird) drawBird(ctx, m.bird.x, m.bird.y, 5 * k, m.bird.flap)
   m.particles.draw(ctx)
+  // 一题里的表演（B72）：答对往上一蹿、答错往下一沉，球囊跟着呼吸；乘客趴在篮边、探头、挥手 / 挠头 / 举手、表情；头顶图标最后画
   m.balloons.forEach((b, i) => {
-    drawBalloon(ctx, g.colX[i]!, m.yOf(b), g.size, b.team, m.passengers[i]!, {
-      sway: m.swayOf(b),
+    const s = g.size
+    const a = b.act.pose()
+    const body = m.body(b)
+    const x = g.colX[i]!
+    const y = m.yOf(b) + body.dy
+    const sway = m.swayOf(b)
+    const wave = Math.max(m.wave[i]!.value, a.wave)
+    const look = Math.max(b.look.value, a.look)
+    drawBalloon(ctx, x, y, s, b.team, m.passengers[i]!, {
+      sway,
       flame: m.flameOf(b, i),
-      wave: m.wave[i]!.value,
+      wave,
       deflate: m.deflateOf(b),
       blink: b.blink.value,
-      look: b.look.value,
+      look,
+      sx: body.sx,
+      sy: body.sy,
+      headDx: body.headDx,
+      headTilt: body.headTilt,
+      bodySx: body.bodySx,
+      bodySy: body.bodySy,
+      face: { happy: a.happy, wide: a.wide, arms: a.arms, scratch: a.scratch, beat: a.beat * 2 },
+      rest: [1 - Math.max(a.arms, a.scratch), 1 - Math.max(a.arms, wave)],
     })
+    // 乘客头顶（在气球的摆动里转一下）：泡泡 / 灯泡往对面那只气球那边偏一点，别全压在颈口上
+    const side = i === 0 ? 1 : -1
+    const lx = look * s * 0.02 + body.headDx + side * s * 0.06
+    const ly = s * 0.9 - s * 0.34 * 0.66 * body.bodySy
+    drawActFx(ctx, x + lx * Math.cos(sway) - ly * Math.sin(sway), y - s + lx * Math.sin(sway) + ly * Math.cos(sway), s * 0.34, a, { side, quality: m.quality })
   })
 }

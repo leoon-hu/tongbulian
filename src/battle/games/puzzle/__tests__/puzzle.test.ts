@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createRng } from '@/engine'
 import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
+import { PICKER_HEAD } from '@/battle/game/sprites/fruit'
 import { knobsOf } from '@/battle/game/sprites/puzzle'
 import { createPuzzleGame } from '..'
 import { COLS, FLY_TIME, LIT_TIME, PuzzleModel, ROWS, STAGGER, layoutPuzzle } from '../model'
@@ -194,6 +195,53 @@ describe('拼图 · 模型（B36r）', () => {
     const t0 = performance.now()
     for (let i = 0; i < 10000; i++) m.step(1 / 60)
     expect(performance.now() - t0).toBeLessThan(300)
+  })
+})
+
+describe('拼图 · 一题里的表演（B72）', () => {
+  it('红队的角色站得离红板够远，答对跳起来头不撞板；等久了托下巴、按键只亮自己那一队的灯泡；红队答对跳起来欢呼、蓝队答错挠挠头冒汗；画得出来', () => {
+    for (const [W, H] of [
+      [150, 700],
+      [300, 1424],
+    ] as const) {
+      const g = layoutPuzzle(W, H, false)
+      expect(g.kidY[0] - (0.7 + PICKER_HEAD) * g.size).toBeGreaterThan(g.boardTop[0] + g.boardH)
+    }
+    const m = new PuzzleModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.kids
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.setState({ ...snap(3, 2), inputs: { blue: '2' } })
+    expect(b.act.bulbT).toBe(0)
+    expect(r.act.bulbT).toBe(-1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    m.setState(snap(4, 2))
+    m.onEvent({ type: 'point', team: 'red', playerId: 'r', streak: 1 })
+    let maxLift = 0
+    let maxArms = 0
+    let maxScratch = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      maxLift = Math.max(maxLift, r.act.pose().lift)
+      maxArms = Math.max(maxArms, r.act.pose().arms)
+      maxScratch = Math.max(maxScratch, m.scratchOf(b))
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      expect(m.liftOf(r)).toBe(0) // 跳交给表演：蓄力 → 跳 → 落地
+      expect(m.scratchOf(r)).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxScratch).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    settle(m, 1)
+    expect(m.scratchOf(b)).toBe(0)
   })
 })
 

@@ -49,7 +49,8 @@ function pageTitle(): string {
   const battle = battleInfo()
   if (battle) {
     return [
-      ui('battle.title'),
+      // 设置页（自己练 + 三种对战，B26 / B27）叫「练习」，竞技场与房间叫「对战」
+      ui(route.name === 'battle-setup' ? 'battle.setupTitle' : 'battle.title'),
       kpTitle(battle.kp),
       ui('course.name', { grade: battle.grade.title, subject: battle.subject.title }),
       ui('brand.title'),

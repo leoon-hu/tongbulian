@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { RIGHT_TIME, WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
@@ -78,6 +79,14 @@ export const SPRINT_FROM = 2
 export const GEM_ROUNDS = 3
 export const GEM_GAP = 0.5
 export const OPEN_TIME = 0.6
+/**
+ * 等答题时的小动作（B72）：stretch = 拄着镐歇一歇、scratch = 擦汗、nod = 用镐轻敲地面、look = 抬头看
+ */
+export const DIG_GESTURES: readonly Gesture[] = ['stretch', 'scratch', 'nod', 'look']
+/** 答对那一拍镐刨下去的时刻（× RIGHT_TIME）：土块飞 */
+export const STRIKE_AT = 0.2
+/** 答错那一拍镐碰到石头的时刻（× WRONG_TIME）：迸两颗火星 */
+export const CLANG_AT = 0.1
 
 export class DigModel {
   geo: DigGeometry = layoutDig(150, 700, false)
@@ -89,6 +98,9 @@ export class DigModel {
   chestGlow: [Decay, Decay] = [new Decay(1), new Decay(1)]
   private opened: [boolean, boolean] = [false, false]
   private swingT: [number, number] = [0, 0]
+  /** 上一帧答对 / 答错那一拍进行到哪（秒），看有没有走过刨下去 / 碰到石头的时刻 */
+  private lastRight: [number, number] = [-1, -1]
+  private lastWrong: [number, number] = [-1, -1]
   clouds: Cloud[] = []
   glints: Glint[] = []
   /** 蚯蚓：探出的程度、还要露多久（> 0 = 正露着）、下次探头的倒计时 */
@@ -109,7 +121,7 @@ export class DigModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.diggers = [new Racer('red', rng), new Racer('blue', rng)]
+    this.diggers = [new Racer('red', rng, undefined, DIG_GESTURES), new Racer('blue', rng, undefined, DIG_GESTURES)]
     this.layout(150, 700, false)
   }
 
@@ -213,6 +225,27 @@ export class DigModel {
     })
   }
 
+  /** 镐碰到石头（B72）：迸两颗火星 */
+  private sparks(i: number): void {
+    if (!this.animated || this.quality >= 2) return
+    const g = this.geo
+    const d = this.diggers[i]!
+    this.particles.emit({
+      x: g.shaftX[i]! + g.size * 0.5,
+      y: d.pos.value - g.size * 0.12,
+      count: 2,
+      speed: 100 * g.k,
+      angle: -Math.PI / 2,
+      spread: Math.PI * 0.7,
+      life: 0.6,
+      size: 4.5 * g.k,
+      colors: ['#fff3a0', '#ffd24a'],
+      shape: 'flake',
+      gravity: 220 * g.k,
+      drag: 1,
+    })
+  }
+
   private gems(i: number): void {
     if (!this.animated || this.quality >= 2) return
     const g = this.geo
@@ -250,6 +283,7 @@ export class DigModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.digger(t).act)
     switch (e.type) {
       case 'countdown':
         for (const d of this.diggers) d.setMood('ready')
@@ -339,6 +373,14 @@ export class DigModel {
         this.dirt(i, 2 + Math.round(d.boost.value * 2) + (this.sprint ? 1 : 0))
       }
       if (d.mood === 'win' && !this.opened[i] && d.pos.done) this.openChest(i)
+      // 一题里的表演（B72）：答对使劲刨下去、土块飞；答错镐碰到石头迸火星
+      const a = d.act
+      const strike = STRIKE_AT * RIGHT_TIME
+      if (a.rightT >= strike && this.lastRight[i]! < strike) this.dirt(i, 7)
+      const clang = CLANG_AT * WRONG_TIME
+      if (a.wrongT >= clang && this.lastWrong[i]! < clang) this.sparks(i)
+      this.lastRight[i] = a.rightT
+      this.lastWrong[i] = a.wrongT
     })
     if (this.gemLeft > 0 && this.winner) {
       this.gemT += dt
@@ -364,14 +406,52 @@ export class DigModel {
     return 0
   }
 
-  /** 镐的角度：扛肩上 / 抡 / 举起 / 放下 */
+  /** 镐的角度：扛肩上 / 抡 / 举起 / 放下；比赛中再叠上一题里的表演（B72） */
   swingOf(d: Racer): number {
     if (d.mood === 'ready') return -1.1
     if (d.mood === 'lose') return 0.5
     if (d.mood === 'win') return d.phase
-    if (d.moving < 0.02) return -0.35 + (this.animated ? Math.sin(d.hop) * 0.06 : 0)
     // 抡镐：举到 −1.3 再刨到 +0.6
-    return -0.35 + Math.sin(d.phase) * 0.95 * d.moving
+    const base = d.moving < 0.02 ? -0.35 + (this.animated ? Math.sin(d.hop) * 0.06 : 0) : -0.35 + Math.sin(d.phase) * 0.95 * d.moving
+    return this.actSwing(d, base)
+  }
+
+  /**
+   * 一题里的镐（B72）：正在按 = 举起镐蓄力（按一下再往后一压）；拄着镐歇 = 镐头朝下杵在地上；敲地面 = 镐头一下下点地；
+   * 答对 = 举到头顶再使劲刨下去；答错 = 刨下去碰到石头弹回来、震得直抖。减少动画时只留举起镐（不动）
+   */
+  private actSwing(d: Racer, base: number): number {
+    const a = d.act
+    let sw = base + (-1.35 - base) * a.typing
+    if (!this.animated) return sw
+    sw -= a.press.value * 0.3
+    if (a.gesture === 'stretch' || a.gesture === 'nod') {
+      const env = Math.sin(Math.PI * Math.min(1, a.gestureT))
+      const tap = a.gesture === 'nod' ? 1.0 + 0.35 * Math.abs(Math.sin(a.gestureT * Math.PI * 5)) : 1.45
+      sw += (tap - sw) * env
+    }
+    if (a.rightT >= 0) {
+      const q = a.rightT / RIGHT_TIME
+      const hit = q < 0.1 ? -1.45 : q < STRIKE_AT ? -1.45 + (q - 0.1) / (STRIKE_AT - 0.1) * 2.45 : q < 0.45 ? 1.0 : 1.0 + (sw - 1.0) * Math.min(1, (q - 0.45) / 0.3)
+      sw = q < 0.1 ? sw + (hit - sw) * (q / 0.1) : hit
+    } else if (a.wrongT >= 0) {
+      const q = a.wrongT / WRONG_TIME
+      let hit: number
+      if (q < CLANG_AT) hit = sw + (0.7 - sw) * (q / CLANG_AT)
+      else if (q < 0.3) hit = 0.7 - ((q - CLANG_AT) / (0.3 - CLANG_AT)) * 1.6 + Math.sin(q * 90) * 0.12
+      else if (q < 0.65) hit = -0.9 + Math.sin(q * 70) * 0.1 * (1 - (q - 0.3) / 0.35)
+      else hit = -0.9 + (sw + 0.9) * Math.min(1, (q - 0.65) / 0.25)
+      sw = hit
+    }
+    return sw
+  }
+
+  /** 镐碰到的那块石头露出来的程度（B72）：答错那一拍里淡入、站好前淡出 */
+  rockOf(d: Racer): number {
+    const a = d.act
+    if (a.wrongT < 0) return 0
+    const q = a.wrongT / WRONG_TIME
+    return q < 0.08 ? q / 0.08 : q < 0.7 ? 1 : Math.max(0, 1 - (q - 0.7) / 0.25)
   }
 
   sitOf(d: Racer): number {

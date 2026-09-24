@@ -2,7 +2,8 @@
  * 游泳的渲染：renderBackground 画不动的部分（天空、瓷砖甲板、遮阳伞、救生圈、池沿、池水、泳道中线、未亮的地砖、分道线、出发台、池壁），
  * index.ts 缓存到离屏 canvas；renderDynamic 每帧画会动的部分（太阳、云、发令员、观众、水纹、亮起的地砖、触板、粒子、白浪、两只泳员）。
  */
-import { gradient } from '@/battle/game/engine/draw'
+import { RIGHT_TIME, WRONG_TIME, drawActFx, type ActPose } from '@/battle/game/engine/act'
+import { ellipse, gradient, withAlpha, withTransform } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawCloud, drawCritter, drawStarter, drawSun, drawTeamBadge, skyGradient, type CritterKind } from '@/battle/game/sprites/scenery'
 import { drawBowWave, drawLaneRope, drawPoolTile, drawRingBuoy, drawShimmer, drawStartBlock, drawSwimmer, drawTileDeck, drawTouchPad, drawUmbrella } from '@/battle/game/sprites/swim'
@@ -74,6 +75,25 @@ export function renderBackground(ctx: CanvasRenderingContext2D, g: SwimGeometry,
   })
 }
 
+/**
+ * 俯视的泳员怎么演一题（B72）：跳起来 = 身子放大（离水面近了）+ 往前一跃，前倾 = 往前探，晃 / 摇头 = 身子绕腰左右摆，
+ * 翻跟头 = 原地转一圈，压扁拉长沿身子方向（身长 ↔ sy、身宽 ↔ sx），都绕身子中间。
+ */
+function withSwimAct(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, a: ActPose, draw: () => void): void {
+  const air = 1 + a.lift * 0.6
+  const mid = -s * 0.45
+  withTransform(ctx, x + (a.lean * 0.3 + a.lift * 0.35) * s + mid, y, a.shake * 0.8 + a.spin, a.sy * air, a.sx * air, () => {
+    ctx.translate(-mid, 0)
+    draw()
+  })
+}
+
+/** 头顶图标别出盒子（紧凑版头顶离上沿很近）：放不下就往下挪到放得下、再往旁边让开脸（B72） */
+function fxAt(x: number, y: number, s: number, side: 1 | -1): [number, number] {
+  const r = Math.max(s, 22)
+  return y >= r * 0.6 ? [x, y] : [x + side * r * 0.4, r * 0.6]
+}
+
 export function renderDynamic(ctx: CanvasRenderingContext2D, m: SwimModel): void {
   const g = m.geo
   const { k } = g
@@ -105,20 +125,70 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: SwimModel): void
   })
   drawTouchPad(ctx, g.finishX, g.poolTop, g.poolBottom, Math.max(4, 6 * k), Math.max(m.padGlow.value, m.padFlash.value))
   m.particles.draw(ctx)
+  const s = g.size
   m.swimmers.forEach((sw, i) => {
     const x = m.xOf(sw, i)
     const y = g.laneY[i]! + m.bobOf(sw, i)
-    drawBowWave(ctx, x, y, g.size * 0.23, m.bowOf(sw))
-    drawSwimmer(ctx, x, y, g.size, sw.team, m.kinds[i]!, {
-      phase: sw.phase,
-      swim: sw.moving,
-      crouch: sw.mood === 'ready' ? 1 : 0,
-      air: m.airOf(i),
-      cheer: sw.mood === 'win' ? 1 : 0,
-      float: m.floatOf(sw),
-      blink: sw.blink.value,
-      look: sw.look.value,
-      kick: t * 3,
-    })
+    const act = sw.act
+    const a = act.pose()
+    const tread = m.treadOf(sw)
+    drawBowWave(ctx, x, y, s * 0.23, m.bowOf(sw))
+    // 一题里的表演（B72）：踩水时身边一圈圈水纹、跃起时水面上的影子、落回水里的一圈浪
+    if (m.animated) {
+      if (tread > 0.3 && m.quality < 1) {
+        const q = (a.t / 1.8) % 1
+        withAlpha(ctx, (1 - q) * 0.45 * tread, () => {
+          ctx.strokeStyle = '#ffffff'
+          ctx.lineWidth = Math.max(1, s * 0.035)
+          ellipse(ctx, x - s * 0.4, y, s * (0.5 + q * 0.35), s * (0.22 + q * 0.2))
+          ctx.stroke()
+        })
+      }
+      if (a.lift > 0.02) {
+        withAlpha(ctx, Math.min(0.3, a.lift * 0.8), () => {
+          ctx.fillStyle = '#12507a'
+          ellipse(ctx, x - s * 0.45 + a.lift * s * 0.2, y + a.lift * s * 0.28, s * 0.5, s * 0.18)
+          ctx.fill()
+        })
+      }
+      if (act.rightT >= RIGHT_TIME * 0.5) {
+        const q = (act.rightT / RIGHT_TIME - 0.5) / 0.5
+        withAlpha(ctx, (1 - q) * 0.85, () => {
+          ctx.strokeStyle = '#ffffff'
+          ctx.lineWidth = Math.max(1.5, s * 0.06)
+          ellipse(ctx, x - s * 0.35, y, s * (0.55 + q * 0.5), s * (0.3 + q * 0.3))
+          ctx.stroke()
+        })
+      }
+    }
+    const wrongQ = act.wrongT >= 0 ? act.wrongT / WRONG_TIME : -1
+    withSwimAct(ctx, x, y, s, a, () =>
+      drawSwimmer(ctx, 0, 0, s, sw.team, m.kinds[i]!, {
+        phase: sw.phase,
+        swim: sw.moving,
+        crouch: sw.mood === 'ready' ? 1 : 0,
+        air: m.airOf(i),
+        // 答对那一拍举手欢呼；伸展那个小动作是两手往前伸，不算举手
+        cheer: sw.mood === 'win' ? 1 : act.rightT >= 0 ? a.arms : 0,
+        float: m.floatOf(sw),
+        blink: sw.blink.value,
+        look: Math.max(sw.look.value, a.look),
+        kick: t * 3,
+        tread,
+        treadT: m.animated ? a.t * 2.4 : 0,
+        reach: Math.max(act.typing, act.gesture === 'stretch' ? a.arms / 0.7 : 0),
+        press: a.press,
+        wave: a.wave,
+        waveSide: i === 0 ? -1 : 1,
+        beat: a.beat,
+        scratch: a.scratch,
+        turn: wrongQ >= 0 ? a.shake * 2.2 : 0,
+        happy: a.happy,
+        wide: a.wide,
+        gulp: wrongQ >= 0 && wrongQ < 0.5 ? Math.sin((wrongQ / 0.5) * Math.PI) : 0,
+      }),
+    )
+    const [fx, fy] = fxAt(x + (a.lean * 0.3 + a.lift * 0.35) * s, y - s * 0.24 * (1 + a.lift * 0.6), s, 1)
+    drawActFx(ctx, fx, fy, s, a, { side: 1, quality: m.quality })
   })
 }

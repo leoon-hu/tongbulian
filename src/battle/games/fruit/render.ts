@@ -2,9 +2,10 @@
  * 摘果子的渲染：renderBackground 画不动的部分（天空、山丘、草地、树干），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳、云、小鸟、树冠、树上的果子、落叶、篮子、篮子里的果子、落下的果子、两只角色、粒子）。
  */
+import { drawActFx, withActBody } from '@/battle/game/engine/act'
 import { gradient } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
-import { drawBasket, drawCanopy, drawFruit, drawPicker, drawTrunk } from '@/battle/game/sprites/fruit'
+import { PICKER_HEAD, drawBasket, drawCanopy, drawFruit, drawPicker, drawTrunk, gestureEnv, pickerAct } from '@/battle/game/sprites/fruit'
 import { drawLeaf } from '@/battle/game/sprites/ladder'
 import { drawCloud, drawHill, drawSun, skyGradient } from '@/battle/game/sprites/scenery'
 import { drawBird } from '@/battle/game/sprites/town'
@@ -49,15 +50,42 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: FruitModel): voi
   m.pickers.forEach((p, i) => {
     const dir: 1 | -1 = i === 0 ? 1 : -1
     const bl = m.basketLift(p, i)
-    drawPicker(ctx, g.basketX[i]!, g.groundY - g.basketH * 0.35, g.size, p.team, m.kinds[i]!, {
-      lift: m.liftOf(p, i),
-      cheer: p.mood === 'win' ? 1 : 0,
-      scratch: m.scratchOf(p),
-      blink: p.blink.value,
-      look: p.look.value,
-      leaf: m.leafOnHead(p),
-      dir,
-    })
+    // 一题里的表演（B72）：整体（跳 / 前倾 / 晃 / 压扁）交给 withActBody，手势与表情接到 drawPicker 上，头顶图标画在篮子前面
+    const s = g.size
+    const x = g.basketX[i]!
+    const lift = m.liftOf(p, i)
+    const a = p.act.pose()
+    const base = pickerAct(p.act, a)
+    // 抬头看树（点头换的）：不点头，身子往后一仰看上面
+    const up = gestureEnv(p.act, 'nod')
+    if (up > 0) a.lean = -0.12 * up
+    // 踮脚伸手够（伸懒腰换的）：前面那只手往树上够，另一只不举，脚尖踮起来
+    const reach = gestureEnv(p.act, 'stretch')
+    if (reach > 0) {
+      base.arms = 0
+      if (m.animated) a.lift += 0.06 * reach
+    }
+    const leaf = m.leafOf(p)
+    const typing = p.act.typing
+    withActBody(ctx, x, g.kidY, s, a, dir, () =>
+      drawPicker(ctx, 0, 0, s, p.team, m.kinds[i]!, {
+        ...base,
+        lift,
+        cheer: p.mood === 'win' ? 1 : 0,
+        scratch: Math.max(base.scratch, m.scratchOf(p)),
+        blink: p.blink.value,
+        look: Math.abs(base.look) > p.look.value ? base.look : p.look.value,
+        leaf: leaf.amount,
+        leafY: leaf.y,
+        leafX: leaf.x,
+        leafRot: leaf.rot,
+        dir,
+        // 正在按：双手举起准备接、抬头看果子，每按一下手往上一送
+        arms: Math.max(base.arms, typing * 0.72 + a.press * 0.2),
+        reachUp: reach,
+        lookUp: Math.max(up, typing * 0.8, reach),
+      }),
+    )
     drawBasket(ctx, g.basketX[i]!, g.basketTop - bl, g.basketW, g.basketH, p.team, 'back', m.basketGlow[i]!.value)
     for (const f of m.fruits[i]!) {
       if (f.state === 'tree') continue
@@ -65,6 +93,8 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: FruitModel): voi
       drawFruit(ctx, f.x.value, f.y.value - (inBasket ? bl : 0), g.fruitR, m.fruitKinds[i]!, inBasket ? 0.8 : 1)
     }
     drawBasket(ctx, g.basketX[i]!, g.basketTop - bl, g.basketW, g.basketH, p.team, 'front', 0)
+    // 泡泡往外侧冒（里侧是树干）
+    drawActFx(ctx, x - dir * s * 0.05, g.kidY - lift - (a.lift + PICKER_HEAD) * s, s, a, { side: dir === 1 ? -1 : 1, quality: m.quality })
   })
   m.particles.draw(ctx)
 }

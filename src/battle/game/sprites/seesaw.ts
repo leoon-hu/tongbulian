@@ -95,25 +95,40 @@ export interface RiderPose {
   /** 挥手 0…1 */
   wave: number
   dir: 1 | -1
+  /** 以下是一题里的表演（B72），都可选 */
+  /** 坐着也晃腿（一踢一踢）0…1 */
+  kick?: number
+  /** 举手欢呼（连续，答对）0…1 */
+  arms?: number
+  /** 挠头 0…1 与搓动相位 */
+  scratch?: number
+  rub?: number
+  /** 笑眯眯 0…1（答对） */
+  happy?: number
 }
 
 /** 坐在板头的小动物（板坐标系，原点在屁股坐着的板面上）：系队色围巾、抓着扶手 */
 export function drawRider(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, team: Team, kind: CritterKind, p: RiderPose): void {
   const c = TEAM[team]
   const [fur, accent] = FUR[kind]
+  const up = Math.max(p.cheer, p.arms ?? 0)
+  const kick = (p.kick ?? 0) * (1 - p.dangle)
+  const happy = (p.happy ?? 0) * (1 - p.scared)
   withTransform(ctx, x, y - p.lift, 0, p.dir, 1, () => {
     ctx.lineCap = 'round'
-    // 腿：坐着往前伸，翘起来时悬着晃
+    // 腿：坐着往前伸（一踢一踢地晃），翘起来时悬着晃
     ctx.strokeStyle = fur
     ctx.lineWidth = Math.max(1.5, s * 0.13)
     for (const d of [-1, 1] as const) {
-      const sw = Math.sin(p.swing + (d < 0 ? Math.PI : 0)) * s * 0.1 * p.dangle
+      const ph = Math.sin(p.swing + (d < 0 ? Math.PI : 0))
+      const sw = ph * s * 0.1 * Math.max(p.dangle, kick * 0.6)
+      const fy = 0.12 * s * p.dangle + 0.02 * s - Math.max(0, ph) * kick * 0.14 * s
       ctx.beginPath()
       ctx.moveTo(d * 0.08 * s, -0.16 * s)
-      ctx.lineTo(0.2 * s + d * 0.1 * s + sw, 0.12 * s * p.dangle + 0.02 * s)
+      ctx.lineTo(0.2 * s + d * 0.1 * s + sw, fy)
       ctx.stroke()
       ctx.fillStyle = fur
-      ellipse(ctx, 0.22 * s + d * 0.1 * s + sw, 0.12 * s * p.dangle + 0.03 * s, s * 0.08, s * 0.045)
+      ellipse(ctx, 0.22 * s + d * 0.1 * s + sw, fy + 0.01 * s, s * 0.08, s * 0.045)
       ctx.fill()
     }
     ctx.fillStyle = fur
@@ -122,23 +137,49 @@ export function drawRider(ctx: CanvasRenderingContext2D, x: number, y: number, s
     fillRoundRect(ctx, -0.22 * s, -0.66 * s, 0.44 * s, 0.1 * s, 0.05 * s, c.main)
     ctx.fillStyle = c.dark
     ctx.fillRect(0.06 * s, -0.62 * s, 0.09 * s, 0.2 * s)
-    // 手：抓扶手 / 欢呼 / 挥手
+    // 手：右手抓扶手、左手也搭上去；挥手 / 挠头时左手松开；欢呼两手举高
     ctx.strokeStyle = fur
     ctx.lineWidth = Math.max(1.5, s * 0.1)
+    const wave = p.wave > 0.05 ? p.wave : 0
+    const scratch = (p.scratch ?? 0) * (1 - wave)
+    const rub = Math.sin(p.rub ?? 0) * 0.035 * s * scratch
+    // 左手松开扶手时先绕到身子左边（肩膀高），再往上挥 / 搭到脑袋边上 / 举高——直接走直线会从脸上划过去
+    const free = Math.min(1, Math.max(wave, scratch, up))
+    const k1 = Math.min(1, free * 2)
+    const k2 = Math.max(0, free * 2 - 1)
+    // 挠头的爪子贴在脑袋左上边（再往里就和脑袋叠在一起看不出来了）
+    const [topX, topY] =
+      up >= Math.max(wave, scratch)
+        ? [-0.3 * s, -1.0 * s]
+        : wave > 0
+          ? [-0.34 * s, -0.95 * s - Math.sin(p.swing * 3) * 0.06 * s]
+          : [-0.29 * s + rub, -0.95 * s]
+    const midX = 0.38 * s + (-0.36 * s - 0.38 * s) * k1
+    const midY = -0.42 * s + (-0.6 * s + 0.42 * s) * k1
+    const lx = midX + (topX - midX) * k2
+    const ly = midY + (topY - midY) * k2
     ctx.beginPath()
-    if (p.cheer > 0) {
-      ctx.moveTo(0.16 * s, -0.6 * s)
-      ctx.lineTo(0.3 * s, -1.05 * s)
-      ctx.moveTo(-0.16 * s, -0.6 * s)
-      ctx.lineTo(-0.3 * s, -1.0 * s)
-    } else {
-      ctx.moveTo(0.16 * s, -0.6 * s)
-      ctx.lineTo(0.42 * s, -0.5 * s)
-      ctx.moveTo(-0.16 * s, -0.6 * s)
-      if (p.wave > 0.05) ctx.lineTo(-0.34 * s, -0.95 * s - Math.sin(p.swing * 3) * 0.06 * s)
-      else ctx.lineTo(0.38 * s, -0.42 * s)
-    }
+    ctx.moveTo(0.16 * s, -0.6 * s)
+    ctx.lineTo(0.42 * s + (0.3 * s - 0.42 * s) * up, -0.5 * s + (-1.05 * s + 0.5 * s) * up)
     ctx.stroke()
+    // 左手：挠头时画在头的前面（不然被头挡住），爪子描一圈深色边
+    const leftArm = (): void => {
+      ctx.strokeStyle = fur
+      ctx.lineWidth = Math.max(1.5, s * 0.1)
+      ctx.beginPath()
+      ctx.moveTo(-0.16 * s, -0.6 * s)
+      ctx.lineTo(lx, ly)
+      ctx.stroke()
+      if (scratch > 0.05) {
+        ctx.fillStyle = fur
+        ctx.strokeStyle = 'rgba(60,40,30,0.45)'
+        ctx.lineWidth = Math.max(1, s * 0.025)
+        circle(ctx, lx, ly, s * 0.065)
+        ctx.fill()
+        ctx.stroke()
+      }
+    }
+    if (scratch <= 0.05) leftArm()
     // 头
     withTransform(ctx, 0, -0.84 * s, -p.look * 0.3, 1, 1, () => {
       ctx.fillStyle = fur
@@ -158,11 +199,21 @@ export function drawRider(ctx: CanvasRenderingContext2D, x: number, y: number, s
         ellipse(ctx, 0, 0.08 * s, 0.13 * s, 0.09 * s)
         ctx.fill()
       }
-      ctx.fillStyle = kind === 'panda' ? '#ffffff' : '#2b2b2b'
+      const ink = kind === 'panda' ? '#ffffff' : '#2b2b2b'
       const er = (0.035 + p.scared * 0.02) * s
       for (const ex of [-0.1 * s, 0.1 * s]) {
-        if (p.blink > 0.5 && p.scared < 0.5) ctx.fillRect(ex - 0.035 * s, -0.03 * s, 0.07 * s, Math.max(1, 0.02 * s))
-        else {
+        if (p.blink > 0.5 && p.scared < 0.5) {
+          ctx.fillStyle = ink
+          ctx.fillRect(ex - 0.035 * s, -0.03 * s, 0.07 * s, Math.max(1, 0.02 * s))
+        } else if (happy > 0.4) {
+          // 笑眯眯：眼睛弯成 ∩
+          ctx.strokeStyle = ink
+          ctx.lineWidth = Math.max(1, 0.035 * s)
+          ctx.beginPath()
+          ctx.arc(ex, -0.01 * s, 0.035 * s, Math.PI, 0)
+          ctx.stroke()
+        } else {
+          ctx.fillStyle = ink
           circle(ctx, ex, -0.03 * s, er)
           ctx.fill()
         }
@@ -170,7 +221,7 @@ export function drawRider(ctx: CanvasRenderingContext2D, x: number, y: number, s
       ctx.strokeStyle = '#8a5a3a'
       ctx.lineWidth = Math.max(1, 0.03 * s)
       ctx.beginPath()
-      if (p.cheer > 0) {
+      if (p.cheer > 0 || happy > 0.3) {
         ctx.fillStyle = '#c0392b'
         ellipse(ctx, 0.02 * s, 0.11 * s, 0.05 * s, 0.04 * s)
         ctx.fill()
@@ -178,5 +229,6 @@ export function drawRider(ctx: CanvasRenderingContext2D, x: number, y: number, s
       else ctx.arc(0, 0.09 * s, 0.06 * s, 0.15, Math.PI - 0.15)
       ctx.stroke()
     })
+    if (scratch > 0.05) leftArm()
   })
 }

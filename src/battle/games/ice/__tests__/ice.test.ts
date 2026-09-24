@@ -4,7 +4,7 @@ import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
 import { createIceGame } from '..'
 import { CRACK_TIME, IceModel, MELT_TIME, STAGGER, layoutIce } from '../model'
-import { renderBackground, renderDynamic } from '../render'
+import { fitLift, renderBackground, renderDynamic } from '../render'
 
 const snap = (red: number, blue: number, phase: GameState['phase'] = 'playing', winner: GameState['winner'] = null): GameState => ({
   red,
@@ -192,6 +192,87 @@ describe('融冰 · 模型（B36e）', () => {
     const t0 = performance.now()
     for (let i = 0; i < 10000; i++) m.step(1 / 60)
     expect(performance.now() - t0).toBeLessThan(300)
+  })
+})
+
+describe('融冰 · 一题里的表演（B72）', () => {
+  it('等答题左右摇摆踩脚；按键亮灯泡、翅膀张开；红队答对跳起来拍翅膀、蓝队答错脚下左右打滑冒汗；只演自己那一队；画得出来', () => {
+    const m = new IceModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.sides
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.stompOf(r)).toBe(1)
+    const w0 = r.waddle
+    m.step(0.1)
+    expect(r.waddle).not.toBeCloseTo(w0, 3)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.3)
+    expect(m.flapOf(r)).toBeGreaterThanOrEqual(0.5) // 翅膀张开
+    expect(m.stompOf(r)).toBeLessThan(m.stompOf(b)) // 站定了
+    m.setState(snap(3, 2))
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    let maxLift = 0
+    let maxFlap = 0
+    let minSlide = 0
+    let maxSlide = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    let dynMax = 0
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      maxLift = Math.max(maxLift, r.act.pose().lift)
+      maxFlap = Math.max(maxFlap, m.flapOf(r))
+      minSlide = Math.min(minSlide, m.slideOf(b))
+      maxSlide = Math.max(maxSlide, m.slideOf(b))
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      expect(m.slideOf(r)).toBe(0)
+      if (i % 10 === 0) {
+        const n = ctx.calls.length
+        renderDynamic(ctx, m)
+        dynMax = Math.max(dynMax, ctx.calls.length - n)
+      }
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxFlap).toBeGreaterThan(0.9)
+    expect(minSlide).toBeLessThan(-m.geo.size * 0.05) // 左右都滑
+    expect(maxSlide).toBeGreaterThan(m.geo.size * 0.05)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    expect(dynMax).toBeLessThan(1400) // 表演的每一帧也在绘制调用上限内
+    settle(m, 1)
+    expect(m.slideOf(b)).toBe(0)
+  })
+
+  it('满满 8 块冰时跳起来也不出盒子；减少动画时不跳不滑不踩脚', () => {
+    const m = new IceModel(createRng(4))
+    m.layout(96, 350, true)
+    m.setState(snap(0, 0))
+    settle(m, 1)
+    m.poke('red')
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    const g = m.geo
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      const y = m.penguinY(m.sides[0])
+      const [a, lift] = fitLift(m.sides[0].act.pose(), m.liftOf(m.sides[0]), y, g.size)
+      expect(y - lift - (a.lift + a.sy) * g.size).toBeGreaterThanOrEqual(1.99)
+    }
+    const quiet = new IceModel(createRng(4), { reducedMotion: true })
+    quiet.layout(150, 700, false)
+    quiet.setState(snap(3, 2))
+    quiet.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.slideOf(quiet.sides[1])).toBe(0)
+      expect(quiet.stompOf(quiet.sides[0])).toBe(0)
+      expect(quiet.sides[1].act.pose().shake).toBe(0)
+    }
+    expect(quiet.sides[1].act.pose().sweat).toBe(1)
   })
 })
 

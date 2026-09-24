@@ -5,10 +5,11 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { RIGHT_TIME, WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
-import { clamp, ease, Tween } from '@/battle/game/engine/tween'
+import { clamp, clamp01, ease, Tween } from '@/battle/game/engine/tween'
 import type { CritterKind } from '@/battle/game/sprites/scenery'
 
 export interface StarsGeometry {
@@ -76,6 +77,8 @@ export const SPRINT_FROM = 2
 export const SPARKLE_ROUNDS = 3
 export const SPARKLE_GAP = 0.5
 export const LINE_TIME = 1.0
+/** 等答题时的小动作（B72）：张望、挥魔法棒、挠头、伸懒腰、在云上蹦一下 */
+export const STAR_GESTURES: readonly Gesture[] = ['look', 'wave', 'scratch', 'stretch', 'hop']
 
 export class StarsModel {
   geo: StarsGeometry = layoutStars(1000, 120, false)
@@ -110,7 +113,7 @@ export class StarsModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.kids = [new Racer('red', rng), new Racer('blue', rng)]
+    this.kids = [new Racer('red', rng, ease.outBack, STAR_GESTURES), new Racer('blue', rng, ease.outBack, STAR_GESTURES)]
     this.layout(1000, 120, false)
   }
 
@@ -249,6 +252,7 @@ export class StarsModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.kid(t).act)
     switch (e.type) {
       case 'countdown':
         for (const kid of this.kids) kid.setMood('ready')
@@ -391,6 +395,32 @@ export class StarsModel {
     const w = this.wave[i]!.value
     if (this.sprint && kid.mood !== 'lose') return Math.max(w, 0.5 + (this.animated ? Math.sin(this.time * 6 + i) * 0.2 : 0))
     return Math.min(1, w)
+  }
+
+  /** 一题里的表演（B72）：云一起一伏（px，两朵错开） */
+  bobOf(i: number): number {
+    return this.animated ? Math.sin(this.time * 1.8 + i * 1.9) * this.geo.size * 0.07 : 0
+  }
+
+  /** 晃腿的幅度 0…1：等答题时一直晃，按键时坐稳、睡着了不晃 */
+  legSwingOf(kid: Racer): number {
+    if (!this.animated || kid.mood === 'lose') return 0
+    return 1 - 0.75 * kid.act.typing
+  }
+
+  /** 答对挥一圈棒子：棒子绕手多转的角度（弧度，0…2π） */
+  wandSpinOf(kid: Racer): number {
+    const t = kid.act.rightT
+    if (t < 0 || !this.animated) return 0
+    return Math.PI * 2 * ease.inOutSine(clamp01((t / RIGHT_TIME - 0.06) / 0.5))
+  }
+
+  /** 答错棒尖「噗」地冒一小团灰烟：进度 0…1（0 = 没有） */
+  fizzleOf(kid: Racer): number {
+    const t = kid.act.wrongT
+    if (t < 0 || !this.animated) return 0
+    const q = t / WRONG_TIME
+    return q < 0.75 ? Math.max(0.001, q / 0.75) : 0
   }
 
   /** 小星星的亮度 */

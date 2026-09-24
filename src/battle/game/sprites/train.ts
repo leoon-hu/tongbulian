@@ -4,7 +4,7 @@
  */
 import type { Team } from '@/battle/protocol'
 import { circle, fillRoundRect, withAlpha, withTransform } from '../engine/draw'
-import { drawCritter, type CritterKind } from './scenery'
+import { drawCritter, type CritterKind, type CritterPose } from './scenery'
 
 export const TRAIN_TEAM: Record<Team, { main: string; dark: string; light: string }> = {
   red: { main: '#ff6b6b', dark: '#c94444', light: '#ffa3a3' },
@@ -29,6 +29,14 @@ export interface LocoPose {
   look: number
   /** 输了：司机耷拉下来 0…1 */
   sad: number
+  /** 司机的头再歪多少（弧度，正 = 往前探：按键前倾、点头、摇头，B72） */
+  headTilt?: number
+  /** 司机往上探（px，欢呼时） */
+  headLift?: number
+  /** 司机挥手 0…1 */
+  wave?: number
+  /** 司机的表情与手（举手、笑、一愣） */
+  face?: CritterPose
 }
 
 function drawWheel(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, angle: number, spokes: number): void {
@@ -96,9 +104,11 @@ export function drawLocomotive(ctx: CanvasRenderingContext2D, x: number, y: numb
     fillRoundRect(ctx, -1.04 * s, -0.79 * s, 0.48 * s, 0.07 * s, 0.03 * s, '#3a3a44')
     fillRoundRect(ctx, -0.94 * s, -0.68 * s, 0.28 * s, 0.24 * s, 0.04 * s, '#cfeeff')
     // 司机：探出窗口的脑袋
-    withTransform(ctx, -0.8 * s + p.look * 0.02 * s, -0.42 * s + p.sad * 0.05 * s, p.look * 0.25 - p.sad * 0.2, 1, 1, () => {
-      drawCritter(ctx, 0, 0, s * 0.42, kind, 0, 0)
-      if (p.blink > 0.5) {
+    const face = p.face
+    const eyesBusy = (face?.wide ?? 0) > 0.3 || (face?.happy ?? 0) > 0.4
+    withTransform(ctx, -0.8 * s + p.look * 0.02 * s, -0.42 * s + p.sad * 0.05 * s - (p.headLift ?? 0), p.look * 0.25 - p.sad * 0.2 + (p.headTilt ?? 0), 1, 1, () => {
+      drawCritter(ctx, 0, 0, s * 0.42, kind, 0, p.wave ?? 0, face)
+      if (p.blink > 0.5 && !eyesBusy) {
         ctx.fillStyle = kind === 'panda' ? '#000' : '#2b2b2b'
         ctx.fillRect(-0.075 * s, -0.17 * s, 0.05 * s, Math.max(1, s * 0.013))
         ctx.fillRect(0.025 * s, -0.17 * s, 0.05 * s, Math.max(1, s * 0.013))

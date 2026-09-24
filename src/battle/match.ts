@@ -115,7 +115,7 @@ export function answer(
   const streak = correct ? player.streak + 1 : 0
   const players = state.players.slice()
   players[i] = { ...player, index: index + 1, correct: player.correct + (correct ? 1 : 0), streak, input: '' }
-  const events: MatchEvent[] = [{ type: 'answered', playerId, index, correct, given }]
+  const events: MatchEvent[] = [{ type: 'answered', playerId, team: player.team, index, correct, given }]
   let next: MatchState = { ...state, players }
   if (correct) {
     const team = player.team

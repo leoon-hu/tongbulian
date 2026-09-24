@@ -3,7 +3,7 @@ import { createRng } from '@/engine'
 import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
 import { createTrainGame } from '..'
-import { OUT_TIME, RUN_TIME, TrainModel, WIN_TIME, layoutTrain } from '../model'
+import { HOP_DELAY, OUT_TIME, RUN_TIME, TrainModel, WIN_TIME, layoutTrain } from '../model'
 import { renderBackground, renderDynamic } from '../render'
 
 const snap = (red: number, blue: number, phase: GameState['phase'] = 'playing', winner: GameState['winner'] = null): GameState => ({
@@ -229,6 +229,96 @@ describe('开火车 · 模型（B36v）', () => {
     const t0 = performance.now()
     for (let i = 0; i < 10000; i++) m.step(1 / 60)
     expect(performance.now() - t0).toBeLessThan(300)
+  })
+})
+
+describe('开火车 · 一题里的表演（B72）', () => {
+  const answered = (team: 'red' | 'blue', correct: boolean) => ({ type: 'answered' as const, playerId: team[0]!, team, index: 0, correct, given: '1' })
+
+  it('等久了冒泡泡、停着跟着呼吸冒小口烟；按键亮灯泡、「嚓」地喷蒸汽；红队答对汽笛喷汽、火车一跳（车厢一节节跟着）、司机举手；蓝队答错两侧漏气、一抖、冒汗；只演自己那一队；画得出来', () => {
+    const m = new TrainModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.trains
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.particles.clear()
+    let breathPuff = false
+    for (let i = 0; i < 180; i++) {
+      m.step(1 / 60)
+      if (m.particles.count > 0) breathPuff = true
+    }
+    expect(breathPuff).toBe(true) // 停着也跟着呼吸冒小口烟
+    m.particles.clear()
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    expect(m.particles.items.some((p) => p.color === '#ffffff' || p.color === '#eef0f4')).toBe(true) // 「嚓」一口蒸汽
+    m.step(1 / 60)
+    expect(m.body(0).lift).toBeGreaterThan(0) // 车身一颠
+    settle(m, 0.5)
+    m.onEvent(answered('red', true))
+    m.onEvent(answered('blue', false))
+    expect(m.whistle[0].value).toBe(1)
+    expect(m.whistle[1].value).toBeLessThan(0.5)
+    m.particles.clear()
+    let maxLift = 0
+    let maxDx = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let headFirst = -1
+    let tailFirst = -1
+    const ctx = stubCtx()
+    for (let i = 0; i < 50; i++) {
+      m.step(1 / 60)
+      maxLift = Math.max(maxLift, m.body(0).lift)
+      maxDx = Math.max(maxDx, Math.abs(m.body(1).dx))
+      maxArms = Math.max(maxArms, r.act.pose().arms)
+      maxSweat = Math.max(maxSweat, b.act.pose().sweat)
+      if (headFirst < 0 && m.hopAt(r, 0) > 0) headFirst = i
+      if (tailFirst < 0 && m.hopAt(r, 8 * HOP_DELAY) > 0) tailFirst = i
+      expect(b.act.pose().arms).toBe(0)
+      expect(m.hopAt(b, 0)).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(m.geo.size * 0.25)
+    expect(headFirst).toBeGreaterThanOrEqual(0)
+    expect(tailFirst).toBeGreaterThan(headFirst) // 最后一节比车头晚跳
+    expect(maxDx).toBeGreaterThan(0.5) // 答错一抖
+    expect(m.particles.count).toBeGreaterThan(2) // 两侧漏气
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    expect(ctx.count('clip')).toBe(5)
+  })
+
+  it('跳的高度按盒子顶边收住；减少动画时车身不跳不抖、没有粒子，只留举手与表情', () => {
+    const m = new TrainModel(createRng(4))
+    m.layout(820, 56, true)
+    m.setState(snap(2, 2))
+    settle(m, 2)
+    m.onEvent(answered('red', true))
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      expect(m.geo.laneY[0] - m.geo.size * 0.95 - m.lift(m.trains[0]) - m.body(0).lift).toBeGreaterThanOrEqual(0)
+    }
+    const quiet = new TrainModel(createRng(4), { reducedMotion: true })
+    quiet.layout(1000, 120, false)
+    quiet.setState(snap(2, 2))
+    settle(quiet, 2)
+    quiet.setState({ ...snap(2, 2), inputs: { blue: '5' } })
+    quiet.onEvent(answered('red', true))
+    quiet.onEvent(answered('blue', false))
+    let arms = 0
+    for (let i = 0; i < 40; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.body(0).lift).toBe(0)
+      expect(quiet.body(1).dx).toBe(0)
+      expect(quiet.hopAt(quiet.trains[0], 0)).toBe(0)
+      arms = Math.max(arms, quiet.trains[0].act.pose().arms)
+    }
+    expect(arms).toBeGreaterThan(0.9)
+    expect(quiet.particles.count).toBe(0)
   })
 })
 

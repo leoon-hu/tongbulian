@@ -177,17 +177,39 @@ export function drawStarter(ctx: CanvasRenderingContext2D, x: number, y: number,
 /** 小动物的种类 = 可选的小动物（B66）：六种都能当司机 / 乘客 / 观众 */
 export type CritterKind = AvatarId
 
-/** 观众小动物：一张圆脸 + 耳朵，bounce 是离地高度 */
-export function drawCritter(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, kind: CritterKind, bounce: number, wave: number): void {
-  const colors: Record<CritterKind, [string, string]> = {
-    bear: ['#b98a5c', '#e9c9a3'],
-    pig: ['#f6a5b5', '#fbd0da'],
-    panda: ['#ffffff', '#2b2b2b'],
-    monkey: ['#b07a45', '#e8c39e'],
-    rabbit: ['#f4f4f4', '#ffc7d3'],
-    cat: ['#f4b860', '#fff0d6'],
-  }
-  const [main, accent] = colors[kind]
+const CRITTER_COLORS: Record<CritterKind, [string, string]> = {
+  bear: ['#b98a5c', '#e9c9a3'],
+  pig: ['#f6a5b5', '#fbd0da'],
+  panda: ['#ffffff', '#2b2b2b'],
+  monkey: ['#b07a45', '#e8c39e'],
+  rabbit: ['#f4f4f4', '#ffc7d3'],
+  cat: ['#f4b860', '#fff0d6'],
+}
+
+/** 小动物手的颜色（熊猫是黑的）：司机 / 乘客把手搭在别处时用（B72） */
+export function critterLimb(kind: CritterKind): string {
+  return kind === 'panda' ? '#2b2b2b' : CRITTER_COLORS[kind][0]
+}
+
+/**
+ * 当司机 / 乘客时的表情与手（B72 一题里的表演）：全都不传时画出来与原来一模一样（观众照旧）。
+ * 值都是 0…1；beat 是挥手 / 挠头摆动的相位（弧度），给了就按它摆，不给按 wave 本身摆（观众原来的写法）。
+ */
+export interface CritterPose {
+  /** 笑眯眯（眼睛弯成 ∩）、张嘴笑 */
+  happy?: number
+  /** 一愣：瞪大眼、嘴成 o */
+  wide?: number
+  /** 两只手举过头顶 */
+  arms?: number
+  /** 一只手挠头 */
+  scratch?: number
+  beat?: number
+}
+
+/** 观众小动物：一张圆脸 + 耳朵，bounce 是离地高度；o = 表情与手（司机 / 乘客用，B72） */
+export function drawCritter(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, kind: CritterKind, bounce: number, wave: number, o?: CritterPose): void {
+  const [main, accent] = CRITTER_COLORS[kind]
   withTransform(ctx, x, y - bounce, 0, 1, 1, () => {
     ctx.fillStyle = main
     if (kind === 'rabbit') {
@@ -230,14 +252,76 @@ export function drawCritter(ctx: CanvasRenderingContext2D, x: number, y: number,
       ellipse(ctx, 0, -s * 0.24, s * 0.16, s * 0.12)
       ctx.fill()
     }
-    ctx.fillStyle = kind === 'panda' ? '#fff' : '#2b2b2b'
-    circle(ctx, -s * 0.12, -s * 0.38, s * 0.04)
-    ctx.fill()
-    circle(ctx, s * 0.12, -s * 0.38, s * 0.04)
-    ctx.fill()
+    const wide = o?.wide ?? 0
+    const happy = o?.happy ?? 0
+    if (wide > 0.3) {
+      // 一愣：白眼圈 + 小眼珠
+      for (const ex of [-0.12, 0.12]) {
+        ctx.fillStyle = '#fff'
+        circle(ctx, ex * s, -s * 0.38, s * 0.075)
+        ctx.fill()
+        ctx.fillStyle = '#2b2b2b'
+        circle(ctx, ex * s, -s * 0.38, s * 0.032)
+        ctx.fill()
+      }
+    } else if (happy > 0.4) {
+      // 笑眯眯：眼睛弯成 ∩
+      ctx.strokeStyle = kind === 'panda' ? '#fff' : '#2b2b2b'
+      ctx.lineWidth = Math.max(1, s * 0.045)
+      ctx.lineCap = 'round'
+      for (const ex of [-0.12, 0.12]) {
+        ctx.beginPath()
+        ctx.arc(ex * s, -s * 0.36, s * 0.055, Math.PI * 1.1, Math.PI * 1.9)
+        ctx.stroke()
+      }
+    } else {
+      ctx.fillStyle = kind === 'panda' ? '#fff' : '#2b2b2b'
+      circle(ctx, -s * 0.12, -s * 0.38, s * 0.04)
+      ctx.fill()
+      circle(ctx, s * 0.12, -s * 0.38, s * 0.04)
+      ctx.fill()
+    }
+    if (o) {
+      // 嘴：答对张嘴笑、答错嘴成 o（观众不画嘴）
+      if (wide > 0.3) {
+        ctx.fillStyle = '#7a3b2e'
+        ellipse(ctx, 0, -s * 0.19, s * 0.04, s * 0.055)
+        ctx.fill()
+      } else if (happy > 0.3) {
+        ctx.fillStyle = '#c94f4f'
+        ctx.beginPath()
+        ctx.arc(0, -s * 0.22, s * 0.085, 0, Math.PI)
+        ctx.closePath()
+        ctx.fill()
+      }
+      // 手：举过头顶欢呼 / 一只手挠头（从肩膀伸出去，手臂一笔、手一个圆）
+      const limb = critterLimb(kind)
+      const arms = o.arms ?? 0
+      const scratch = arms < 0.5 ? (o.scratch ?? 0) : 0
+      const rub = Math.sin(o.beat ?? 0) * s * 0.07
+      const paws: [number, number, number][] = []
+      if (arms > 0.05) for (const side of [-1, 1]) paws.push([side, side * (0.3 + 0.2 * arms), -0.04 - 0.98 * arms])
+      if (scratch > 0.05) paws.push([-1, -0.3 + 0.16 * scratch + (rub / s) * scratch, -0.04 - 0.62 * scratch])
+      for (const [side, px, py] of paws) {
+        ctx.strokeStyle = limb
+        ctx.lineWidth = Math.max(1, s * 0.13)
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(side * s * 0.24, -s * 0.06)
+        ctx.lineTo(px * s, py * s)
+        ctx.stroke()
+        ctx.fillStyle = limb
+        circle(ctx, px * s, py * s, s * 0.1)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(60,40,20,0.3)'
+        ctx.lineWidth = Math.max(0.75, s * 0.03)
+        ctx.stroke()
+      }
+    }
     // 挥手：一只小手举起来摆
     if (wave > 0.02) {
-      withTransform(ctx, s * 0.3, -s * 0.2, -0.8 + Math.sin(wave * 20) * 0.5 * wave, 1, 1, () => {
+      const swing = o?.beat !== undefined ? Math.sin(o.beat) : Math.sin(wave * 20)
+      withTransform(ctx, s * 0.3, -s * 0.2, -0.8 + swing * 0.5 * wave, 1, 1, () => {
         ctx.fillStyle = main
         circle(ctx, s * 0.18, 0, s * 0.09)
         ctx.fill()

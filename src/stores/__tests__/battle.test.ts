@@ -7,7 +7,7 @@ import { AI_ID } from '@/battle/ai'
 import type { Question } from '@/types/models'
 import { EVENT_LOG, FEEDBACK_CALLOUT_MS, FEEDBACK_RIGHT_MS, FEEDBACK_WRONG_MS, INTRO_AGAIN_MS, LINE_GAP_MS, LINE_MS, POKE_GAP_MS, useBattleStore } from '../battle'
 import { BOT_REPLY_MS, EMOTE_GAP_MS, EMOTE_MS } from '@/battle/emotes'
-import { playSfx } from '@/battle/sfx'
+import { KEY_GAIN, KEY_GAP_MS, playSfx } from '@/battle/sfx'
 import { apply, createRoom, join, snapshot } from '../../../server/room'
 import { ROBOT_LINE_DELAY_MS, ROBOT_SAY_MS, planAnswer } from '@/battle/ai'
 
@@ -568,7 +568,7 @@ describe('背景音乐开关（B68）', () => {
 })
 
 describe('小项（B70）：答错按游戏、左右声道、震动', () => {
-  it('开火车里答错放刹车声（偏那一队那边）；得分音带左右；真人答题时震动（安卓），机器人不震', () => {
+  it('开火车里答错放漏气声（B73，偏那一队那边）；得分音带左右；真人答题时震动（安卓），机器人不震', () => {
     const s = useBattleStore()
     const vib = vi.fn(() => true)
     Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vib })
@@ -577,8 +577,8 @@ describe('小项（B70）：答错按游戏、左右声道、震动', () => {
     s.beginPlay()
     vi.mocked(playSfx).mockClear()
     s.submit('left', 'nope')
-    expect(vi.mocked(playSfx).mock.calls).toContainEqual(['brake', 1, 1, -0.5])
-    expect(vi.mocked(playSfx).mock.calls.some((c) => c[0] === 'dong')).toBe(false)
+    expect(vi.mocked(playSfx).mock.calls).toContainEqual(['hiss', 1, 1, -0.5])
+    expect(vi.mocked(playSfx).mock.calls.some((c) => c[0] === 'oops')).toBe(false)
     expect(vib).toHaveBeenLastCalledWith([40, 40, 40])
     vi.advanceTimersByTime(FEEDBACK_WRONG_MS + 1)
     vi.mocked(playSfx).mockClear()
@@ -591,8 +591,30 @@ describe('小项（B70）：答错按游戏、左右声道、震动', () => {
     vi.mocked(playSfx).mockClear()
     s.submit(AI_ID, 'nope')
     expect(vib).not.toHaveBeenCalled()
-    expect(vi.mocked(playSfx).mock.calls).toContainEqual(['brake', 1, 1, 0.5])
+    expect(vi.mocked(playSfx).mock.calls).toContainEqual(['hiss', 1, 1, 0.5])
     Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
+  })
+})
+
+describe('按键声（B73）', () => {
+  it('本设备的真人每按一下数字键放这个游戏的按键声（很轻、偏自己那边），最密 KEY_GAP_MS 一次；清空不算；机器人按键不出声', () => {
+    const s = useBattleStore()
+    s.setName('me', '小兔')
+    s.startLocal({ kpId: KP, mode: 'ai', skin: 'car', seeds: { left: 1, ai: 2 }, aiSeed: 3, aiLevel: 'slow' })
+    s.beginPlay()
+    vi.mocked(playSfx).mockClear()
+    s.setInput('left', '1')
+    expect(vi.mocked(playSfx).mock.calls).toEqual([['rev', 1, KEY_GAIN, -0.5]])
+    s.setInput('left', '12')
+    expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(KEY_GAP_MS + 1)
+    s.setInput('left', '1')
+    expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(2)
+    vi.advanceTimersByTime(KEY_GAP_MS + 1)
+    s.setInput('left', '')
+    expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(2)
+    s.setInput(AI_ID, '3')
+    expect(vi.mocked(playSfx)).toHaveBeenCalledTimes(2)
   })
 })
 

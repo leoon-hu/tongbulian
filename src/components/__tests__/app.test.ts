@@ -285,7 +285,7 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('点知识点直接到「跟谁打」（不弹选择面板，B26）：第一次默认选着「自己练」，点开始进练习页；下次进来默认选着上次开始时的那张卡（没有解锁；页签行没有对战开关）', async () => {
+  it('点知识点直接到「怎么练」（不弹选择面板，B26）：第一次默认选着「自己练」，点开始进练习页；下次进来默认选着上次开始时的那张卡（没有解锁；页签行没有对战开关）', async () => {
     const w = await mountAt(MAP)
     // 已去除解锁：地图上不再出现 🔒；也没有「⚔️ 对战」开关了（B26）
     expect(shown(w)).not.toContain('🔒')
@@ -296,7 +296,7 @@ describe('App 集成冒烟', () => {
     await until(() => router.currentRoute.value.name === 'battle-setup')
     const kpId = String(router.currentRoute.value.params.kpId)
     expect(w.find('.entry-sheet').exists()).toBe(false)
-    expect(shown(w)).toContain('跟谁打')
+    expect(shown(w)).toContain('怎么练')
     expect(w.findAll('.mode').map((m) => m.attributes('data-mode'))).toEqual(['practice', 'ai', 'duo', 'online'])
     expect(w.find('.mode.on').attributes('data-mode')).toBe('practice') // 第一次默认自己练
     expect(shown(w.find('.mode-desc'))).toContain('不用比快慢')
@@ -655,18 +655,20 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     vi.useRealTimers()
   })
 
-  it('地图上点知识点 → 设置页只有四张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；点开始不问名字直接进竞技场，名字是随机到的小动物（无全局顶栏、标题带「对战」）', async () => {
+  it('地图上点知识点 → 设置页只有四张卡和开始；⚙️ 配置里才有快慢 / 选游戏 / 名字；点开始不问名字直接进竞技场，名字是随机到的小动物（无全局顶栏；设置页标题「练习」、问「怎么练？」）', async () => {
     const w = await mountAt(MAP)
     await w.find('.node.open').trigger('click')
     await until(pathIs('/battle/new/s1-00-count'))
-    expect(shown(w)).toContain('跟谁打')
-    expect(document.title).toContain('对战')
+    expect(shown(w.find('.page-header'))).toContain('练习')
+    expect(shown(w.find('.page-header'))).not.toContain('对战')
+    expect(shown(w)).toContain('怎么练？')
+    expect(document.title).toMatch(/^练习 · /)
     // 页面默认不问名字、不展示机器人快慢 / 选游戏 / 名字
     expect(w.find('.sheet').exists()).toBe(false)
     expect(shown(w)).not.toContain('机器人快慢')
     expect(w.find('.skins').exists()).toBe(false)
     expect(w.find('.name-chip').exists()).toBe(false)
-    // 四张「跟谁打」卡各有一幅示意图（B27），自己练在第一张：自己练一台竖着的手机，打机器人 / 两人一台一台横着的，各用各的两台；只有打机器人那张画机器人、只有自己练画书
+    // 四张「怎么练」卡各有一幅示意图（B27），自己练在第一张：自己练一台竖着的手机，打机器人 / 两人一台一台横着的，各用各的两台；只有打机器人那张画机器人、只有自己练画书
     const pics = w.findAll('.mode .mode-pic')
     expect(pics.length).toBe(4)
     expect(pics.map((p) => p.findAll('.phone').length)).toEqual([1, 1, 1, 2])
@@ -1489,7 +1491,7 @@ describe('帮助页（F17）', () => {
     w.unmount()
   })
 
-  it('设置页「跟谁打」：选中哪张卡，下面出一行对应的说明；页头没有「加入对战」（它在全局顶栏）', async () => {
+  it('设置页「怎么练」：选中哪张卡，下面出一行对应的说明；页头没有「加入对战」（它在全局顶栏）', async () => {
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
     const w = await mountAt('/battle/new/s1-05-carry-add')
     expect(shown(w.find('.mode-desc'))).toContain('不用比快慢') // 默认选着自己练
@@ -1731,8 +1733,8 @@ describe('我的小动物（B66）', () => {
   })
 })
 
-describe('背景音乐（B68）', () => {
-  it('开打就按游戏类别放，到 6 分加快，打完停；配置里关了不放；🔇 静音不放', async () => {
+describe('背景音乐（B68 / B73）', () => {
+  it('开打就放这个游戏自己的曲子，到 6 分加快，打完停；配置里关了不放；🔇 静音不放', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
     const settle = async (): Promise<void> => {
@@ -1747,8 +1749,7 @@ describe('背景音乐（B68）', () => {
     expect(vi.mocked(startMusic)).not.toHaveBeenCalled() // 倒数不放
     store.beginPlay()
     await settle()
-    const kind = skinById(chapterSkin('s1-04-simple-addsub'))!.kind
-    expect(vi.mocked(startMusic)).toHaveBeenCalledWith(kind, false)
+    expect(vi.mocked(startMusic)).toHaveBeenCalledWith(chapterSkin('s1-04-simple-addsub'), false)
     store.state = { ...store.state!, score: { red: 6, blue: 2 } }
     await settle()
     expect(vi.mocked(setMusicSprint)).toHaveBeenCalledWith(true)

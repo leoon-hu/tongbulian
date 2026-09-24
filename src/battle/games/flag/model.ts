@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { WRONG_TIME, actEvent, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Racer } from '@/battle/game/engine/racer'
 import { Decay } from '@/battle/game/engine/rig'
@@ -69,6 +70,8 @@ export const FLY_TIME = 1.0
 export const SPRINT_FROM = 2
 export const FIREWORK_ROUNDS = 3
 export const FIREWORK_GAP = 0.5
+/** 等答题时的小动作（B72）：张望、挥手、伸懒腰、原地踏步（蹦两下换的，渲染里接） */
+export const FLAG_GESTURES: readonly Gesture[] = ['look', 'wave', 'stretch', 'hop']
 
 export class FlagModel {
   geo: FlagGeometry = layoutFlag(1000, 120, false)
@@ -107,7 +110,7 @@ export class FlagModel {
     this.rng = rng
     this.opts = opts
     this.particles = new ParticlePool(64, () => rng.next())
-    this.kids = [new Racer('red', rng), new Racer('blue', rng)]
+    this.kids = [new Racer('red', rng, ease.outBack, FLAG_GESTURES), new Racer('blue', rng, ease.outBack, FLAG_GESTURES)]
     this.layout(1000, 120, false)
   }
 
@@ -213,6 +216,7 @@ export class FlagModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.kid(t).act)
     switch (e.type) {
       case 'countdown':
         for (const kid of this.kids) kid.setMood('ready')
@@ -316,7 +320,19 @@ export class FlagModel {
     if (!this.animated) return 0
     if (kid.mood === 'ready') return Math.abs(Math.sin(kid.hop)) * g.size * 0.15
     if (kid.mood === 'win') return Math.abs(Math.sin(kid.phase)) * g.size * 0.12
+    // 答对那一拍由表演来跳（B72：蓄力 → 跳 → 落地，不再一下弹到最高）
+    if (kid.act.rightT >= 0) return 0
     return this.jump[i]!.value * g.size * 0.35
+  }
+
+  /** 答错那一拍（B72）脚下一绊：0…1（一下绊出去、慢慢站稳；不后退、不摔倒）；减少动画时没有 */
+  tripOf(kid: Racer): number {
+    const t = kid.act.wrongT
+    if (t < 0 || !this.animated) return 0
+    const q = t / WRONG_TIME
+    if (q < 0.12) return ease.outQuad(q / 0.12)
+    if (q < 0.6) return 1 - ease.inOutSine((q - 0.12) / 0.48)
+    return 0
   }
 
   scratchOf(kid: Racer): number {

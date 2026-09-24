@@ -17,6 +17,11 @@ export interface GameState {
   lastPoint: Team | null
   /** 两队各自的小动物（B66）：有司机 / 乘客的游戏用它换脸；没有就用游戏自己的默认角色 */
   avatars?: TeamAvatars
+  /**
+   * 每队正在按的内容（这一队几个人的拼在一起，B72）：变了且不空 = 有人按了一下键，角色做「有主意了、蓄力」的表演；
+   * 选择题点了就交，没有这一段
+   */
+  inputs?: Partial<Record<Team, string>>
 }
 
 /** 瞬时事件：比赛事件（得分 / 连对 / 反超 / 还差一分 / 结束）+ 倒数开始 / 开打 */

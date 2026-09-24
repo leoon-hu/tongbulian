@@ -5,6 +5,7 @@
 import type { RNG } from '@/engine'
 import type { Team } from '@/battle/protocol'
 import type { GameEvent, GameState } from '@/battle/game/contract'
+import { Actor, actEvent, actState, type Gesture } from '@/battle/game/engine/act'
 import { ParticlePool } from '@/battle/game/engine/particles'
 import { Blinker, Decay, advancePhase } from '@/battle/game/engine/rig'
 import { clamp, ease, Tween } from '@/battle/game/engine/tween'
@@ -77,7 +78,13 @@ export interface Runner {
   twitch: number
   /** 尘土发射计时 */
   dustT: number
+  /** 一题里的表演（B72） */
+  act: Actor
 }
+
+/** 等答题时的小动作（B72）：乌龟伸脖子、点头、张望、蹦一下；兔子洗脸、竖起来伸懒腰、抖耳朵、张望、蹦一下 */
+export const TORTOISE_GESTURES: readonly Gesture[] = ['look', 'stretch', 'nod', 'hop']
+export const HARE_GESTURES: readonly Gesture[] = ['look', 'scratch', 'stretch', 'hop', 'wave']
 
 export interface Cloud {
   x: number
@@ -150,6 +157,7 @@ export class RaceModel {
       hop: this.rng.next() * Math.PI * 2,
       twitch: 1 + this.rng.next() * 3,
       dustT: 0,
+      act: new Actor(this.rng, team === 'red' ? TORTOISE_GESTURES : HARE_GESTURES, !this.opts.reducedMotion),
     }
   }
 
@@ -188,6 +196,7 @@ export class RaceModel {
   }
 
   setState(s: GameState): void {
+    actState(s, (t) => this.runner(t).act)
     this.target = Math.max(1, s.target)
     const prevPhase = this.phase
     this.phase = s.phase
@@ -245,6 +254,7 @@ export class RaceModel {
   }
 
   onEvent(e: GameEvent): void {
+    actEvent(e, (t) => this.runner(t).act)
     switch (e.type) {
       case 'countdown':
         for (const r of this.runners) this.setMood(r, 'ready')
@@ -343,6 +353,7 @@ export class RaceModel {
 
     for (const r of this.runners) {
       r.moodT += dt
+      r.act.step(dt)
       r.x.step(dt)
       const boost = r.boost.step(dt)
       const running = !r.x.done && r.mood !== 'win' && r.mood !== 'lose'

@@ -124,6 +124,40 @@ describe('龟兔赛跑 · 模型（B36a）', () => {
   })
 })
 
+describe('龟兔赛跑 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡、按键亮灯泡；红队答对跳起来举手、蓝队答错冒汗摇头；只演自己那一队；画得出来', () => {
+    const m = new RaceModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.runners
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    let maxLift = 0
+    let maxSweat = 0
+    let maxShake = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      expect(pb.arms).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxSweat).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+  })
+})
+
 describe('龟兔赛跑 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new RaceModel(createRng(2))

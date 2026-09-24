@@ -6,16 +6,18 @@ export const RULE_MAX_MS = 9000
 </script>
 
 <script setup lang="ts">
-// 开局倒数（B6）：新开一局先讲一句规则（rule 词条，朗读 + 显示，说完再倒数）→「预备…」→ 3、2、1（朗读数字 + 嘀）→「开始！」（朗读 + 嘟）→ done。
+// 开局倒数（B6）：新开一局先讲一句规则（rule 词条，朗读 + 显示，说完再倒数）→「预备…」→ 3、2、1（朗读数字 + 嘀）→
+// 「开始！」（朗读 + 这个游戏开始的一声，B73：发令枪、汽笛、点火…；不知道是哪个游戏就是通用的「嘟」）→ done。
 // 再来一局不讲（rule 传 null）。
 import { onBeforeUnmount, ref } from 'vue'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
 import { say } from '@/engine/voice'
-import { playSfx } from '@/battle/sfx'
+import { playSfx, skinSfx } from '@/battle/sfx'
+import { skinById } from '@/battle/skins'
 import RubyText from '@/components/ui/RubyText.vue'
 
-const props = defineProps<{ rule?: string | null }>()
+const props = defineProps<{ rule?: string | null; skin?: string | null }>()
 const emit = defineEmits<{ done: [] }>()
 
 /** 5 = 讲规则，4 = 「预备…」，3 / 2 / 1，0 = 「开始！」 */
@@ -57,7 +59,8 @@ function step(): void {
     )
   } else {
     say(phraseSpeech({ k: 'battle.go' }, lang.value), lang.value)
-    playSfx('go')
+    const skin = props.skin ? skinById(props.skin) : undefined
+    for (const x of skin ? skinSfx(skin.id, skin.kind).go : ['go' as const]) playSfx(x)
     timers.push(setTimeout(() => emit('done'), 600))
   }
 }

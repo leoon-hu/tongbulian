@@ -135,6 +135,79 @@ describe('火箭升空 · 模型（B36b）', () => {
   })
 })
 
+describe('火箭升空 · 一题里的表演（B72）', () => {
+  const answered = (team: 'red' | 'blue', correct: boolean) => ({ type: 'answered' as const, playerId: team[0]!, team, index: 0, correct, given: '1' })
+
+  it('得过分之后停稳了照样悬停起伏、等久了冒泡泡；按键亮灯泡、火苗蹿一下；红队答对往上一蹿、喷大火；蓝队答错火苗哑了、冒灰烟、晃；只演自己那一队；画得出来', () => {
+    const m = new RocketModel(createRng(3))
+    m.layout(150, 700, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.rockets
+    expect(r.mood).toBe('run')
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    let lo = Infinity
+    let hi = -Infinity
+    for (let i = 0; i < 120; i++) {
+      m.step(1 / 60)
+      lo = Math.min(lo, m.yOf(r))
+      hi = Math.max(hi, m.yOf(r))
+    }
+    expect(hi - lo).toBeGreaterThan(m.geo.size * 0.05) // 悬停起伏
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    expect(m.flameAct(r, 0.4)).toBeGreaterThan(1) // 按一下火苗蹿一下
+    expect(m.flameAct(b, 0.4)).toBeLessThan(0.7)
+    settle(m, 0.5)
+    m.particles.clear()
+    m.onEvent(answered('red', true))
+    m.onEvent(answered('blue', false))
+    expect(m.particles.items.some((p) => ['#a4a4b4', '#c2c2ce', '#8a8a9a'].includes(p.color))).toBe(true) // 一口灰烟
+    let maxLift = 0
+    let maxFlame = 0
+    let minFlame = Infinity
+    let maxShake = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    for (let i = 0; i < 40; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxFlame = Math.max(maxFlame, m.flameAct(r, m.flameOf(r)))
+      minFlame = Math.min(minFlame, m.flameAct(b, m.flameOf(b)))
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      expect(pb.lift).toBeLessThan(0.2)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxFlame).toBeGreaterThan(1.2)
+    expect(maxFlame).toBeLessThanOrEqual(2.2)
+    expect(minFlame).toBeLessThan(0.25)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    settle(m, 1.5)
+    expect(m.flameAct(b, 0.4)).toBeGreaterThan(0.2) // 火又旺回来
+  })
+
+  it('减少动画时尾焰不跟着表演变、没有烟，只留头顶图标', () => {
+    const quiet = new RocketModel(createRng(4), { reducedMotion: true })
+    quiet.layout(150, 700, false)
+    quiet.setState(snap(2, 2))
+    settle(quiet, 2)
+    quiet.setState({ ...snap(2, 2), inputs: { red: '3' } })
+    quiet.onEvent(answered('blue', false))
+    expect(quiet.flameAct(quiet.rockets[0], 0.4)).toBe(0.4)
+    expect(quiet.flameAct(quiet.rockets[1], 0.4)).toBe(0.4)
+    expect(quiet.rockets[0].act.pose().bulb).toBeGreaterThan(0.9)
+    expect(quiet.rockets[1].act.pose().lift).toBe(0)
+    expect(quiet.particles.count).toBe(0)
+  })
+})
+
 describe('火箭升空 · 渲染冒烟', () => {
   it('假 ctx 下背景与每帧动态各自的绘制调用有上限，不抛错', () => {
     const m = new RocketModel(createRng(2))

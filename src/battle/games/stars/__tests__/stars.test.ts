@@ -4,7 +4,7 @@ import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
 import { createStarsGame } from '..'
 import { LIGHT_TIME, LINE_TIME, StarsModel, layoutStars } from '../model'
-import { renderBackground, renderDynamic } from '../render'
+import { fitLift, renderBackground, renderDynamic } from '../render'
 
 const snap = (red: number, blue: number, phase: GameState['phase'] = 'playing', winner: GameState['winner'] = null): GameState => ({
   red,
@@ -190,6 +190,93 @@ describe('点亮星星 · 模型（B36q）', () => {
     const t0 = performance.now()
     for (let i = 0; i < 10000; i++) m.step(1 / 60)
     expect(performance.now() - t0).toBeLessThan(300)
+  })
+})
+
+describe('点亮星星 · 一题里的表演（B72）', () => {
+  it('等久了冒泡泡；按键亮灯泡、举棒、不晃腿；红队答对跳起来挥一圈棒子、蓝队答错棒尖冒灰烟冒汗摇头；只演自己那一队；画得出来', () => {
+    const m = new StarsModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.kids
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.legSwingOf(r)).toBe(1)
+    const y0 = m.bobOf(0)
+    m.step(0.3)
+    expect(m.bobOf(0)).not.toBeCloseTo(y0, 3) // 云一起一伏
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    settle(m, 0.3)
+    expect(r.act.typing).toBeGreaterThan(0.8)
+    expect(m.legSwingOf(r)).toBeLessThan(0.5)
+    expect(m.legSwingOf(b)).toBe(1)
+    m.setState(snap(3, 2))
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    let maxLift = 0
+    let maxSpin = 0
+    let maxFizzle = 0
+    let maxSweat = 0
+    const ctx = stubCtx()
+    let dynMax = 0
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxSpin = Math.max(maxSpin, m.wandSpinOf(r))
+      maxFizzle = Math.max(maxFizzle, m.fizzleOf(b))
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      expect(pb.arms).toBe(0)
+      expect(m.fizzleOf(r)).toBe(0)
+      if (i % 10 === 0) {
+        const n = ctx.calls.length
+        renderDynamic(ctx, m)
+        dynMax = Math.max(dynMax, ctx.calls.length - n)
+      }
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxSpin).toBeGreaterThan(Math.PI)
+    expect(maxFizzle).toBeGreaterThan(0.5)
+    expect(maxSweat).toBe(1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    expect(dynMax).toBeLessThan(1500) // 表演的每一帧也在绘制调用上限内
+  })
+
+  it('跳起来不出盒子：手机紧凑版红队头顶没地方，点一下的蹦和答对的跳一起收；减少动画时不跳不晃', () => {
+    const m = new StarsModel(createRng(4))
+    m.layout(820, 56, true)
+    m.setState(snap(3, 2))
+    settle(m, 1)
+    m.poke('red')
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    const g = m.geo
+    let jumped = false
+    for (let i = 0; i < 60; i++) {
+      m.step(1 / 60)
+      const seat = g.kidY[0] + m.bobOf(0)
+      const [a, lift] = fitLift(m.kids[0].act.pose(), m.liftOf(m.kids[0]), seat, g.size)
+      if (a.lift > 0 || lift > 0) jumped = true
+      expect(seat - lift - (a.lift + 1.1 * a.sy) * g.size).toBeGreaterThanOrEqual(1.99)
+    }
+    expect(jumped).toBe(true)
+    const quiet = new StarsModel(createRng(4), { reducedMotion: true })
+    quiet.layout(1000, 120, false)
+    quiet.setState({ ...snap(3, 2), inputs: { blue: '2' } })
+    quiet.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    for (let i = 0; i < 30; i++) {
+      quiet.step(1 / 60)
+      const p = quiet.kids[0].act.pose()
+      expect(p.lift).toBe(0)
+      expect(p.shake).toBe(0)
+      expect(quiet.wandSpinOf(quiet.kids[0])).toBe(0)
+      expect(quiet.legSwingOf(quiet.kids[0])).toBe(0)
+      expect(quiet.bobOf(0)).toBe(0)
+    }
+    expect(quiet.kids[0].act.pose().arms).toBeGreaterThan(0.3) // 举手照样有
+    expect(quiet.kids[1].act.pose().bulb).toBeGreaterThan(0)
   })
 })
 

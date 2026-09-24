@@ -2,7 +2,8 @@
  * 爬梯子的渲染：renderBackground 画不动的部分（天空、山丘、草地、树干、树冠、平台与栏杆），index.ts 缓存到离屏 canvas；
  * renderDynamic 每帧画会动的部分（太阳、云、小鸟、落叶、两架梯子（横档弯 / 晃）、两面旗、粒子、两只角色）。
  */
-import { gradient } from '@/battle/game/engine/draw'
+import { drawActFx } from '@/battle/game/engine/act'
+import { gradient, withTransform } from '@/battle/game/engine/draw'
 import { breathe } from '@/battle/game/engine/rig'
 import { drawCanopy, drawClimber, drawFlag, drawLadder, drawLeaf, drawPlatform, drawTrunk } from '@/battle/game/sprites/ladder'
 import { drawCloud, drawHill, drawSun } from '@/battle/game/sprites/scenery'
@@ -48,19 +49,46 @@ export function renderDynamic(ctx: CanvasRenderingContext2D, m: LadderModel): vo
     if (m.flagOf(c) === 0) drawFlag(ctx, g.flagX[i]!, g.platformY, g.flagH, c.team, m.animated ? m.flagWave + i : 0, m.flagGlow[i]!.value, m.sprint ? 1.6 : 1)
   })
   m.particles.draw(ctx)
+  const s = g.size
   m.climbers.forEach((c, i) => {
-    drawClimber(ctx, m.xOf(c, i), c.pos.value, g.size, c.team, m.kinds[i]!, {
-      climb: m.climbOf(c),
-      grip: c.mood === 'ready' ? 0 : 1,
-      lift: m.liftOf(c),
-      cheer: c.mood === 'win' ? 1 : 0,
-      hang: m.hangOf(c),
-      swing: t * 2.5,
-      flag: m.flagOf(c),
-      wave: m.animated ? m.flagWave + 2 : 0,
-      blink: c.blink.value,
-      look: Math.max(c.look.value, m.hangOf(c) * 0.8),
-      sway: m.swayOf(c),
-    })
+    // 一题里的表演（B72）：抓着梯子不能往前倾，所以前倾 = 往上看、抓紧；跳 = 往上一窜（半幅）；
+    // 晃 = 绕腰左右摆；翻跟头 = 绕着梯子转一圈（横向压扁再翻回来）；答错手一滑往下出溜一点再爬回来
+    const act = c.act
+    const a = act.pose()
+    const x = m.xOf(c, i)
+    const y = c.pos.value + m.slipOf(c) - a.lift * s * 0.6
+    const right = act.rightT >= 0
+    const wrong = act.wrongT >= 0
+    withTransform(ctx, x, y - s * 0.5, a.shake * 0.7, 1, 1, () =>
+      withTransform(ctx, 0, s * 0.5, 0, a.sx * Math.cos(a.spin), a.sy, () =>
+        drawClimber(ctx, 0, 0, s, c.team, m.kinds[i]!, {
+          climb: m.climbOf(c),
+          grip: c.mood === 'ready' ? 0 : 1,
+          lift: m.liftOf(c),
+          cheer: c.mood === 'win' ? 1 : 0,
+          hang: m.hangOf(c),
+          swing: t * 2.5,
+          flag: m.flagOf(c),
+          wave: m.animated ? m.flagWave + 2 : 0,
+          blink: c.blink.value,
+          look: Math.max(c.look.value, m.hangOf(c) * 0.8, a.look),
+          sway: m.swayOf(c),
+          free: i === 0 ? -1 : 1,
+          beat: a.beat,
+          hello: a.wave,
+          scratch: a.scratch,
+          reach: Math.max(act.typing, act.gesture === 'stretch' ? a.arms / 0.7 : 0),
+          up: Math.max(act.typing, act.gesture === 'stretch' ? a.arms / 0.7 : 0),
+          fist: right ? a.arms : 0,
+          both: right && act.big,
+          slip: wrong ? Math.min(1, m.slipOf(c) / (s * 0.08)) : 0,
+          legs: m.legsOf(c),
+          turn: wrong ? a.shake * 1.6 : 0,
+          happy: a.happy,
+          wide: a.wide,
+        }),
+      ),
+    )
+    drawActFx(ctx, x, y - m.liftOf(c) - s * 1.18, s, a, { side: i === 0 ? 1 : -1, quality: m.quality })
   })
 }

@@ -126,12 +126,55 @@ export interface BlowerPose {
   blink: number
   look: number
   dir: 1 | -1
+  /** 双手往上举 0…1（伸懒腰 / 答对举手，B72），与 cheer 取大的 */
+  arms?: number
+  /** 蘸泡泡水 0…1：拿棒的手伸到脚边的瓶子里（B72） */
+  dip?: number
+  /** 抬头往上看 0…1 */
+  up?: number
+  /** 笑眯眯 0…1（答对） */
+  happy?: number
+  /** 瞪大眼、嘴成 o 0…1（答错一愣） */
+  wide?: number
+  /** 泡泡棒画在手里（跟着身子一起动）；不给就由外面自己画 */
+  wand?: boolean
+}
+
+/** 脚边的一小瓶泡泡水（B72 蘸一下泡泡水）：原点在瓶底中点，s 是角色身高 */
+export function drawJar(ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  const w = s * 0.2
+  const h = s * 0.24
+  fillRoundRect(ctx, x - w / 2, y - h, w, h, w * 0.25, 'rgba(210,235,255,0.9)')
+  withAlpha(ctx, 0.8, () => {
+    fillRoundRect(ctx, x - w / 2 + 1, y - h * 0.62, w - 2, h * 0.62 - 1, w * 0.2, '#c9a3ff')
+  })
+  fillRoundRect(ctx, x - w * 0.38, y - h - s * 0.05, w * 0.76, s * 0.06, s * 0.02, '#a78bfa')
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'
+  ctx.fillRect(x - w * 0.32, y - h * 0.85, w * 0.12, h * 0.5)
+}
+
+/** 泡泡棒圈心相对脚下的位置（没镜像的本地坐标，单位 = 身高）与棍的角度：平时在嘴边，举手时举过头，蘸水时伸到脚边的瓶子里 */
+export function wandPose(p: BlowerPose): { x: number; y: number; ang: number } {
+  const up = Math.max(p.cheer > 0 ? 1 : 0, Math.min(1, p.arms ?? 0))
+  const dip = p.dip ?? 0
+  let x = 0.3
+  let y = -0.78 - 0.3 * up
+  let ang = 0.5 - 1.1 * up
+  x += (0.46 - x) * dip
+  y += (-0.14 - y) * dip
+  ang += (Math.PI - ang) * dip
+  return { x, y, ang }
 }
 
 /** 吹泡泡的小动物：队色围巾、一只手把泡泡棒举到嘴边（棒子由外面按 wandTip 画）；原点在脚下正中 */
 export function drawBlower(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, team: Team, kind: CritterKind, p: BlowerPose): void {
   const c = TEAM[team]
   const [fur, accent] = FUR[kind]
+  const arms = Math.max(p.cheer > 0 ? 1 : 0, Math.min(1, p.arms ?? 0))
+  const dip = p.dip ?? 0
+  const lookUp = p.up ?? 0
+  const wide = p.wide ?? 0
+  const happy = (p.happy ?? 0) * (1 - wide)
   withTransform(ctx, x, y - p.lift, 0, p.dir, 1, () => {
     ctx.lineCap = 'round'
     // 腿
@@ -153,19 +196,20 @@ export function drawBlower(ctx: CanvasRenderingContext2D, x: number, y: number, 
     fillRoundRect(ctx, -0.22 * s, -0.7 * s, 0.44 * s, 0.1 * s, 0.05 * s, c.main)
     ctx.fillStyle = c.dark
     ctx.fillRect(0.06 * s, -0.66 * s, 0.09 * s, 0.2 * s)
-    // 手臂：右手举棒到嘴边 / 欢呼举起，左手垂着
+    // 手臂：右手举棒到嘴边 / 欢呼举起 / 伸到瓶子里蘸水，左手垂着 / 欢呼举起
     ctx.strokeStyle = fur
     ctx.lineWidth = Math.max(1.5, s * 0.1)
+    const hand = wandPose(p)
     ctx.beginPath()
     ctx.moveTo(0.16 * s, -0.6 * s)
-    if (p.cheer > 0) ctx.lineTo(0.3 * s, -1.05 * s)
-    else ctx.lineTo(0.34 * s, -0.78 * s)
+    ctx.lineTo((hand.x + 0.04 * (1 - arms) * (1 - dip)) * s, (hand.y + 0.03 * arms - 0.2 * dip) * s)
     ctx.moveTo(-0.16 * s, -0.6 * s)
-    ctx.lineTo(p.cheer > 0 ? -0.3 * s : -0.28 * s, p.cheer > 0 ? -1.0 * s : -0.34 * s)
+    ctx.lineTo((-0.28 - 0.02 * arms) * s, (-0.34 - 0.66 * arms) * s)
     ctx.stroke()
-    // 头（吹的时候腮帮子鼓起来）
+    // 头（吹的时候腮帮子鼓起来；蘸水时低头看瓶子、抬头看泡泡时往上仰）
     const puff = 1 + p.puff * 0.12
-    withTransform(ctx, 0, -0.88 * s, -p.look * 0.3, puff, puff, () => {
+    const eyeY = (-0.03 - 0.07 * lookUp + 0.03 * dip) * s
+    withTransform(ctx, 0, (-0.88 + 0.04 * dip) * s, -p.look * 0.3 + dip * 0.25, puff, puff * (1 - 0.05 * lookUp), () => {
       ctx.fillStyle = fur
       circle(ctx, -0.23 * s, -0.16 * s, 0.09 * s)
       ctx.fill()
@@ -173,14 +217,16 @@ export function drawBlower(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.fill()
       circle(ctx, 0, 0, 0.26 * s)
       ctx.fill()
+      // 抬头往上看：眼睛、嘴鼻都往上挪一点（正面朝人，仰头就是脸往上走）
+      const faceY = -0.04 * lookUp * s
       ctx.fillStyle = accent
       if (kind === 'panda') {
-        ellipse(ctx, -0.1 * s, -0.03 * s, 0.08 * s, 0.1 * s)
+        ellipse(ctx, -0.1 * s, -0.03 * s + faceY, 0.08 * s, 0.1 * s)
         ctx.fill()
-        ellipse(ctx, 0.1 * s, -0.03 * s, 0.08 * s, 0.1 * s)
+        ellipse(ctx, 0.1 * s, -0.03 * s + faceY, 0.08 * s, 0.1 * s)
         ctx.fill()
       } else {
-        ellipse(ctx, 0, 0.08 * s, 0.13 * s, 0.09 * s)
+        ellipse(ctx, 0, 0.08 * s + faceY, 0.13 * s, 0.09 * s)
         ctx.fill()
       }
       if (p.puff > 0.2) {
@@ -192,26 +238,45 @@ export function drawBlower(ctx: CanvasRenderingContext2D, x: number, y: number, 
           ctx.fill()
         })
       }
-      ctx.fillStyle = kind === 'panda' ? '#ffffff' : '#2b2b2b'
+      const eye = kind === 'panda' ? '#ffffff' : '#2b2b2b'
+      ctx.fillStyle = eye
       for (const ex of [-0.1 * s, 0.1 * s]) {
-        if (p.blink > 0.5) ctx.fillRect(ex - 0.035 * s, -0.03 * s, 0.07 * s, Math.max(1, 0.02 * s))
+        if (wide > 0.3) {
+          ctx.fillStyle = '#ffffff'
+          circle(ctx, ex, eyeY, 0.055 * s)
+          ctx.fill()
+          ctx.fillStyle = '#2b2b2b'
+          circle(ctx, ex, eyeY, 0.028 * s)
+          ctx.fill()
+        } else if (happy > 0.4) {
+          ctx.strokeStyle = eye
+          ctx.lineWidth = Math.max(1, 0.03 * s)
+          ctx.beginPath()
+          ctx.arc(ex, eyeY + 0.015 * s, 0.035 * s, Math.PI, 0)
+          ctx.stroke()
+        } else if (p.blink > 0.5) ctx.fillRect(ex - 0.035 * s, eyeY, 0.07 * s, Math.max(1, 0.02 * s))
         else {
-          circle(ctx, ex, -0.03 * s, 0.035 * s)
+          circle(ctx, ex, eyeY, 0.035 * s)
           ctx.fill()
         }
       }
-      // 嘴：吹的时候是个 o，欢呼张嘴，平时微笑
-      if (p.puff > 0.2 || p.cheer > 0) {
+      // 嘴：吹的时候是个 o，欢呼张嘴，答错一愣也是 o，平时微笑
+      if (wide > 0.3) {
+        ctx.fillStyle = '#7a3b2e'
+        ellipse(ctx, 0.02 * s, 0.13 * s + faceY, 0.035 * s, 0.05 * s)
+        ctx.fill()
+      } else if (p.puff > 0.2 || p.cheer > 0 || happy > 0.3) {
         ctx.fillStyle = '#c0392b'
-        circle(ctx, 0.04 * s, 0.13 * s, (p.cheer > 0 ? 0.05 : 0.035) * s)
+        circle(ctx, 0.04 * s, 0.13 * s + faceY, (p.cheer > 0 || happy > 0.3 ? 0.05 : 0.035) * s)
         ctx.fill()
       } else {
         ctx.strokeStyle = '#8a5a3a'
         ctx.lineWidth = Math.max(1, 0.03 * s)
         ctx.beginPath()
-        ctx.arc(0, 0.09 * s, 0.06 * s, 0.15, Math.PI - 0.15)
+        ctx.arc(0, 0.09 * s + faceY, 0.06 * s, 0.15, Math.PI - 0.15)
         ctx.stroke()
       }
     })
+    if (p.wand) drawWand(ctx, hand.x * s, hand.y * s, s, hand.ang)
   })
 }

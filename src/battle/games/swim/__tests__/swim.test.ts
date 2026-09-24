@@ -3,7 +3,8 @@ import { createRng } from '@/engine'
 import type { GameState } from '@/battle/game/contract'
 import { stubCanvas, stubCtx } from '@/battle/game/__tests__/stub'
 import { createSwimGame } from '..'
-import { DIVE_TIME, SWIM_TIME, SwimModel, layoutSwim } from '../model'
+import { DIVE_TIME, SPLASH_AT, SWIM_TIME, SwimModel, layoutSwim } from '../model'
+import { RIGHT_TIME } from '@/battle/game/engine/act'
 import { renderBackground, renderDynamic } from '../render'
 
 const snap = (red: number, blue: number, phase: GameState['phase'] = 'playing', winner: GameState['winner'] = null): GameState => ({
@@ -148,6 +149,71 @@ describe('游泳 · 模型（B36i）', () => {
     const t0 = performance.now()
     for (let i = 0; i < 10000; i++) m.step(1 / 60)
     expect(performance.now() - t0).toBeLessThan(300)
+  })
+})
+
+describe('游泳 · 一题里的表演（B72）', () => {
+  it('等久了踩水冒泡泡、按键亮灯泡摆好架势；红队答对跃起拍起一大片水花、蓝队答错呛水吐一口；只演自己那一队；画得出来', () => {
+    const m = new SwimModel(createRng(3))
+    m.layout(1000, 120, false)
+    m.setState(snap(3, 2))
+    settle(m, 5)
+    const [r, b] = m.swimmers
+    expect(r.act.pose().think).toBeGreaterThan(0.9)
+    expect(m.treadOf(r)).toBeGreaterThan(0.9)
+    m.particles.clear()
+    m.setState({ ...snap(3, 2), inputs: { red: '1' } })
+    expect(r.act.bulbT).toBe(0)
+    expect(b.act.bulbT).toBe(-1)
+    expect(m.particles.count).toBeGreaterThan(0) // 按一下手往前划、溅两滴
+    settle(m, 0.4)
+    expect(r.act.typing).toBeGreaterThan(0.9)
+    expect(m.treadOf(r)).toBeLessThan(0.3)
+    m.setState(snap(3, 2))
+    m.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    m.onEvent({ type: 'answered', playerId: 'b', team: 'blue', index: 0, correct: false, given: '9' })
+    m.particles.clear()
+    let maxLift = 0
+    let maxArms = 0
+    let maxSweat = 0
+    let maxShake = 0
+    let splashed = false
+    const ctx = stubCtx()
+    for (let i = 0; i < 70; i++) {
+      const before = m.particles.count
+      m.step(1 / 60)
+      if (r.act.rightT >= SPLASH_AT * RIGHT_TIME && m.particles.count > before + 8) splashed = true
+      const pr = r.act.pose()
+      const pb = b.act.pose()
+      maxLift = Math.max(maxLift, pr.lift)
+      maxArms = Math.max(maxArms, pr.arms)
+      maxSweat = Math.max(maxSweat, pb.sweat)
+      maxShake = Math.max(maxShake, Math.abs(pb.shake))
+      expect(pb.arms).toBe(0)
+      expect(pr.sweat).toBe(0)
+      if (i % 10 === 0) renderDynamic(ctx, m)
+    }
+    expect(maxLift).toBeGreaterThan(0.3)
+    expect(maxArms).toBeGreaterThan(0.9)
+    expect(splashed).toBe(true)
+    expect(maxSweat).toBe(1)
+    expect(maxShake).toBeGreaterThan(0.1)
+    expect(ctx.count('save')).toBe(ctx.count('restore'))
+    // 减少动画：不跳不晃、不溅水，只留表情
+    const quiet = new SwimModel(createRng(4), { reducedMotion: true })
+    quiet.layout(820, 56, true)
+    quiet.setState(snap(3, 2))
+    settle(quiet, 1)
+    quiet.onEvent({ type: 'answered', playerId: 'r', team: 'red', index: 0, correct: true, given: '1' })
+    for (let i = 0; i < 40; i++) {
+      quiet.step(1 / 60)
+      expect(quiet.swimmers[0].act.pose().lift).toBe(0)
+    }
+    expect(quiet.particles.count).toBe(0)
+    expect(quiet.treadOf(quiet.swimmers[0])).toBe(0)
+    const c = stubCtx()
+    renderDynamic(c, quiet)
+    expect(c.count('save')).toBe(c.count('restore'))
   })
 })
 

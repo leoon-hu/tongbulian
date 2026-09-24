@@ -15,8 +15,21 @@ const STEM_DARK = '#3b8a32'
 const LEAF = '#5fb84a'
 const LEAF_DARK = '#3f9a35'
 
-/** 花盆：上宽下窄 + 盆沿 + 队色带 + 盆里的土；top 是盆沿的顶边 */
-export function drawPot(ctx: CanvasRenderingContext2D, x: number, top: number, w: number, h: number, team: Team): void {
+/** 花盆上的小脸（B72）：它是这一队的角色 */
+export interface PotFace {
+  blink: number
+  /** 笑眯眯 0…1（答对 / 赢了） */
+  happy: number
+  /** 瞪大眼、嘴成 o 0…1（答错一愣） */
+  wide: number
+  /** 眼珠往哪边瞧 −1…1 */
+  look: number
+  /** 撇嘴 0…1（输了） */
+  sad: number
+}
+
+/** 花盆：上宽下窄 + 盆沿 + 队色带 + 盆里的土；top 是盆沿的顶边；face 给了就在队色带下面画一张小脸 */
+export function drawPot(ctx: CanvasRenderingContext2D, x: number, top: number, w: number, h: number, team: Team, face?: PotFace): void {
   ctx.fillStyle = '#d98a55'
   ctx.beginPath()
   ctx.moveTo(x - w * 0.5, top + h * 0.22)
@@ -37,10 +50,76 @@ export function drawPot(ctx: CanvasRenderingContext2D, x: number, top: number, w
   ctx.fillStyle = '#6b4a2f'
   ellipse(ctx, x, top + h * 0.12, w * 0.46, h * 0.08)
   ctx.fill()
+  if (face) drawPotFace(ctx, x, top + h * 0.72, w, face)
 }
 
-/** 还没长起来的小芽：两片小叶 */
-export function drawSprout(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, wiggle: number): void {
+/** 小脸：两只眼、一张嘴、两团腮红；(x, y) 是两眼中间 */
+function drawPotFace(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, f: PotFace): void {
+  const wide = f.wide
+  const happy = f.happy * (1 - wide)
+  const er = w * 0.05
+  const lw = Math.max(1, w * 0.035)
+  withAlpha(ctx, 0.45, () => {
+    ctx.fillStyle = '#ff8f8f'
+    for (const d of [-1, 1]) {
+      ellipse(ctx, x + d * w * 0.26, y + w * 0.1, w * 0.07, w * 0.045)
+      ctx.fill()
+    }
+  })
+  ctx.lineCap = 'round'
+  ctx.lineWidth = lw
+  ctx.strokeStyle = '#4a2f1e'
+  for (const d of [-1, 1]) {
+    const ex = x + d * w * 0.14
+    if (wide > 0.3) {
+      ctx.fillStyle = '#ffffff'
+      circle(ctx, ex, y, er * 1.35)
+      ctx.fill()
+      ctx.fillStyle = '#2b2b2b'
+      circle(ctx, ex + f.look * er * 0.3, y, er * 0.55)
+      ctx.fill()
+    } else if (happy > 0.4) {
+      ctx.beginPath()
+      ctx.arc(ex, y + er * 0.4, er, Math.PI, 0)
+      ctx.stroke()
+    } else if (f.blink > 0.5) {
+      ctx.beginPath()
+      ctx.moveTo(ex - er, y)
+      ctx.lineTo(ex + er, y)
+      ctx.stroke()
+    } else {
+      ctx.fillStyle = '#2b2b2b'
+      circle(ctx, ex + f.look * er * 0.5, y, er)
+      ctx.fill()
+      ctx.fillStyle = '#ffffff'
+      circle(ctx, ex + f.look * er * 0.5 - er * 0.3, y - er * 0.35, er * 0.35)
+      ctx.fill()
+    }
+  }
+  const my = y + w * 0.13
+  if (wide > 0.3) {
+    ctx.fillStyle = '#7a3b2e'
+    ellipse(ctx, x, my + w * 0.01, w * 0.045, w * 0.06)
+    ctx.fill()
+  } else if (happy > 0.3) {
+    ctx.fillStyle = '#c94f4f'
+    ctx.beginPath()
+    ctx.arc(x, my - w * 0.02, w * 0.09, 0.1, Math.PI - 0.1)
+    ctx.closePath()
+    ctx.fill()
+  } else if (f.sad > 0.3) {
+    ctx.beginPath()
+    ctx.arc(x, my + w * 0.07, w * 0.07, Math.PI + 0.5, -0.5)
+    ctx.stroke()
+  } else {
+    ctx.beginPath()
+    ctx.arc(x, my - w * 0.03, w * 0.07, 0.35, Math.PI - 0.35)
+    ctx.stroke()
+  }
+}
+
+/** 还没长起来的小芽：两片小叶；raise 让两片叶子往上举（负 = 耷拉，B72） */
+export function drawSprout(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, wiggle: number, raise = 0): void {
   withTransform(ctx, x, y, wiggle, 1, 1, () => {
     ctx.strokeStyle = STEM
     ctx.lineWidth = Math.max(1, s * 0.12)
@@ -51,8 +130,10 @@ export function drawSprout(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.stroke()
     ctx.fillStyle = LEAF
     for (const d of [-1, 1] as const) {
-      ellipse(ctx, d * s * 0.28, -s * 0.62, s * 0.3, s * 0.16)
-      ctx.fill()
+      withTransform(ctx, 0, -s * 0.6, -d * raise, 1, 1, () => {
+        ellipse(ctx, d * s * 0.28, -s * 0.02, s * 0.3, s * 0.16)
+        ctx.fill()
+      })
     }
   })
 }
