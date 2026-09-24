@@ -355,6 +355,8 @@ describe('角色的台词（B71）', () => {
     store.beginPlay()
     await settle()
     vi.mocked(say).mockClear()
+    // 游戏按需加载：冷启动（比如发布脚本里第一次跑）时固定几次 flushPromises 不一定够，等宿主加载完再点，不然点按被忽略
+    await until(() => w.find('.strip .game-host').attributes('data-status') !== 'loading')
     await w.find('.strip canvas').trigger('pointerdown', { clientX: 30, clientY: 30 })
     await settle()
     expect(w.find('.strip .char-bubble').exists()).toBe(true)
