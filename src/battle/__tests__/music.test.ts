@@ -57,6 +57,27 @@ describe('背景音乐（B68）', () => {
     }
   })
 
+  it('默认定时器：原生 setInterval / clearInterval 不能当别的对象的方法调（浏览器抛 Illegal invocation）', () => {
+    const strict = <T,>(ret: T) =>
+      function (this: unknown): T {
+        if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation')
+        return ret
+      }
+    const set = vi.spyOn(globalThis, 'setInterval').mockImplementation(strict(7 as unknown as ReturnType<typeof setInterval>) as unknown as typeof setInterval)
+    const clear = vi.spyOn(globalThis, 'clearInterval').mockImplementation(strict(undefined) as unknown as typeof clearInterval)
+    try {
+      const p = new MusicPlayer(fakeContext().ac)
+      expect(() => p.start('race')).not.toThrow()
+      expect(p.playing).toBe(true)
+      expect(() => p.stop()).not.toThrow()
+      expect(set).toHaveBeenCalledOnce()
+      expect(clear).toHaveBeenCalledWith(7)
+    } finally {
+      set.mockRestore()
+      clear.mockRestore()
+    }
+  })
+
   it('开始后按节拍提前排音符，时钟走了继续排；冲刺后步长变短；停了不再排；压低只改增益', () => {
     const f = fakeContext()
     const p = new MusicPlayer(f.ac)

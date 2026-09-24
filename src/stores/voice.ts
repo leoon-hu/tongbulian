@@ -135,6 +135,11 @@ export const useVoiceStore = defineStore('voice', () => {
   let iceResolve: (() => void) | null = null
   let iceTimer: ReturnType<typeof setTimeout> | null = null
   const live = new Map<string, Live>()
+  /**
+   * 应答方等 ICE 清单时先攒着的信令（按发来的人）：开麦的人的 offer 常比「他开了麦」的快照先到，我这边还没去要 TURN 凭据——
+   * 马上应答的话这条连接只有 STUN、没有中转候选，我所在的网络只能走 TCP / 443 时就连不上（线上强制只走中转验出来的）
+   */
+  const held = new Map<string, RtcSignal[]>()
   let levelTimer: ReturnType<typeof setInterval> | null = null
   let errorTimer: ReturnType<typeof setTimeout> | null = null
   const retryTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -371,8 +376,26 @@ export const useVoiceStore = defineStore('voice', () => {
   /** 对方经服务器转来的信令 */
   function onSignal(from: string, data: RtcSignal): void {
     if (!transport) return
+    const isOffer = 'sdp' in data && data.sdp.type === 'offer'
+    const queue = held.get(from)
+    if (queue) {
+      // 还在等清单：接着攒（又来了新 offer 就从它重新开始，旧的作废）
+      if (isOffer) queue.length = 0
+      queue.push(data)
+      return
+    }
+    if (isOffer && !iceFresh()) {
+      // 清单还没到：先要（同时只要一次），回来或 TURN_WAIT_MS 超时后按顺序处理这个人发来的信令
+      held.set(from, [data])
+      void ensureIce().then(() => {
+        const list = held.get(from)
+        held.delete(from)
+        for (const d of list ?? []) onSignal(from, d)
+      })
+      return
+    }
     const cur = live.get(from)
-    if ('sdp' in data && data.sdp.type === 'offer') {
+    if (isOffer) {
       if (!members.value.some((m) => m.clientId === from)) return
       // 发 offer 的一定是开了麦的人；这一对里按现在的状态该由我发的，对方发来的不认
       if (pairOfferer(me.value, speaking(), from, true) === me.value) return
@@ -488,6 +511,7 @@ export const useVoiceStore = defineStore('voice', () => {
   function leave(): void {
     disable()
     closeAll()
+    held.clear()
     members.value = []
     me.value = ''
     iceServers = DEFAULT_ICE_SERVERS.map((s) => ({ ...s }))

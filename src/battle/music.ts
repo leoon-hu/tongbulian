@@ -68,10 +68,14 @@ export class MusicPlayer {
   private sprint = false
   private ducked = false
 
+  /**
+   * 默认的定时器要包一层：原生 setInterval / clearInterval 存成字段再用 this.xxx() 调，浏览器按「方法」调用、this 是本实例，
+   * 直接抛 Illegal invocation（续排一直失败，音乐只在状态变化时响一小段；单测注入的是普通函数，没测出来）
+   */
   constructor(
     private readonly ac: MusicContext,
-    private readonly setIntervalFn: typeof setInterval = setInterval,
-    private readonly clearIntervalFn: typeof clearInterval = clearInterval,
+    private readonly setIntervalFn: (fn: () => void, ms: number) => ReturnType<typeof setInterval> = (fn, ms) => setInterval(fn, ms),
+    private readonly clearIntervalFn: (id: ReturnType<typeof setInterval>) => void = (id) => clearInterval(id),
   ) {}
 
   get playing(): boolean {

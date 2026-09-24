@@ -92,7 +92,7 @@ try {
 
   // 1. 主持人建房
   const host = await open("主持", "e2e-host-000000", `${BASE}/#/battle/new/${KP}`);
-  await until(host, "document.querySelectorAll('.mode').length === 3", "设置页三张卡");
+  await until(host, "!!document.querySelector('.mode[data-mode=online]')", "「各用各的」卡");
   await host.ev("document.querySelector('.mode[data-mode=online]').click()");
   await click(host, ".start-btn", "建房间");
   await until(host, "!!document.querySelector('.codes-page')", "二维码页");

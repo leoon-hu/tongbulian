@@ -58,6 +58,7 @@ describe('语音 store（B57）', () => {
   it('没开麦也自动收听：开了麦的人的 offer 来了就建一条只收的连接（不加音轨、不申请麦克风）并应答；他说话时 talking；他关麦连接关掉、整条重建再收就换新的、掉线也关；自己没开麦名字旁没有 🎤', async () => {
     const { store, sent, streams } = setup()
     store.onSnapshot(snap([m('aaaa'), m('bbbb', { voice: true })]), 'aaaa')
+    store.onTurn(STUN, 0)
     await flush()
     expect(FakePc.all).toHaveLength(0) // 我没开麦：等 bbbb 来连
     expect(store.enabled).toBe(false)
@@ -110,6 +111,7 @@ describe('语音 store（B57）', () => {
     // me = mmmm：aaaa 开了麦且比我小 → 他发；zzzz 开了麦比我大 → 我发；l1 没开麦 → 我发；off 掉线不连
     const base = [m('mmmm'), m('aaaa', { voice: true, joinedAt: 1 }), m('zzzz', { voice: true, joinedAt: 2 }), m('l1', { joinedAt: 3 }), m('off', { online: false, joinedAt: 0 })]
     store.onSnapshot(snap(base), 'mmmm')
+    store.onTurn(STUN, 0)
     store.onSignal('aaaa', { sdp: { type: 'offer', sdp: 'a1' } })
     await flush()
     expect(FakePc.all).toHaveLength(1)
@@ -280,6 +282,7 @@ describe('语音 store（B57）', () => {
     FakeAudio.blockPlay = true
     const { store } = setup()
     store.onSnapshot(snap([m('aaaa'), m('bbbb', { voice: true })]), 'aaaa')
+    store.onTurn(STUN, 0)
     store.onSignal('bbbb', { sdp: { type: 'offer', sdp: 'o' } })
     await flush()
     FakePc.last().emitTrack({} as MediaStream)
@@ -402,6 +405,7 @@ describe('语音 store（B57）', () => {
   it('别人说话时压低朗读：对方音量过阈值 duck(true)，停了 DUCK_HOLD_MS 后 duck(false)；离开恢复', async () => {
     const { store, ducks } = setup()
     store.onSnapshot(snap([m('aaaa'), m('bbbb', { voice: true })]), 'aaaa')
+    store.onTurn(STUN, 0)
     store.onSignal('bbbb', { sdp: { type: 'offer', sdp: 'o' } })
     await flush()
     const pc = FakePc.last()
@@ -420,12 +424,51 @@ describe('语音 store（B57）', () => {
     expect(ducks.at(-1)).toBe(false)
   })
 
-  it('时序：开麦的人的 offer 常比「他开了麦」的快照先到（快照广播有节流）——先应答，之后快照来了连接留着不重建（联调撞过）', async () => {
+  it('应答时清单还没到：等的时候又来了新 offer 就从新的开始；清单没回音 TURN_WAIT_MS 后用手上的（只 STUN）；等的时候离开了房间就都不要了', async () => {
     const { store, sent } = setup()
     store.onSnapshot(snap([m('aaaa'), m('bbbb')]), 'aaaa')
     store.onSignal('bbbb', { sdp: { type: 'offer', sdp: 'o1' } })
+    store.onSignal('bbbb', { candidates: [{ candidate: 'old', sdpMid: null, sdpMLineIndex: null }] })
+    store.onSignal('bbbb', { sdp: { type: 'offer', sdp: 'o2' } })
+    store.onSignal('bbbb', { candidates: [{ candidate: 'new', sdpMid: null, sdpMLineIndex: null }] })
+    await flush()
+    expect(FakePc.all).toHaveLength(0)
+    expect(sent.filter((x) => x.type === 'turn')).toHaveLength(1) // 同时只要一次
+    vi.advanceTimersByTime(TURN_WAIT_MS)
     await flush()
     expect(FakePc.all).toHaveLength(1)
+    expect(FakePc.all[0]!.config).toEqual({ iceServers: STUN })
+    expect(FakePc.all[0]!.remote?.sdp).toBe('o2')
+    expect(FakePc.all[0]!.candidates.map((c) => c.candidate)).toEqual(['new'])
+    expect(sent.filter((x) => x.type === 'rtc')).toHaveLength(1)
+
+    // 另一个房间：等清单的时候离开
+    store.leave()
+    store.attach({ send: (msg) => sent.push(msg) })
+    store.onSnapshot(snap([m('aaaa'), m('cccc')]), 'aaaa')
+    store.onSignal('cccc', { sdp: { type: 'offer', sdp: 'x' } })
+    store.leave()
+    vi.advanceTimersByTime(TURN_WAIT_MS)
+    await flush()
+    expect(FakePc.all).toHaveLength(1)
+  })
+
+  it('时序：开麦的人的 offer 常比「他开了麦」的快照先到（快照广播有节流）——先要清单、等回来再应答（带着 TURN），期间的候选不丢；之后快照来了连接留着不重建（联调撞过）', async () => {
+    const { store, sent } = setup()
+    store.onSnapshot(snap([m('aaaa'), m('bbbb')]), 'aaaa')
+    expect(sent).toEqual([]) // 快照里还没人开麦：没去要清单
+    store.onSignal('bbbb', { sdp: { type: 'offer', sdp: 'o1' } })
+    store.onSignal('bbbb', { candidates: [{ candidate: 'c1', sdpMid: null, sdpMLineIndex: null }] })
+    await flush()
+    expect(FakePc.all).toHaveLength(0) // 只带 STUN 的连接没有中转候选：先等清单
+    expect(sent).toEqual([{ type: 'turn' }])
+    const TURN = [...STUN, { urls: ['turns:turn.cloudflare.com:443?transport=tcp'], username: 'u', credential: 'p' }]
+    store.onTurn(TURN, 3600)
+    await flush()
+    expect(FakePc.all).toHaveLength(1)
+    expect(FakePc.all[0]!.config).toEqual({ iceServers: TURN })
+    expect(FakePc.all[0]!.remote?.sdp).toBe('o1')
+    expect(FakePc.all[0]!.candidates).toHaveLength(1)
     expect(sent.filter((x) => x.type === 'rtc')).toHaveLength(1)
     store.onSnapshot(snap([m('aaaa'), m('bbbb', { voice: true })]), 'aaaa')
     await flush()
