@@ -1,14 +1,14 @@
 /**
- * README 用的预览图：用无头 Chrome（CDP）模拟 iPhone（390×844 @2x，触屏）截四张到 screenshots/，
- * 再横过来（852×393 @3x）截一张对战竞技场。
- * 再截 iPad 横屏的对战设置页 / 开局规则句 / 两人同屏竞技场，和帮助页。
+ * README 用的预览图：用无头 Chrome（CDP）截到 screenshots/——iPhone 竖屏（390×844 @2x，触屏）：首页、地图、练习 × 2、「跟谁打」、帮助页；
+ * 手机横屏（852×393 @3x）：打机器人的竞技场；iPad 横屏（1024×768 @2x）：开局规则句、两人一台的竞技场。
  * 用法：npm run dev 后执行 `npm run screenshots`（环境变量 BASE_URL、CHROME 可改）。
- * 安装提示条不进预览图：预先把静默期写成永久；对战的昵称也预先写好，免得先弹名字面板。
+ * 安装提示条不进预览图：预先把静默期写成永久；对战的小动物预先定死（没选的每次打开随机，截出来会不一样）。
  * 练习页的题是随机的：带 kp + seed 的截图预先把这一轮的 seed 写进本地存储，进页面就是那道代表题（每次截出来一样）。
+ * 安装对话框（PWA 清单的 screenshots）用的是其中两张：截到了就同时复制一份到 public/screenshots/（尺寸写在 vite.config.ts 里，别改大小）。
  */
 
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,6 +17,9 @@ const BASE = (process.env.BASE_URL || "http://localhost:5173").replace(/\/+$/, "
 const [W, H, SCALE] = [390, 844, 2];
 const outDir = new URL("../screenshots", import.meta.url).pathname;
 mkdirSync(outDir, { recursive: true });
+/** 安装对话框用的截图（vite.config.ts 的 manifest.screenshots）：与 README 同一张，复制过去免得两边不一样 */
+const installDir = new URL("../public/screenshots", import.meta.url).pathname;
+const INSTALL_SHOTS = ["home", "battle-ipad"];
 const profile = mkdtempSync(join(tmpdir(), "screenshots-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -141,6 +144,7 @@ try {
     const shot = await send("Page.captureScreenshot", { format: "png" });
     if (!shot.result?.data) throw new Error("截图失败：" + s.name);
     writeFileSync(`${outDir}/${s.name}.png`, Buffer.from(shot.result.data, "base64"));
+    if (INSTALL_SHOTS.includes(s.name)) copyFileSync(`${outDir}/${s.name}.png`, `${installDir}/${s.name}.png`);
     console.log("✓", s.name);
   }
 } finally {

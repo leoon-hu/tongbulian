@@ -24,7 +24,7 @@
   <img src="screenshots/battle-ipad.png" width="49%" alt="对战：两人一台（iPad 横屏，盖楼，红队 5 : 蓝队 3）">
   <img src="screenshots/battle-rule.png" width="49%" alt="开局先讲一句游戏规则（iPad 横屏，火箭升空）">
 </p>
-<p align="center"><sub>iPad 横屏：两人一台，左右各答各的（盖楼）· 开局先讲一句游戏规则，说完再倒数（火箭升空）</sub></p>
+<p align="center"><sub>iPad 横屏：两人一台，左右各答各的（盖楼；没改过名字就是随机分到的小动物，两边不一样）· 开局先讲一句游戏规则，说完再倒数（火箭升空）</sub></p>
 
 <p align="center">
   <img src="screenshots/battle.png" width="80%" alt="对战：打机器人（手机横屏紧凑版，赛跑）">
@@ -65,7 +65,7 @@ npx vitest run -t "凑十"                                                      
 npm run audio          # 重建朗读音频包（改了题目文案 / 生成器 / 外壳固定句之后；需要 pip install edge-tts numpy 并联网）
 npm run seo            # 按目录重新生成搜索引擎用的静态页与 index.html 里的简介（build / dev 前会自动跑）
 npm run og             # 用无头 Chrome 重新渲染分享图 public/og.png（加了年级 / 学科之后）
-npm run screenshots    # npm run dev 之后：无头 Chrome 模拟 iPhone / iPad 截 README 用的预览图到 screenshots/
+npm run screenshots    # npm run dev 之后：无头 Chrome 模拟 iPhone / iPad 截 README 用的预览图到 screenshots/（安装对话框用的两张同时复制到 public/screenshots/）
 npm run battle:survey  # npm run dev 之后：每种「题干 × 作答方式」在 iPhone / iPad 横屏各截一张并拼图，肉眼核对对战排版；加 -- practice 查练习页
 npm run game:survey    # npm run dev 之后：每种游戏在几个比分 / 倒数 / 胜利 / 手机紧凑版各截一帧并拼图
 npm run build:server   # 打包对战中继服务 → dist-server/battle.mjs
@@ -153,7 +153,7 @@ npm run voice:check    # 语音联调：自己起中继（8788）与 dev 服务�
 
 **表情与点游戏**：竞技场顶栏每队一排 4 个表情键 🔥 加油 / 😆 哈哈 / 😱 哇 / 😎 厉害（两人一台两排都有，打机器人 / 多设备只有自己那排，只观战的设备在时钟旁有一排），点了从自己这边飞向对方那边、一声「啵嘤」，🔥 还会读一声「加油！」；机器人会回应（收到表情回一个，反超 😎、被反超 😱，赢了 😎、输了给你 🔥）；多设备房间里表情经服务器转给房间里所有人，家长在主持设备上就能给孩子加油。游戏画面也能点：点一下那一队的角色它会有反应（火车鸣笛喷汽、乌龟 / 兔子跳一下、火箭喷一口火、企鹅拍翅膀……每种游戏各不一样），点按处一圈涟漪、小声放这种游戏的得分音，不计分；角色还会在点按处冒一个对话框说一句自己的台词（25 个角色各 3 句，都是催你答题的，比如乌龟「我爬得慢，你答得快我就追上啦！」、火车司机「快答题，火车要开到车站啦！」），带拼音并自动朗读，每个角色的声音快慢高低不一样（乌龟慢而低、兔子快而高）。
 
-**本章战绩**：同一个知识点连着「再来一局」，结果页记「本章战绩：小兔 2 : 1 小虎」，先赢两局的名字旁出 🏆，换知识点或离开清零、不存本地。
+**本章战绩**：同一个知识点连着「再来一局」，结果页记「本章战绩：小兔 2 : 1 小猫」，先赢两局的名字旁出 🏆，换知识点或离开清零、不存本地。
 
 **我的小动物**：每一方一只小动物（🐻 小熊、🐷 小猪、🐼 熊猫、🐵 小猴、🐰 小兔、🐱 小猫）：不选就随机、两边不一样，想固定就在「⚙️ 配置」里选（两人一台左右各选各的，「🎲 随机」回到随机）；名字旁、结果页都带它，赛车 / 开火车的司机、热气球的乘客换成它；多设备时随进房发给服务器，别人也看得到。
 
