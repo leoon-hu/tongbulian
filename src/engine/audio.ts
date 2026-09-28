@@ -40,6 +40,8 @@ export interface SeqItem {
   pause?: boolean
   file?: string | null
   text?: string
+  /** 这一条用哪种语言的 TTS 兜底（英文界面里的中文内容，需求 Y6）；不填跟着整句 */
+  lang?: Lang
 }
 /** 片段之间留多久（秒）：一个词接下一个词 */
 export const JOIN_GAP_S = 0.03
@@ -457,12 +459,12 @@ async function playSequenceInner(items: SeqItem[], lang: Lang, signal: AbortSign
       for (const { item } of run) {
         if (signal?.aborted) return
         if (item.pause) await new Promise((r) => setTimeout(r, PAUSE_S * 1000))
-        else await play(item.file ?? null, item.text ?? '', lang, signal, rate)
+        else await play(item.file ?? null, item.text ?? '', item.lang ?? lang, signal, rate)
       }
       continue
     }
     const it = items[i++]!
-    await play(it.file ?? null, it.text ?? '', lang, signal, rate)
+    await play(it.file ?? null, it.text ?? '', it.lang ?? lang, signal, rate)
     if (signal?.aborted) return
   }
 }

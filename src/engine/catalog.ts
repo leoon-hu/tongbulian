@@ -1,19 +1,57 @@
 import type { Course, GradeMeta, KnowledgePoint, SubjectMeta } from '@/types/models'
 import { mathGrade1 } from '@/content/math/grade1'
 import { mathGrade2 } from '@/content/math/grade2'
+import { chineseGrade1 } from '@/content/chinese/grade1/course'
 
 // ── 课程注册表：key 为 courseId（如 math-g1）。────────────────────────────
 const COURSES = new Map<string, Course>()
+/** 按需加载的内容包（N8）：courseId → 加载函数；加载好的、没有加载函数（静态导入）的在 LOADED 里 */
+const LOADERS = new Map<string, () => Promise<unknown>>()
+const LOADED = new Set<string>()
+const LOADING = new Map<string, Promise<void>>()
 
-/** 注册一个「学科×年级」内容包。内容包 index 被导入时由本文件登记。 */
-export function registerCourse(course: Course): void {
+/**
+ * 注册一个「学科×年级」内容包。course 是目录（单元 / 知识点树），随首页加载；
+ * load 给了就是按需加载的包：生成器、题目词条、课文材料等进这门课的页面之前才加载（router.ts 的守卫调 loadCourse）。
+ */
+export function registerCourse(course: Course, load?: () => Promise<unknown>): void {
   COURSES.set(course.id, course)
+  if (load) LOADERS.set(course.id, load)
+  else LOADED.add(course.id)
 }
 
-// 上线的内容包在此静态导入并登记（导入即触发其生成器 / 词条注册）。
-// 新增内容包：在 content/ 下建包，然后在这里 import + registerCourse 一行。
+// 上线的内容包在此登记。数学两个包静态导入（导入即触发其生成器 / 词条注册）；语文的材料与拼音表大，
+// 只静态导入目录，进语文的页面之前再加载（首页 JS 少约 90 KB gzip）。
+// 新增内容包：在 content/ 下建包，然后在这里 import + registerCourse 一行（大的包照语文拆成 course.ts + 按需的 index.ts）。
 registerCourse(mathGrade1)
 registerCourse(mathGrade2)
+registerCourse(chineseGrade1, () => import('@/content/chinese/grade1'))
+
+/** 这门课的内容包加载好了没有（没有加载函数的一直是好的） */
+export function courseLoaded(courseId: string): boolean {
+  return LOADED.has(courseId)
+}
+
+/** 加载一门课的内容包；已经好了立刻 resolve，同时几处要只加载一次；失败了下次再试 */
+export function loadCourse(courseId: string): Promise<void> {
+  const load = LOADERS.get(courseId)
+  if (LOADED.has(courseId) || !load) return Promise.resolve()
+  let p = LOADING.get(courseId)
+  if (!p) {
+    p = load()
+      .then(() => {
+        LOADED.add(courseId)
+      })
+      .finally(() => LOADING.delete(courseId))
+    LOADING.set(courseId, p)
+  }
+  return p
+}
+
+/** 全部内容包（语料收集、静态页、截图脚本这类要跑遍所有知识点的） */
+export async function loadAllCourses(): Promise<void> {
+  await Promise.all([...COURSES.keys()].map(loadCourse))
+}
 
 /** 已注册的全部课程（语料收集 / 测试用） */
 export function allCourses(): Course[] {
@@ -143,8 +181,8 @@ export const SUBJECTS: SubjectMeta[] = [
     title: { k: 'subject.chinese' },
     icon: '📖',
     theme: 'chinese',
-    status: 'soon',
-    grades: ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'].map((g) => grade(g)),
+    status: 'live',
+    grades: [grade('g1', 'chinese-g1'), ...['g2', 'g3', 'g4', 'g5', 'g6'].map((g) => grade(g))],
   },
   {
     id: 'english',

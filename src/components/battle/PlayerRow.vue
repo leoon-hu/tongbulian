@@ -200,7 +200,7 @@ onBeforeUnmount(() => {
           <span class="mark">{{ feedback.correct ? '✅' : '❌' }}</span>
           <p v-if="!feedback.correct" class="answer">
             <RubyText :text="{ k: 'practice.answerIs' }" />
-            <strong><RubyText :text="answerLabel(feedback.question)" /></strong>
+            <strong :class="feedback.question.choiceStyle ? `as-${feedback.question.choiceStyle}` : undefined"><RubyText :text="answerLabel(feedback.question)" /></strong>
           </p>
           <span v-if="feedback.correct && player.kind !== 'human'" class="ai-mood" aria-hidden="true">😄</span>
           <span v-else-if="player.kind !== 'human'" class="ai-mood" aria-hidden="true">😅</span>
@@ -437,6 +437,15 @@ onBeforeUnmount(() => {
   color: var(--c-green);
   font-size: var(--fs-lg);
   margin-left: 0.3em;
+}
+/* 语文：拼音答案用初学者字体，字的答案用楷体（需求 Y4） */
+.answer strong.as-pinyin {
+  font-family: var(--font-pinyin);
+  font-weight: 400;
+}
+.answer strong.as-hanzi {
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Kaiti', 'BiauKai', serif;
+  font-weight: 400;
 }
 .ai-mood {
   font-size: 40px;

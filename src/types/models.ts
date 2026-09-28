@@ -49,6 +49,12 @@ export type QuestionType =
   | 'mixed-ops' // 混合运算
   | 'mass' // 克和千克
   | 'logic' // 数学广角：推理
+  // ── 语文（§9） ──
+  | 'hanzi' // 识字：听音 / 看图 / 看拼音选字、看字选读音
+  | 'writing' // 写字与字的结构：笔画、第一笔、偏旁、加一加减一减
+  | 'pinyin' // 汉语拼音：声调、拼读、声母韵母、字母表
+  | 'reading' // 课文：选词填空、问答、古诗
+  | 'phrase' // 词语积累：反义词、对子、量词、称呼、标点
 
 export interface KnowledgePoint {
   id: string
@@ -123,6 +129,20 @@ export type StemPart =
   | { kind: 'angles'; items: { deg: number; rot: number }[] }
   /** 竖式（笔算加减法）：两个数右对齐、运算符在左、下面一条横线，答案留空 */
   | { kind: 'vertical'; a: number; op: '+' | '-'; b: number }
+  // ── 语文（§9）：这几种都是中文内容，不翻译；朗读时在英文界面下也用中文读（Y6）──
+  /** 大字：每个汉字一个田字格（楷体），其它字符（＋ ＝ ？）原样放大；不注音、不朗读——考的就是认不认得（Y3） */
+  | { kind: 'hanzi'; text: string }
+  /** 拼音卡：音节 / 声母 / 韵母 / 拼读式「b + ā」，初学者字体大号显示；say 是朗读时读的同音汉字（「bā」读「八」），不填就不读（Y4） */
+  | { kind: 'pinyin'; text: string; say?: string }
+  /** 听音题：画一个大喇叭，朗读时读 say（中文），屏幕上不出现 say 的文字（Y3） */
+  | { kind: 'listen'; say: string }
+  /** 一张图（emoji）；say 是朗读时读的名字，不填就不读 */
+  | { kind: 'picture'; icon: string; say?: string }
+  /**
+   * 课文 / 古诗 / 儿歌里的句子：py 是与 text 里的汉字逐个对齐的拼音（空格分隔，挖掉的字也有）；
+   * blank = 挖掉的那几个字 [起点, 长度]（按字符算），画成虚线空格，朗读时在那里停一下。中文界面注音、英文界面不注音
+   */
+  | { kind: 'verse'; text: string; py: string; blank?: [number, number] }
 
 export type AnswerSpec =
   | { kind: 'number'; value: number }
@@ -134,7 +154,15 @@ export type InputMode = 'numpad' | 'choice'
 export interface Choice {
   id: string
   label: LStr
+  /**
+   * 朗读这个选项时读什么（中文）：拼音「shān」读「山」、偏旁「氵」读「三点水」、图读它的名字；
+   * 不填就读 label。答错时「正确答案是 X」读的就是它（语文，Y4 / Y6）
+   */
+  say?: string
 }
+
+/** 选项卡的样子（语文）：pinyin 拼音（初学者字体）、hanzi 不注音的楷体大字（考认字，Y3）、emoji 大图；不填是普通文字 */
+export type ChoiceStyle = 'pinyin' | 'hanzi' | 'emoji'
 
 /** 答错后的教具演示配置 */
 export type DemoSpec =
@@ -151,6 +179,8 @@ export interface Question {
   input: InputMode
   answer: AnswerSpec
   choices?: Choice[]
+  /** 选项卡的样子（语文）；不填是普通文字 */
+  choiceStyle?: ChoiceStyle
   explain?: DemoSpec
 }
 

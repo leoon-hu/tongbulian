@@ -67,5 +67,7 @@ describe('rubySegments', () => {
   it('字面量与英文模式不注音', () => {
     expect(rubySegments('9 + 5 = ?', 'zh')).toEqual([{ text: '9 + 5 = ?' }])
     expect(rubySegments({ k: 'q.whatShape' }, 'en')).toEqual([{ text: 'What shape is this?' }])
+    // 纯字符串里的汉字也不查单字兜底表（元、角在表里）：语文考认字的选项就是纯字符串，注了音等于泄露答案（需求 Y3）
+    expect(rubySegments('元角', 'zh')).toEqual([{ text: '元角' }])
   })
 })

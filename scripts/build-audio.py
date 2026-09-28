@@ -388,7 +388,7 @@ def write_credits(out: Path, counts: Dict[str, int]) -> None:
     lines = [
         "# 音频来源",
         "",
-        "这里的 mp3 是题目朗读用的片段（数字、短语、emoji 的名字、运算符的读法），由 `scripts/build-audio.py` 生成：",
+        "这里的 mp3 是题目朗读用的片段（数字、短语、emoji 的名字、运算符的读法、语文的课文句子与字词），由 `scripts/build-audio.py` 生成：",
         "",
     ]
     for lang, voice in VOICES.items():

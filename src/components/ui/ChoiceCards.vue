@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Choice } from '@/types/models'
+import type { Choice, ChoiceStyle } from '@/types/models'
 import { t } from '@/engine/i18n'
 import RubyText from '@/components/ui/RubyText.vue'
 import { onTap } from '@/components/ui/tap'
@@ -12,6 +12,8 @@ const props = defineProps<{
   /** 只看不点（对战里看别人答题）：highlight 是他正点着的那张 */
   readonly?: boolean
   highlight?: string
+  /** 选项的样子（语文）：拼音用初学者字体、考认字的字用不注音的楷体大字、图放大 */
+  choiceStyle?: ChoiceStyle
 }>()
 const emit = defineEmits<{ select: [id: string] }>()
 
@@ -21,14 +23,16 @@ const emit = defineEmits<{ select: [id: string] }>()
  * long = 有 4 个字以上的（平行四边形、11元5角…，字号小一档）
  */
 const textLen = computed(() =>
-  Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+$/.test(s)).map((s) => Array.from(s).length)),
+  props.choiceStyle === 'pinyin' || props.choiceStyle === 'emoji'
+    ? 0
+    : Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+$/.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
 )
 const wordy = computed(() => textLen.value >= 3)
 const long = computed(() => textLen.value > 3)
 </script>
 
 <template>
-  <div class="cards" :class="{ wordy, long }">
+  <div class="cards" :class="[{ wordy, long }, choiceStyle ? `as-${choiceStyle}` : '']">
     <button
       v-for="c in choices"
       :key="c.id"
@@ -74,6 +78,23 @@ const long = computed(() => textLen.value > 3)
 .cards.long .card {
   font-size: var(--fs-lg);
   padding: 6px 8px;
+}
+/* 语文（需求 Y3 / Y4）：拼音用初学者字体（单层 a / g）；考认字的字是不注音的楷体大字；图放大 */
+.cards.as-pinyin .card {
+  font-family: var(--font-pinyin);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+.cards.as-hanzi .card {
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Kaiti', 'BiauKai', serif;
+  font-weight: 400;
+  font-size: 44px;
+}
+.cards.as-hanzi.long .card {
+  font-size: var(--fs-xl);
+}
+.cards.as-emoji .card {
+  font-size: 48px;
 }
 .card.correct {
   border-color: var(--c-green);

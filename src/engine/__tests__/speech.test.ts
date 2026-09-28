@@ -5,7 +5,8 @@ import { KNOWLEDGE_POINTS as G1 } from '@/content/math/grade1/curriculum'
 import { KNOWLEDGE_POINTS as G2 } from '@/content/math/grade2/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { translate } from '@/engine/i18n'
-import { answerSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, summarySpeech, tokenize } from '@/engine/speech'
+import type { Question } from '@/types/models'
+import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
 
 const KNOWLEDGE_POINTS = [...G1, ...G2]
 
@@ -247,5 +248,65 @@ describe('questionSpeech / answerSpeech', () => {
   it('结算读成绩', () => {
     expect(summarySpeech(6, 'zh')).toEqual(['闯关完成', PAUSE, '答对6题'])
     expect(summarySpeech(6, 'en')).toEqual(['All done', PAUSE, '6 correct'])
+  })
+})
+
+describe('语文的中文内容（需求 Y3 / Y6）', () => {
+  const base = { id: 'c:1', kpId: 'c', type: 'reading', difficulty: 1, input: 'choice', answer: { kind: 'choice', choiceId: 'a' } } as const
+  const voices = (tokens: string[], lang: 'zh' | 'en') => tokens.map((t) => (t === PAUSE ? t : tokenVoice(t, lang)))
+
+  it('句子挖空的地方停一下；英文界面下每条都标成用中文读', () => {
+    const q: Question = {
+      ...base,
+      stem: [{ kind: 'verse', text: '床前明月光，疑是地上霜。', py: 'chuáng qián míng yuè guāng yí shì dì shàng shuāng', blank: [10, 1] }],
+      choices: [{ id: 'a', label: '霜' }],
+    }
+    expect(questionSpeech(q, 'zh')).toEqual(['床前明月光', PAUSE, '疑是地上'])
+    expect(voices(questionSpeech(q, 'en'), 'en')).toEqual([{ text: '床前明月光', lang: 'zh' }, PAUSE, { text: '疑是地上', lang: 'zh' }])
+    // 空在句首：不在开头停
+    const head: Question = { ...q, stem: [{ kind: 'verse', text: '云对雨', py: 'yún duì yǔ', blank: [0, 1] }] }
+    expect(questionSpeech(head, 'zh')).toEqual(['对雨'])
+  })
+
+  it('田字格里的大字、没有 say 的拼音不读；听音、带 say 的拼音与图读中文', () => {
+    const q: Question = {
+      ...base,
+      stem: [
+        { kind: 'text', text: { k: 'practice.answerIs' } },
+        { kind: 'hanzi', text: '山' },
+        { kind: 'pinyin', text: 'shān' },
+        { kind: 'listen', say: '大山' },
+        { kind: 'pinyin', text: 'bā', say: '八' },
+        { kind: 'picture', icon: '☀️', say: '太阳' },
+        { kind: 'picture', icon: '🌙' },
+      ],
+      choices: [{ id: 'a', label: '山' }],
+    }
+    expect(questionSpeech(q, 'zh')).toEqual(['正确答案是', PAUSE, '大山', PAUSE, '八', PAUSE, '太阳'])
+    expect(voices(questionSpeech(q, 'en'), 'en')).toEqual([
+      { text: 'The answer is', lang: 'en' },
+      PAUSE,
+      { text: '大山', lang: 'zh' },
+      PAUSE,
+      { text: '八', lang: 'zh' },
+      PAUSE,
+      { text: '太阳', lang: 'zh' },
+    ])
+  })
+
+  it('答案带 say 就读 say（拼音读同音字、偏旁读名字）；没有 say 的中文答案在英文界面也用中文读', () => {
+    const py: Question = { ...base, stem: [{ kind: 'hanzi', text: '八' }], choices: [{ id: 'a', label: 'bā', say: '八' }, { id: 'b', label: 'pā', say: '趴' }] }
+    expect(answerSpeech(py, 'zh')).toEqual(['正确答案是八'])
+    expect(answerSpeech(py, 'en')).toEqual(['The answer is', zhToken('八')])
+    const word: Question = { ...base, stem: [{ kind: 'hanzi', text: '八' }], choices: [{ id: 'a', label: '霜' }] }
+    expect(answerSpeech(word, 'zh')).toEqual(['正确答案是霜'])
+    expect(answerSpeech(word, 'en')).toEqual(['The answer is', zhToken('霜')])
+  })
+
+  it('chineseSpeech：中文界面不加标记，英文界面标记；数学的英文句子里没有汉字，不受影响', () => {
+    expect(chineseSpeech('云对雨，雪对风。', 'zh')).toEqual(['云对雨', PAUSE, '雪对风'])
+    expect(chineseSpeech('云对雨，雪对风。', 'en')).toEqual([zhToken('云对雨'), PAUSE, zhToken('雪对风')])
+    expect(tokenize('Which word means the opposite of 开?', 'en')).toEqual(['Which word means the opposite of', zhToken('开')])
+    expect(tokenize('How many dots in all?', 'en').every((t) => tokenVoice(t, 'en').lang === 'en')).toBe(true)
   })
 })

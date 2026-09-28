@@ -34,6 +34,7 @@ const maxLen = computed(() =>
     <ChoiceCards
       v-else-if="question.input === 'choice'"
       :choices="question.choices ?? []"
+      :choice-style="question.choiceStyle"
       :revealed="revealed"
       @select="(id) => emit('answer', id)"
     />

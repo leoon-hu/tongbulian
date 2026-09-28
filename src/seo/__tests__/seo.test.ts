@@ -40,16 +40,19 @@ describe('SEO 静态页', () => {
     const total = liveCourses().reduce((n, lc) => n + lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).length, 0)
     expect(m.kpCount).toBe(total)
     expect(m.grades).toBe('一年级、二年级')
+    expect(m.subjects).toBe('数学、语文')
+    expect(m.summary).toBe('一年级、二年级数学和一年级语文')
     expect(m.title).toContain('同步练-对战版')
     expect(m.description).toContain('谁先答对 8 题谁赢')
-    expect(m.description).toContain(`一年级数学 26 个知识点`)
+    expect(m.description).toContain('一年级数学 26 个')
+    expect(m.description).toContain('一年级语文 76 个')
     expect(m.description.length).toBeLessThan(160)
   })
 
   it('每个上线课程一张目录页、每个有生成器的知识点一张页；上线课程与目录一致', () => {
     const courses = liveCourses()
     expect(courses.map((lc) => lc.course.id)).toEqual(catalogCourses().map((lc) => lc.course.id))
-    expect(courses.map((lc) => lc.name)).toEqual(['一年级数学', '二年级数学'])
+    expect(courses.map((lc) => lc.name)).toEqual(['一年级数学', '二年级数学', '一年级语文'])
     const expected = courses.flatMap((lc) => [
       coursePath(lc.course),
       ...lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).map((kp) => kpPath(lc.course, kp)),
@@ -163,6 +166,24 @@ describe('SEO 静态页', () => {
     expect(stemText({ kind: 'lineup', items: ['🐶', '🐱'], axis: 'ud' })).toBe('（从上到下）🐶小狗、🐱小猫')
     expect(stemText({ kind: 'sequence', cells: [{ kind: 'item', label: '🔺' }, { kind: 'blank' }] })).toBe('🔺 ?')
     expect(stemText({ kind: 'vertical', a: 345, op: '+', b: 278 })).toBe('（竖式：345 + 278）')
+  })
+
+  it('语文题干的文字版：挖掉的字写成空格，听音题写出读的是什么', () => {
+    expect(stemText({ kind: 'verse', text: '床前明月光，\n疑是地上霜。', py: '', blank: [2, 2] })).toBe('床前（　）光，\n疑是地上霜。')
+    expect(stemText({ kind: 'listen', say: '长短的长' })).toBe('（听音：长短的长）')
+    expect(stemText({ kind: 'picture', icon: '☀️', say: '太阳' })).toBe('☀️（太阳）')
+    expect(stemText({ kind: 'hanzi', text: '日＋月＝？' })).toBe('日＋月＝？')
+  })
+
+  it('语文的课程页、知识点页不说「教具演示」，说题目带拼音、考认字的字不标拼音', () => {
+    const lc = liveCourses().find((c) => c.course.id === 'chinese-g1')!
+    const course = byPath.get(coursePath(lc.course))!
+    expect(course.html).toContain('考认字的字不标拼音')
+    expect(course.html).not.toContain('教具演示')
+    const kp = lc.course.knowledgePoints[0]!
+    const page = byPath.get(kpPath(lc.course, kp))!
+    expect(page.html).toContain('按课文出题、题目带拼音和朗读')
+    expect(page.html).not.toContain('教具')
   })
 
   it('帮助页：五节都在、每种游戏的规则句都在、常见问题有 FAQPage 结构化数据、链回首页与课程页', () => {

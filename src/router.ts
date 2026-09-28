@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import SubjectPickerView from '@/views/SubjectPickerView.vue'
+import { courseLoaded, courseOfKp, getCourse, loadCourse } from '@/engine/catalog'
 
 // hash 路由：本地静态部署（vite preview / 直接开 dist）也能正常刷新
 const router = createRouter({
@@ -42,6 +43,23 @@ const router = createRouter({
     { path: '/help', name: 'help', component: () => import('@/views/HelpView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
+})
+
+/** 地址里的这门课：地图 / 练习按学科、年级找，对战按知识点反查 */
+function courseOf(params: Record<string, unknown>): string | undefined {
+  const one = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
+  const kpId = one(params.kpId)
+  if (kpId) return courseOfKp(kpId)?.course.id
+  const subjectId = one(params.subjectId)
+  const gradeId = one(params.gradeId)
+  return subjectId && gradeId ? getCourse(subjectId, gradeId)?.id : undefined
+}
+
+// 内容包按需加载（N8）：进地图 / 练习 / 对战之前把这门课的生成器与题目词条加载好，视图里照旧同步出题；
+// 加载失败（断网又没缓存）照样放行，视图按「没有这个知识点」处理（地图显示敬请期待、练习页回地图）
+router.beforeEach(async (to) => {
+  const id = courseOf(to.params)
+  if (id && !courseLoaded(id)) await loadCourse(id).catch(() => undefined)
 })
 
 export default router

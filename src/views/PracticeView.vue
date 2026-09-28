@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Question } from '@/types/models'
 import { ROUND_SIZE, buildSession, hasGenerator } from '@/engine'
 import { findKp, getCourse, mapPathOf, nextKp, practicePathOf } from '@/engine/catalog'
-import { answerLabel, checkAnswer } from '@/engine/answer'
+import { answerLabel, answerText, checkAnswer } from '@/engine/answer'
 import { tenFrameProps } from '@/content/math/shared/demo'
 import { kpTitleKey, lang, ui } from '@/engine/i18n'
 import { RIGHT_KEYS, answerSpeech, phraseSpeech, questionSpeech, rightSpeech, summarySpeech } from '@/engine/speech'
@@ -12,7 +12,7 @@ import { hush, say, warmUp } from '@/engine/voice'
 import { useProgressStore } from '@/stores/progress'
 import QuestionRenderer from '@/components/practice/QuestionRenderer.vue'
 import AnswerPanel from '@/components/practice/AnswerPanel.vue'
-import { hasBlank, type BlankFill } from '@/components/practice/blank'
+import { hasBlank, hasChoiceBlank, type BlankFill } from '@/components/practice/blank'
 import SessionSummary from '@/components/practice/SessionSummary.vue'
 import CelebrationOverlay from '@/components/ui/CelebrationOverlay.vue'
 import TenFrame from '@/components/math/TenFrame.vue'
@@ -60,7 +60,10 @@ const typed = ref('')
 const blank = computed(() => !!current.value && hasBlank(current.value))
 const fill = computed<BlankFill | null>(() => {
   const q = current.value
-  if (!blank.value || !q) return null
+  if (!q) return null
+  // 语文的句子空格 / 大字算式的「？」：答完填上正确答案（hasChoiceBlank）
+  if (phase.value !== 'answer' && hasChoiceBlank(q)) return { value: answerText(q), done: true }
+  if (!blank.value) return null
   if (phase.value === 'wrong') return { value: q.answer.kind === 'number' ? String(q.answer.value) : '', done: true }
   return { value: typed.value, done: phase.value === 'right' }
 })
@@ -189,7 +192,7 @@ function retry(): void {
       <div v-if="phase === 'wrong'" class="wrong-panel">
         <p class="wrong-title">
           <RubyText :text="{ k: 'practice.answerIs' }" />
-          <strong><RubyText :text="answerLabel(current)" /></strong>
+          <strong :class="current.choiceStyle ? `as-${current.choiceStyle}` : undefined"><RubyText :text="answerLabel(current)" /></strong>
         </p>
         <TenFrame
           v-if="current.explain"
@@ -364,6 +367,16 @@ function retry(): void {
 .wrong-title strong {
   color: var(--c-green);
   font-size: var(--fs-xl);
+}
+/* 语文：拼音答案用初学者字体，字的答案用楷体（需求 Y4） */
+.wrong-title strong.as-pinyin {
+  font-family: var(--font-pinyin);
+  font-weight: 400;
+}
+.wrong-title strong.as-hanzi {
+  font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Kaiti', 'BiauKai', serif;
+  font-weight: 400;
+  font-size: 40px;
 }
 /* 数字键盘：显示框矮一点，键仍是 64px（--tap-min） */
 .stage :deep(.numpad) {

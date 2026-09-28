@@ -41,7 +41,9 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) await flushPromises()
 }
 async function until(pred: () => boolean): Promise<void> {
-  for (let i = 0; i < 200 && !pred(); i++) await flushPromises()
+  // 按真实时间等（最多 5 秒；performance 不在假计时器里）：按需加载的模块在整套测试并行跑时要几百毫秒，固定次数的 flushPromises 不够
+  const start = performance.now()
+  while (!pred() && performance.now() - start < 5000) await flushPromises()
   expect(pred()).toBe(true)
   await settle()
 }

@@ -49,11 +49,29 @@ const EN_PLURAL_AFTER = new Set(['hundred', 'thousand', 'more', 'fewer', 'less',
 
 /** 停顿标记：不是音频片段，播放时停一小会儿（子句之间）；不进语料 */
 export const PAUSE = '|'
+
+/**
+ * 中文内容的标记（需求 Y6）：英文界面下，语文题里的课文、要听的字词、答案这些中文内容也要用中文的声音读，
+ * 片段前面加这个私用区字符——播放端（voice.ts 的 sequenceFor）按中文找音频，语料收集（corpus.ts）把它归到中文。
+ * 中文界面本来就是中文，不加标记。
+ */
+const ZH_MARK = '\uE000'
+
+/** 把一条片段标成「用中文读」 */
+export function zhToken(text: string): string {
+  return ZH_MARK + text
+}
+
+/** 这条片段用哪种语言读、读什么：标过的是中文（去掉标记），其余跟着当前语言 */
+export function tokenVoice(token: string, lang: Lang): { text: string; lang: Lang } {
+  return token.startsWith(ZH_MARK) ? { text: token.slice(ZH_MARK.length), lang: 'zh' } : { text: token, lang }
+}
 /** 两个片段之间的文字里有这些就算子句边界（顿号「、」不算：「填 >、< 或 =」「上北下南、左西右东」一口气读完） */
 const CLAUSE_BREAK = /[，。！？；：…—,.!?;:]/
 
 interface Raw {
-  kind: 'number' | 'phrase' | 'emoji' | 'symbol' | 'pause'
+  /** zh：英文界面下的一段汉字（语文的中文内容），单独成条、用中文读（Y6） */
+  kind: 'number' | 'phrase' | 'emoji' | 'symbol' | 'pause' | 'zh'
   text: string
   /** 大数拆出来的一段（如 302 的「2」），不再套「2 读两」的规则 */
   part?: boolean
@@ -149,7 +167,7 @@ function rawTokens(text: string, lang: Lang): Raw[] {
       const pieces = numberPieces(num, lang)
       // 拆读的大数：每段都是一个槽（「加三百」「四百的百位上是几」能并）；英文的 thousand / hundred 是跟在数后面的词
       for (const piece of pieces) push(/^[a-z]+$/i.test(piece) ? { kind: 'phrase', text: piece } : { kind: 'number', text: piece, part: pieces.length > 1 })
-    } else if (han) push({ kind: 'phrase', text: han })
+    } else if (han) push({ kind: lang === 'zh' ? 'phrase' : 'zh', text: han })
     else if (latin) push({ kind: 'phrase', text: latin.trim() })
     else if (sym) {
       if (WORDISH_BEFORE.test(text.slice(0, m.index)) || WORDISH_AFTER.test(text.slice(m.index + whole.length))) continue
@@ -261,7 +279,7 @@ export function tokenize(text: string, lang: Lang, merge = true): string[] {
     }
     mapped.push(r)
   }
-  if (!merge) return mapped.map((r) => r.text)
+  if (!merge) return mapped.map((r) => (r.kind === 'zh' ? zhToken(r.text) : r.text))
   const out: string[] = []
   let run: Raw[] = []
   const flush = (): void => {
@@ -305,11 +323,29 @@ export function tokenize(text: string, lang: Lang, merge = true): string[] {
       run.push(r)
     } else {
       flush()
-      out.push(r.text)
+      out.push(r.kind === 'zh' ? zhToken(r.text) : r.text)
     }
   }
   flush()
   return out
+}
+
+/**
+ * 一段中文内容的朗读片段（语文的课文、要听的字词、图名、拼音的同音字，需求 Y6）：按中文切，
+ * 当前是英文界面就每条都标成「用中文读」。
+ */
+export function chineseSpeech(text: string, lang: Lang): string[] {
+  const tokens = tokenize(text, 'zh')
+  return lang === 'zh' ? tokens : tokens.map((t) => (t === PAUSE ? t : zhToken(t)))
+}
+
+/** 带空格的句子（verse）：空前、空后各切各的，空的地方停一下（开头 / 结尾的空不停） */
+function verseSpeech(text: string, blank: [number, number] | undefined, lang: Lang): string[] {
+  if (!blank) return chineseSpeech(text, lang)
+  const chars = Array.from(text)
+  const before = chars.slice(0, blank[0]).join('')
+  const after = chars.slice(blank[0] + blank[1]).join('')
+  return joinSpeech([chineseSpeech(before, lang), chineseSpeech(after, lang)])
 }
 
 /** 几段片段接成一句：段与段之间加一个停顿（空段、已经以停顿结尾的不重复加） */
@@ -328,19 +364,32 @@ export function phraseSpeech(l: LStr, lang: Lang): string[] {
   return tokenize(translate(l, lang), lang)
 }
 
-/** 题干的朗读片段：文字与算式按顺序读（之间停顿一下），教具（十格阵、实物、钟面…）不读。 */
+/**
+ * 题干的朗读片段：文字与算式按顺序读（之间停顿一下），教具（十格阵、实物、钟面…）不读。
+ * 语文（§9）：句子、听音题的字词、图名、拼音的同音字是中文内容（Y6，英文界面也用中文读）；田字格里的大字不读（Y3）。
+ */
 export function questionSpeech(q: Question, lang: Lang): string[] {
   const parts: string[][] = []
   for (const part of q.stem) {
     if (part.kind === 'text') parts.push(phraseSpeech(part.text, lang))
     else if (part.kind === 'expr') parts.push(tokenize(part.expr, lang))
+    else if (part.kind === 'verse') parts.push(verseSpeech(part.text, part.blank, lang))
+    else if (part.kind === 'listen') parts.push(chineseSpeech(part.say, lang))
+    else if ((part.kind === 'pinyin' || part.kind === 'picture') && part.say) parts.push(chineseSpeech(part.say, lang))
   }
   return joinSpeech(parts)
 }
 
-/** 答错反馈：「正确答案是 X」——先拼成一句再切，「正确答案是14」「正确答案是小兔子」并成一条。 */
+/**
+ * 答错反馈：「正确答案是 X」——先拼成一句再切，「正确答案是14」「正确答案是小兔子」并成一条。
+ * 选项带 say（语文：拼音读同音字、偏旁读名字、图读名字）就读 say；它是中文内容，英文界面也用中文读（Y4 / Y6）。
+ */
 export function answerSpeech(q: Question, lang: Lang): string[] {
-  return tokenize(`${translate({ k: 'practice.answerIs' }, lang)} ${translate(answerLabel(q), lang)}`, lang)
+  const correct = q.answer.kind === 'choice' ? q.answer.choiceId : null
+  const say = correct === null ? undefined : q.choices?.find((c) => c.id === correct)?.say
+  const lead = translate({ k: 'practice.answerIs' }, lang)
+  if (say === undefined) return tokenize(`${lead} ${translate(answerLabel(q), lang)}`, lang)
+  return lang === 'zh' ? tokenize(`${lead}${say}`, 'zh') : [...tokenize(lead, lang), ...chineseSpeech(say, lang)]
 }
 
 /** 结算：「闯关完成！答对 x 题」（「答对 x 题」并成一条）。 */

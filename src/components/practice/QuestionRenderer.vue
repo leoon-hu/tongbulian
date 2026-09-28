@@ -17,10 +17,16 @@ import NumberLine from '@/components/math/NumberLine.vue'
 import RulerGauge from '@/components/math/RulerGauge.vue'
 import AngleGlyph from '@/components/math/AngleGlyph.vue'
 import VerticalForm from '@/components/math/VerticalForm.vue'
+import HanziGrid from '@/components/chinese/HanziGrid.vue'
+import PinyinCard from '@/components/chinese/PinyinCard.vue'
+import ListenCue from '@/components/chinese/ListenCue.vue'
+import PictureCard from '@/components/chinese/PictureCard.vue'
+import VerseLine from '@/components/chinese/VerseLine.vue'
 
 /**
  * withSpeaker：题干第一行开头放一个小喇叭（点读的提示），点击由外层处理。
  * fill：练习页把按的数字填进算式的「?」与竖式的答案行（blank.ts，U5）；不传就原样画「?」（对战）。
+ * 语文的句子空格、大字算式里的「？」只在答完（done）时填上正确答案。
  */
 withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: BlankFill | null }>(), {
   withSpeaker: false,
@@ -100,6 +106,17 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
           :size="part.items.length === 1 ? 128 : 84"
         />
       </div>
+      <HanziGrid v-else-if="part.kind === 'hanzi'" :text="part.text" :fill="fill?.done ? fill.value : undefined" />
+      <PinyinCard v-else-if="part.kind === 'pinyin'" :text="part.text" />
+      <ListenCue v-else-if="part.kind === 'listen'" />
+      <PictureCard v-else-if="part.kind === 'picture'" :icon="part.icon" />
+      <VerseLine
+        v-else-if="part.kind === 'verse'"
+        :text="part.text"
+        :py="part.py"
+        :blank="part.blank"
+        :fill="fill?.done ? fill.value : undefined"
+      />
     </template>
   </div>
 </template>

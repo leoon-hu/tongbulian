@@ -2,7 +2,7 @@
  * 朗读语料：把所有可能读出来的片段收齐（生成音频包的输入，也是 manifest 测试的依据）。
  * - 数字 0–100 与中文的「两」：题目里的数都在这个范围
  * - 外壳固定句：正确答案是 / 鼓励语 / 结算 / 对战的开始与胜负播报 / 页面打开时自动读的提示语
- * - 每个知识点用固定种子跑三档难度各 CORPUS_SEEDS 题，题干与答案的片段全部收进来
+ * - 每个知识点用固定种子跑三档难度各 CORPUS_SEEDS 题，题干与答案的片段全部收进来；语文的条目有限，另外逐条出一遍（一句课文都不漏）
  * - 并成一条的短语（「有14个」「比小猪」，F14）除了它本身，拆开的小片段（「有」「14」「个」）也收：种子里没枚举到的
  *   组合在播放时拆回小片段照样有音频，不用退 TTS
  * 停顿标记 PAUSE 不是音频，不收。种子固定，所以结果是确定的；模板改了、生成器改了，这里的集合跟着变，测试会提醒重跑 npm run audio。
@@ -10,8 +10,9 @@
 import type { Lang } from '@/types/models'
 import { createRng, getGenerator } from '@/engine'
 import { allCourses } from '@/engine/catalog'
-import { answerSpeech, PAUSE, phraseSpeech, piecesOf, questionSpeech, RIGHT_KEYS } from '@/engine/speech'
+import { answerSpeech, PAUSE, phraseSpeech, piecesOf, questionSpeech, RIGHT_KEYS, tokenVoice } from '@/engine/speech'
 import { LINE_KEYS } from '@/battle/lines'
+import { everyItemQuestion } from '@/content/chinese/grade1/generators'
 
 export const CORPUS_SEEDS = 300
 
@@ -82,10 +83,12 @@ export function collectCorpus(): Record<Lang, string[]> {
   const sets: Record<Lang, Set<string>> = { zh: new Set(), en: new Set() }
   const langs: Lang[] = ['zh', 'en']
   const add = (lang: Lang, tokens: string[]): void => {
-    for (const t of tokens) {
-      if (t === PAUSE) continue
-      sets[lang].add(t)
-      for (const piece of piecesOf(t, lang)) sets[lang].add(piece)
+    for (const raw of tokens) {
+      if (raw === PAUSE) continue
+      // 英文界面里标过的中文内容（语文，Y6）归到中文
+      const { text: t, lang: voice } = tokenVoice(raw, lang)
+      sets[voice].add(t)
+      for (const piece of piecesOf(t, voice)) sets[voice].add(piece)
     }
   }
   for (const lang of langs) {
@@ -93,6 +96,13 @@ export function collectCorpus(): Record<Lang, string[]> {
     for (const key of FIXED_KEYS) add(lang, phraseSpeech({ k: key }, lang))
   }
   sets.zh.add('两')
+  // 语文的题目条目有限，逐条出一遍（随机抽样可能漏掉某一句课文、某个听音的字）
+  for (const q of everyItemQuestion()) {
+    for (const lang of langs) {
+      add(lang, questionSpeech(q, lang))
+      add(lang, answerSpeech(q, lang))
+    }
+  }
   for (const course of allCourses()) {
     for (const kp of course.knowledgePoints) {
       const gen = getGenerator(kp.id)

@@ -30,7 +30,8 @@ const combos = [];
   const server = await createServer({ configFile: "vite.config.ts", logLevel: "error", server: { middlewareMode: true, hmr: false, ws: false, watch: null } });
   try {
     const runner = createServerModuleRunner(server.environments.ssr);
-    const { allCourses } = await runner.import("/src/engine/catalog.ts");
+    const { allCourses, loadAllCourses } = await runner.import("/src/engine/catalog.ts");
+    await loadAllCourses(); // 语文的内容包按需加载
     const { hasGenerator } = await runner.import("/src/engine/index.ts");
     const { questionAt } = await runner.import("/src/battle/stream.ts");
     const seen = new Map();

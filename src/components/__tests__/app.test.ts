@@ -82,7 +82,7 @@ describe('App 集成冒烟', () => {
     for (let i = 0; i < 5; i++) await flushPromises()
   }
 
-  it('顶层选择页列出各学科（数学可进，语文/英语占位）', async () => {
+  it('顶层选择页列出各学科（数学、语文可进，英语占位）', async () => {
     const w = await mountAt('/')
     expect(shown(w)).toContain('同步练') // 品牌
     expect(shown(w)).toContain('数学')
@@ -98,7 +98,7 @@ describe('App 集成冒烟', () => {
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('.about .about-links a')
-    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单'])
+    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '一年级语文知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
     // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
     const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])

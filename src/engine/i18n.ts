@@ -60,8 +60,8 @@ export interface RubySeg {
   py?: string
 }
 
-/** 把一段文字逐字对上拼音：syllables 依次给汉字，不够时查单字兜底表，再没有就不注音。 */
-function alignRuby(text: string, syllables: string[], out: RubySeg[]): void {
+/** 把一段文字逐字对上拼音：syllables 依次给汉字，不够时查单字兜底表（fallback），再没有就不注音。 */
+function alignRuby(text: string, syllables: string[], out: RubySeg[], fallback = true): void {
   let plain = ''
   const flush = (): void => {
     if (plain) out.push({ text: plain })
@@ -73,7 +73,7 @@ function alignRuby(text: string, syllables: string[], out: RubySeg[]): void {
       continue
     }
     flush()
-    const py = syllables.shift() ?? CHAR_PINYIN[ch]
+    const py = syllables.shift() ?? (fallback ? CHAR_PINYIN[ch] : undefined)
     out.push(py ? { text: ch, py } : { text: ch })
   }
   flush()
@@ -99,8 +99,10 @@ export function rubySegments(l: LStr, target: Lang = lang.value): RubySeg[] {
 }
 
 function collectRuby(l: LStr, out: RubySeg[]): void {
+  // 纯字符串是字面量，一律不注音——连单字兜底表也不查：语文考认字的选项（「山」「明」）就是纯字符串，
+  // 注了音等于把答案告诉孩子（需求 Y3）；要注音的文字都走词条
   if (typeof l === 'string') {
-    alignRuby(l, [], out)
+    alignRuby(l, [], out, false)
     return
   }
   const entry = ZH[l.k]

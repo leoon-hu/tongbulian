@@ -16,7 +16,7 @@ defineProps<{ question: Question; input: string; mood?: string }>()
       <p v-if="!input" class="thinking"><RubyText :text="{ k: 'battle.thinking' }" /></p>
     </template>
     <template v-else>
-      <ChoiceCards :choices="question.choices ?? []" readonly :highlight="input" />
+      <ChoiceCards :choices="question.choices ?? []" :choice-style="question.choiceStyle" readonly :highlight="input" />
       <p v-if="!input" class="thinking"><RubyText :text="{ k: 'battle.thinking' }" /></p>
     </template>
   </div>

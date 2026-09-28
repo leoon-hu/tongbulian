@@ -6,12 +6,19 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { hasGenerator } from '@/engine'
+import { courseLoaded, courseOfKp, loadCourse } from '@/engine/catalog'
 import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
 import { joinOpen, roomAvailable, roomInMatch, roomKpId } from '@/battle/lite'
 import { useBattleStore } from './battle'
 import { useVoiceStore } from './voice'
 import { reloadForNewVersion } from '@/engine/update'
+
+/** 内容包加载期间攒着的最新快照（快照、我是谁、服务器时刻）与事件 */
+interface Held {
+  state: [RoomSnapshot, string, number | undefined]
+  events: ArenaEvent[]
+}
 
 /** 这些错误进不了 / 待不下去房间，页面要换成提示 */
 export const FATAL_ERRORS: readonly RoomError[] = ['noRoom', 'closed', 'replaced', 'version', 'full', 'busy']
@@ -33,6 +40,11 @@ export const useRoomStore = defineStore('room', () => {
   const updating = ref(false)
   let client: RoomClient | null = null
   let errorTimer: ReturnType<typeof setTimeout> | null = null
+  /**
+   * 内容包按需加载（N8）：快照里的知识点属于还没加载的课（比如扫码直接进语文的房间），先加载再处理——
+   * 这期间的快照只留最新的、事件按顺序攒着，加载完一起交给比赛 store；换房间 / 离开就作废
+   */
+  let held: Held | null = null
   /** 测试可注入假的 WebSocket */
   let factory: RoomClientOptions['factory'] | undefined
 
@@ -73,8 +85,30 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   function onState(room: RoomSnapshot, me: string, serverNow?: number): void {
-    // 服务器不认识目录，只透传建房者给的知识点 id（B41）：这个页面没有这个知识点的生成器（别人乱填的、或者版本不同）
-    // 就当没有这个房间——不然进了竞技场出题时会抛错、整页空白
+    if (held) {
+      held.state = [room, me, serverNow]
+      return
+    }
+    const courseId = courseOfKp(room.kpId)?.course.id
+    if (courseId && !courseLoaded(courseId)) {
+      const mine: Held = { state: [room, me, serverNow], events: [] }
+      held = mine
+      void loadCourse(courseId)
+        .catch(() => undefined)
+        .then(() => {
+          if (held !== mine) return
+          held = null
+          applyState(...mine.state)
+          for (const e of mine.events) onEvent(e)
+        })
+      return
+    }
+    applyState(room, me, serverNow)
+  }
+
+  function applyState(room: RoomSnapshot, me: string, serverNow?: number): void {
+    // 服务器不认识目录，只透传建房者给的知识点 id（B41）：这个页面没有这个知识点的生成器（别人乱填的、或者版本不同、
+    // 内容包没加载成）就当没有这个房间——不然进了竞技场出题时会抛错、整页空白
     if (!hasGenerator(room.kpId)) {
       client?.close()
       client = null
@@ -89,7 +123,8 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   function onEvent(e: ArenaEvent): void {
-    battle.onRemoteEvent(e)
+    if (held) held.events.push(e)
+    else battle.onRemoteEvent(e)
   }
 
   /** 页面回到前台（手机锁屏 / 切走再回来）：不等退避，立刻重连（B23） */
@@ -168,6 +203,7 @@ export const useRoomStore = defineStore('room', () => {
   function reset(): void {
     // 换房间 / 离开：语音先关掉（麦克风释放、连接断开），新房间里要再点一次 🎤（B57）
     voice.leave()
+    held = null
     snapshot.value = null
     you.value = ''
     error.value = null

@@ -5,7 +5,6 @@ import App from '@/App.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useInstallStore } from '@/stores/install'
 import { unlockAudio } from '@/engine/audio'
-import { pruneAudioCache } from '@/engine/audioCache'
 import { setupPageTracking } from '@/engine/analytics'
 import '@/styles/tokens.css'
 import '@/styles/themes.css'
@@ -25,5 +24,6 @@ app.use(router)
 app.mount('#app')
 // 访问统计（N7）：翻页由路由上报（房间号不进统计库、返回键不记两次）；没加统计标签时什么都不做
 setupPageTracking(router)
-// 朗读片段只在读到时才下载（N8 ⑦）；页面打开一会儿后把缓存里已经不用的旧片段删掉（不联网）
-if (typeof caches !== 'undefined') setTimeout(() => void pruneAudioCache(), 10_000)
+// 朗读片段只在读到时才下载（N8 ⑦）；页面打开一会儿后把缓存里已经不用的旧片段删掉（不联网）。
+// 按需引入：清理要查的片段表（一万多条文件名的哈希，约 100 KB）不进首页的包
+if (typeof caches !== 'undefined') setTimeout(() => void import('@/engine/audioCache').then((m) => m.pruneAudioCache()), 10_000)

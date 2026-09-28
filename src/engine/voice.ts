@@ -16,7 +16,7 @@ import { watch } from 'vue'
 import { playSequence, preload, stop, type SeqItem } from './audio'
 import { soundOn } from './sound'
 import { cancel, check, run, sleep } from './runner'
-import { joinSpeech, PAUSE, phraseSpeech, piecesOf } from './speech'
+import { joinSpeech, PAUSE, phraseSpeech, piecesOf, tokenVoice } from './speech'
 
 export type SayMode = 'cut' | 'hold' | 'wait' | 'skip'
 
@@ -70,20 +70,23 @@ export function clipFor(token: string, lang: Lang): string | null {
  */
 export function sequenceFor(tokens: string[], lang: Lang): SeqItem[] {
   const out: SeqItem[] = []
-  for (const token of tokens) {
-    if (token === PAUSE) {
+  for (const raw of tokens) {
+    if (raw === PAUSE) {
       out.push({ pause: true })
       continue
     }
-    const file = clipFor(token, lang)
+    // 标过的中文内容（语文，Y6）：英文界面下也按中文找音频、缺了用中文的 TTS
+    const { text: token, lang: voice } = tokenVoice(raw, lang)
+    const other = voice !== lang ? { lang: voice } : {}
+    const file = clipFor(token, voice)
     if (file === null) {
-      const parts = piecesOf(token, lang)
-      if (parts.length > 1 && parts.every((p) => clipFor(p, lang) !== null)) {
-        for (const p of parts) out.push({ file: clipFor(p, lang), text: p })
+      const parts = piecesOf(token, voice)
+      if (parts.length > 1 && parts.every((p) => clipFor(p, voice) !== null)) {
+        for (const p of parts) out.push({ file: clipFor(p, voice), text: p, ...other })
         continue
       }
     }
-    out.push({ file, text: token })
+    out.push({ file, text: token, ...other })
   }
   return out
 }

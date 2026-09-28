@@ -57,6 +57,15 @@ describe('voice.say', () => {
     expect(played.length).toBeGreaterThan(0)
   })
 
+  it('英文界面里标过的中文内容（语文，Y6）按中文找音频，缺了用中文的 TTS', async () => {
+    const { zhToken } = await import('@/engine/speech')
+    expect(sequenceFor(['Listen', zhToken('有'), zhToken('山')], 'en')).toEqual([
+      { file: null, text: 'Listen' },
+      { file: 'zh-you', text: '有', lang: 'zh' },
+      { file: null, text: '山', lang: 'zh' },
+    ])
+  })
+
   it('停顿标记播成一个停顿；并成一条的短语有音频就整条播，没有就拆回小片段，小片段也不全就整条退 TTS', async () => {
     expect(sequenceFor(['加', PAUSE, '等于'], 'zh')).toEqual([{ file: 'zh-jia', text: '加' }, { pause: true }, { file: 'zh-dengyu', text: '等于' }])
     expect(sequenceFor(['有14个'], 'zh')).toEqual([{ file: 'zh-you14ge', text: '有14个' }])

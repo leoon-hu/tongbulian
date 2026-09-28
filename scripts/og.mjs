@@ -1,6 +1,6 @@
 /**
  * 分享图 public/og.png（1200×630，index.html 与静态页的 og:image / twitter:image）：用无头 Chrome（CDP）把一张
- * 内联 HTML 截成图。文案里的年级与知识点数取自 src/seo/site.ts 的 homeMeta()，加了年级 / 学科后重跑 `npm run og`。
+ * 内联 HTML 截成图。文案里的学科与知识点数取自 src/seo/site.ts 的 homeMeta()，加了年级 / 学科后重跑 `npm run og`。
  * 环境变量 CHROME 可指定浏览器路径。
  */
 import { spawn } from 'node:child_process'
@@ -62,7 +62,7 @@ const html = `<!doctype html>
     <ul>
       <li>答对课本题就得分，谁先答对 8 题谁赢</li>
       <li>打机器人 · 两人一台 · 扫码多设备组队</li>
-      <li>人教版${meta.grades}数学 ${meta.kpCount} 个知识点</li>
+      <li>人教版小学${meta.subjects} ${meta.kpCount} 个课本知识点</li>
       <li>汉字标拼音、自动朗读；免费、无广告</li>
     </ul>
   </div>

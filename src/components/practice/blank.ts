@@ -14,3 +14,11 @@ export interface BlankFill {
   value: string
   done: boolean
 }
+
+/**
+ * 语文的选择题里也有「空」：课文句子挖掉的词（verse 的 blank）、大字算式里的「？」（日＋月＝？）——
+ * 答完（答对或答错）把正确答案填进去，孩子看到完整的句子 / 字（需求 Y2）。
+ */
+export function hasChoiceBlank(q: Question): boolean {
+  return q.input === 'choice' && q.stem.some((p) => (p.kind === 'verse' && !!p.blank) || (p.kind === 'hanzi' && /[？?]/.test(p.text)))
+}

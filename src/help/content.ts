@@ -4,7 +4,6 @@
  * 只有中文）用同一份。只依赖目录与皮肤注册表（知识点数、游戏名与规则句都是算出来的，不手写数字）。
  */
 import type { Lang } from '@/types/models'
-import { getGenerator } from '@/engine'
 import { liveCourses } from '@/engine/catalog'
 import { translate } from '@/engine/i18n'
 import { SKINS, finishKey, ruleKey } from '@/battle/skins'
@@ -46,7 +45,8 @@ export const HELP_LEAD: Record<Lang, string> = {
 function coverage(lang: Lang): string {
   return liveCourses()
     .map((lc) => {
-      const n = lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).length
+      // 按目录数（语文的生成器按需加载，帮助页打开时可能还没加载；上线课程的知识点都有生成器，测试查着）
+      const n = lc.course.knowledgePoints.length
       const name = translate({ k: 'course.name', p: { grade: lc.grade.title, subject: lc.subject.title } }, lang)
       return lang === 'zh' ? `${name} ${n} 个知识点` : `${name} (${n} topics)`
     })
@@ -158,11 +158,12 @@ export function helpSections(lang: Lang): HelpSection[] {
               'Number pad: type the answer, ⌫ deletes, ✓ submits.',
               'Four choices: tap one card to answer.',
               'Visual aids in the question: ten-frames, objects, clock faces, money, shapes, number lines, rulers, column arithmetic, line-ups and more.',
+              'Chinese follows the lessons: pick the character you hear, see or read in pinyin, read a character in its writing grid, count strokes, radicals, character puzzles (日 + 月 = 明), tones and blending, fill in words from lesson texts and poems, and questions about each lesson. The character being tested has no pinyin and is not read aloud; everything else has pinyin.',
             ],
           },
           {
             kind: 'p',
-            text: 'Every Chinese character carries pinyin, each question is read aloud when it appears, and 🔊 reads it again. A wrong answer shows and reads the correct one, with a demonstration where a visual aid applies (making ten and breaking ten are animated). No timer, no penalty, no leaderboard.',
+            text: 'Every Chinese character carries pinyin (except the one a Chinese question is testing), each question is read aloud when it appears, and 🔊 reads it again. A wrong answer shows and reads the correct one, with a demonstration where a visual aid applies (making ten and breaking ten are animated). No timer, no penalty, no leaderboard.',
           },
           {
             kind: 'p',
@@ -196,7 +197,8 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Do questions repeat?', a: 'They are generated randomly, so almost never. An unfinished round continues with the same questions; a finished one gets new ones.' },
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
               { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the topic\'s Practice page (the one you land on after tapping a topic), together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
-              { q: 'Why no Chinese / English / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
+              { q: 'Why do some characters in Chinese questions have no pinyin?', a: 'Questions that test character recognition (pick the character from its pinyin, sound or picture; how do you read this character) would give the answer away with pinyin or by reading it aloud. Lesson texts, questions and all other options carry pinyin and are read aloud.' },
+              { q: 'Why no English / grade 2 Chinese / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
                 a: 'Free, no ads, no account, no personal data collected; progress stays in this device\'s browser. All code is open source under MIT, so anyone can inspect it or host their own copy:',
@@ -299,11 +301,12 @@ export function helpSections(lang: Lang): HelpSection[] {
             '数字键盘：填一个数，打错用 ⌫ 删掉，按 ✓ 提交。',
             '四选一：点一张卡片就算作答。',
             '题干配教具：十格阵、实物图、钟面、人民币、图形、数轴、尺子、竖式、排队等，看得见就更容易懂。',
+            '语文按课出题：听音选字、看图 / 看拼音选字、田字格里的生字选读音、数笔画、偏旁、加一加减一减（日＋月＝明）、声调与拼一拼、课文和古诗选词填空、课文问答；考认字的那个字不标拼音、不读出来，其余都标拼音。',
           ],
         },
         {
           kind: 'p',
-          text: '每个汉字都标拼音，进题自动朗读，题干下方的 🔊 可以再听一遍。答错会读出并显示正确答案，有教具的知识点会演示一遍（凑十法、破十法有动画）；不计时、不扣分、没有排行。',
+          text: '每个汉字都标拼音（语文题里考认字的那个字除外），进题自动朗读，题干下方的 🔊 可以再听一遍。答错会读出并显示正确答案，有教具的知识点会演示一遍（凑十法、破十法有动画）；不计时、不扣分、没有排行。',
         },
         {
           kind: 'p',
@@ -337,7 +340,8 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '题目会重复吗？', a: '每次随机生成，几乎不重复；没做完的一轮下次接着做同一组题，做完就换新题。' },
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
             { q: '想改名字？', a: '在知识点的「练习」页（点知识点就到）页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
-            { q: '为什么还没有语文 / 英语 / 三年级？', a: '内容按年级逐个做，陆续补充。' },
+            { q: '语文题里有的字为什么不标拼音？', a: '考认字的题（看拼音选字、听音选字、看图选字、这个字怎么读）要看孩子认不认得这个字，标了拼音、读出了字音就等于告诉了答案；课文、问题和其余选项都标拼音、都朗读。' },
+            { q: '为什么还没有英语 / 二年级语文 / 三年级？', a: '内容按年级逐个做，陆续补充。' },
             {
               q: '收费吗？有广告吗？安全吗？',
               a: '免费、无广告、不用注册、不收集个人信息，学习记录只存在这台设备的浏览器里。代码全部以 MIT 许可开源，谁都能查、也能自己部署一套：',
