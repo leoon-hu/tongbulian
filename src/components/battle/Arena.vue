@@ -161,28 +161,28 @@ const emoteSides = computed<Team[]>(() => {
   if (!s) return []
   return TEAMS.filter((t) => s.players.some((p) => p.team === t && store.operable.includes(p.id)))
 })
-// 角色的台词（B71）：点了角色冒气泡就朗读，按角色的速率变音色；skip 播法，正在读题就不读
+// 角色的台词（B71）：点了角色冒气泡就朗读，按角色的速率变音色；idle 播法：正在读题、读提示就不读（B37）
 watch(
   () => store.charLine,
   (l) => {
-    if (l) say(phraseSpeech({ k: l.key }, lang.value), lang.value, 0, { mode: 'skip', rate: l.rate })
+    if (l) say(phraseSpeech({ k: l.key }, lang.value), lang.value, 0, { mode: 'idle', rate: l.rate })
   },
 )
-// 机器人说话（B61）：气泡出现就朗读，音高提一点像机器人；skip 播法，正在读题就不读
+// 机器人说话（B61）：气泡出现就朗读，音高提一点像机器人；idle 播法：正在读题、读提示就不读（B37）
 watch(
   () => store.robotLine,
   (line) => {
-    if (line) say(phraseSpeech({ k: line.key }, lang.value), lang.value, 0, { mode: 'skip', rate: ROBOT_RATE })
+    if (line) say(phraseSpeech({ k: line.key }, lang.value), lang.value, 0, { mode: 'idle', rate: ROBOT_RATE })
   },
 )
-// 🔥 加油飞出去时朗读一声「加油！」（B58；skip 播法：正在读题就不读）；每条只读一次
+// 🔥 加油飞出去时朗读一声「加油！」（B58；idle 播法：正在读题、读提示就不读）；每条只读一次
 let spokenEmote = 0
 watch(
   () => store.emotes.at(-1),
   (e) => {
     if (!e || e.id <= spokenEmote) return
     spokenEmote = e.id
-    if (e.kind === 'cheer') say(phraseSpeech({ k: 'emote.cheer' }, lang.value), lang.value, 0, { mode: 'skip' })
+    if (e.kind === 'cheer') say(phraseSpeech({ k: 'emote.cheer' }, lang.value), lang.value, 0, { mode: 'idle' })
   },
 )
 /** 结果页的「下一章」（B9，三种模式都有）：本册目录里的下一个知识点；null = 已是最后一个 */

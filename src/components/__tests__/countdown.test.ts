@@ -41,6 +41,34 @@ describe('开局倒数（B6）：先讲规则再倒数', () => {
     w.unmount()
   })
 
+  it('规则卡点一下（或回车）就直接「开始！」：跳过预备和 3 2 1，0.6 秒后 done；原来的等待到点了也不再往下走', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const voice = await import('@/engine/voice')
+    vi.mocked(voice.say).mockClear()
+    const w = mount(Countdown, { props: { rule: ruleKey('rocket'), skin: 'rocket' } })
+    const card = w.find('.rule')
+    expect(card.attributes('role')).toBe('button')
+    expect(shown(card.find('.rule-skip').html())).toBe('点一下，直接开始')
+    expect(card.find('.rule-close').text()).toBe('✕')
+    await card.trigger('click')
+    expect(w.find('.rule').exists()).toBe(false)
+    expect(w.find('.go').exists()).toBe(true)
+    // 「开始！」用默认播法：打断还没读完的规则
+    expect(vi.mocked(voice.say).mock.calls.at(-1)![3]).toBeUndefined()
+    vi.advanceTimersByTime(600)
+    expect(w.emitted('done')).toHaveLength(1)
+    vi.advanceTimersByTime(RULE_MAX_MS)
+    await flushPromises()
+    expect(w.find('.ready').exists()).toBe(false)
+    expect(w.emitted('done')).toHaveLength(1)
+    w.unmount()
+    // 回车也行；「预备…」之后没有卡片，点不到
+    const k = mount(Countdown, { props: { rule: ruleKey('race') } })
+    await k.find('.rule').trigger('keydown', { key: 'Enter' })
+    expect(k.find('.go').exists()).toBe(true)
+    k.unmount()
+  })
+
   it('「开始」时放这个游戏开始的一声（B73：赛跑发令枪、火车汽笛）；不知道是哪个游戏就是通用的「嘟」', async () => {
     const { playSfx } = await import('@/battle/sfx')
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })

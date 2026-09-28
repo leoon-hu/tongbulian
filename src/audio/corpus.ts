@@ -40,7 +40,6 @@ const FIXED_KEYS = [
   // 表情 🔥 加油（B58）：飞出去时朗读一声
   'emote.cheer',
   // 机器人的话（B61）
-  'robot.ready',
   'robot.lead',
   'robot.behind',
   'robot.worry',

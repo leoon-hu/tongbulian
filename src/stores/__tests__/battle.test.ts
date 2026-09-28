@@ -323,14 +323,14 @@ describe('机器人跟着你 + 会说话（B60 / B61）', () => {
     expect(Number.isInteger(pace?.diff)).toBe(true) // 做计划那一刻的分差（之后机器人又得了分）
   })
 
-  it('机器人的话：开打 0.4 秒后「我准备好啦」冒气泡、2.6 秒后收起；被反超「哎呀被追上了」；孩子还差一分「别急别急」；输了「你太厉害了」；两人一台没有', () => {
+  it('机器人的话：开局不说话（会压在第一题的自动读题上）；被反超「哎呀被追上了」、2.6 秒后收起；孩子还差一分「别急别急」；输了「你太厉害了」；两人一台没有', () => {
     const s = useBattleStore()
     s.setName('me', '小兔')
     s.startLocal({ kpId: KP, mode: 'ai', skin: 'race', seeds: { left: 1, [AI_ID]: 2 }, aiSeed: 3, aiLevel: 'slow' })
     s.beginPlay()
     expect(s.robotLine).toBeNull()
-    vi.advanceTimersByTime(ROBOT_LINE_DELAY_MS.go)
-    expect(s.robotLine?.key).toBe('robot.ready')
+    vi.advanceTimersByTime(400)
+    expect(s.robotLine).toBeNull()
     vi.advanceTimersByTime(ROBOT_SAY_MS)
     expect(s.robotLine).toBeNull()
     // 机器人先领先，我反超

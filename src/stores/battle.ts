@@ -630,7 +630,6 @@ export const useBattleStore = defineStore('battle', () => {
     if (before === 'countdown' && state.value.phase === 'playing') {
       pushEvent({ type: 'go' })
       for (const p of state.value.players) if (p.kind === 'human') shownAt.set(p.id, now)
-      if (mode.value === 'ai') robotSay('robot.ready', ROBOT_LINE_DELAY_MS.go)
     }
     if (mode.value === 'ai') aiStep()
   }

@@ -7,7 +7,9 @@
  * - hold：这一句必须播完（对战里点 🔊 读题）——自己再点、另一方点、弹出提示都不能打断，
  *   要读的排在后面，播完接着读；只有 cut 与 hush（离开页面 / 静音）能停它；
  * - wait：正在播一句必须播完的（或队伍里还有人等着）就排到后面，否则与 cut 一样；
- * - skip：正在播一句必须播完的就不读了（屏幕上有字，一会儿再读就过时了），否则与 cut 一样。
+ * - skip：正在播一句必须播完的就不读了（屏幕上有字，一会儿再读就过时了），否则与 cut 一样；
+ * - idle：只在没在读东西时读（机器人的话、角色台词、「加油」）：正在读（自动读的题也算）或有人排队就不读、也不排队；
+ *   它开口以后，新来的读题照常打断它。
  * 排队时同一个 key 只留最新的一条（一行的读题一个 key、一种提示一个 key），forget(key) 撤回还没轮到的那条。
  */
 import type { Lang } from '@/types/models'
@@ -18,7 +20,7 @@ import { soundOn } from './sound'
 import { cancel, check, run, sleep } from './runner'
 import { joinSpeech, PAUSE, phraseSpeech, piecesOf, tokenVoice } from './speech'
 
-export type SayMode = 'cut' | 'hold' | 'wait' | 'skip'
+export type SayMode = 'cut' | 'hold' | 'wait' | 'skip' | 'idle'
 
 export interface SayOptions {
   mode?: SayMode
@@ -130,6 +132,8 @@ function start(item: Item): Promise<void> {
 export function say(tokens: string[], lang: Lang, delayMs = 0, opts: SayOptions = {}): Promise<void> {
   if (!soundOn.value || tokens.length === 0) return Promise.resolve()
   const mode = opts.mode ?? 'cut'
+  // 没在读东西才读（B37）：正在读题、读提示就算了，也不排队
+  if (mode === 'idle' && (current !== null || queue.length > 0)) return Promise.resolve()
   const item = makeItem(tokens, lang, delayMs, mode, opts.key, opts.rate ?? 1)
   if (mode !== 'cut' && current) {
     // 正在播的就是这一句（点 🔊 时它正在自动读）：不重头来，只把它升级成必须播完

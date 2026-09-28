@@ -143,6 +143,28 @@ describe('voice.say 的播法', () => {
     expect(played.filter((p) => p === 'zh-jia|加').length).toBeLessThan(2)
   })
 
+  it('idle：正在读东西（自动读的题也算）就不读、也不排队；没在读才读，读的时候来了题照常打断它', async () => {
+    // 正在自动读题：机器人的话 / 角色台词 / 加油都不读，题读完了也不补读
+    const auto = say(A, 'zh', 0, { mode: 'wait', key: 'q:left' })
+    await say(['几'], 'zh', 0, { mode: 'idle', rate: 1.2 })
+    await auto
+    expect(played).toEqual(['zh-jia|加', 'zh-dengyu|等于', 'zh-jia|加'])
+    // 有人排队也不读
+    played.length = 0
+    const red = say(A, 'zh', 0, { mode: 'hold', key: 'red' })
+    const blue = say(B, 'zh', 0, { mode: 'hold', key: 'blue' })
+    await say(['几'], 'zh', 0, { mode: 'idle' })
+    await Promise.all([red, blue])
+    expect(played).toEqual(['zh-jia|加', 'zh-dengyu|等于', 'zh-jia|加', '-|几', 'zh-dengyu|等于'])
+    // 没在读：照常读；读的时候进了新题，新题打断它
+    played.length = 0
+    const line = say(B, 'zh', 0, { mode: 'idle' })
+    const question = say(A, 'zh', 0, { mode: 'wait', key: 'q:left' })
+    await Promise.all([line, question])
+    expect(played.slice(-3)).toEqual(['zh-jia|加', 'zh-dengyu|等于', 'zh-jia|加'])
+    expect(played.filter((p) => p === '-|几').length).toBeLessThan(2)
+  })
+
   it('wait / hold 在没人排队、正在播的也不必播完时，和默认一样打断', async () => {
     const plain = say(A, 'zh')
     const next = say(B, 'zh', 0, { mode: 'wait', key: 'x' })

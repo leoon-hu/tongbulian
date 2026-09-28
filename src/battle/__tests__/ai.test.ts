@@ -76,7 +76,8 @@ describe('机器人（B11）', () => {
   })
 
   it('机器人的话（B61）：开局、自己反超、被反超、孩子还差一分、输、赢各一句；别的事件不说', () => {
-    expect(robotLineFor({ type: 'go' })).toBe('robot.ready')
+    // 开局不说话：会压在第一题的自动读题上（2026-09-28 用户定）
+    expect(robotLineFor({ type: 'go' })).toBeNull()
     expect(robotLineFor({ type: 'lead', team: 'blue' })).toBe('robot.lead')
     expect(robotLineFor({ type: 'lead', team: 'red' })).toBe('robot.behind')
     expect(robotLineFor({ type: 'nearWin', team: 'red' })).toBe('robot.worry')

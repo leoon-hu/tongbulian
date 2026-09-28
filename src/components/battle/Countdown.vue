@@ -8,7 +8,7 @@ export const RULE_MAX_MS = 9000
 <script setup lang="ts">
 // 开局倒数（B6）：新开一局先讲一句规则（rule 词条，朗读 + 显示，说完再倒数）→「预备…」→ 3、2、1（朗读数字 + 嘀）→
 // 「开始！」（朗读 + 这个游戏开始的一声，B73：发令枪、汽笛、点火…；不知道是哪个游戏就是通用的「嘟」）→ done。
-// 再来一局不讲（rule 传 null）。
+// 再来一局不讲（rule 传 null）。规则卡点一下（或点 ✕）就停掉朗读、跳过预备和 3 2 1，直接「开始！」（2026-09-28 用户定）。
 import { onBeforeUnmount, ref } from 'vue'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
@@ -16,6 +16,7 @@ import { say } from '@/engine/voice'
 import { playSfx, skinSfx } from '@/battle/sfx'
 import { skinById } from '@/battle/skins'
 import RubyText from '@/components/ui/RubyText.vue'
+import { onTap } from '@/components/ui/tap'
 
 const props = defineProps<{ rule?: string | null; skin?: string | null }>()
 const emit = defineEmits<{ done: [] }>()
@@ -36,7 +37,8 @@ function step(): void {
   if (n.value === 5) {
     const spoken = say(phraseSpeech({ k: props.rule! }, lang.value), lang.value).catch(() => {})
     Promise.race([Promise.all([spoken, wait(RULE_MIN_MS)]), wait(RULE_MAX_MS)]).then(() => {
-      if (!alive) return
+      // 点了规则卡已经跳到「开始！」
+      if (!alive || n.value !== 5) return
       n.value = 4
       step()
     })
@@ -65,6 +67,14 @@ function step(): void {
   }
 }
 step()
+
+/** 规则卡点一下：直接「开始！」（它的朗读会打断还没读完的规则） */
+function skipRule(): void {
+  if (!alive || n.value !== 5) return
+  n.value = 0
+  step()
+}
+
 onBeforeUnmount(() => {
   alive = false
   timers.forEach(clearTimeout)
@@ -73,7 +83,19 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="countdown" role="status">
-    <p v-if="n === 5 && rule" class="rule"><RubyText :text="{ k: rule }" /></p>
+    <p
+      v-if="n === 5 && rule"
+      class="rule"
+      role="button"
+      tabindex="0"
+      @pointerup="onTap($event, skipRule)"
+      @click="onTap($event, skipRule)"
+      @keydown.enter.prevent="skipRule"
+    >
+      <RubyText :text="{ k: rule }" />
+      <span class="rule-skip"><RubyText :text="{ k: 'battle.skipRule' }" /></span>
+      <span class="rule-close" aria-hidden="true">✕</span>
+    </p>
     <span v-else-if="n === 4" class="ready"><RubyText :text="{ k: 'battle.getReady' }" /></span>
     <span v-else-if="n > 0" :key="n" class="num">{{ n }}</span>
     <span v-else class="go"><RubyText :text="{ k: 'battle.go' }" /></span>
@@ -101,8 +123,9 @@ onBeforeUnmount(() => {
   line-height: 1;
 }
 .rule {
+  position: relative;
   max-width: 720px;
-  padding: 18px 28px;
+  padding: 18px 44px;
   border-radius: var(--radius-lg);
   background: var(--c-card);
   box-shadow: var(--shadow-card);
@@ -112,6 +135,27 @@ onBeforeUnmount(() => {
   text-align: center;
   color: var(--c-text);
   animation: zoom 0.5s ease-out;
+  /* 倒数层不接点按（B59），只有这张卡能点：点一下直接开始 */
+  pointer-events: auto;
+  cursor: pointer;
+}
+.rule:active {
+  transform: scale(0.98);
+}
+.rule-skip {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--c-text-light);
+}
+.rule-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--c-text-light);
 }
 .num {
   font-size: 140px;

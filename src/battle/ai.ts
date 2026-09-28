@@ -67,15 +67,16 @@ export function profileFor(level: AiLevel, pace: HumanPace = NO_PACE): AiProfile
 // ── 机器人的话（B61）：屏幕上它那一行冒气泡，同时朗读 ──
 
 /** 词条键（`robot.*`，中英 + 拼音，进语料）与说话前的延迟：反超 / 还差一分等弹出提示读完再说，结束的等播报完再说 */
-export const ROBOT_LINE_DELAY_MS: Record<'go' | 'lead' | 'nearWin' | 'finished', number> = { go: 400, lead: 1500, nearWin: 1500, finished: 3200 }
+export const ROBOT_LINE_DELAY_MS: Record<'lead' | 'nearWin' | 'finished', number> = { lead: 1500, nearWin: 1500, finished: 3200 }
 /** 气泡显示多久 */
 export const ROBOT_SAY_MS = 2600
 
-/** 这个事件机器人说哪句：开局「我准备好啦」、自己反超「我领先啦」、被反超「哎呀被追上了」、孩子还差一分「别急别急」、输了 / 赢了各一句 */
+/**
+ * 这个事件机器人说哪句：自己反超「我领先啦」、被反超「哎呀被追上了」、孩子还差一分「别急别急」、输了 / 赢了各一句。
+ * 开局不说话（2026-09-28 用户定：原来的「我准备好啦」正好压在第一题的自动读题上）。
+ */
 export function robotLineFor(e: ArenaEvent, botTeam: Team = 'blue'): string | null {
   switch (e.type) {
-    case 'go':
-      return 'robot.ready'
     case 'lead':
       return e.team === botTeam ? 'robot.lead' : 'robot.behind'
     case 'nearWin':

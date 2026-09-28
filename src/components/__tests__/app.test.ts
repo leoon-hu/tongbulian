@@ -1569,7 +1569,7 @@ describe('表情与点游戏（B58 / B59）', () => {
 })
 
 describe('机器人会说话（B61）', () => {
-  it('打机器人：开打后机器人那一行冒气泡「我准备好啦！」（带拼音），2.6 秒后收起；两人一台没有气泡', async () => {
+  it('打机器人：开局不说话（会压在第一题的读题上）；机器人说话时它那一行冒气泡（带拼音）；两人一台没有气泡', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     localStorage.setItem('tongbulian:battle', JSON.stringify({ names: { me: '小兔', left: '', right: '小虎' } }))
     const w = await mountAt('/battle/local/s1-04-simple-addsub?mode=ai')
@@ -1580,14 +1580,18 @@ describe('机器人会说话（B61）', () => {
     const store = useBattleStore()
     store.beginPlay()
     await settle()
-    expect(w.find('.robot-say').exists()).toBe(false)
     vi.advanceTimersByTime(500)
+    await settle()
+    expect(w.find('.robot-say').exists()).toBe(false)
+    expect(store.robotLine).toBeNull()
+    // 什么时候说、说多久由 store 管（stores/__tests__/battle.test.ts）；这里看气泡画在机器人那一行、带拼音
+    store.robotLine = { id: 1, key: 'robot.lead' }
     await settle()
     const bubble = w.find('.team.blue .robot-say')
     expect(bubble.exists()).toBe(true)
-    expect(shown(bubble)).toContain('我准备好啦')
+    expect(shown(bubble)).toContain('我领先啦')
     expect(bubble.html()).toMatch(/<rt[\s>]/)
-    vi.advanceTimersByTime(2700)
+    store.robotLine = null
     await settle()
     expect(w.find('.robot-say').exists()).toBe(false)
     w.unmount()
