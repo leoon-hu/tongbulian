@@ -589,7 +589,7 @@ function pinyinItems(ctx: Ctx, spec: PinyinSpec): Record<string, Item[]> {
     ([1, 2, 3, 4] as const).map((n) => ({
       key: `picktone-${b}-${n}`,
       build: (d: Difficulty, rng: RNG) =>
-        choiceQ(ctx, 'pinyin', d, `picktone-${b}-${n}`, [text('yq.pickTone', { n }), { kind: 'pinyin', text: b }], { label: addTone(b, n), say: TONE_SAY[n] }, ([1, 2, 3, 4] as const).filter((x) => x !== n).map((x) => ({ label: addTone(b, x), say: TONE_SAY[x] })), rng, 'pinyin'),
+        choiceQ(ctx, 'pinyin', d, `picktone-${b}-${n}`, [text('yq.pickTone', { n: { k: `yq.toneNum.${n}` } }), { kind: 'pinyin', text: b }], { label: addTone(b, n), say: TONE_SAY[n] }, ([1, 2, 3, 4] as const).filter((x) => x !== n).map((x) => ({ label: addTone(b, x), say: TONE_SAY[x] })), rng, 'pinyin'),
     })),
   )
 

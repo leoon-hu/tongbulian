@@ -3,7 +3,7 @@ import '@/content/chinese/grade1'
 import type { LStr, Question, StemPart } from '@/types/models'
 import { buildSession, createRng, getGenerator, labelKey } from '@/engine'
 import { answerLabel } from '@/engine/answer'
-import { translate } from '@/engine/i18n'
+import { rubySegments, translate } from '@/engine/i18n'
 import { PAUSE, answerSpeech, questionSpeech, tokenVoice } from '@/engine/speech'
 import { INITIALS, LETTER_SAY, addTone, splitSyllable, splitTone } from '@/content/chinese/shared/syllables'
 import { RADICALS, parseAsk, sayZi } from '@/content/chinese/shared/makers'
@@ -334,6 +334,18 @@ describe('朗读（需求 Y4 / Y6）', () => {
         }
       }
     }
+  })
+
+  it('「选出第几声」的声调用汉字：屏幕上「一」注 yī，朗读是一整句、没有阿拉伯数字；英文界面是 tone 1', () => {
+    // 阿拉伯数字夹在中文句子里，合成出来是读数字的调子（「第1声」的 1 往下掉，像四声）
+    const q = SAMPLES.get('c1s1-02-aoe')!.find((x) => maker(x) === 'picktone' && key(x).endsWith('-1'))!
+    const stem = q.stem[0]!
+    if (stem.kind !== 'text') throw new Error('not text')
+    expect(zh(stem.text)).toBe('选出第一声。')
+    expect(rubySegments(stem.text, 'zh')).toContainEqual({ text: '一', py: 'yī' })
+    expect(questionSpeech(q, 'zh')[0]).toBe('选出第一声')
+    expect(translate(stem.text, 'en')).toBe('Choose tone 1.')
+    for (const qs of SAMPLES.values()) for (const x of qs) for (const t of questionSpeech(x, 'zh')) expect(t, x.id).not.toMatch(/第\d声/)
   })
 
   it('英文界面：题目要求读英文，课文、字词、答案这些中文内容标成用中文读（字母表的字母跟中文界面一样读）', () => {
