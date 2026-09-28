@@ -131,7 +131,8 @@ export type StemPart =
   | { kind: 'vertical'; a: number; op: '+' | '-'; b: number }
   // ── 语文（§9）：这几种都是中文内容，不翻译；朗读时在英文界面下也用中文读（Y6）──
   /** 大字：每个汉字一个田字格（楷体），其它字符（＋ ＝ ？）原样放大；不注音、不朗读——考的就是认不认得（Y3） */
-  | { kind: 'hanzi'; text: string }
+  /** mark：标红的那个字（多音字「这个词里红色的字怎么读」，Y9） */
+  | { kind: 'hanzi'; text: string; mark?: number }
   /** 拼音卡：音节 / 声母 / 韵母 / 拼读式「b + ā」，初学者字体大号显示；say 是朗读时读的同音汉字（「bā」读「八」），不填就不读（Y4） */
   | { kind: 'pinyin'; text: string; say?: string }
   /** 听音题：画一个大喇叭，朗读时读 say（中文），屏幕上不出现 say 的文字（Y3） */

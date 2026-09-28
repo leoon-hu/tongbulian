@@ -4,9 +4,9 @@ import { isHan } from '@/engine/i18n'
 
 /**
  * 语文的大字（需求 Y3）：每个汉字放进一个田字格（楷体、不注音），其它字符（＋ － ＝）原样放大；
- * 「？」画成一个虚线格——答完题 fill 是正确的字，填进去变绿（加一加 / 减一减）。
+ * 「？」画成一个虚线格——答完题 fill 是正确的字，填进去变绿（加一加 / 减一减）；mark 是标红的那个字（多音字，Y9）。
  */
-const props = defineProps<{ text: string; fill?: string }>()
+const props = defineProps<{ text: string; fill?: string; mark?: number }>()
 
 const cells = computed(() =>
   Array.from(props.text).map((ch) => ({ ch, kind: isHan(ch) ? 'han' : ch === '？' || ch === '?' ? 'ask' : /\d/.test(ch) ? 'num' : 'sym' })),
@@ -16,7 +16,7 @@ const cells = computed(() =>
 <template>
   <div class="hanzi" :class="{ many: cells.length > 3 }" lang="zh-CN">
     <template v-for="(c, i) in cells" :key="i">
-      <span v-if="c.kind === 'han'" class="cell">{{ c.ch }}</span>
+      <span v-if="c.kind === 'han'" class="cell" :class="{ mark: i === mark }">{{ c.ch }}</span>
       <span v-else-if="c.kind === 'ask'" class="cell ask" :class="{ done: !!fill }">{{ fill || '？' }}</span>
       <span v-else-if="c.ch.trim()" class="sym" :class="{ num: c.kind === 'num' }">{{ c.ch }}</span>
     </template>
@@ -53,6 +53,11 @@ const cells = computed(() =>
   font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Kaiti', 'BiauKai', serif;
   font-weight: 400;
   color: var(--c-text);
+}
+/* 多音字题里要读的那个字（Y9） */
+.cell.mark {
+  color: var(--c-red);
+  border-color: var(--c-red);
 }
 .cell.ask {
   border-style: dashed;

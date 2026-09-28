@@ -7,6 +7,8 @@ import { labelKey, numberQuestion, sigId } from '@/engine'
 import { translate } from '@/engine/i18n'
 import { LETTER_SAY, TONE_SAY, addTone, splitSyllable, splitTone, syllableDistractors } from './syllables'
 import type { LessonSpec, PinyinSpec } from './spec'
+import './prompts' // 副作用：注册题目要求（inPrompt 要查）
+import { READINGS } from './readings'
 
 /** 一个选项：显示的文字（要注音的走词条）+ 朗读时读什么（中文，不填读 label） */
 export interface Opt {
@@ -25,6 +27,8 @@ export interface Ctx {
   pinyinReady: boolean
   /** 拼音课里干扰项能用的声母 / 韵母（学到本课为止的）；拼音单元以后是 null = 不限 */
   learned: { initials: ReadonlySet<string>; finals: ReadonlySet<string> } | null
+  /** 读一个字：多音字按它在本年级拼音表里的读音给个词（sayZi） */
+  say: (c: string) => string
 }
 
 /** 一道题的条目：key 是签名的一部分（模板名 + 条目），build 每次出一道（干扰项、选项顺序随机） */
@@ -99,65 +103,95 @@ for (const g of SIMILAR_GROUPS) {
 }
 
 /**
- * 多音字：听音题与「正确答案是 X」读的时候给个词（Y6），单读一个字合成语音可能读成别的音。
- * 不在表里的多音字按最常见的读音读（大 dà、看 kàn、好 hǎo……），拿不准的干脆不出听音题。
+ * 多音字：听音题与「正确答案是 X」读的时候给个词（Y6），单读一个字合成语音按它最常见的读音读（重 zhòng、倒 dǎo）。
+ * 按读音分开写：同一个字在不同的课读不同的音（一年级「重要的重」，二年级《寒号鸟》「重复的重」），读哪个词看这个字
+ * 在这一课的读音（生字按本年级拼音表，填空的答案按它在那句课文里的读音）；没有这个读音的词就用第一个。
+ * 「X 的 X」末尾单独那个字合成时也常按最常见的读音读（高兴的兴读成 xīng），scripts/build-audio.py 的 POLY_TAIL
+ * 把这些词的末尾换成读音唯一的同音字再合成——改了这里的词要同步那张表（测试查）。
+ * 不在表里的多音字单读就是本课读音（逐个比过基频），拿不准的干脆不出听音题。
  */
-export const POLY_SAY: Readonly<Record<string, string>> = {
-  长: '长短的长',
-  行: '行走的行',
-  为: '为什么的为',
-  数: '数一数的数',
-  乐: '快乐的乐',
-  觉: '睡觉的觉',
-  朝: '朝霞的朝',
-  降: '下降的降',
-  落: '落下的落',
-  露: '露水的露',
-  藏: '捉迷藏的藏',
-  空: '天空的空',
-  种: '种花的种',
-  教: '教书的教',
-  背: '背书包的背',
-  还: '还有的还',
-  只: '一只的只',
-  少: '多少的少',
-  相: '互相的相',
-  着: '看着的着',
-  地: '大地的地',
-  得: '得到的得',
-  了: '好了的了',
-  发: '发芽的发',
-  干: '干净的干',
-  华: '中华的华',
-  兴: '高兴的兴',
-  奇: '奇怪的奇',
-  假: '真假的假',
-  和: '和平的和',
-  重: '重要的重',
-  没: '没有的没',
-  处: '到处的处',
-  好: '好人的好',
-  中: '中间的中',
-  更: '更好的更',
-  应: '应该的应',
-  便: '方便的便',
-  调: '调皮的调',
-  闷: '闷热的闷',
-  扇: '扇子的扇',
-  薄: '薄厚的薄',
-  传: '传说的传',
-  参: '参加的参',
-  仔: '仔细的仔',
-  散: '散步的散',
-  模: '一模一样的模',
-  悄: '悄悄的悄',
-  翘: '翘起来的翘',
-  壳: '贝壳的壳',
-  挣: '挣断的挣',
+export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  长: { cháng: '长短的长', zhǎng: '长大的长' },
+  行: { xíng: '行走的行' },
+  为: { wèi: '为什么的为', wéi: '成为的为' },
+  数: { shǔ: '数一数的数' },
+  乐: { lè: '快乐的乐' },
+  觉: { jiào: '睡觉的觉' },
+  朝: { zhāo: '朝霞的朝' },
+  降: { jiàng: '下降的降' },
+  落: { luò: '落下的落' },
+  露: { lù: '露水的露' },
+  藏: { cáng: '捉迷藏的藏' },
+  空: { kōng: '天空的空' },
+  种: { zhòng: '种花的种' },
+  教: { jiāo: '教书的教' },
+  背: { bēi: '背书包的背' },
+  还: { hái: '还有的还' },
+  只: { zhī: '一只的只' },
+  少: { shǎo: '多少的少' },
+  相: { xiāng: '互相的相' },
+  着: { zhe: '看着的着', zháo: '着急的着' },
+  地: { dì: '大地的地' },
+  得: { dé: '得到的得' },
+  了: { le: '好了的了' },
+  发: { fā: '发芽的发' },
+  干: { gān: '干净的干' },
+  华: { huá: '中华的华' },
+  兴: { xìng: '高兴的兴' },
+  奇: { qí: '奇怪的奇' },
+  假: { jiǎ: '真假的假' },
+  和: { hé: '和平的和' },
+  重: { zhòng: '重要的重', chóng: '重复的重' },
+  没: { méi: '没有的没' },
+  处: { chù: '到处的处' },
+  好: { hǎo: '好人的好' },
+  中: { zhōng: '中间的中' },
+  更: { gèng: '更好的更' },
+  应: { yīng: '应该的应' },
+  便: { biàn: '方便的便' },
+  调: { tiáo: '调皮的调' },
+  闷: { mēn: '闷热的闷' },
+  扇: { shàn: '扇子的扇' },
+  薄: { báo: '薄厚的薄' },
+  传: { chuán: '传说的传' },
+  参: { cān: '参加的参' },
+  仔: { zǐ: '仔细的仔' },
+  散: { sàn: '散步的散' },
+  模: { mú: '一模一样的模', mó: '模型的模' },
+  悄: { qiāo: '悄悄的悄' },
+  翘: { qiào: '翘起来的翘' },
+  壳: { ké: '贝壳的壳' },
+  挣: { zhèng: '挣断的挣' },
+  折: { zhé: '折纸的折' },
+  燕: { yàn: '燕子的燕' },
+  // 二年级
+  柏: { bǎi: '松柏的柏' },
+  系: { jì: '系鞋带的系' },
+  倒: { dào: '倒映的倒' },
+  钉: { dìng: '钉扣子的钉' },
+  将: { jiāng: '将来的将' },
+  担: { dàn: '担子的担' },
+  笼: { lǒng: '笼罩的笼' },
+  杆: { gǎn: '杠杆的杆' },
+  扎: { zā: '扎辫子的扎' },
+  量: { liàng: '力量的量' },
+  吐: { tǔ: '吐出的吐' },
+  蒙: { méng: '蒙蒙细雨的蒙' },
+  磨: { mò: '石磨的磨' },
+  坊: { fáng: '磨坊的坊' },
+  哗: { huā: '哗哗的哗' },
+  佛: { fú: '仿佛的佛' },
+  簸: { bò: '簸箕的簸' },
+  切: { qiè: '一切的切' },
+  舍: { shě: '舍不得的舍' },
 }
 
-/** 读一个字：多音字给个词 */
-export const sayZi = (c: string): string => POLY_SAY[c] ?? c
+/** 读一个字：多音字给个词——按这个字的读音挑，不给读音或没有这个读音的词就用第一个 */
+export function sayZi(c: string, py?: string): string {
+  const byPy = POLY_SAY[c]
+  if (!byPy) return c
+  return (py === undefined ? undefined : byPy[py]) ?? Object.values(byPy)[0]!
+}
 
 /** 偏旁：写法 → 名称（偏旁题的干扰项、朗读） */
 export const RADICALS: Readonly<Record<string, string>> = {
@@ -192,6 +226,38 @@ export const RADICALS: Readonly<Record<string, string>> = {
   雨: '雨字头',
   钅: '金字旁',
   竹: '竹字头',
+  // 二年级的部首查字法（Y9）
+  广: '广字旁',
+  疒: '病字旁',
+  门: '门字框',
+  穴: '穴宝盖',
+  攵: '反文旁',
+  页: '页字旁',
+  刂: '立刀旁',
+  力: '力字旁',
+  贝: '贝字旁',
+  石: '石字旁',
+  走: '走字旁',
+  车: '车字旁',
+  囗: '国字框',
+  冖: '秃宝盖',
+  心: '心字底',
+  灬: '四点底',
+  皿: '皿字底',
+  巾: '巾字旁',
+  山: '山字旁',
+  马: '马字旁',
+  牛: '牛字旁',
+  鱼: '鱼字旁',
+  舟: '舟字旁',
+  尸: '尸字头',
+  厂: '厂字头',
+  户: '户字头',
+  寸: '寸字旁',
+  弓: '弓字旁',
+  子: '子字旁',
+  田: '田字旁',
+  金: '金字底',
 }
 
 /** 「哪个字是某某旁」的干扰字：一年级常见的字和它的偏旁（与本课的偏旁不同的才用） */
@@ -211,7 +277,15 @@ const PUNCT_SAY: Readonly<Record<string, string>> = { '。': '句号', '？': '�
 
 // ── 模板 ───────────────────────────────────────────────────────────────
 
-/** 挑干扰字：第 2 档起先挑形近字，再从本课的字里补；排除同音字（看拼音选字不能有两个对的） */
+/** 一个字的全部读音（READINGS，多音字全列） */
+export const readingsOf = (c: string): string[] => READINGS[c]?.split(' ') ?? []
+/** 两个字有没有相同的读音：有就不能一个当另一个的干扰项（听音选字会两个都对） */
+export const sameSound = (a: string, b: string): boolean => {
+  const ra = readingsOf(a)
+  return readingsOf(b).some((r) => ra.includes(r))
+}
+
+/** 挑干扰字：第 2 档起先挑形近字，再从本课的字里补；exclude 排除会让题目有两个对的（同音字） */
 function charWrongs(c: string, pool: string[], d: Difficulty, rng: RNG, exclude: (x: string) => boolean = () => false): string[] {
   const near = d >= 2 ? rng.shuffle(SIMILAR.get(c) ?? []) : []
   const rest = rng.shuffle(pool)
@@ -229,22 +303,22 @@ function listenItems(ctx: Ctx, zi: string[]): Item[] {
   return zi.filter((c) => !inPrompt('yq.listenZi', c)).map((c) => ({
     key: `listen-${c}`,
     build: (d, rng) =>
-      choiceQ(ctx, 'hanzi', d, `listen-${c}`, [text('yq.listenZi'), { kind: 'listen', say: sayZi(c) }], plain(c), charWrongs(c, zi, d, rng).map(plain), rng, 'hanzi'),
+      choiceQ(ctx, 'hanzi', d, `listen-${c}`, [text('yq.listenZi'), { kind: 'listen', say: ctx.say(c) }], plain(c), charWrongs(c, zi, d, rng, (x) => sameSound(x, c)).map(plain), rng, 'hanzi'),
   }))
 }
 
-/** 看拼音选字：拼音卡（不读），四个楷体字里选；同音字不当干扰项 */
+/** 看拼音选字：拼音卡（不读），四个楷体字里选；能读成这个音的字（含多音字的别的读音）不当干扰项 */
 function pyZiItems(ctx: Ctx, zi: string[]): Item[] {
   return zi.filter((c) => !inPrompt('yq.pyZi', c)).map((c) => ({
     key: `pyzi-${c}`,
     build: (d, rng) => {
       const py = ctx.py(c)
-      return choiceQ(ctx, 'hanzi', d, `pyzi-${c}`, [text('yq.pyZi'), { kind: 'pinyin', text: py }], { label: c, say: sayZi(c) }, charWrongs(c, zi, d, rng, (x) => ctx.py(x) === py).map(plain), rng, 'hanzi')
+      return choiceQ(ctx, 'hanzi', d, `pyzi-${c}`, [text('yq.pyZi'), { kind: 'pinyin', text: py }], { label: c, say: ctx.say(c) }, charWrongs(c, zi, d, rng, (x) => readingsOf(x).includes(py)).map(plain), rng, 'hanzi')
     },
   }))
 }
 
-/** 看字选读音：田字格大字（不读），四个音节里选；轻声字不出 */
+/** 看字选读音：田字格大字（不读），四个音节里选；轻声字不出；这个字别的读音不当干扰项（多音字：好 hǎo / hào） */
 function ziPyItems(ctx: Ctx, zi: string[]): Item[] {
   return zi
     .filter((c) => splitTone(ctx.py(c)).tone !== 0 && !inPrompt('yq.ziPy', c))
@@ -252,8 +326,12 @@ function ziPyItems(ctx: Ctx, zi: string[]): Item[] {
       key: `zipy-${c}`,
       build: (d, rng) => {
         const py = ctx.py(c)
-        const wrongs = syllableDistractors(py, rng, ctx.learned ?? {}).map(plain)
-        return choiceQ(ctx, 'hanzi', d, `zipy-${c}`, [text('yq.ziPy'), { kind: 'hanzi', text: c }], { label: py, say: sayZi(c) }, wrongs, rng, 'pinyin')
+        const others = readingsOf(c)
+        const wrongs = syllableDistractors(py, rng, { ...(ctx.learned ?? {}), count: 6 })
+          .filter((w) => !others.includes(w))
+          .slice(0, 3)
+          .map(plain)
+        return choiceQ(ctx, 'hanzi', d, `zipy-${c}`, [text('yq.ziPy'), { kind: 'hanzi', text: c }], { label: py, say: ctx.say(c) }, wrongs, rng, 'pinyin')
       },
     }))
 }
@@ -278,7 +356,7 @@ function picItems(ctx: Ctx, pics: PicItem[], zi: string[]): Item[] {
       const pool = single ? [...same, ...zi] : same
       const wrongs = single ? charWrongs(p.target, pool, d, rng) : rng.shuffle(pool)
       const key = single ? 'yq.picZi' : 'yq.picWord'
-      return choiceQ(ctx, 'hanzi', d, `pic-${p.target}`, [text(key), { kind: 'picture', icon: p.icon, say: p.say }], { label: p.target, say: sayZi(p.target) }, wrongs.map(plain), rng, 'hanzi')
+      return choiceQ(ctx, 'hanzi', d, `pic-${p.target}`, [text(key), { kind: 'picture', icon: p.icon, say: p.say }], { label: p.target, say: ctx.say(p.target) }, wrongs.map(plain), rng, 'hanzi')
     },
   }))
 }
@@ -362,19 +440,30 @@ export function parseCloze(s: string): ClozeItem {
 }
 /** 句子（去掉换行）就是拼音表的键 */
 export const verseKey = (t: string): string => t.replace(/\n/g, '')
-function sayOpt(s: string): string | undefined {
-  return PUNCT_SAY[s] ?? (Array.from(s).length === 1 && POLY_SAY[s] ? POLY_SAY[s] : undefined)
+/** 选项读什么：标点读名字，一个多音字给个词（py = 它在这句里的读音，干扰项不给就用第一个词） */
+function sayOpt(s: string, py?: string): string | undefined {
+  return PUNCT_SAY[s] ?? (Array.from(s).length === 1 && POLY_SAY[s] ? sayZi(s, py) : undefined)
+}
+/** 填空的答案是一个字时，它在这句课文里的读音（多音字的答案按这个挑词读） */
+export function clozeAnswerPy(ctx: Pick<Ctx, 'py'>, it: ClozeItem): string | undefined {
+  if (Array.from(it.answer).length !== 1 || !HAN.test(it.answer)) return undefined
+  const at = Array.from(it.text).slice(0, it.blank[0]).filter((c) => HAN.test(c)).length
+  return ctx.py(verseKey(it.text)).split(' ')[at]
 }
 function clozeItems(ctx: Ctx, items: ClozeItem[]): Item[] {
   return items.map((it) => {
     const key = `cloze-${verseKey(it.text)}-${it.blank[0]}`
+    const answerPy = clozeAnswerPy(ctx, it)
     return {
       key,
       build: (d, rng) => {
-        const opt = (s: string): Opt => ({ label: it.bare || !HAN.test(s) ? s : ctx.word(s), ...(sayOpt(s) ? { say: sayOpt(s) } : {}) })
+        const opt = (s: string, py?: string): Opt => {
+          const say = sayOpt(s, py)
+          return { label: it.bare || !HAN.test(s) ? s : ctx.word(s), ...(say ? { say } : {}) }
+        }
         const verse: StemPart = { kind: 'verse', text: it.text, py: ctx.py(verseKey(it.text)), blank: it.blank }
         const style: ChoiceStyle | undefined = it.bare || !HAN.test(it.answer) ? 'hanzi' : undefined
-        return choiceQ(ctx, 'reading', d, key, [text('yq.cloze'), verse], opt(it.answer), rng.shuffle(it.wrongs).map(opt), rng, style)
+        return choiceQ(ctx, 'reading', d, key, [text('yq.cloze'), verse], opt(it.answer, answerPy), rng.shuffle(it.wrongs).map((w) => opt(w)), rng, style)
       },
     }
   })
@@ -504,24 +593,118 @@ function poetItems(ctx: Ctx, items: string[]): Item[] {
   })
 }
 
-/** 反义词：「开关 南北」两个字一对，两个方向都问 */
-function antonymItems(ctx: Ctx, pairs: string[]): Item[] {
-  const words = pairs.flatMap((p) => Array.from(p))
+/** 一对词：「开关」两个字，或「高兴-难过」两个词（用 - 连） */
+export function parsePairs(s: string | undefined): [string, string][] {
+  return split(s).map((p) => {
+    const pair = p.includes('-') ? p.split('-') : Array.from(p)
+    if (pair.length !== 2 || !pair[0] || !pair[1]) throw new Error(`bad pair: ${p}`)
+    return [pair[0], pair[1]]
+  })
+}
+
+/** 反义词 / 近义词：一对里两个方向都问（「开」的反义词、「关」的反义词），干扰项是本课其它对里的词 */
+function pairItems(ctx: Ctx, pairs: [string, string][], name: 'anto' | 'syn', prompt: string): Item[] {
+  const words = pairs.flat()
   const out: Item[] = []
-  for (const p of pairs) {
-    const [a, b] = Array.from(p) as [string, string]
+  for (const [a, b] of pairs) {
     for (const [x, y] of [
       [a, b],
       [b, a],
     ] as const) {
       out.push({
-        key: `anto-${x}`,
+        key: `${name}-${x}`,
         build: (d, rng) =>
-          choiceQ(ctx, 'phrase', d, `anto-${x}`, [text('yq.antonym', { w: ctx.word(x) })], { label: ctx.word(y) }, rng.shuffle(words.filter((w) => w !== x && w !== y)).map((w) => ({ label: ctx.word(w) })), rng),
+          choiceQ(ctx, 'phrase', d, `${name}-${x}`, [text(prompt, { w: ctx.word(x) })], { label: ctx.word(y) }, rng.shuffle(words.filter((w) => w !== x && w !== y)).map((w) => ({ label: ctx.word(w) })), rng),
       })
     }
   }
   return out
+}
+
+/** 词语（二年级起，Y9）：看拼音选词语、听音选词语，选项是不注音的楷体词语（Y3）；题目要求里出现了的字不考 */
+function ciItems(ctx: Ctx, ci: string[]): { pyci: Item[]; cilisten: Item[] } {
+  const clean = (key: string): string[] => ci.filter((w) => !Array.from(w).some((c) => inPrompt(key, c)))
+  // 第 2 档起先挑跟答案有同一个字的词（更容易看混），再从本课其它词里补
+  const wrongs = (w: string, d: Difficulty, rng: RNG, exclude: (o: string) => boolean): string[] => {
+    const others = ci.filter((o) => o !== w && !exclude(o))
+    const near = d >= 2 ? rng.shuffle(others.filter((o) => Array.from(o).some((c) => w.includes(c)))) : []
+    return [...new Set([...near, ...rng.shuffle(others)])]
+  }
+  return {
+    pyci: clean('yq.pyWord').map((w) => ({
+      key: `pyci-${w}`,
+      build: (d, rng) => {
+        const py = ctx.py(w)
+        return choiceQ(ctx, 'phrase', d, `pyci-${w}`, [text('yq.pyWord'), { kind: 'pinyin', text: py }], { label: w, say: w }, wrongs(w, d, rng, (o) => ctx.py(o) === py).map(plain), rng, 'hanzi')
+      },
+    })),
+    cilisten: clean('yq.listenCi').map((w) => ({
+      key: `cilisten-${w}`,
+      build: (d, rng) => choiceQ(ctx, 'phrase', d, `cilisten-${w}`, [text('yq.listenCi'), { kind: 'listen', say: w }], plain(w), wrongs(w, d, rng, (o) => ctx.py(o) === ctx.py(w)).map(plain), rng, 'hanzi'),
+    })),
+  }
+}
+
+/** 多音字（Y9）：「长大 长 zhǎng=掌 cháng=常」= 词语、要考的字、它在这个词里的读音（第一个）与别的读音，各带一个读音唯一的同音字（朗读用） */
+export interface PolyItem {
+  word: string
+  c: string
+  /** 字在词里的位置（大字格里标红） */
+  at: number
+  readings: { py: string; say: string }[]
+}
+export function parsePoly(s: string): PolyItem {
+  const [word, c, ...rs] = split(s)
+  if (!word || !c || rs.length < 2) throw new Error(`bad poly item: ${s}`)
+  const at = Array.from(word).indexOf(c)
+  if (at < 0) throw new Error(`poly: ${c} 不在 ${word} 里`)
+  const readings = rs.map((r) => {
+    const m = /^([^=\s]+)=(\p{Script=Han})$/u.exec(r)
+    if (!m) throw new Error(`bad poly reading: ${r}`)
+    return { py: m[1]!, say: m[2]! }
+  })
+  return { word, c, at, readings }
+}
+function polyItems(ctx: Ctx, items: PolyItem[]): Item[] {
+  return items.map((it) => {
+    const key = `poly-${it.word}-${it.c}`
+    const [right, ...others] = it.readings
+    return {
+      key,
+      build: (d, rng) =>
+        choiceQ(ctx, 'pinyin', d, key, [text('yq.polyRead'), { kind: 'hanzi', text: it.word, mark: it.at }], { label: right!.py, say: right!.say }, others.map((r) => ({ label: r.py, say: r.say })), rng, 'pinyin'),
+    }
+  })
+}
+
+/** 部首查字法（Y9）：「湖 氵 三点水 9」= 字、部首、部首名称、除去部首的画数 */
+export interface BushouItem {
+  c: string
+  r: string
+  name: string
+  n: number
+}
+export function parseBushou(s: string): BushouItem {
+  const [c, r, name, n] = split(s)
+  if (!c || !r || !name || !n || !/^\d+$/.test(n)) throw new Error(`bad bushou item: ${s}`)
+  return { c, r, name, n: Number(n) }
+}
+function bushouItems(ctx: Ctx, items: BushouItem[]): { bushou: Item[]; bushouN: Item[] } {
+  const names: Record<string, string> = { ...RADICALS, ...Object.fromEntries(items.map((o) => [o.r, o.name])) }
+  return {
+    bushou: items.map((it) => ({
+      key: `bushou-${it.c}`,
+      build: (d, rng) => {
+        const others = rng.shuffle([...new Set([...items.map((o) => o.r), ...Object.keys(RADICALS)])].filter((r) => r !== it.r && !it.c.includes(r)))
+        return choiceQ(ctx, 'writing', d, `bushou-${it.c}`, [text('yq.bushouOf'), { kind: 'hanzi', text: it.c }], { label: it.r, say: it.name }, others.map((r) => ({ label: r, say: names[r] ?? r })), rng, 'hanzi')
+      },
+    })),
+    bushouN: items.map((it) => ({
+      key: `bushouN-${it.c}`,
+      build: (d, rng) =>
+        numberQuestion({ kpId: ctx.kp, type: 'writing', difficulty: d, sig: `bushouN-${it.c}`, stem: [text('yq.bushouLeft'), { kind: 'hanzi', text: it.c }], value: it.n, rng, min: 0, max: it.n + 3, smart: [it.n + 1, it.n - 1, it.n + 2] }),
+    })),
+  }
 }
 
 // ── 拼音课 ─────────────────────────────────────────────────────────────
@@ -832,7 +1015,11 @@ export function lessonItems(spec: LessonSpec, ctx: Ctx): Record<string, Item[]> 
     compose: composeItems(ctx, (spec.compose ?? []).map(parseCompose)),
     radical: radicalItems(ctx, (spec.radical ?? []).map(parseRadical)),
     poet: poetItems(ctx, spec.poet ?? []),
-    anto: antonymItems(ctx, split(spec.anto)),
+    anto: pairItems(ctx, parsePairs(spec.anto), 'anto', 'yq.antonym'),
+    syn: pairItems(ctx, parsePairs(spec.syn), 'syn', 'yq.synonym'),
+    poly: polyItems(ctx, (spec.poly ?? []).map(parsePoly)),
+    ...ciItems(ctx, split(spec.ci)),
+    ...bushouItems(ctx, (spec.bushou ?? []).map(parseBushou)),
     alphabet: spec.alphabet ? alphabetItems(ctx) : [],
     yinxu: yinxuItems(ctx, split(spec.yinxu)),
   }
@@ -852,9 +1039,9 @@ export function parseMix(mix: string): [string, number][] {
 export const hanPart = (s: string): string => askLabel(s).say
 
 /**
- * 一课里所有要查拼音表的中文（拼音表的完整性测试用）：看拼音选字 / 看字选读音的生字（第 2 档起还有看拼音选字的形近干扰字，
- * 排除同音字要查）、音序查的字、句子、要注音的选项与问题、反义词、偏旁名、作者、笔画名，以及拼音课的
- * 「平舌音 / 翘舌音 / 前鼻韵母 / 后鼻韵母」。pinyinReady 同 Ctx：还没学拼音的课不出这两种题，生字就不用查拼音。
+ * 一课里所有要查拼音表的中文（拼音表的完整性测试用）：看拼音选字 / 看字选读音的生字、词语表的词、音序查的字、句子、
+ * 要注音的选项与问题、反义词 / 近义词、偏旁名、作者、笔画名、多音字的同音字，以及拼音课的「平舌音 / 翘舌音 / 前鼻韵母 /
+ * 后鼻韵母」。干扰字是不是同音不查这里，查 READINGS。pinyinReady 同 Ctx：还没学拼音的课不出看拼音 / 选读音的题，生字就不用查拼音。
  */
 export function lessonTexts(spec: LessonSpec, pinyinReady = true): string[] {
   const out = new Set<string>()
@@ -862,13 +1049,7 @@ export function lessonTexts(spec: LessonSpec, pinyinReady = true): string[] {
     const t = hanPart(s)
     if (HAN.test(t)) out.add(t)
   }
-  if (pinyinReady) {
-    const near = ([2, 3] as const).some((d) => parseMix(spec.mix[d]).some(([name]) => name === 'pyzi'))
-    for (const c of split(spec.zi)) {
-      add(c)
-      if (near && !inPrompt('yq.pyZi', c)) for (const x of SIMILAR.get(c) ?? []) add(x)
-    }
-  }
+  if (pinyinReady) for (const c of split(spec.zi)) add(c)
   for (const c of split(spec.yinxu)) add(c)
   for (const s of spec.cloze ?? []) {
     const it = parseCloze(s)
@@ -882,7 +1063,11 @@ export function lessonTexts(spec: LessonSpec, pinyinReady = true): string[] {
   }
   for (const s of spec.poet ?? []) for (const w of split(s)) add(w)
   if (spec.poet?.length) for (const p of POETS) add(p)
-  for (const p of split(spec.anto)) for (const c of Array.from(p)) add(c)
+  for (const pair of [...parsePairs(spec.anto), ...parsePairs(spec.syn)]) for (const w of pair) add(w)
+  // 词语：看拼音选词语要查拼音（排除同音词也要查）
+  for (const w of split(spec.ci)) add(w)
+  // 多音字的同音字：不显示，但拼音表里记着它的读音，测试拿它核对「只有这一个读音、等于要读的音」
+  for (const s of spec.poly ?? []) for (const r of parsePoly(s).readings) add(r.say)
   for (const s of spec.radical ?? []) add(parseRadical(s).name)
   if (split(spec.xie).some((x) => parseXie(x).first)) for (const s of STROKES) add(s)
   if (spec.py) for (const w of ['平舌音', '翘舌音', '前鼻韵母', '后鼻韵母']) add(w)

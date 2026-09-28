@@ -13,7 +13,8 @@ import { createRng, getGenerator } from '@/engine'
 import { allCourses } from '@/engine/catalog'
 import { answerSpeech, PAUSE, phraseSpeech, piecesOf, questionSpeech, RIGHT_KEYS, tokenVoice } from '@/engine/speech'
 import { LINE_KEYS } from '@/battle/lines'
-import { everyItemQuestion } from '@/content/chinese/grade1/generators'
+import { everyItemQuestion as chineseG1Items } from '@/content/chinese/grade1/generators'
+import { everyItemQuestion as chineseG2Items } from '@/content/chinese/grade2/generators'
 import { everyPosFrom } from '@/content/math/grade1/generators/position'
 
 export const CORPUS_SEEDS = 300
@@ -98,7 +99,7 @@ export function collectCorpus(): Record<Lang, string[]> {
   }
   sets.zh.add('两')
   // 语文的题目条目有限，逐条出一遍（随机抽样可能漏掉某一句课文、某个听音的字）
-  for (const q of everyItemQuestion()) {
+  for (const q of [...chineseG1Items(), ...chineseG2Items()]) {
     for (const lang of langs) {
       add(lang, questionSpeech(q, lang))
       add(lang, answerSpeech(q, lang))

@@ -109,7 +109,7 @@ describe('题目结构（G1–G3）', () => {
         const py = part(q, 'pinyin')?.text ?? ''
         switch (m) {
           case 'listen':
-            expect(part(q, 'listen')!.say).toBe(sayZi(label(q)))
+            expect(part(q, 'listen')!.say).toBe(sayZi(label(q), PY[label(q)]))
             break
           case 'pyzi':
             expect(py).toBe(PY[label(q)])

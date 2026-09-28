@@ -20,8 +20,8 @@ export interface PinyinSpec {
 /**
  * 一课（或一个语文园地）的材料。字段都是可选的，有什么出什么；mix 决定各档出哪些模板、各占多少：
  * 模板名见 makers.ts 的 lessonItems（listen / pyzi / zipy / pic / zipic / strokes / first / digit / cloze / ask /
- * compose / radical / poet / anto / alphabet / yinxu）与拼音课的（tone / picktone / spell / hear / picpy / pypic /
- * pyword / kind / initial / final / flat / nasal / order）。
+ * compose / radical / poet / anto / syn / poly / pyci / cilisten / bushou / bushouN / alphabet / yinxu）与拼音课的
+ * （tone / picktone / spell / hear / picpy / pypic / pyword / kind / initial / final / flat / nasal / order）。
  */
 export interface LessonSpec {
   /** 知识点 id */
@@ -44,8 +44,19 @@ export interface LessonSpec {
   radical?: string[]
   /** 古诗的作者：「静夜思 李白」 */
   poet?: string[]
-  /** 反义词：两个字一对，空格分隔（「开关 南北」） */
+  /** 反义词：两个字一对（「开关」），或两个词用 - 连（「高兴-难过」），空格分隔 */
   anto?: string
+  /** 近义词：两个词用 - 连，空格分隔（「美丽-漂亮 高兴-快乐」，二年级起） */
+  syn?: string
+  /** 词语表里本课的词，空格分隔：看拼音选词语、听音选词语（二年级起） */
+  ci?: string
+  /**
+   * 多音字：「词语 字 读音=同音字 读音=同音字…」，第一个读音是这个字在这个词里的读法；同音字挑只有这一个读音的常用字
+   * （朗读用，Y4）。例「长大 长 zhǎng=掌 cháng=常」。只出课本本课 / 园地里教的多音字（二年级起）
+   */
+  poly?: string[]
+  /** 部首查字法：「字 部首 部首名称 除去部首的画数」（「湖 氵 三点水 9」，二年级起） */
+  bushou?: string[]
   /** 大小写与字母表顺序（一下语文园地一） */
   alphabet?: boolean
   /** 音序查字：这些字各查一次（一下语文园地三），空格分隔 */

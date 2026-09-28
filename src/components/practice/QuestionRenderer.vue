@@ -106,7 +106,7 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
           :size="part.items.length === 1 ? 128 : 84"
         />
       </div>
-      <HanziGrid v-else-if="part.kind === 'hanzi'" :text="part.text" :fill="fill?.done ? fill.value : undefined" />
+      <HanziGrid v-else-if="part.kind === 'hanzi'" :text="part.text" :mark="part.mark" :fill="fill?.done ? fill.value : undefined" />
       <PinyinCard v-else-if="part.kind === 'pinyin'" :text="part.text" />
       <ListenCue v-else-if="part.kind === 'listen'" />
       <PictureCard v-else-if="part.kind === 'picture'" :icon="part.icon" />

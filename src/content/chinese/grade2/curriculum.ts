@@ -1,0 +1,107 @@
+import type { KnowledgePoint, QuestionType, Unit } from '@/types/models'
+
+/**
+ * 统编版（人教版）二年级语文知识点树（单一事实源，需求 R4d），按新教材：二上 2025 秋、二下 2026 春起用。
+ * 设知识点的规矩同一年级（R4c）：一课一个（标题就是课题，「古诗二首」算一课），每个语文园地一个；快乐读书吧、口语交际不设。
+ * 单元 id：c2s<册>u<序号>；知识点 id：c2s<册>-<单元两位>-<语义名>（语文园地是 garden）。
+ */
+export const UNITS: Unit[] = [
+  { id: 'c2s1u1', semester: 1, order: 1, title: '阅读' },
+  { id: 'c2s1u2', semester: 1, order: 2, title: '识字' },
+  { id: 'c2s1u3', semester: 1, order: 3, title: '阅读' },
+  { id: 'c2s1u4', semester: 1, order: 4, title: '阅读' },
+  { id: 'c2s1u5', semester: 1, order: 5, title: '阅读' },
+  { id: 'c2s1u6', semester: 1, order: 6, title: '阅读' },
+  { id: 'c2s1u7', semester: 1, order: 7, title: '阅读' },
+  { id: 'c2s1u8', semester: 1, order: 8, title: '阅读' },
+  { id: 'c2s2u1', semester: 2, order: 1, title: '阅读' },
+  { id: 'c2s2u2', semester: 2, order: 2, title: '阅读' },
+  { id: 'c2s2u3', semester: 2, order: 3, title: '识字' },
+  { id: 'c2s2u4', semester: 2, order: 4, title: '阅读' },
+  { id: 'c2s2u5', semester: 2, order: 5, title: '阅读' },
+  { id: 'c2s2u6', semester: 2, order: 6, title: '阅读' },
+  { id: 'c2s2u7', semester: 2, order: 7, title: '阅读' },
+  { id: 'c2s2u8', semester: 2, order: 8, title: '阅读' },
+]
+
+const SHIZI: QuestionType[] = ['hanzi', 'phrase', 'writing', 'reading']
+const READING: QuestionType[] = ['reading', 'phrase', 'hanzi', 'writing']
+const GARDEN: QuestionType[] = ['phrase', 'reading', 'hanzi', 'writing']
+
+const kp = (id: string, unitId: string, title: string, icon: string, questionTypes: QuestionType[]): KnowledgePoint => ({ id, unitId, title, icon, questionTypes })
+
+export const KNOWLEDGE_POINTS: KnowledgePoint[] = [
+  // ── 上册 ──
+  kp('c2s1-01-kedou', 'c2s1u1', '小蝌蚪找妈妈', '🐸', READING),
+  kp('c2s1-01-woshi', 'c2s1u1', '我是什么', '💧', READING),
+  kp('c2s1-01-zhiwu', 'c2s1u1', '植物妈妈有办法', '🌼', READING),
+  kp('c2s1-01-garden', 'c2s1u1', '语文园地一', '🌦️', GARDEN),
+  kp('c2s1-02-changjing', 'c2s1u2', '场景歌', '⛵', SHIZI),
+  kp('c2s1-02-shuzhi', 'c2s1u2', '树之歌', '🌳', SHIZI),
+  kp('c2s1-02-paishou', 'c2s1u2', '拍手歌', '👏', SHIZI),
+  kp('c2s1-02-tianjia', 'c2s1u2', '田家四季歌', '🌾', SHIZI),
+  kp('c2s1-02-garden', 'c2s1u2', '语文园地二', '📖', GARDEN),
+  kp('c2s1-03-caihong', 'c2s1u3', '彩虹', '🌈', READING),
+  kp('c2s1-03-waipo', 'c2s1u3', '去外婆家', '👵', READING),
+  kp('c2s1-03-shuxing', 'c2s1u3', '数星星的孩子', '⭐', READING),
+  kp('c2s1-03-garden', 'c2s1u3', '语文园地三', '🎹', GARDEN),
+  kp('c2s1-04-gushi', 'c2s1u4', '古诗二首', '🏯', READING),
+  kp('c2s1-04-huangshan', 'c2s1u4', '黄山奇石', '🗻', READING),
+  kp('c2s1-04-riyuetan', 'c2s1u4', '日月潭', '🌅', READING),
+  kp('c2s1-04-putaogou', 'c2s1u4', '葡萄沟', '🍇', READING),
+  kp('c2s1-04-garden', 'c2s1u4', '语文园地四', '🚄', GARDEN),
+  kp('c2s1-05-zuojing', 'c2s1u5', '坐井观天', '🕳️', READING),
+  kp('c2s1-05-hanhao', 'c2s1u5', '寒号鸟', '🥶', READING),
+  kp('c2s1-05-hulu', 'c2s1u5', '我要的是葫芦', '🐛', READING),
+  kp('c2s1-05-garden', 'c2s1u5', '语文园地五', '🚒', GARDEN),
+  kp('c2s1-06-bajiaolou', 'c2s1u6', '八角楼上', '🕯️', READING),
+  kp('c2s1-06-biandan', 'c2s1u6', '朱德的扁担', '🎋', READING),
+  kp('c2s1-06-poshui', 'c2s1u6', '难忘的泼水节', '💦', READING),
+  kp('c2s1-06-liuhulan', 'c2s1u6', '刘胡兰', '🌺', READING),
+  kp('c2s1-06-garden', 'c2s1u6', '语文园地六', '🐝', GARDEN),
+  kp('c2s1-07-gushi', 'c2s1u7', '古诗二首', '🎣', READING),
+  kp('c2s1-07-wu', 'c2s1u7', '雾在哪里', '🌫️', READING),
+  kp('c2s1-07-xuehaizi', 'c2s1u7', '雪孩子', '⛄', READING),
+  kp('c2s1-07-garden', 'c2s1u7', '语文园地七', '🌙', GARDEN),
+  kp('c2s1-08-chengzan', 'c2s1u8', '称赞', '🦔', READING),
+  kp('c2s1-08-zhichuan', 'c2s1u8', '纸船和风筝', '🪁', READING),
+  kp('c2s1-08-xiaohe', 'c2s1u8', '快乐的小河', '🏞️', READING),
+  kp('c2s1-08-garden', 'c2s1u8', '语文园地八', '🦁', GARDEN),
+  // ── 下册 ──
+  kp('c2s2-01-gushi', 'c2s2u1', '古诗二首', '🌿', READING),
+  kp('c2s2-01-chuntian', 'c2s2u1', '找春天', '🌱', READING),
+  kp('c2s2-01-xiaolu', 'c2s2u1', '开满鲜花的小路', '🌼', READING),
+  kp('c2s2-01-zhishu', 'c2s2u1', '邓小平爷爷植树', '🌲', READING),
+  kp('c2s2-01-garden', 'c2s2u1', '语文园地一', '🗺️', GARDEN),
+  kp('c2s2-02-leifeng', 'c2s2u2', '雷锋叔叔，你在哪里', '❤️', READING),
+  kp('c2s2-02-qianrengao', 'c2s2u2', '千人糕', '🍰', READING),
+  kp('c2s2-02-ruoxiao', 'c2s2u2', '我不是最弱小的', '🌹', READING),
+  kp('c2s2-02-garden', 'c2s2u2', '语文园地二', '🎩', GARDEN),
+  kp('c2s2-03-shenzhou', 'c2s2u3', '神州谣', '🏞️', SHIZI),
+  kp('c2s2-03-jieri', 'c2s2u3', '传统节日', '🏮', SHIZI),
+  kp('c2s2-03-bei', 'c2s2u3', '「贝」的故事', '🐚', SHIZI),
+  kp('c2s2-03-meishi', 'c2s2u3', '中国美食', '🥟', SHIZI),
+  kp('c2s2-03-garden', 'c2s2u3', '语文园地三', '🐉', GARDEN),
+  kp('c2s2-04-caisemeng', 'c2s2u4', '彩色的梦', '🖍️', READING),
+  kp('c2s2-04-yipima', 'c2s2u4', '一匹出色的马', '🐎', READING),
+  kp('c2s2-04-xique', 'c2s2u4', '枫树上的喜鹊', '🐦', READING),
+  kp('c2s2-04-garden', 'c2s2u4', '语文园地四', '🧸', GARDEN),
+  kp('c2s2-05-yuyan', 'c2s2u5', '寓言二则', '🐑', READING),
+  kp('c2s2-05-yangtao', 'c2s2u5', '画杨桃', '⭐', READING),
+  kp('c2s2-05-xiaoma', 'c2s2u5', '小马过河', '🐴', READING),
+  kp('c2s2-05-garden', 'c2s2u5', '语文园地五', '😄', GARDEN),
+  kp('c2s2-06-gushi', 'c2s2u6', '古诗二首', '🌺', READING),
+  kp('c2s2-06-leiyu', 'c2s2u6', '雷雨', '⛈️', READING),
+  kp('c2s2-06-milu', 'c2s2u6', '要是你在野外迷了路', '🧭', READING),
+  kp('c2s2-06-taikong', 'c2s2u6', '太空生活趣事多', '🚀', READING),
+  kp('c2s2-06-garden', 'c2s2u6', '语文园地六', '🏛️', GARDEN),
+  kp('c2s2-07-erduo', 'c2s2u7', '大象的耳朵', '🐘', READING),
+  kp('c2s2-07-zhizhu', 'c2s2u7', '蜘蛛开店', '🕷️', READING),
+  kp('c2s2-07-nitang', 'c2s2u7', '青蛙卖泥塘', '🐸', READING),
+  kp('c2s2-07-maochong', 'c2s2u7', '小毛虫', '🐛', READING),
+  kp('c2s2-07-garden', 'c2s2u7', '语文园地七', '🧹', GARDEN),
+  kp('c2s2-08-yishe', 'c2s2u8', '羿射九日', '☀️', READING),
+  kp('c2s2-08-huangdi', 'c2s2u8', '黄帝的传说', '🛶', READING),
+  kp('c2s2-08-dayu', 'c2s2u8', '大禹治水', '🌊', READING),
+  kp('c2s2-08-garden', 'c2s2u8', '语文园地八', '🎣', GARDEN),
+]

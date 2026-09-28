@@ -2,6 +2,7 @@ import type { Course, GradeMeta, KnowledgePoint, SubjectMeta } from '@/types/mod
 import { mathGrade1 } from '@/content/math/grade1'
 import { mathGrade2 } from '@/content/math/grade2'
 import { chineseGrade1 } from '@/content/chinese/grade1/course'
+import { chineseGrade2 } from '@/content/chinese/grade2/course'
 
 // ── 课程注册表：key 为 courseId（如 math-g1）。────────────────────────────
 const COURSES = new Map<string, Course>()
@@ -26,6 +27,7 @@ export function registerCourse(course: Course, load?: () => Promise<unknown>): v
 registerCourse(mathGrade1)
 registerCourse(mathGrade2)
 registerCourse(chineseGrade1, () => import('@/content/chinese/grade1'))
+registerCourse(chineseGrade2, () => import('@/content/chinese/grade2'))
 
 /** 这门课的内容包加载好了没有（没有加载函数的一直是好的） */
 export function courseLoaded(courseId: string): boolean {
@@ -182,7 +184,7 @@ export const SUBJECTS: SubjectMeta[] = [
     icon: '📖',
     theme: 'chinese',
     status: 'live',
-    grades: [grade('g1', 'chinese-g1'), ...['g2', 'g3', 'g4', 'g5', 'g6'].map((g) => grade(g))],
+    grades: [grade('g1', 'chinese-g1'), grade('g2', 'chinese-g2'), ...['g3', 'g4', 'g5', 'g6'].map((g) => grade(g))],
   },
   {
     id: 'english',

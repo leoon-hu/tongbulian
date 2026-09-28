@@ -17,6 +17,10 @@ describe('内容包按需加载（N8）', () => {
     expect(translate({ k: 'kp.c1s1-05-qiutian' }, 'en')).toBe('Autumn')
     expect(hasGenerator('c1s1-05-qiutian')).toBe(false)
     expect(translate({ k: 'yq.listenZi' }, 'zh')).toBe('yq.listenZi')
+    expect(courseLoaded('chinese-g2')).toBe(false)
+    expect(courseOfKp('c2s1-01-kedou')?.course.id).toBe('chinese-g2')
+    expect(translate({ k: 'kp.c2s1-01-kedou' }, 'zh')).toBe('小蝌蚪找妈妈')
+    expect(hasGenerator('c2s1-01-kedou')).toBe(false)
   })
 
   it('进语文的页面之前，路由守卫把这门课的内容包加载好（对战页按知识点反查）', async () => {
@@ -24,6 +28,11 @@ describe('内容包按需加载（N8）', () => {
     expect(courseLoaded('chinese-g1')).toBe(true)
     expect(hasGenerator('c1s1-05-qiutian')).toBe(true)
     expect(translate({ k: 'yq.listenZi' }, 'zh')).toBe('听一听，选出你听到的字。')
+    // 两个年级各自一个包：进一年级的页面不会顺带加载二年级
+    expect(courseLoaded('chinese-g2')).toBe(false)
+    await router.push('/battle/new/c2s2-08-dayu')
+    expect(courseLoaded('chinese-g2')).toBe(true)
+    expect(hasGenerator('c2s2-08-dayu')).toBe(true)
   })
 
   it('同时几处要只加载一次；加载失败下次再试，成功了就不再调', async () => {

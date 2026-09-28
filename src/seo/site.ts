@@ -21,11 +21,13 @@ import { EMOJI_ZH } from '@/content/math/shared/emoji'
 import { KP_SEO as SEO_G1, type KpSeo } from '@/content/math/grade1/seo'
 import { KP_SEO as SEO_G2 } from '@/content/math/grade2/seo'
 import { KP_SEO as SEO_C1 } from '@/content/chinese/grade1/seo'
+import { KP_SEO as SEO_C2 } from '@/content/chinese/grade2/seo'
 // 语文的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/chinese/grade1'
+import '@/content/chinese/grade2'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_C1 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_C1, ...SEO_C2 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -83,7 +85,7 @@ const SUBJECT_COPY: Record<string, SubjectCopy> = {
       `题目都按课本要求随机出，每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错显示正确答案${kp.questionTypes.includes('arith') ? '并演示算法' : '并用教具演示'}，不计时、不扣分。`,
   },
   chinese: {
-    course: '按 2024 年起用的统编新教材逐课出题，识字、拼音、课文填空、古诗都有，题目带拼音和朗读，考认字的字不标拼音',
+    course: '按统编新教材逐课出题，识字、词语、拼音、课文填空、古诗都有，题目带拼音和朗读，考认字的字不标拼音',
     kp: '按课文出题、题目带拼音和朗读',
     lead: () =>
       '题目都从这一课的生字、课文或拼音里出：听音选字、看拼音选字、选词填空、数笔画、认偏旁……题目要求标拼音、每道题自动朗读；要认的字、要选的读音不标拼音也不读出来，考的就是认没认得。答错显示正确答案并读一遍，不计时、不扣分。',
@@ -210,6 +212,7 @@ export function stemText(part: StemPart): string {
       return `（${part.items.length} 个角）`
     // 语文（§9）
     case 'hanzi':
+      return part.mark === undefined ? part.text : `${part.text}（红字：${Array.from(part.text)[part.mark]}）`
     case 'pinyin':
       return part.text
     case 'listen':
@@ -751,7 +754,7 @@ export function homeMeta(): {
   const subjectWords: Record<string, string[]> = { math: ['小学数学对战游戏', '口算练习'], chinese: ['小学语文对战游戏', '识字拼音练习'] }
   return {
     title: `${SITE_NAME}：人教版小学${subjects}练习题变对战游戏（${grades}，带拼音朗读）`,
-    description: `${SITE_NAME}：人教版${grades}${subjects}练习题在线做——${SITE_PITCH}；打机器人、两人一台或多设备扫码组队，${SKINS.length} 种游戏画面；${list}，也能一个人练；汉字标拼音、自动朗读；免费、无广告。`,
+    description: `${SITE_NAME}：人教版${grades}${subjects}练习题——${SITE_PITCH}；打机器人、两人一台或多设备扫码组队，${SKINS.length} 种游戏画面；${list}，也能一个人练；汉字标拼音、自动朗读；免费、无广告。`,
     ogDescription: `${SITE_PITCH}：打机器人、两人一台或多设备组队，${SKINS.length} 种游戏画面；${list}；带拼音和朗读，免费、无广告。`,
     keywords: [
       SITE_NAME,

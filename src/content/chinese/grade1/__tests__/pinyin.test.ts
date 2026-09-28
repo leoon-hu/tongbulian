@@ -3,7 +3,7 @@ import '@/content/chinese/grade1'
 import { dictKeys, isHan, pinyinOf, rubySegments, translate } from '@/engine/i18n'
 import { lessonTexts } from '@/content/chinese/shared/makers'
 import { LESSONS, pinyinReady, wordOf } from '../generators'
-import { PINYIN } from '../pinyin'
+import { PINYIN } from '@/content/chinese/shared/prompts'
 import { PY } from '../py'
 
 /** 带调的音节（轻声不标调）；儿化的「儿」标 r（雨点儿 yǔ diǎn r） */
@@ -28,7 +28,7 @@ function readingIn(key: string, at: number): string | undefined {
   return PY[key]?.split(' ')[hans(key.slice(0, at)).length]
 }
 
-describe('题目要求与知识点标题的拼音（pinyin.ts）', () => {
+describe('题目要求（shared/prompts.ts）与知识点标题（titles.ts）的拼音', () => {
   const keys = dictKeys('zh').filter((k) => /^(yq\.|kp\.c1s)/.test(k))
 
   it('每个题目要求、每个有汉字的知识点标题都有拼音，且与汉字逐个对齐', () => {
@@ -43,7 +43,7 @@ describe('题目要求与知识点标题的拼音（pinyin.ts）', () => {
     expect(bad).toEqual([])
   })
 
-  it('pinyin.ts 里没有多余的键', () => {
+  it('题目要求的拼音表里没有多余的键', () => {
     const known = new Set(dictKeys('zh'))
     for (const key of Object.keys(PINYIN)) expect(known.has(key), `${key} 在字典里不存在`).toBe(true)
   })
