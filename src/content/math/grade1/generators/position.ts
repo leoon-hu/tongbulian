@@ -25,8 +25,11 @@ const AXIS_WORDS: Record<
  * - endmost：谁在最起点/最终点
  * - neighbor：某个的前一个/后一个是谁（建立方位）
  */
+/** 各档一排几个小动物 */
+const LINE_SIZE: Record<Difficulty, number> = { 1: 4, 2: 5, 3: 6 }
+
 function genPosition(d: Difficulty, rng: RNG): Question {
-  const n = d === 1 ? 4 : d === 2 ? 5 : 6
+  const n = LINE_SIZE[d]
   const items = rng.shuffle(ANIMALS).slice(0, n)
   const axis = rng.pick(AXES)
   const w = AXIS_WORDS[axis]
@@ -57,7 +60,7 @@ function genPosition(d: Difficulty, rng: RNG): Question {
   if (kind === 'from') {
     const fromEnd = rng.chance(0.5)
     const k = rng.int(1, n)
-    text = { k: 'q.posFrom', p: { k, from: { k: fromEnd ? w.fromEnd : w.fromStart } } }
+    text = { k: 'q.posFrom', p: { nth: { k: `q.posNum.${k}` }, from: { k: fromEnd ? w.fromEnd : w.fromStart } } }
     correct = fromEnd ? items[n - k]! : items[k - 1]!
     sig = `from-${axis}-${fromEnd ? 'e' : 's'}-${items.join('')}-${k}`
   } else if (kind === 'endmost') {
@@ -91,3 +94,17 @@ function genPosition(d: Difficulty, rng: RNG): Question {
 }
 
 defineGenerator('s1-00-position', genPosition)
+
+/**
+ * 「从哪边数第几个是谁」的全部说法（语料收集用）：第几个用汉字写，不是朗读里的「数字槽」，
+ * 随机抽样没碰到的组合拆不回小片段、只能退 TTS，所以方向 × 第一到第六逐个收齐。
+ */
+export function everyPosFrom(): LStr[] {
+  const out: LStr[] = []
+  for (const axis of AXES) {
+    for (const from of [AXIS_WORDS[axis].fromStart, AXIS_WORDS[axis].fromEnd]) {
+      for (let k = 1; k <= LINE_SIZE[3]; k++) out.push({ k: 'q.posFrom', p: { nth: { k: `q.posNum.${k}` }, from: { k: from } } })
+    }
+  }
+  return out
+}

@@ -3,6 +3,7 @@
  * - 数字 0–100 与中文的「两」：题目里的数都在这个范围
  * - 外壳固定句：正确答案是 / 鼓励语 / 结算 / 对战的开始与胜负播报 / 页面打开时自动读的提示语
  * - 每个知识点用固定种子跑三档难度各 CORPUS_SEEDS 题，题干与答案的片段全部收进来；语文的条目有限，另外逐条出一遍（一句课文都不漏）
+ * - 汉字写的序数（排队题「从左数第三个是谁」）不是数字槽、拆不回小片段，全部说法逐个收
  * - 并成一条的短语（「有14个」「比小猪」，F14）除了它本身，拆开的小片段（「有」「14」「个」）也收：种子里没枚举到的
  *   组合在播放时拆回小片段照样有音频，不用退 TTS
  * 停顿标记 PAUSE 不是音频，不收。种子固定，所以结果是确定的；模板改了、生成器改了，这里的集合跟着变，测试会提醒重跑 npm run audio。
@@ -13,6 +14,7 @@ import { allCourses } from '@/engine/catalog'
 import { answerSpeech, PAUSE, phraseSpeech, piecesOf, questionSpeech, RIGHT_KEYS, tokenVoice } from '@/engine/speech'
 import { LINE_KEYS } from '@/battle/lines'
 import { everyItemQuestion } from '@/content/chinese/grade1/generators'
+import { everyPosFrom } from '@/content/math/grade1/generators/position'
 
 export const CORPUS_SEEDS = 300
 
@@ -103,6 +105,8 @@ export function collectCorpus(): Record<Lang, string[]> {
       add(lang, answerSpeech(q, lang))
     }
   }
+  // 「从左数第三个是谁」：第几个是汉字、不是数字槽，每种说法逐个收（抽样漏掉的组合拆不回小片段）
+  for (const l of everyPosFrom()) for (const lang of langs) add(lang, phraseSpeech(l, lang))
   for (const course of allCourses()) {
     for (const kp of course.knowledgePoints) {
       const gen = getGenerator(kp.id)

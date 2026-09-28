@@ -23,8 +23,8 @@ describe('sha1Hex（音频文件名用）', () => {
 
   it('合成时换过读法的片段（多音字）文件名跟着读法走，clipFile 按别名找到', () => {
     const zh = (manifest as unknown as { zh: Record<string, string> }).zh
-    // 「数」shǔ；序数「第一声」「第一笔」的「一」读 yī（合成时换成「衣」）
-    for (const text of ['从前数第', '狮子从前数排第几个', '从上数第3个是谁', '选出第一声', '第一声', '正确答案是第一声', '这个字的第一笔是什么']) {
+    // 「数」shǔ；序数「第一声」「第一笔」「第一个」的「一」读 yī（合成时换成「衣」）
+    for (const text of ['从前数第五个是谁', '狮子从前数排第几个', '从上数第三个是谁', '从左数第一个是谁', '我要第一个拍到池边', '选出第一声', '第一声', '正确答案是第一声', '这个字的第一笔是什么']) {
       expect(zh[text], text).not.toBe(`zh-${node(text).slice(0, 10)}`)
       expect(clipFile(text, 'zh'), text).toBe(zh[text])
     }

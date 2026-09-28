@@ -5,7 +5,8 @@ import { KNOWLEDGE_POINTS } from '@/content/math/grade1/curriculum'
 import { buildSession, createRng, getGenerator, hasGenerator } from '@/engine'
 import { checkAnswer } from '@/engine/answer'
 import { SHAPE_NAMES, formatMoney } from '@/content/math/shared/labels'
-import { translate } from '@/engine/i18n'
+import { rubySegments, translate } from '@/engine/i18n'
+import { questionSpeech } from '@/engine/speech'
 
 const registered = KNOWLEDGE_POINTS.filter((kp) => hasGenerator(kp.id))
 
@@ -267,6 +268,26 @@ describe('数学正确性（按题型抽样）', () => {
       if (line?.axis) axes.add(line.axis)
     }
     expect(axes).toEqual(new Set(['lr', 'ud', 'fb']))
+  })
+
+  it('位置：「从哪边数第几个」用汉字（第一个，一注 yī），朗读里没有阿拉伯数字；英文界面是 number 1', () => {
+    // 阿拉伯数字夹在中文句子里，合成出来是读数字的调子（「第1个」的 1 常读得像四声）
+    const gen = getGenerator('s1-00-position')!
+    const seen = new Set<string>()
+    for (let seed = 1; seed <= 300; seed++) {
+      const q = gen(((seed % 3) + 1) as 1 | 2 | 3, createRng(seed))
+      const text = q.stem[0]!
+      if (text.kind !== 'text' || typeof text.text === 'string' || text.text.k !== 'q.posFrom') continue
+      const zh = translate(text.text, 'zh')
+      const m = /第([一二三四五六])个是谁/.exec(zh)
+      expect(m, zh).not.toBeNull()
+      seen.add(m![1]!)
+      expect(zh).not.toMatch(/\d/)
+      for (const t of questionSpeech(q, 'zh')) expect(t).not.toMatch(/\d/)
+      expect(translate(text.text, 'en')).toMatch(/who is number [1-6]\?$/)
+      if (m![1] === '一') expect(rubySegments(text.text, 'zh')).toContainEqual({ text: '一', py: 'yī' })
+    }
+    expect(seen).toEqual(new Set(['一', '二', '三', '四', '五', '六']))
   })
 
   it('位置：第几题答案 == 高亮序号，方位题答案在队列中', () => {
