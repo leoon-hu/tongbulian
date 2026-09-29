@@ -439,7 +439,13 @@ export const SHELL_PINYIN: Record<string, string> = {
   'summary.next': 'xià yì zhāng',
   'summary.quit': 'bú liàn le',
   'summary.lastChapter': 'zhè yí cè dōu liàn wán la',
-  // 选年级页课本封面下面的「上册 / 下册」（F2）
+  // 选年级页每一册卡片下面的「一年级 上册」（F1）
+  'grade.g1': 'yī nián jí',
+  'grade.g2': 'èr nián jí',
+  'grade.g3': 'sān nián jí',
+  'grade.g4': 'sì nián jí',
+  'grade.g5': 'wǔ nián jí',
+  'grade.g6': 'liù nián jí',
   'sem.1': 'shàng cè',
   'sem.2': 'xià cè',
   // 对战与皮肤名
