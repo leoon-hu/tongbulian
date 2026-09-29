@@ -66,6 +66,7 @@ const FIXED_KEYS = [
   'room.enter.hint.blue',
   'room.wait.title',
   'room.wait.sub',
+  'room.wait.sub.coop',
   'room.join.title',
   'room.join.hint',
   'room.join.wrong',
@@ -81,7 +82,34 @@ const FIXED_KEYS = [
   'mic.lost',
   'mic.failed',
   'mic.crowded',
+  // 打怪兽（第 10 章）：设置页卡片的说明（M5）、开场规则、打倒 / 下一只 / 最后十秒 / 时间到的提示、Boss 的话、结束播报（M11）
+  'boss.mode.solo.desc',
+  'boss.mode.ai.coop.desc',
+  'boss.mode.ai.versus.desc',
+  'boss.mode.duo.coop.desc',
+  'boss.mode.duo.versus.desc',
+  'boss.mode.online.coop.desc',
+  'boss.mode.online.versus.desc',
+  'boss.rule.coop',
+  'boss.rule.versus',
+  'boss.down',
+  'boss.in.2',
+  'boss.in.3',
+  'boss.in.gold',
+  'boss.lastTen',
+  'boss.timeUp',
+  'boss.taunt',
+  'boss.roar',
+  'boss.jelly',
+  'boss.tickle',
+  'boss.paused',
+  'boss.record',
+  'boss.result.none',
+  'boss.tie',
 ]
+
+/** 打怪兽结束播报「一起把捣蛋龙打倒了 n 次」的 n 收到多少（M11；两个人 120 秒也很难打倒这么多次） */
+export const BOSS_RESULT_MAX = 40
 
 export function collectCorpus(): Record<Lang, string[]> {
   const sets: Record<Lang, Set<string>> = { zh: new Set(), en: new Set() }
@@ -98,6 +126,7 @@ export function collectCorpus(): Record<Lang, string[]> {
   for (const lang of langs) {
     for (let n = 0; n <= 100; n++) sets[lang].add(String(n))
     for (const key of FIXED_KEYS) add(lang, phraseSpeech({ k: key }, lang))
+    for (let n = 1; n <= BOSS_RESULT_MAX; n++) for (const k of ['boss.result.coop', 'boss.result.solo']) add(lang, phraseSpeech({ k, p: { n } }, lang))
   }
   sets.zh.add('两')
   // 语文的题目条目有限，逐条出一遍（随机抽样可能漏掉某一句课文、某个听音的字）

@@ -2,17 +2,20 @@
 // 对战配置面板（B27 ③）：机器人快慢、选游戏、名字与小动物——设置页默认不展示这些，页头「⚙️ 配置」才打开。
 // 快慢、名字、小动物改了立刻记进偏好；游戏是这一次的（默认按章节排到的那个，由设置页持有），不记偏好。
 // 名字那一格显示现在用的名字与小动物（没自定义的是随机点选的，带 🎲，B17）
+// 打怪兽页签下（format = boss，M5）：多「打多久」（60 / 90 / 120 秒，记进偏好）与「打哪个怪兽」（现在只有捣蛋龙），没有选游戏
 import { computed } from 'vue'
 import { AI_LEVELS, type AiLevel } from '@/battle/ai'
 import { avatarEmoji } from '@/battle/avatars'
 import { ui } from '@/engine/i18n'
-import { useBattleStore } from '@/stores/battle'
+import { useBattleStore, type PlayFormat } from '@/stores/battle'
+import { DURATIONS_S } from '@/battle/timed'
+import { BOSSES } from '@/battle/boss'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import SkinPicker from './SkinPicker.vue'
 import AvatarPicker from './AvatarPicker.vue'
 
-defineProps<{ skin: string }>()
+defineProps<{ skin: string; format?: PlayFormat }>()
 const emit = defineEmits<{ close: []; rename: [which: 'me' | 'right']; 'update:skin': [id: string] }>()
 const store = useBattleStore()
 const AI_ICONS: Record<AiLevel, string> = { auto: '🐾', slow: '🐢', mid: '🐰', fast: '🚀' }
@@ -23,6 +26,34 @@ const ids = computed(() => store.identities())
   <div class="config-mask" @click.self="emit('close')">
     <div class="config" role="dialog" :aria-label="ui('battle.config')">
       <h2 class="title"><RubyText :text="{ k: 'battle.config' }" /></h2>
+
+      <template v-if="format === 'boss'">
+        <section class="part">
+          <h3 class="label"><RubyText :text="{ k: 'boss.duration' }" /></h3>
+          <div class="levels" role="radiogroup">
+            <button
+              v-for="n in DURATIONS_S"
+              :key="n"
+              type="button"
+              class="level duration"
+              :class="{ on: store.prefs.boss.durationS === n }"
+              role="radio"
+              :data-duration="n"
+              :aria-checked="store.prefs.boss.durationS === n"
+              @click="store.prefs.boss = { ...store.prefs.boss, durationS: n }"
+            >
+              <span class="level-icon">⏱️</span>
+              <RubyText :text="{ k: 'boss.seconds', p: { n } }" />
+            </button>
+          </div>
+        </section>
+        <section class="part">
+          <h3 class="label"><RubyText :text="{ k: 'boss.pick' }" /></h3>
+          <div class="levels">
+            <span v-for="b in BOSSES" :key="b.id" class="level on"><span class="level-icon">{{ b.icon }}</span><RubyText :text="{ k: `boss.name.${b.id}` }" /></span>
+          </div>
+        </section>
+      </template>
 
       <section class="part">
         <h3 class="label"><RubyText :text="{ k: 'battle.ai.speed' }" /></h3>
@@ -43,7 +74,7 @@ const ids = computed(() => store.identities())
         </div>
       </section>
 
-      <section class="part">
+      <section v-if="format !== 'boss'" class="part">
         <h3 class="label"><RubyText :text="{ k: 'battle.pickSkin' }" /></h3>
         <p class="hint"><RubyText :text="{ k: 'battle.skin.once' }" /></p>
         <SkinPicker :model-value="skin" @update:model-value="(id) => emit('update:skin', id)" />

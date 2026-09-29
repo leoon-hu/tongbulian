@@ -6,7 +6,7 @@ import { FakeAudio, FakePc, fakePeerDeps, fakeStream, type FakeStream } from '@/
 import { CONNECT_SHOW_MS, CONNECT_TIMEOUT_MS, DUCK_HOLD_MS, LEVEL_MS, RETRY_MS, TURN_WAIT_MS, VOICE_ERROR_MS, useVoiceStore } from '../voice'
 
 const m = (clientId: string, o: Partial<Member> = {}): Member => ({ clientId, name: clientId, role: 'red', ready: false, online: true, joinedAt: 0, voice: false, ...o })
-const snap = (members: Member[]): RoomSnapshot => ({ code: 'ABC234', kpId: 's1-05-carry-add', skin: 'race', hostId: 'aaaa', locked: false, createdAt: 0, members, match: null, passcodes: { red: '111111', blue: '222222', watch: '333333' } })
+const snap = (members: Member[]): RoomSnapshot => ({ code: 'ABC234', format: 'battle', timed: null, kpId: 's1-05-carry-add', skin: 'race', hostId: 'aaaa', locked: false, createdAt: 0, members, match: null, passcodes: { red: '111111', blue: '222222', watch: '333333' } })
 
 async function flush(): Promise<void> {
   for (let i = 0; i < 10; i++) await Promise.resolve()

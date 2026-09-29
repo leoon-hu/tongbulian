@@ -13,12 +13,13 @@ import { onBeforeUnmount, ref } from 'vue'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
 import { say } from '@/engine/voice'
-import { playSfx, skinSfx } from '@/battle/sfx'
+import { playSfx, skinSfx, type Sfx } from '@/battle/sfx'
 import { skinById } from '@/battle/skins'
 import RubyText from '@/components/ui/RubyText.vue'
 import { onTap } from '@/components/ui/tap'
 
-const props = defineProps<{ rule?: string | null; skin?: string | null }>()
+/** go：「开始！」那一刻放的声音，给了就不按皮肤找（打怪兽是锣，M11） */
+const props = defineProps<{ rule?: string | null; skin?: string | null; go?: readonly Sfx[] }>()
 const emit = defineEmits<{ done: [] }>()
 
 /** 5 = 讲规则，4 = 「预备…」，3 / 2 / 1，0 = 「开始！」 */
@@ -62,7 +63,7 @@ function step(): void {
   } else {
     say(phraseSpeech({ k: 'battle.go' }, lang.value), lang.value)
     const skin = props.skin ? skinById(props.skin) : undefined
-    for (const x of skin ? skinSfx(skin.id, skin.kind).go : ['go' as const]) playSfx(x)
+    for (const x of props.go ?? (skin ? skinSfx(skin.id, skin.kind).go : ['go' as const])) playSfx(x)
     timers.push(setTimeout(() => emit('done'), 600))
   }
 }

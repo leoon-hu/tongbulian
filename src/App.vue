@@ -26,10 +26,10 @@ onMounted(() => {
   }
 })
 
-/** 对战页的地址只带 kpId：学科 / 年级 / 知识点由目录反查 */
-const isBattle = computed(() => route.path.startsWith('/battle/'))
-/** 竞技场（B28）不放全局顶栏，省高度；房间页在比赛进行中也是竞技场 */
-const isArena = computed(() => route.name === 'battle-local' || (route.name === 'battle-room' && roomInMatch.value))
+/** 对战 / 打怪兽页的地址只带 kpId：学科 / 年级 / 知识点由目录反查 */
+const isBattle = computed(() => route.path.startsWith('/battle/') || route.path.startsWith('/boss/'))
+/** 竞技场（B28）不放全局顶栏，省高度；房间页在比赛进行中也是竞技场；打怪兽的竞技场（M6）同样 */
+const isArena = computed(() => route.name === 'battle-local' || route.name === 'boss-local' || (route.name === 'battle-room' && roomInMatch.value))
 // 新版本装好接管后自己重载（B43）：不在对战里马上换，在对战里等退出竞技场再换
 const swUpdates = setupSwUpdates(() => isArena.value || roomInMatch.value)
 watch(isArena, (v) => {
@@ -49,8 +49,8 @@ function pageTitle(): string {
   const battle = battleInfo()
   if (battle) {
     return [
-      // 设置页（自己练 + 三种对战，B26 / B27）叫「练习」，竞技场与房间叫「对战」
-      ui(route.name === 'battle-setup' ? 'battle.setupTitle' : 'battle.title'),
+      // 设置页（自己练 + 三种对战，B26 / B27）叫「练习」，竞技场与房间叫「对战」，打怪兽的竞技场叫「打怪兽」（M6）
+      ui(route.name === 'battle-setup' ? 'battle.setupTitle' : route.name === 'boss-local' ? 'boss.tab.boss' : 'battle.title'),
       kpTitle(battle.kp),
       ui('course.name', { grade: battle.grade.title, subject: battle.subject.title }),
       ui('brand.title'),
@@ -100,7 +100,7 @@ watch(
     <router-view v-slot="{ Component }">
       <Transition name="route" mode="out-in">
         <!-- 同一视图换参数整个重挂载；单设备竞技场例外：「下一章」换知识点时要留着竞技场（全屏、游戏宿主），key 固定 -->
-        <component :is="Component" :key="route.name === 'battle-local' ? 'battle-local' : route.path" />
+        <component :is="Component" :key="route.name === 'battle-local' || route.name === 'boss-local' ? route.name : route.path" />
       </Transition>
     </router-view>
   </main>

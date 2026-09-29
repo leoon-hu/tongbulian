@@ -1,6 +1,6 @@
 /**
- * 对战中继服务（需求 B41–B49）：WebSocket 一层薄壳——连接、房间表、心跳、限流、节流广播；
- * 房间与比赛逻辑都在 room.ts（纯函数）。只在内存里，不落库、不记内容日志。
+ * 对战中继服务（需求 B41–B49；打怪兽的多设备房间 M13）：WebSocket 一层薄壳——连接、房间表、心跳、限流、节流广播、
+ * 比赛的定时（倒数到点开打；打怪兽的最后 10 秒与时间到）；房间与比赛逻辑都在 room.ts（纯函数）。只在内存里，不落库、不记内容日志。
  * 生产：nginx 把 wss://<域名>/ws 反代到这里（默认 127.0.0.1:8787）；开发：Vite 把 /ws 代理过来。
  * 运行：node dist-server/battle.mjs（npm run build:server 打成单文件，含 ws）。环境变量 PORT / HOST。
  */
@@ -13,7 +13,29 @@ import { EMOTE_SERVER_GAP_MS, isEmoteId } from '@/battle/emotes'
 import { isAvatarId, type AvatarId } from '@/battle/avatars'
 import { cleanName } from '@/battle/names'
 import { DEFAULT_ICE_SERVERS, cleanIceServers, isRtcSignal } from '@/battle/voice'
-import { apply, autoStart, createRoom, expired, findByPasscode, isCode, isKpId, isPasscode, isSkinId, join, makeCode, makePasscodes, randomSeed, reassignHost, setOnline, snapshot, tick, type Effect, type Room } from './room'
+import { GRACE_MS, LAST_TEN_MS } from '@/battle/timed'
+import {
+  apply,
+  autoStart,
+  createRoom,
+  expired,
+  findByPasscode,
+  isCode,
+  isKpId,
+  isPasscode,
+  isSkinId,
+  join,
+  makeCode,
+  makePasscodes,
+  randomSeed,
+  reassignHost,
+  roomPlayOf,
+  setOnline,
+  snapshot,
+  tick,
+  type Effect,
+  type Room,
+} from './room'
 
 export const MAX_ROOMS = 500
 /** 同一个 IP 同时最多开几个房间、10 分钟内最多建几次（N6 ⑨）：不然几个 IP 几分钟就把 MAX_ROOMS 占满，所有人建房都回 busy */
@@ -120,7 +142,7 @@ export interface BattleServerOptions {
   now?: () => number
   /** 语音的 TURN 凭据来源（B57）：不传 = 只给 STUN */
   turn?: TurnProvider
-  /** 倒数到点的定时（测试可注入） */
+  /** 比赛的定时（测试可注入）：倒数到点开打；打怪兽开打后的最后 10 秒与时间到（M13） */
   schedule?: (fn: () => void, ms: number) => void
   seed?: () => number
   log?: (line: string) => void
@@ -272,23 +294,37 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     }
   }
 
+  /**
+   * 在 at 这一刻推一下这个房间的时间（room.ts 的 tick）：回调里先核对还是同一局、还在 phase 这个阶段（再来一局 / 下一章 /
+   * 房间关了就什么都不做）。按 max(现在, at) 算：定时器早到一两毫秒也不会漏掉这一步（漏了时间到这一局就停不下来）
+   */
+  function tickAt(code: string, matchNo: number, phase: string, at: number, what: string): void {
+    schedule(() => {
+      try {
+        const room = rooms.get(code)
+        const game = room?.timed ?? room?.match
+        if (!room || !game || room.matchNo !== matchNo || game.phase !== phase) return
+        commit(code, tick(room, Math.max(now(), at)))
+      } catch (e) {
+        log(`${what}出错：${String(e)}`)
+      }
+    }, at - now())
+  }
+
   function commit(code: string, res: { room: Room; effects: Effect[] }): void {
     const before = rooms.get(code)
     rooms.set(code, res.room)
     runEffects(code, res.effects)
-    // 刚进入倒数：到点开打
-    const m = res.room.match
-    if (m && m.phase === 'countdown' && (!before?.match || before.match.phase !== 'countdown' || before.match.startedAt !== m.startedAt)) {
-      const at = m.startedAt
-      schedule(() => {
-        try {
-          const room = rooms.get(code)
-          if (!room || !room.match || room.match.startedAt !== at) return
-          commit(code, tick(room, Math.max(now(), at)))
-        } catch (e) {
-          log(`开局出错：${String(e)}`)
-        }
-      }, at - now())
+    // 刚进入倒数（两种玩法一样）：到点开打
+    const game = res.room.timed ?? res.room.match
+    const prev = before?.timed ?? before?.match
+    const sameGame = before?.matchNo === res.room.matchNo
+    if (game && game.phase === 'countdown' && !(sameGame && prev?.phase === 'countdown')) tickAt(code, res.room.matchNo, 'countdown', game.startedAt, '开局')
+    // 打怪兽刚开打（M13）：计时以服务器为准，最后 10 秒与时间到（endsAt + 宽限）各推一次；多设备没有暂停，endsAt 定了就不变
+    const timed = res.room.timed
+    if (timed && timed.phase === 'playing' && !(sameGame && before?.timed?.phase === 'playing')) {
+      tickAt(code, res.room.matchNo, 'playing', timed.endsAt - LAST_TEN_MS, '最后 10 秒')
+      tickAt(code, res.room.matchNo, 'playing', timed.endsAt + GRACE_MS, '时间到')
     }
     // 红蓝两队都有人在线且还没开过局：自动开始（B21）；开始后 match 不为 null，这里不会再进
     const auto = autoStart(res.room, now(), seed)
@@ -374,7 +410,9 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       fail(c.ws, 'bad')
       return
     }
-    if (!isKpId(msg.kpId) || !isSkinId(msg.skin)) {
+    // 玩法（M5）：不带是对战房间；打怪兽的设置不合法也是 bad
+    const play = roomPlayOf(msg.format, msg.boss)
+    if (!isKpId(msg.kpId) || !isSkinId(msg.skin) || !play) {
       fail(c.ws, 'bad')
       return
     }
@@ -392,7 +430,7 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
     // 口令全服务器唯一（B19）：避开别的房间正在用的
     const taken = new Set<string>()
     for (const r of rooms.values()) for (const p of Object.values(r.passcodes)) taken.add(p)
-    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name, avatar: c.avatar }, version: c.version, now: t, passcodes: makePasscodes(taken) })
+    const room = createRoom({ code, kpId: msg.kpId, skin: msg.skin, host: { clientId: c.clientId, name: c.name, avatar: c.avatar }, version: c.version, now: t, passcodes: makePasscodes(taken), ...play })
     rooms.set(code, room)
     roomIp.set(code, c.ip)
     roomsByIp.set(c.ip, (roomsByIp.get(c.ip) ?? 0) + 1)
@@ -627,9 +665,14 @@ export function createBattleServer(opts: BattleServerOptions = {}): Promise<Batt
       for (const [ip, w] of badPassByIp) if (t - w.start >= BAD_PASS_WINDOW_MS) badPassByIp.delete(ip)
       for (const [ip, w] of createsByIp) if (t - w.start >= BAD_PASS_WINDOW_MS) createsByIp.delete(ip)
       for (const [code, room] of rooms) {
-        const handover = reassignHost(room, t)
-        if (handover.room !== room) commit(code, handover)
-        if (!expired(room, t)) continue
+        // 比赛定时的兜底（M13）：定时回调万一没跑成（出错被吞掉、被推迟），到点了照样开打 / 发最后 10 秒 / 时间到，
+        // 不会一直停在倒数或比赛中；按时跑过的这里什么都不做（tick 状态没变就原样返回）
+        const late = tick(room, t)
+        if (late.room !== room) commit(code, late)
+        const cur = rooms.get(code) ?? room
+        const handover = reassignHost(cur, t)
+        if (handover.room !== cur) commit(code, handover)
+        if (!expired(cur, t)) continue
         closeRoom(code)
       }
     } catch (e) {

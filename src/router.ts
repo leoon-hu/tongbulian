@@ -33,6 +33,12 @@ const router = createRouter({
       name: 'battle-local',
       component: () => import('@/views/battle/BattleArenaView.vue'),
     },
+    // 打怪兽（M6）：单设备的竞技场，?mode=solo|ai|duo&v=coop|versus&t=60|90|120
+    {
+      path: '/boss/local/:kpId',
+      name: 'boss-local',
+      component: () => import('@/views/battle/BossArenaView.vue'),
+    },
     // 多设备房间（B19–B21）：二维码页 / 连接状态 → 竞技场 → 结果，同一视图分阶段；房间号 6 位，去掉 0 O 1 I L
     {
       path: '/battle/:code([A-HJ-NP-Z2-9]{6})',

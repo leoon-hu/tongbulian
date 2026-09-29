@@ -29,6 +29,8 @@ import { AVATAR_IDS, LEGACY_AVATARS, isAvatarId, pickIdentity, type AvatarId, ty
 import { KEY_GAIN, KEY_GAP_MS, calloutSfx, panOf, playSfx, skinSfx, streakPitch } from '@/battle/sfx'
 import { chapterSkin, finishKey, resolveSkin, ruleKey, skinById } from '@/battle/skins'
 import { pickLine } from '@/battle/lines'
+import { DEFAULT_DURATION_S, isDurationS, type DurationS, type TimedVariant } from '@/battle/timed'
+import { BEST_MAX, isBestKey, isBossMode, type BossMode } from '@/battle/boss'
 
 export type LocalMode = 'ai' | 'duo'
 /** 单设备两种 + 多设备房间（B41：竞技场页不知道自己在哪种模式下） */
@@ -59,7 +61,7 @@ export const LINE_GAP_MS = 1500
 /** 安卓的短震动（B70）：答对一下、答错三下；不支持就算了 */
 export const VIBRATE_RIGHT: number | number[] = 25
 export const VIBRATE_WRONG: number | number[] = [40, 40, 40]
-function vibrate(pattern: number | number[]): void {
+export function vibrate(pattern: number | number[]): void {
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern)
   } catch {
@@ -86,7 +88,16 @@ export interface BattlePrefs {
   music: boolean
   /** 设置页上次选的「怎么练」（B27）：下次进来默认选着它；从来没开始过是自己练 */
   mode: SetupMode
+  /** 设置页上次选的玩法页签（M5）：⚔️ 对战 / 🥊 打怪兽 */
+  format: PlayFormat
+  /** 打怪兽上次选的（M5）：谁来玩、一起打还是各打各的、时长（秒，M1） */
+  boss: { mode: BossMode; variant: TimedVariant; durationS: DurationS }
+  /** 打怪兽一个人打的本机最好成绩（M7）：键是 battle/boss 的 bestKey（知识点 @ 时长），最多 BEST_MAX 个 */
+  bossBest: Record<string, number>
 }
+
+/** 两种玩法（M5）：battle = 先答对 8 题（第 8 章），boss = 限时打怪兽（第 10 章） */
+export type PlayFormat = 'battle' | 'boss'
 
 
 /** 同一个游戏隔多久再讲一次开场规则句 */
@@ -139,6 +150,9 @@ function loadPrefs(): BattlePrefs {
     lastRuns: {},
     music: true,
     mode: 'practice',
+    format: 'battle',
+    boss: { mode: 'solo', variant: 'coop', durationS: DEFAULT_DURATION_S },
+    bossBest: {},
   }
   try {
     const raw = localStorage.getItem(KEY)
@@ -164,9 +178,26 @@ function loadPrefs(): BattlePrefs {
       ),
       music: typeof p.music === 'boolean' ? p.music : true,
       mode: SETUP_MODES.includes(p.mode as SetupMode) ? (p.mode as SetupMode) : base.mode,
+      format: p.format === 'boss' ? 'boss' : 'battle',
+      boss: bossPref(p.boss, base.boss),
+      bossBest: Object.fromEntries(
+        Object.entries(typeof p.bossBest === 'object' && p.bossBest !== null ? (p.bossBest as Record<string, unknown>) : {})
+          .filter((kv): kv is [string, number] => isBestKey(kv[0]) && Number.isInteger(kv[1]) && (kv[1] as number) >= 0 && (kv[1] as number) < 100000)
+          .slice(-BEST_MAX),
+      ),
     }
   } catch {
     return base
+  }
+}
+
+/** 存档里打怪兽的选择（M5）：每一项不认识就用默认的 */
+function bossPref(v: unknown, base: BattlePrefs['boss']): BattlePrefs['boss'] {
+  const b = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>
+  return {
+    mode: isBossMode(b.mode) ? b.mode : base.mode,
+    variant: b.variant === 'versus' ? 'versus' : 'coop',
+    durationS: isDurationS(b.durationS) ? b.durationS : base.durationS,
   }
 }
 
@@ -366,8 +397,9 @@ export const useBattleStore = defineStore('battle', () => {
    * 本机发一个表情：side 是哪一排（红 / 蓝 / 观战），同一排 EMOTE_GAP_MS 内只发一个（返回 false = 太快了没发）；
    * 线上发给服务器（别人那里由 onRemoteEmote 画）；打机器人时机器人过一会儿回一个
    */
-  function sendEmote(side: Role, kind: EmoteId, now = Date.now()): boolean {
-    if (!state.value) return false
+  function sendEmote(side: Role, kind: EmoteId, now = Date.now(), boss = false): boolean {
+    // boss：多设备的打怪兽（M12）也用这一套飞行层——那时对战的 state 是空的，由打怪兽竞技场担保正在比赛
+    if (!state.value && !(boss && mode.value === 'online')) return false
     if (now - (emoteAt[side] ?? -Infinity) < EMOTE_GAP_MS) return false
     emoteAt[side] = now
     showEmote(kind, side, true)
@@ -377,8 +409,8 @@ export const useBattleStore = defineStore('battle', () => {
   }
 
   /** 别人（多设备房间里的其他人）发的表情 */
-  function onRemoteEmote(side: Role, kind: EmoteId): void {
-    if (state.value) showEmote(kind, side, false)
+  function onRemoteEmote(side: Role, kind: EmoteId, boss = false): void {
+    if (state.value || (boss && mode.value === 'online')) showEmote(kind, side, false)
   }
 
   /**

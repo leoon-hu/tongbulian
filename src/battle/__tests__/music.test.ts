@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SKINS } from '../skins'
+import { BOSSES } from '../boss'
 import {
   BARS,
   LOOKAHEAD_S,
@@ -81,6 +82,17 @@ describe('背景音乐（B68 / B73）', () => {
     const heads = SKINS.map((s) => JSON.stringify([TUNES[s.id]!.key, TUNES[s.id]!.melody]))
     expect(new Set(heads).size).toBe(SKINS.length)
     expect(tuneOf('nope')).toBe(TUNES.race)
+  })
+
+  it('每只 Boss 的战曲（M11）都在表里、和对战的曲子不一样；Boss 战曲是小调、最后 10 秒更快', () => {
+    const skinHeads = new Set(SKINS.map((s) => JSON.stringify([TUNES[s.id]!.key, TUNES[s.id]!.melody])))
+    for (const b of BOSSES) {
+      const t = TUNES[b.tune]
+      expect(t, b.id).toBeDefined()
+      expect(skinHeads.has(JSON.stringify([t!.key, t!.melody])), b.id).toBe(false)
+    }
+    expect(TUNES.boss!.scale).toBe('minor')
+    expect(TUNES.boss!.sprintBpm).toBeGreaterThanOrEqual(155)
   })
 
   it('每首 8 小节、每小节一个和弦、一组 meter × 2 步的旋律；鼓点一小节一个模板；速度合理、冲刺更快', () => {

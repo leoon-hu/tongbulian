@@ -4,6 +4,7 @@
  * 每 25 秒 ping（Cloudflare 代理 100 秒空闲会断）。WebSocket 与计时器可注入，node 里能测。
  */
 import type { ArenaEvent, AutoIdentity, ClientMsg, IceServer, Role, RoomError, RoomSnapshot, RtcSignal, ServerMsg } from './protocol'
+import type { BossArenaEvent } from './timed'
 import { isEmoteId, type EmoteId } from './emotes'
 import type { AvatarId } from './avatars'
 import { cleanIceServers, isRtcSignal } from './voice'
@@ -42,7 +43,8 @@ export interface RoomClientOptions {
   /** 名字 / 小动物哪样是随机的（B17）：随 hello 发，服务器按它去重 */
   auto?: AutoIdentity
   onState(room: RoomSnapshot, you: string, now: number): void
-  onEvent(e: ArenaEvent): void
+  /** 对战房间是 ArenaEvent、打怪兽房间是 BossArenaEvent（stores/room 按快照的 format 分） */
+  onEvent(e: ArenaEvent | BossArenaEvent): void
   onError(error: RoomError): void
   onStatus(status: SocketStatus): void
   /** 口令查到的房间号与身份（B19） */
@@ -174,6 +176,10 @@ export class RoomClient {
         if (!r || typeof r !== 'object' || typeof msg.you !== 'string' || typeof msg.now !== 'number') return
         if (!CODE_RE.test(String(r.code)) || !Array.isArray(r.members) || typeof r.kpId !== 'string' || typeof r.skin !== 'string') return
         if (r.match !== null && (!r.match || typeof r.match !== 'object' || !Array.isArray(r.match.players))) return
+        // 打怪兽的一局（M13）；旧服务器的快照没有这个字段，当 null
+        if (r.timed === undefined) r.timed = null
+        if (r.timed !== null && (typeof r.timed !== 'object' || !Array.isArray(r.timed.players) || !Array.isArray(r.timed.bosses))) return
+        if (r.format !== 'boss') r.format = 'battle'
         if (!r.passcodes || typeof r.passcodes !== 'object') return
         if (!r.members.every((m) => m && typeof m === 'object' && typeof m.clientId === 'string' && typeof m.name === 'string' && typeof m.role === 'string')) return
         this.code = r.code

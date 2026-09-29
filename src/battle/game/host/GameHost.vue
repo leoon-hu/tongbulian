@@ -1,29 +1,34 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="S extends { phase: string }, E">
 /**
- * 游戏宿主（需求 B34 / B34a）：竞技场盒子里唯一的 Vue 组件。
+ * 游戏宿主（需求 B34 / B34a；打怪兽的 Boss 游戏也用它，M13）：竞技场盒子里唯一的 Vue 组件。
  * - 建 canvas、量盒子尺寸（ResizeObserver）、像素比、是否减少动画；
  * - 按需加载游戏模块（独立 chunk），喂快照与带序号的事件，跑 rAF 循环，切后台暂停；
  * - 游戏的每一次调用都包在 try/catch 里：加载失败或运行时抛错 → 卸掉它换成保底画面（两条队色进度条），
  *   保底画面也出错就停止绘制；比赛照常，不冒泡到页面。
  * - 根元素 pointer-events: none（inline 也写一份，别靠样式表），只有 canvas 收点按（B59）：宿主算出盒子里的坐标与
  *   按位置猜的一方交给游戏的 poke，自己在点按处画一圈涟漪，并把这一下报给竞技场放声音；游戏仍拿不到事件对象。
+ * - 对快照 / 事件的类型泛型：对战的游戏是 GameState + ArenaEvent，Boss 游戏是 BossGameState + BossArenaEvent（boss-contract.ts）；
+ *   保底画面由 fallback 给，不给就是对战那两条队色进度条。
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { SeqEvent, Team } from '@/battle/protocol'
-import type { GameEvent, GameHostInfo, GameLoader, GameModule, GameState } from '../contract'
+import type { Team } from '@/battle/protocol'
+import type { GameHostInfo, HostedGame } from '../contract'
 import { deviceScale, prefersReducedMotion } from '../engine/canvas'
 import { Loop } from '../engine/loop'
 import { createFallbackGame } from '../fallback'
 
 const props = defineProps<{
-  load: GameLoader
-  state: GameState
-  events: readonly SeqEvent[]
+  load: () => Promise<() => HostedGame<S, E>>
+  state: S
+  events: readonly { seq: number; e: E }[]
   compact?: boolean
   /** 点按位置 → 猜是哪一队的东西（B59；由 GameSlot 按皮肤的位置 / 类别给），不传就上半红下半蓝 */
   sideOf?: (x: number, y: number, w: number, h: number) => Team
+  /** 保底画面（游戏加载失败 / 抛错时换上的）；不给就是对战的两条队色进度条 */
+  fallback?: () => HostedGame<S, E>
 }>()
-const emit = defineEmits<{ poke: [team: Team, x: number, y: number] }>()
+/** poke 的第 4 个参数：游戏说点中的是什么（没说就是 undefined） */
+const emit = defineEmits<{ poke: [team: Team, x: number, y: number, what: string | undefined] }>()
 
 /** 两次点按至少隔多久才转给游戏（孩子连点也别把游戏刷爆）；涟漪显示多久 */
 const POKE_MIN_GAP_MS = 150
@@ -32,7 +37,8 @@ const ripples = ref<{ id: number; x: number; y: number }[]>([])
 let rippleSeq = 0
 let lastPoke = -Infinity
 
-export type HostStatus = 'loading' | 'game' | 'fallback' | 'dead'
+/** 泛型的 <script setup> 编译成函数，里面不能 export：这个类型只在组件内部用 */
+type HostStatus = 'loading' | 'game' | 'fallback' | 'dead'
 
 const root = ref<HTMLElement | null>(null)
 const canvasEl = ref<HTMLCanvasElement | null>(null)
@@ -40,10 +46,14 @@ const status = ref<HostStatus>('loading')
 /** 降级等级（只读，给测试 / 调试看） */
 const level = ref(0)
 
-let mod: GameModule | null = null
+let mod: HostedGame<S, E> | null = null
 let info: GameHostInfo | null = null
 let lastSeq = 0
-const backlog: GameEvent[] = []
+const backlog: E[] = []
+/** 保底画面：对战的进度条只认 GameState，所以只在调用方没给 fallback 时（对战）用它 */
+function makeFallback(): HostedGame<S, E> {
+  return props.fallback ? props.fallback() : (createFallbackGame() as unknown as HostedGame<S, E>)
+}
 let unmounted = false
 let ro: ResizeObserver | null = null
 
@@ -87,7 +97,7 @@ function fail(e: unknown): void {
   } catch {
     /* 已经在出错了 */
   }
-  useModule(createFallbackGame(), 'fallback')
+  useModule(makeFallback(), 'fallback')
 }
 
 function guard(fn: () => void): void {
@@ -98,7 +108,7 @@ function guard(fn: () => void): void {
   }
 }
 
-function useModule(m: GameModule, s: HostStatus): void {
+function useModule(m: HostedGame<S, E>, s: HostStatus): void {
   const canvas = canvasEl.value
   if (!canvas || unmounted) return
   const { width, height } = measure()
@@ -141,13 +151,18 @@ function onPointer(e: PointerEvent): void {
   const w = info.width
   const h = info.height
   const team: Team = props.sideOf ? props.sideOf(x, y, w, h) : y < h / 2 ? 'red' : 'blue'
-  if (mod?.poke) guard(() => mod!.poke!(x, y, team))
+  let what: string | undefined
+  if (mod?.poke)
+    guard(() => {
+      const r = mod!.poke!(x, y, team)
+      if (typeof r === 'string') what = r
+    })
   const id = ++rippleSeq
   ripples.value = [...ripples.value.slice(-5), { id, x, y }]
   setTimeout(() => {
     ripples.value = ripples.value.filter((p) => p.id !== id)
   }, RIPPLE_MS)
-  emit('poke', team, x, y)
+  emit('poke', team, x, y, what)
 }
 
 function onVisibility(): void {
@@ -170,22 +185,22 @@ onMounted(async () => {
     ro.observe(root.value)
   }
   document.addEventListener('visibilitychange', onVisibility)
-  let factory: (() => GameModule) | null = null
+  let factory: (() => HostedGame<S, E>) | null = null
   try {
     factory = await props.load()
   } catch (e) {
     if (unmounted) return
     warn('游戏加载失败，换成保底画面', e)
-    useModule(createFallbackGame(), 'fallback')
+    useModule(makeFallback(), 'fallback')
     return
   }
   if (unmounted) return
-  let m: GameModule | null = null
+  let m: HostedGame<S, E> | null = null
   try {
     m = factory()
   } catch (e) {
     warn('游戏创建失败，换成保底画面', e)
-    useModule(createFallbackGame(), 'fallback')
+    useModule(makeFallback(), 'fallback')
     return
   }
   useModule(m, 'game')

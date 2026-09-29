@@ -37,14 +37,18 @@ export interface GameHostInfo {
   reducedMotion: boolean
 }
 
-export interface GameModule {
+/**
+ * 宿主（host/GameHost.vue）跑的游戏：对战的 21 个游戏是 HostedGame<GameState, GameEvent>（= GameModule），
+ * 打怪兽的 Boss 游戏是 HostedGame<BossGameState, BossGameEvent>（boss-contract.ts，需求 M13）——生命周期、隔离规则一样，只是快照与事件不同
+ */
+export interface HostedGame<S, E> {
   meta: { id: string }
   /** 拿到 canvas，建上下文、布局场景。之后 setState 至少会调一次 */
   mount(host: GameHostInfo): void
   /** 快照变了（比分、阶段、胜方）就调 */
-  setState(state: GameState): void
+  setState(state: S): void
   /** 瞬时事件：一次答题可能连发几条（point → streak → nearWin …） */
-  onEvent(e: GameEvent): void
+  onEvent(e: E): void
   /** 盒子尺寸 / 像素比变了（转屏、紧凑版切换） */
   resize(width: number, height: number, dpr: number): void
   /** 宿主的 rAF 每帧调一次（dt 秒，已封顶）：推进模型并渲染 */
@@ -56,15 +60,19 @@ export interface GameModule {
   degrade?(level: number): void
   /**
    * 盒子被点了一下（B59）：x / y 是盒子里的 CSS 像素，team 是宿主按位置猜的一方（横条的并行 / 收集类上半红下半蓝，
-   * 拉锯类与竖条左红右蓝）。游戏做个小反应（跳一下、鸣笛、喷火），不计分；没实现的宿主只画涟漪
+   * 拉锯类与竖条左红右蓝）。游戏做个小反应（跳一下、鸣笛、喷火），不计分；没实现的宿主只画涟漪。
+   * 可以返回点中的是什么（一个词，比如 Boss 游戏的 'boss' / 'fighter' / 'gong' / 'crowd'，M12），宿主原样报给竞技场按它放声音
    */
-  poke?(x: number, y: number, team: Team): void
+  poke?(x: number, y: number, team: Team): string | void
   /**
    * 终局特写（B63）要对准的点：这一队的角色现在画在盒子里的位置（CSS 像素）。特写期间宿主每帧都问，
    * 所以收尾动作（冲线、到站、飞到手里）镜头会跟着走；没实现的宿主按赢的那条道 / 那一列对准
    */
   focus?(team: Team): { x: number; y: number } | null
 }
+
+/** 对战的游戏（B34） */
+export type GameModule = HostedGame<GameState, GameEvent>
 
 /** 每次挂载新建一个实例（同一皮肤再来一局、换皮肤都干净） */
 export type GameFactory = () => GameModule

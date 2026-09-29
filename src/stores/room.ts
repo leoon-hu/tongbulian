@@ -1,23 +1,25 @@
 /**
  * 多设备房间的客户端状态（需求 B13–B25，2026-09-20 用户定的极简流程）：连中继服务、拿整份房间快照；
  * 进队由链接决定、开始由服务器自动，客户端只发 hello / create / lookup / team（建房的设备自己上场）/ input / answer / rematch / next / leave / ping。
- * 比赛部分交给 stores/battle（syncOnline / onRemoteEvent），竞技场页不知道自己在哪种模式下（B41）。
+ * 比赛部分按房间的玩法交出去：对战给 stores/battle、打怪兽给 stores/boss（都是 syncOnline / onRemoteEvent），竞技场页不知道自己在哪种模式下（B41 / M13）。
  */
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { hasGenerator } from '@/engine'
 import { courseLoaded, courseOfKp, loadCourse } from '@/engine/catalog'
-import type { ArenaEvent, Member, Role, RoomError, RoomSnapshot, Team } from '@/battle/protocol'
+import type { ArenaEvent, BossRoomOpts, Member, Role, RoomError, RoomFormat, RoomSnapshot, Team } from '@/battle/protocol'
+import type { BossArenaEvent } from '@/battle/timed'
 import { RoomClient, socketUrl, type RoomClientOptions, type SocketLike, type SocketStatus } from '@/battle/socket'
 import { joinOpen, roomAvailable, roomInMatch, roomKpId } from '@/battle/lite'
 import { useBattleStore } from './battle'
+import { useBossStore } from './boss'
 import { useVoiceStore } from './voice'
 import { reloadForNewVersion } from '@/engine/update'
 
 /** 内容包加载期间攒着的最新快照（快照、我是谁、服务器时刻）与事件 */
 interface Held {
   state: [RoomSnapshot, string, number | undefined]
-  events: ArenaEvent[]
+  events: (ArenaEvent | BossArenaEvent)[]
 }
 
 /** 这些错误进不了 / 待不下去房间，页面要换成提示 */
@@ -25,6 +27,7 @@ export const FATAL_ERRORS: readonly RoomError[] = ['noRoom', 'closed', 'replaced
 
 export const useRoomStore = defineStore('room', () => {
   const battle = useBattleStore()
+  const boss = useBossStore()
   const voice = useVoiceStore()
   const snapshot = ref<RoomSnapshot | null>(null)
   const you = ref('')
@@ -53,9 +56,11 @@ export const useRoomStore = defineStore('room', () => {
   const isHost = computed(() => !!snapshot.value && snapshot.value.hostId === you.value)
   const participants = computed(() => snapshot.value?.members.filter((m) => m.role !== 'watch') ?? [])
   const watchers = computed(() => snapshot.value?.members.filter((m) => m.role === 'watch') ?? [])
+  /** 房间的玩法（M13）：旧服务器的快照没有这个字段，按对战 */
+  const format = computed<RoomFormat>(() => (snapshot.value?.format === 'boss' ? 'boss' : 'battle'))
   const inMatch = computed(() => {
-    const p = snapshot.value?.match?.phase
-    return p === 'countdown' || p === 'playing' || p === 'ended'
+    const p = snapshot.value?.match?.phase ?? snapshot.value?.timed?.phase
+    return p === 'countdown' || p === 'playing' || p === 'paused' || p === 'ended'
   })
   const teamMembers = (team: Team): Member[] => snapshot.value?.members.filter((m) => m.role === team) ?? []
   // 镜像给轻模块（App.vue / AppHeader 只看它）
@@ -118,13 +123,15 @@ export const useRoomStore = defineStore('room', () => {
     snapshot.value = room
     you.value = me
     code.value = room.code
-    battle.syncOnline(room, me, serverNow)
+    if (room.format === 'boss') boss.syncOnline(room, me, serverNow)
+    else battle.syncOnline(room, me, serverNow)
     voice.onSnapshot(room, me)
   }
 
-  function onEvent(e: ArenaEvent): void {
+  function onEvent(e: ArenaEvent | BossArenaEvent): void {
     if (held) held.events.push(e)
-    else battle.onRemoteEvent(e)
+    else if (format.value === 'boss') boss.onRemoteEvent(e as BossArenaEvent)
+    else battle.onRemoteEvent(e as ArenaEvent)
   }
 
   /** 页面回到前台（手机锁屏 / 切走再回来）：不等退避，立刻重连（B23） */
@@ -163,11 +170,19 @@ export const useRoomStore = defineStore('room', () => {
       },
       onRtc: (from, data) => voice.onSignal(from, data),
       onTurn: (iceServers, ttl) => voice.onTurn(iceServers, ttl),
-      // 别人的表情（B58）：直接进竞技场的飞行层
-      onEmote: (_from, role, id) => battle.onRemoteEmote(role, id),
+      // 别人的表情（B58）：直接进竞技场的飞行层；打怪兽里那个小动物还在观众席举一下牌（M12）
+      onEmote: (from, role, id) => {
+        const bossOn = format.value === 'boss' && !!boss.state
+        battle.onRemoteEmote(role, id, bossOn)
+        if (bossOn) boss.onEmote(from)
+      },
       factory,
     })
+    // 两个比赛 store 都接上发送通道：进房前不知道房间是哪种玩法，快照来了按 format 喂其中一个
     battle.startOnline({
+      send: (msg) => client?.send(msg),
+    })
+    boss.startOnline({
       send: (msg) => client?.send(msg),
     })
     voice.attach({ send: (msg) => client?.send(msg) })
@@ -182,13 +197,13 @@ export const useRoomStore = defineStore('room', () => {
     c?.connect(roomCode, t)
   }
 
-  /** 设置页「建房间」：连上后建房，拿到快照就知道房间号；建房的这台设备只观战 */
-  function create(kpId: string, skin: string): void {
+  /** 设置页「建房间」：连上后建房，拿到快照就知道房间号；建房的这台设备只观战。bossOpts：建打怪兽的房间（M5） */
+  function create(kpId: string, skin: string, bossOpts?: BossRoomOpts): void {
     reset()
     const c = makeClient()
     if (!c) return
     c.connect()
-    c.send({ type: 'create', kpId, skin })
+    c.send(bossOpts ? { type: 'create', kpId, skin, format: 'boss', boss: bossOpts } : { type: 'create', kpId, skin })
   }
 
   /** 「加入对战」面板：连上后拿口令换房间号与身份（found），再由面板按链接的方式进房 */
@@ -230,6 +245,7 @@ export const useRoomStore = defineStore('room', () => {
     status.value = 'idle'
     reset()
     battle.leave()
+    boss.leave()
   }
 
   return {
@@ -244,6 +260,7 @@ export const useRoomStore = defineStore('room', () => {
     available,
     me,
     isHost,
+    format,
     participants,
     watchers,
     inMatch,

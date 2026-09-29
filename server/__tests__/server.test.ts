@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import WebSocket from 'ws'
+import { COUNTDOWN_MS } from '@/battle/match'
 import type { ClientMsg, ServerMsg } from '@/battle/protocol'
+import { GRACE_MS, LAST_TEN_MS } from '@/battle/timed'
 import { MAX_BAD_PASS, MAX_BAD_PASS_PER_IP, MAX_CONNS_PER_IP, MAX_ROOMS_PER_IP, clientIp, createBattleServer, type BattleServer } from '../index'
 
 /** 一个测试客户端：收到的消息排队，按条件等 */
@@ -593,5 +595,176 @@ describe('我的小动物（B66）', () => {
     a.close()
     b.close()
     c.close()
+  })
+})
+
+describe('打怪兽房间（M13）', () => {
+  it('建房带 format / boss → 两人进来自动倒数 → go → 答题收到 hit / miss → 最后 10 秒 → 时间到之后宽限内的答案还算 → timeUp + finished → 之后的答案静默忽略 → 再来一局；比赛中进来的只能观战；打怪兽设置不合法的建房是 bad', async () => {
+    // 服务器的时钟与定时都由测试推：now 读 clock，schedule 记下到点时刻；advance 按到点顺序一个个跑（跑的时候时钟正停在
+    // 那一刻，回调里新排的也算），最后停在终点
+    let clock = 1_800_000_000_000
+    const timers: { at: number; fn: () => void }[] = []
+    const vs = await createBattleServer({
+      port: 0,
+      log: () => {},
+      sweepMs: 3_600_000,
+      now: () => clock,
+      schedule: (fn, ms) => {
+        timers.push({ at: clock + ms, fn })
+      },
+    })
+    const advance = (ms: number): void => {
+      const until = clock + ms
+      for (;;) {
+        timers.sort((x, y) => x.at - y.at)
+        const next = timers[0]
+        if (!next || next.at > until) break
+        timers.shift()
+        clock = Math.max(clock, next.at)
+        next.fn()
+      }
+      clock = until
+    }
+    const ev = (type: string) => (m: ServerMsg) => m.type === 'event' && m.e.type === type
+    try {
+      const a = new Client(vs.port)
+      const b = new Client(vs.port)
+      const c = new Client(vs.port)
+      const d = new Client(vs.port)
+      await Promise.all([a.open(), b.open(), c.open(), d.open()])
+      a.send({ type: 'hello', clientId: 'boss-a', name: '主持', version: 'v1' })
+      a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race', format: 'boss', boss: { variant: 'team' as never, durationS: 60, boss: 'dino' } })
+      expect(await a.wait((m) => m.type === 'error')).toEqual({ type: 'error', error: 'bad' })
+      a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race', format: 'boss', boss: { variant: 'coop', durationS: 60, boss: 'dino' } })
+      const created = await a.state()
+      expect(created.room).toMatchObject({ format: 'boss', boss: { variant: 'coop', durationS: 60, boss: 'dino' }, match: null, timed: null })
+      const code = created.room.code
+
+      // 一起打：两个人都进红队也能开始（M5）；只进来一个不开始
+      b.send({ type: 'hello', clientId: 'boss-b', name: '小兔', version: 'v1', code, t: 'red' })
+      const B = (await b.state()).you
+      c.send({ type: 'hello', clientId: 'boss-c', name: '小猫', version: 'v1', code, t: 'red' })
+      const C = (await c.state()).you
+      await b.wait(ev('countdown'))
+      await c.wait(ev('countdown'))
+      const cd = await b.state((s) => s.room.timed?.phase === 'countdown')
+      expect(cd.room.match).toBeNull()
+      expect(cd.room.timed!.players.map((p) => [p.id, p.team])).toEqual([
+        [B, 'red'],
+        [C, 'red'],
+      ])
+      // 比赛中进来的：只能观战（started）
+      d.send({ type: 'hello', clientId: 'boss-d', name: '晚来', version: 'v1', code, t: 'red' })
+      expect(await d.wait((m) => m.type === 'error')).toEqual({ type: 'error', error: 'started' })
+      const dIn = await d.state()
+      expect(dIn.room.members.find((m) => m.clientId === dIn.you)!.role).toBe('watch')
+
+      // 倒数到点：go，计时从服务器这一刻起算
+      advance(COUNTDOWN_MS)
+      await b.wait(ev('go'))
+      const play = await c.state((s) => s.room.timed?.phase === 'playing')
+      const ends = play.room.timed!.endsAt
+      expect(ends).toBe(clock + 60_000)
+
+      b.send({ type: 'answer', index: 0, given: '7', correct: true })
+      expect(await c.wait(ev('hit'))).toEqual({ type: 'event', e: { type: 'hit', playerId: B, team: 'red', side: 'shared', points: 1, streak: 1, move: 'jab', together: false } })
+      await d.wait(ev('hit')) // 观战的也收到
+      c.send({ type: 'answer', index: 0, given: '9', correct: false })
+      expect(await b.wait(ev('miss'))).toEqual({ type: 'event', e: { type: 'miss', playerId: C, team: 'red', side: 'shared' } })
+
+      // 最后 10 秒
+      advance(ends - LAST_TEN_MS - clock)
+      await b.wait(ev('lastTen'))
+      await a.wait(ev('lastTen'))
+      advance(1000)
+      b.send({ type: 'answer', index: 1, given: '7', correct: true })
+      const second = await c.wait(ev('hit'))
+      expect(second.type === 'event' && second.e.type === 'hit' && second.e.points).toBe(2)
+
+      // 过了 endsAt、还在宽限里：答案还算，还没结束
+      advance(ends + GRACE_MS - 100 - clock)
+      b.send({ type: 'answer', index: 2, given: '7', correct: true })
+      const third = await c.wait(ev('hit'))
+      expect(third.type === 'event' && third.e.type === 'hit' && [third.e.points, third.e.move]).toEqual([3, 'hook'])
+      expect(b.inbox.some(ev('timeUp'))).toBe(false)
+
+      // 时间到（endsAt + 宽限）：timeUp → finished，快照里一局结束、分数以服务器为准
+      advance(100)
+      await b.wait(ev('timeUp'))
+      expect(await b.wait(ev('finished'))).toEqual({ type: 'event', e: { type: 'finished', winner: null } })
+      await c.wait(ev('finished'))
+      const ended = await c.state((s) => s.room.timed?.phase === 'ended')
+      expect(ended.room.timed!.players.map((p) => [p.id, p.score, p.correct, p.bestStreak])).toEqual([
+        [B, 6, 3, 3],
+        [C, 0, 0, 0],
+      ])
+      expect(timers).toEqual([])
+
+      // 再晚的答案：静默忽略（不回 bad、不发事件），用 ping → pong 当栅栏
+      b.inbox.length = 0
+      b.send({ type: 'answer', index: 3, given: '7', correct: true })
+      b.send({ type: 'ping' })
+      await b.wait((m) => m.type === 'pong')
+      expect(b.inbox.filter((m) => m.type === 'error' || (m.type === 'event' && m.e.type === 'hit'))).toEqual([])
+
+      // 再来一局（谁都能按，观战的也行）：新一局倒数，上一局的定时不会串进来
+      d.send({ type: 'rematch' })
+      await b.wait(ev('countdown'))
+      const again = await b.state((s) => s.room.timed?.phase === 'countdown')
+      expect(again.room.timed!.players.map((p) => [p.score, p.index])).toEqual([
+        [0, 0],
+        [0, 0],
+      ])
+      advance(COUNTDOWN_MS)
+      await b.wait(ev('go'))
+      expect(timers.map((t) => t.at - clock).sort((x, y) => x - y)).toEqual([60_000 - LAST_TEN_MS, 60_000 + GRACE_MS])
+
+      // 主持人中途结束：人都在，马上又自动开了一局；上一局排好的最后 10 秒 / 时间到到点了也不串进新一局
+      a.send({ type: 'end' })
+      await b.wait(ev('countdown'))
+      b.inbox.length = 0
+      advance(60_000 + GRACE_MS) // 新一局 COUNTDOWN_MS 后开打，它自己的时间到还没到
+      await b.wait(ev('go'))
+      await b.wait(ev('lastTen'))
+      b.send({ type: 'ping' })
+      await b.wait((m) => m.type === 'pong')
+      expect(b.inbox.filter((m) => m.type === 'event')).toEqual([])
+      expect((await b.state((s) => s.room.timed?.lastTen === true)).room.timed!.phase).toBe('playing')
+      for (const x of [a, b, c, d]) x.close()
+    } finally {
+      await vs.close()
+    }
+  })
+
+  it('定时回调没跑成（兜底）：心跳里照样按时间开打、发最后 10 秒、时间到', async () => {
+    let clock = 1_800_000_000_000
+    const vs = await createBattleServer({ port: 0, log: () => {}, sweepMs: 20, now: () => clock, schedule: () => {} })
+    const ev = (type: string) => (m: ServerMsg) => m.type === 'event' && m.e.type === type
+    try {
+      const a = new Client(vs.port)
+      const b = new Client(vs.port)
+      await Promise.all([a.open(), b.open()])
+      a.send({ type: 'hello', clientId: 'late-a', name: '甲', version: 'v1' })
+      a.send({ type: 'create', kpId: 's1-05-carry-add', skin: 'race', format: 'boss', boss: { variant: 'versus', durationS: 60, boss: 'dino' } })
+      const code = (await a.state()).room.code
+      a.send({ type: 'team', role: 'red' })
+      b.send({ type: 'hello', clientId: 'late-b', name: '乙', version: 'v1', code, t: 'blue' })
+      await b.wait(ev('countdown'))
+      clock += COUNTDOWN_MS
+      await b.wait(ev('go'))
+      const ends = (await b.state((s) => s.room.timed?.phase === 'playing')).room.timed!.endsAt
+      // 一步别跨过心跳的 60 秒（HEARTBEAT_MS），中间 ping 一下，不然连接被当成掉线断开
+      clock = ends - LAST_TEN_MS
+      await b.wait(ev('lastTen'))
+      for (const x of [a, b]) x.send({ type: 'ping' })
+      await Promise.all([a.wait((m) => m.type === 'pong'), b.wait((m) => m.type === 'pong')])
+      clock = ends + GRACE_MS
+      await b.wait(ev('timeUp'))
+      expect(await b.wait(ev('finished'))).toEqual({ type: 'event', e: { type: 'finished', winner: null } })
+      a.close()
+      b.close()
+    } finally {
+      await vs.close()
+    }
   })
 })

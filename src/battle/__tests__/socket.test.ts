@@ -3,7 +3,7 @@ import type { IceServer, RoomSnapshot, RtcSignal, ServerMsg } from '@/battle/pro
 import { BACKOFF_MS, PING_MS, RoomClient, socketUrl, type RoomClientOptions, type SocketStatus } from '../socket'
 import { FakeWs } from './fake-socket'
 
-const SNAP: RoomSnapshot = { code: 'ABC234', kpId: 's1-05-carry-add', skin: 'race', hostId: 'aaaaaa', locked: false, createdAt: 0, members: [], match: null, passcodes: { red: '111111', blue: '222222', watch: '333333' } }
+const SNAP: RoomSnapshot = { code: 'ABC234', format: 'battle', timed: null, kpId: 's1-05-carry-add', skin: 'race', hostId: 'aaaaaa', locked: false, createdAt: 0, members: [], match: null, passcodes: { red: '111111', blue: '222222', watch: '333333' } }
 
 function client(overrides: Partial<RoomClientOptions> = {}) {
   const calls = { state: [] as [RoomSnapshot, string, number][], events: [] as unknown[], errors: [] as string[], status: [] as SocketStatus[] }

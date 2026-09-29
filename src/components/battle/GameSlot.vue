@@ -20,7 +20,8 @@ function sideOf(x: number, y: number, w: number, h: number): Team {
   return byX ? (x < w / 2 ? 'red' : 'blue') : y < h / 2 ? 'red' : 'blue'
 }
 
-const host = ref<InstanceType<typeof GameHost> | null>(null)
+/** 宿主暴露的特写对准（GameHost 是泛型组件，InstanceType 取不到，只写用到的这一个方法） */
+const host = ref<{ focusOf(team: Team): { x: number; y: number } | null } | null>(null)
 defineExpose({
   /** 终局特写（B63）：这一队的角色现在在盒子里的位置，游戏没报就 null */
   focusOf: (team: Team): { x: number; y: number } | null => host.value?.focusOf(team) ?? null,

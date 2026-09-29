@@ -17,6 +17,8 @@ import { createRoom, join, snapshot, type Room } from '../../../server/room'
 import '@/views/battle/BattleSetupView.vue'
 import '@/views/battle/BattleArenaView.vue'
 import '@/views/battle/BattleRoomView.vue'
+import '@/views/battle/BossArenaView.vue'
+import { useBossStore } from '@/stores/boss'
 // 「加入对战」面板在 App 里是按需加载的（N8）：这里先静态引一次，dynamic import 走缓存立刻就绪，用例不用等编译
 import '@/components/battle/JoinSheet.vue'
 
@@ -122,6 +124,60 @@ describe('对战设置页', () => {
     await settle()
     expect(w.find('.room-error').exists()).toBe(true)
     expect(lastSpoken()).toEqual(['room.connect.slow'])
+    w.unmount()
+  })
+})
+
+describe('打怪兽（M5 / M11）', () => {
+  it('设置页切到打怪兽读一个人打的说明；换卡、换「一起打 / 各打各的」读对应的说明', async () => {
+    const w = await mountAt(`/battle/new/${KP}`)
+    await w.find('.format[data-format="boss"]').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['boss.mode.solo.desc'])
+    await w.find('.mode[data-boss-mode="duo"]').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['boss.mode.duo.coop.desc'])
+    await w.find('.variant[data-variant="versus"]').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['boss.mode.duo.versus.desc'])
+    await w.find('.mode[data-boss-mode="ai"]').trigger('click')
+    await settle()
+    expect(lastSpoken()).toEqual(['boss.mode.ai.versus.desc'])
+    w.unmount()
+  })
+
+  it('竞技场：「打倒啦」skip 播法；6 秒没人打中 Boss 挑衅（idle，放慢一点）；时间到的播报排在读题后面（wait）', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+    const w = await mountAt(`/boss/local/${KP}?mode=solo`)
+    const store = useBossStore()
+    store.beginPlay()
+    await settle()
+    for (let i = 0; i < 4; i++) {
+      const p = store.state!.players[0]!
+      const q = store.questionOf(p)
+      store.submit('left', q.answer.kind === 'number' ? q.answer.value : q.answer.choiceId)
+      vi.advanceTimersByTime(400)
+      await settle()
+    }
+    const calls = () => vi.mocked(say).mock.calls
+    expect(calls().some((c) => c[0].join('') === '打倒啦' && c[3]?.mode === 'skip')).toBe(true)
+    vi.advanceTimersByTime(6400)
+    await settle()
+    expect(calls().some((c) => c[0].join('') === '来打我呀' && c[3]?.mode === 'idle' && c[3]?.rate === 0.9)).toBe(true)
+    // 暂停：说一句「暂停一下，休息休息」，打断正在读的
+    await w.find('.pause-btn').trigger('click')
+    expect(vi.mocked(sayKeys).mock.calls.at(-1)).toEqual([['boss.paused'], 'zh', 0, { mode: 'cut' }])
+    await w.find('.resume-btn').trigger('click')
+    vi.advanceTimersByTime(2100)
+    await settle()
+    vi.advanceTimersByTime(90_000)
+    await settle()
+    vi.advanceTimersByTime(1200)
+    await settle()
+    // 一个人打第一次打出了分：播报后面接「新纪录！」
+    const finish = calls().find((c) => c[3]?.key === 'finish')
+    expect(finish?.[3]?.mode).toBe('wait')
+    expect(finish?.[0].join('')).toMatch(/把捣蛋龙打倒了.*新纪录/)
     w.unmount()
   })
 })

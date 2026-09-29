@@ -81,6 +81,23 @@ export type Sfx =
   | 'hammer' // 按键 / 开始（盖楼）：小锤嗒
   | 'tap' // 按键（默认）：很轻的一下
   | 'tink' // 按键（融冰）：冰叮
+  // ── 打怪兽（M11）：拳、Boss、开打 / 时间到、蓄力 ──
+  | 'punch' // 直拳：嘭
+  | 'hook' // 勾拳：风声 + 嘭
+  | 'upper' // 上勾拳：上扬的呼 + 重嘭
+  | 'smash' // 旋风拳：蓄力嗡 → 大轰
+  | 'whiff' // 挥空：呼 + 卡通啵嘤
+  | 'squeak' // Boss 被打：充气玩具的橡胶 boing（按这一拳的分升调）
+  | 'deflate' // Boss 被打倒：噗——泄气 + 气球乱飞的哨音
+  | 'gong' // 开打：锣当——
+  | 'referee' // 时间到：裁判哨两声
+  | 'charge' // 按键（打怪兽）：蓄力的一下上滑音
+  | 'clap' // 合力拳：击掌
+  | 'giggle' // 点一下 Boss：咯咯咯笑（M12）
+  | 'roar' // Boss 吼一嗓子（表演，M8）：卡通的「嗷——」
+  | 'toss' // Boss 扔果冻球：出手「嗖」
+  | 'splat' // 果冻球落地：「啪」+ 抖两下
+  | 'jingle' // 打倒一只：一小段胜利短句（M11）
 
 interface Note {
   /** 频率（Hz） */
@@ -365,6 +382,108 @@ const PATTERNS: Record<Sfx, Pattern> = {
   hammer: { notes: [{ f: 1000, at: 0, d: 0.04, type: 'triangle', gain: 0.3, to: 700 }], noise: [{ at: 0, d: 0.03, gain: 0.2, f: 2500, q: 1 }] },
   tap: { notes: [{ f: 1100, at: 0, d: 0.03, type: 'triangle', gain: 0.25, to: 900 }] },
   tink: { notes: [{ f: 2600, at: 0, d: 0.08, type: 'sine', gain: 0.2 }] },
+  // ── 打怪兽（M11）──
+  punch: { notes: [{ f: 190, at: 0, d: 0.13, type: 'sine', gain: 0.9, to: 70 }], noise: [{ at: 0, d: 0.05, gain: 0.45, f: 900, q: 0.8 }] },
+  hook: {
+    noise: [
+      { at: 0, d: 0.1, gain: 0.3, f: 1900, q: 1.2 },
+      { at: 0.08, d: 0.05, gain: 0.45, f: 900, q: 0.8 },
+    ],
+    notes: [{ f: 180, at: 0.08, d: 0.14, type: 'sine', gain: 0.9, to: 65 }],
+  },
+  upper: {
+    notes: [
+      { f: 300, at: 0, d: 0.12, type: 'sine', gain: 0.2, to: 900 },
+      { f: 160, at: 0.11, d: 0.18, type: 'sine', gain: 1, to: 55 },
+    ],
+    noise: [{ at: 0.11, d: 0.07, gain: 0.5, f: 700, q: 0.7 }],
+  },
+  smash: {
+    notes: [
+      { f: 110, at: 0, d: 0.28, type: 'sawtooth', gain: 0.1, to: 260 },
+      { f: 140, at: 0.28, d: 0.35, type: 'sine', gain: 1, to: 45 },
+    ],
+    noise: [
+      { at: 0.28, d: 0.12, gain: 0.6, f: 600, q: 0.6 },
+      { at: 0.3, d: 0.5, gain: 0.2, f: 2400, q: 0.5 },
+    ],
+  },
+  whiff: {
+    noise: [{ at: 0, d: 0.22, gain: 0.35, f: 2200, q: 1 }],
+    notes: [{ f: 620, at: 0.14, d: 0.2, type: 'sine', gain: 0.25, to: 330 }],
+  },
+  squeak: {
+    notes: [
+      { f: 300, at: 0.02, d: 0.16, type: 'triangle', gain: 0.35, to: 520 },
+      { f: 520, at: 0.14, d: 0.16, type: 'sine', gain: 0.2, to: 380 },
+    ],
+  },
+  deflate: {
+    noise: [{ at: 0, d: 1.1, gain: 0.3, f: 1100, q: 0.5 }],
+    notes: [
+      { f: 900, at: 0, d: 0.5, type: 'sine', gain: 0.14, to: 1300 },
+      { f: 1300, at: 0.5, d: 0.7, type: 'sine', gain: 0.12, to: 260 },
+    ],
+  },
+  gong: {
+    notes: [
+      { f: 150, at: 0, d: 1.4, type: 'sine', gain: 0.7, to: 142 },
+      { f: 237, at: 0, d: 1.1, type: 'sine', gain: 0.35 },
+      { f: 342, at: 0, d: 0.9, type: 'triangle', gain: 0.18 },
+    ],
+    noise: [{ at: 0, d: 0.1, gain: 0.35, f: 2000, q: 0.6 }],
+  },
+  referee: {
+    notes: [
+      { f: 2500, at: 0, d: 0.14, type: 'sine', gain: 0.35 },
+      { f: 2500, at: 0.2, d: 0.5, type: 'sine', gain: 0.35, to: 2450 },
+    ],
+    noise: [{ at: 0.2, d: 0.5, gain: 0.08, f: 2500, q: 4 }],
+  },
+  charge: { notes: [{ f: 440, at: 0, d: 0.06, type: 'triangle', gain: 0.22, to: 700 }] },
+  clap: {
+    noise: [
+      { at: 0, d: 0.05, gain: 0.6, f: 1600, q: 0.9 },
+      { at: 0.015, d: 0.05, gain: 0.4, f: 2600, q: 0.9 },
+    ],
+  },
+  // 充气玩具咯咯笑：四下一高一低的短音，越笑越高
+  giggle: {
+    notes: [
+      { f: 620, at: 0, d: 0.07, type: 'triangle', gain: 0.3, to: 760 },
+      { f: 560, at: 0.09, d: 0.07, type: 'triangle', gain: 0.28, to: 700 },
+      { f: 680, at: 0.18, d: 0.07, type: 'triangle', gain: 0.28, to: 840 },
+      { f: 760, at: 0.27, d: 0.1, type: 'triangle', gain: 0.25, to: 980 },
+    ],
+  },
+  // 吼：低沉的锯齿波往上一挑再落下 + 一点气声；是玩具在吼，不吓人（音量不大、不到一秒）
+  roar: {
+    notes: [
+      { f: 110, at: 0, d: 0.35, type: 'sawtooth', gain: 0.22, to: 190 },
+      { f: 190, at: 0.35, d: 0.55, type: 'sawtooth', gain: 0.2, to: 95 },
+      { f: 220, at: 0, d: 0.9, type: 'triangle', gain: 0.12, to: 180 },
+    ],
+    noise: [{ at: 0, d: 0.85, gain: 0.18, f: 700, q: 0.6 }],
+  },
+  toss: { noise: [{ at: 0, d: 0.25, gain: 0.3, f: 1500, q: 1.1 }], notes: [{ f: 400, at: 0, d: 0.22, type: 'sine', gain: 0.12, to: 900 }] },
+  splat: {
+    noise: [{ at: 0, d: 0.08, gain: 0.45, f: 500, q: 0.7 }],
+    notes: [
+      { f: 180, at: 0, d: 0.12, type: 'sine', gain: 0.6, to: 90 },
+      { f: 330, at: 0.1, d: 0.1, type: 'sine', gain: 0.2, to: 260 },
+      { f: 300, at: 0.2, d: 0.1, type: 'sine', gain: 0.14, to: 250 },
+    ],
+  },
+  // 打倒一只：do-mi-sol-do' 快速上行 + 最后一个音拖长（三角波，和背景乐叠着也听得出来）
+  jingle: {
+    notes: [
+      { f: 523, at: 0, d: 0.1, type: 'triangle', gain: 0.35 },
+      { f: 659, at: 0.09, d: 0.1, type: 'triangle', gain: 0.35 },
+      { f: 784, at: 0.18, d: 0.1, type: 'triangle', gain: 0.35 },
+      { f: 1047, at: 0.27, d: 0.4, type: 'triangle', gain: 0.35 },
+      { f: 1319, at: 0.27, d: 0.4, type: 'sine', gain: 0.12 },
+    ],
+  },
 }
 
 /**

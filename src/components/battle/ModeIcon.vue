@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // 「怎么练」四张卡的示意图（B27）：一台手机横着放，左半边红队、右半边蓝队；
 // 打机器人时右半边是机器人；各用各的是两台手机各装一队，中间画信号；自己练是一台竖着的手机，一个人捧着一本书（不分队色）。
+// 打怪兽（M5）：一个人打 = 一台横着的手机，左边一个人、右边一只小恐龙；另外三张卡（boss）在原来的图上方加一只小恐龙。
 // 纯 SVG、颜色走 tokens，没有文字（文字在卡片的注音标签里）。
 import type { SetupMode } from '@/stores/battle'
 
-defineProps<{ mode: SetupMode }>()
+defineProps<{ mode: SetupMode | 'solo'; boss?: boolean }>()
 </script>
 
 <template>
@@ -34,6 +35,28 @@ defineProps<{ mode: SetupMode }>()
       <g v-else class="person blue">
         <circle cx="86" cy="28" r="8.5" />
         <path d="M72 57A14 13 0 0 1 100 57Z" />
+      </g>
+    </g>
+
+    <!-- 一台横屏手机，左边一个人、右边一只小恐龙：打怪兽一个人打 -->
+    <g v-else-if="mode === 'solo'" class="phone landscape">
+      <rect class="body" x="2" y="2" width="116" height="68" rx="12" />
+      <path class="half red" d="M14 8H60V64H14A6 6 0 0 1 8 58V14A6 6 0 0 1 14 8Z" />
+      <path class="half boss" d="M60 8H106A6 6 0 0 1 112 14V58A6 6 0 0 1 106 64H60Z" />
+      <rect class="notch" x="3.5" y="32" width="2" height="8" rx="1" />
+      <g class="person red">
+        <circle cx="34" cy="28" r="8.5" />
+        <path d="M20 57A14 13 0 0 1 48 57Z" />
+      </g>
+      <g class="dino">
+        <path class="spike" d="M77 34l3-6 3 6ZM72 40l3-6 3 6ZM82 31l3-6 3 6Z" />
+        <ellipse cx="88" cy="46" rx="14" ry="15" />
+        <circle cx="92" cy="26" r="9" />
+        <ellipse cx="99" cy="28" rx="6.5" ry="4.8" />
+        <circle class="target" cx="86" cy="48" r="6.5" />
+        <circle class="target-in" cx="86" cy="48" r="2.6" />
+        <circle class="eye" cx="94" cy="23" r="2.4" />
+        <circle class="pupil" cx="94.8" cy="23.2" r="1.1" />
       </g>
     </g>
 
@@ -78,6 +101,21 @@ defineProps<{ mode: SetupMode }>()
         <path d="M53.3 32A10.5 10.5 0 0 1 66.7 32" />
       </g>
     </template>
+
+    <!-- 打怪兽的另外三张卡：上方一只小恐龙 -->
+    <g v-if="boss && mode !== 'solo'" class="badge" transform="translate(60 13) scale(0.42) translate(-88 -38)">
+      <circle class="badge-bg" cx="88" cy="38" r="27" />
+      <g class="dino">
+        <path class="spike" d="M77 34l3-6 3 6ZM72 40l3-6 3 6ZM82 31l3-6 3 6Z" />
+        <ellipse cx="88" cy="46" rx="14" ry="15" />
+        <circle cx="92" cy="26" r="9" />
+        <ellipse cx="99" cy="28" rx="6.5" ry="4.8" />
+        <circle class="target" cx="86" cy="48" r="6.5" />
+        <circle class="target-in" cx="86" cy="48" r="2.6" />
+        <circle class="eye" cx="94" cy="23" r="2.4" />
+        <circle class="pupil" cx="94.8" cy="23.2" r="1.1" />
+      </g>
+    </g>
   </svg>
 </template>
 
@@ -133,6 +171,32 @@ defineProps<{ mode: SetupMode }>()
 .robot .eye,
 .robot .mouth {
   fill: #fff;
+}
+.half.boss {
+  fill: #e6f7dc;
+}
+.dino {
+  fill: #7bc96f;
+}
+.dino .spike {
+  fill: #4f9e44;
+}
+.dino .target {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+}
+.dino .target-in,
+.dino .eye {
+  fill: #fff;
+}
+.dino .pupil {
+  fill: var(--c-text);
+}
+.badge-bg {
+  fill: #fff;
+  stroke: var(--c-text);
+  stroke-width: 3;
 }
 .signal circle {
   fill: var(--c-text-light);

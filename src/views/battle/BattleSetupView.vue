@@ -3,6 +3,8 @@
 // 默认选着上次开始时选的那张卡（偏好 mode）。机器人快慢、选游戏、名字与小动物都在页头「⚙️ 配置」的面板里，页面默认不展示；
 // 点「开始」直接开始、不问名字（B17：没自定义的用随机点选的，两边不一样）。「各用各的」（B19 / B20）：建房间 → 二维码页，别人扫码进来（输口令进房的「🔑 加入对战」在全局顶栏，不在这里）。
 // 选中哪张「怎么练」的卡，卡下面出一行对应的说明（B27）；页面打开读「怎么练？」+ 当前那张卡的说明，换卡读那张的说明，建房出错读错误提示（B39a）
+// 页面顶上两个玩法页签（M5）：⚔️ 对战（上面这四张卡）/ 🥊 打怪兽（一个人打 / 和机器人 / 两人一台 / 各用各的 + 「一起打 / 各打各的」开关）；
+// 页签、卡、开关都记进偏好，下次进来默认选着；打怪兽点「开始」进 /boss/local/<kpId>（一个人打不锁横屏）
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRng, hasGenerator } from '@/engine'
@@ -12,7 +14,10 @@ import { hush, sayKeys } from '@/engine/voice'
 import { enterArenaFullscreen } from '@/battle/fullscreen'
 import { AUTOCREATE_KEY, remember, takeIntent } from '@/engine/update'
 import { chapterSkin, resolveSkin } from '@/battle/skins'
-import { SETUP_MODES, useBattleStore, type LocalMode, type SetupMode } from '@/stores/battle'
+import { SETUP_MODES, useBattleStore, type LocalMode, type PlayFormat, type SetupMode } from '@/stores/battle'
+import { useBossStore } from '@/stores/boss'
+import { BOSS_MODES, bestKey, resolveBoss, type BossMode, type LocalBossMode } from '@/battle/boss'
+import type { TimedVariant } from '@/battle/timed'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
@@ -25,6 +30,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useBattleStore()
 const room = useRoomStore()
+const bossStore = useBossStore()
 
 const kpId = String(route.params.kpId)
 const info = courseOfKp(kpId)
@@ -36,6 +42,27 @@ const mapPath = mapPathOf(kpId)
 const online = computed(() => room.available)
 /** 选着哪张卡：上次开始时选的，从来没开始过是自己练（B27）；上次是各用各的而这里没有对战服务也回到自己练 */
 const mode = ref<SetupMode>(store.prefs.mode === 'online' && !online.value ? 'practice' : store.prefs.mode)
+/** 玩法页签（M5）：上次开始时选的，从来没开始过是对战 */
+const FORMATS: readonly PlayFormat[] = ['battle', 'boss']
+const format = ref<PlayFormat>(store.prefs.format)
+/** 打怪兽选着哪张卡：上次开始时选的；上次是各用各的而这里没有对战服务就回到一个人打 */
+const bossMode = ref<BossMode>(store.prefs.boss.mode === 'online' && !online.value ? 'solo' : store.prefs.boss.mode)
+const variant = ref<TimedVariant>(store.prefs.boss.variant)
+/** 「一个人打」卡上写本机这个知识点、现在选的时长的最好得分（M5 / M7）；没打过不写 */
+const soloBest = computed<number | null>(() => store.prefs.bossBest[bestKey(kpId, store.prefs.boss.durationS)] ?? null)
+const VARIANTS: readonly TimedVariant[] = ['coop', 'versus']
+/** 打怪兽的卡上写什么：和机器人 / 一个人打是这个玩法自己的说法，两人一台 / 各用各的同对战 */
+function bossLabel(m: BossMode): string {
+  return m === 'solo' || m === 'ai' ? `boss.mode.${m}` : `battle.mode.${m}`
+}
+/** 卡片下面那行说明（B27 / M5）：对战按卡；打怪兽的和机器人 / 两人一台 / 各用各的还分一起打、各打各的 */
+const descKey = computed(() => {
+  if (format.value === 'battle') return `battle.mode.${mode.value}.desc`
+  const m = bossMode.value
+  return m === 'solo' ? 'boss.mode.solo.desc' : `boss.mode.${m}.${variant.value}.desc`
+})
+/** 开始键要建房间（多设备）：对战的「各用各的」或打怪兽的「各用各的」 */
+const makingRoom = computed(() => (format.value === 'battle' ? mode.value : bossMode.value) === 'online')
 /** 正在改谁的名字（「⚙️ 配置」里点了名字，NameSheet 打开时） */
 const asking = ref<'me' | 'right' | null>(null)
 const names = computed(() => store.prefs.names)
@@ -104,24 +131,31 @@ watch(
 onMounted(() => {
   // 上一次点「建房间」时页面更新重载了：接着建（B43），马上就走、不读提示
   if (takeIntent(AUTOCREATE_KEY) === kpId && online.value) {
-    mode.value = 'online'
-    createRoom()
+    // 建的是哪种房间：开始前已经记进了偏好（玩法页签、打怪兽的卡）
+    if (format.value === 'boss' && bossMode.value === 'online') createRoom(true)
+    else {
+      mode.value = 'online'
+      createRoom()
+    }
     return
   }
   // 切页动画后再开口（与练习页读题一样）
-  sayKeys(['battle.how', `battle.mode.${mode.value}.desc`], lang.value, 350)
+  sayKeys(['battle.how', descKey.value], lang.value, 350)
 })
-watch(mode, (m) => {
-  if (!creating.value) sayKeys([`battle.mode.${m}.desc`], lang.value)
+// 换页签 / 换卡 / 换一起打还是各打各的：读新的那行说明
+watch(descKey, (k) => {
+  if (!creating.value) sayKeys([k], lang.value)
 })
 watch(roomError, (e) => {
   if (e) sayKeys([e === 'connect' ? 'room.connect.slow' : `room.error.${e}`], lang.value)
 })
-function createRoom(): void {
+/** 建房间；boss：建打怪兽的房间（M5 / M13），带上一起打还是各打各的、时长 */
+function createRoom(boss = false): void {
   if (creating.value) return
   roomError.value = null
   creating.value = true
-  room.create(kpId, resolveSkin(skin.value, createRng()))
+  const bossOpts = boss ? { variant: variant.value, durationS: store.prefs.boss.durationS, boss: resolveBoss(undefined) } : undefined
+  room.create(kpId, resolveSkin(skin.value, createRng()), bossOpts)
   createTimer = setTimeout(() => {
     if (!creating.value) return
     stopCreating()
@@ -138,6 +172,11 @@ onBeforeUnmount(() => {
 })
 
 function start(): void {
+  store.prefs.format = format.value
+  if (format.value === 'boss') {
+    startBoss()
+    return
+  }
   store.prefs.mode = mode.value
   // 自己练（B26）：进这个知识点的练习页，不试全屏
   if (mode.value === 'practice') {
@@ -152,6 +191,21 @@ function start(): void {
   // 在这个手势里试着全屏 + 横屏锁（B30）：只有触屏设备，电脑不自动全屏
   enterArenaFullscreen()
   router.push({ path: `/battle/local/${kpId}`, query: { mode: mode.value } })
+}
+
+/** 打怪兽（M5 / M6）：记住卡与开关，开一局，进竞技场；一个人打不锁横屏（手机竖着也能玩） */
+function startBoss(): void {
+  store.prefs.boss = { ...store.prefs.boss, mode: bossMode.value, variant: variant.value }
+  if (bossMode.value === 'online') {
+    createRoom(true)
+    return
+  }
+  const m = bossMode.value as LocalBossMode
+  const v: TimedVariant = m === 'solo' ? 'coop' : variant.value
+  const t = store.prefs.boss.durationS
+  bossStore.startLocal({ kpId, mode: m, variant: v, durationS: t })
+  enterArenaFullscreen({ landscape: m !== 'solo' })
+  router.push({ path: `/boss/local/${kpId}`, query: { mode: m, v, t: String(t) } })
 }
 </script>
 
@@ -170,8 +224,24 @@ function start(): void {
     </PageHeader>
 
     <section class="block">
+      <div class="formats" role="tablist">
+        <button
+          v-for="f in FORMATS"
+          :key="f"
+          type="button"
+          role="tab"
+          class="format"
+          :class="{ on: format === f }"
+          :data-format="f"
+          :aria-selected="format === f"
+          @click="format = f"
+        >
+          <span class="format-icon" aria-hidden="true">{{ f === 'battle' ? '⚔️' : '🥊' }}</span>
+          <RubyText :text="{ k: `boss.tab.${f}` }" />
+        </button>
+      </div>
       <h2 class="label"><RubyText :text="{ k: 'battle.how' }" /></h2>
-      <div class="modes">
+      <div v-if="format === 'battle'" class="modes">
         <button
           v-for="m in SETUP_MODES"
           :key="m"
@@ -187,12 +257,44 @@ function start(): void {
           <small v-if="m === 'online' && !online">{{ ui('room.unavailable') }}</small>
         </button>
       </div>
-      <p class="mode-desc" :key="mode"><RubyText :text="{ k: `battle.mode.${mode}.desc` }" /></p>
+      <div v-else class="modes boss-modes">
+        <button
+          v-for="m in BOSS_MODES"
+          :key="m"
+          type="button"
+          class="mode"
+          :class="{ on: bossMode === m, soon: m === 'online' && !online }"
+          :data-boss-mode="m"
+          :disabled="m === 'online' && !online"
+          @click="bossMode = m"
+        >
+          <ModeIcon :mode="m" boss />
+          <RubyText :text="{ k: bossLabel(m) }" />
+          <small v-if="m === 'online' && !online">{{ ui('room.unavailable') }}</small>
+          <small v-else-if="m === 'solo' && soloBest !== null" class="best">🏅 {{ ui('boss.best', { n: soloBest }) }}</small>
+        </button>
+      </div>
+      <div v-if="format === 'boss' && bossMode !== 'solo'" class="variants" role="radiogroup">
+        <button
+          v-for="v in VARIANTS"
+          :key="v"
+          type="button"
+          role="radio"
+          class="variant"
+          :class="{ on: variant === v }"
+          :data-variant="v"
+          :aria-checked="variant === v"
+          @click="variant = v"
+        >
+          <span aria-hidden="true">{{ v === 'coop' ? '🤝' : '🥊' }}</span> <RubyText :text="{ k: `boss.variant.${v}` }" />
+        </button>
+      </div>
+      <p class="mode-desc" :key="descKey"><RubyText :text="{ k: descKey }" /></p>
     </section>
 
     <div class="start">
       <BigButton color="green" class="start-btn" :disabled="creating" @click="start">
-        <RubyText :text="{ k: mode === 'online' ? (creating ? (room.updating ? 'room.updating' : 'room.connecting') : 'room.create') : 'battle.start' }" />
+        <RubyText :text="{ k: makingRoom ? (creating ? (room.updating ? 'room.updating' : 'room.connecting') : 'room.create') : 'battle.start' }" />
       </BigButton>
       <p v-if="roomError" class="room-error" role="alert">
         <RubyText :text="{ k: roomError === 'connect' ? 'room.connect.slow' : `room.error.${roomError}` }" />
@@ -200,7 +302,7 @@ function start(): void {
     </div>
 
 
-    <ConfigSheet v-if="config" v-model:skin="skin" @close="config = false" @rename="(w) => (asking = w)" />
+    <ConfigSheet v-if="config" v-model:skin="skin" :format="format" @close="config = false" @rename="(w) => (asking = w)" />
     <NameSheet
       v-if="asking"
       :initial="asking === 'right' ? names.right : names.me"
@@ -240,6 +342,56 @@ function start(): void {
 }
 .config-btn {
   margin-right: 8px;
+}
+/* 玩法页签（M5）：两个大药丸，选中的橙底 */
+.formats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.format {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-min);
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  border: 3px solid transparent;
+  font-size: var(--fs-md);
+  font-weight: 900;
+  color: var(--c-text);
+}
+.format.on {
+  border-color: var(--c-primary);
+  background: #fff3e6;
+}
+.format-icon {
+  font-size: 1.3em;
+}
+/* 打怪兽的「一起打 / 各打各的」开关（M4 / M5） */
+.variants {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.variant {
+  min-height: 48px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: var(--c-card);
+  box-shadow: var(--shadow-card);
+  border: 3px solid transparent;
+  font-weight: 800;
+  color: var(--c-text);
+}
+.variant.on {
+  border-color: var(--c-primary);
+  background: #fff3e6;
 }
 /* 选中的模式下面一行说明（B27） */
 .mode-desc {
@@ -339,6 +491,12 @@ function start(): void {
   font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--c-text-light);
+}
+/* 一个人打的最好成绩（M5） */
+.mode small.best {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: #9a6400;
 }
 /* 四张卡的示意图（ModeIcon）：一台 / 两台手机，卡越宽图越大，最大 132px */
 .mode :deep(.mode-pic) {

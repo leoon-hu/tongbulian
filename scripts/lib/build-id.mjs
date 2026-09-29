@@ -1,6 +1,7 @@
-// 对战的「版本」（需求 B43）：只看会影响出题 / 判分的源码——内容包、出题引擎、比赛状态机、题目流、协议与类型。
-// 多设备房间里所有人的题要能由同一个 seed 复现，所以这些文件一变版本就变；只改界面的发布不算新版本，
-// 旧页面照样能进房间。网站与中继服务的构建都用它（vite.config.ts / vite.server.config.ts），两边一致。
+// 对战的「版本」（需求 B43）：只看会影响出题 / 判分的源码——内容包、出题引擎、比赛状态机（对战与打怪兽两份，
+// 中继服务都打包了）、题目流、协议与类型。多设备房间里所有人的题要能由同一个 seed 复现、计分规则要一样，所以这些文件
+// 一变版本就变；只改界面的发布不算新版本，旧页面照样能进房间。网站与中继服务的构建都用它（vite.config.ts /
+// vite.server.config.ts），两边一致。
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -15,6 +16,7 @@ export const COMPAT_SOURCES = [
   'src/engine/catalog.ts',
   'src/types/models.ts',
   'src/battle/match.ts',
+  'src/battle/timed.ts',
   'src/battle/stream.ts',
   'src/battle/protocol.ts',
 ]

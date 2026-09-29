@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import type { DefineComponent } from 'vue'
 import type { SeqEvent, Team } from '@/battle/protocol'
 import type { GameFactory, GameModule, GameState } from '../contract'
 import GameHost from '../host/GameHost.vue'
@@ -37,7 +38,11 @@ function spyGame(opts: { throwIn?: keyof GameModule } = {}) {
     pause: () => calls.push('pause'),
     resume: () => calls.push('resume'),
     destroy: () => calls.push('destroy'),
-    poke: (x, y, team) => calls.push(`poke:${team}:${Math.round(x)},${Math.round(y)}`),
+    // 左边一半说点中了 'left'（Boss 游戏这样告诉竞技场点中的是什么，M12），右边一半什么都不说
+    poke: (x, y, team) => {
+      calls.push(`poke:${team}:${Math.round(x)},${Math.round(y)}`)
+      return x < 50 ? 'left' : undefined
+    },
     focus: (team) => {
       boom('focus')
       return team === 'red' ? { x: -5, y: 3 } : { x: 9999, y: 0.5 }
@@ -147,7 +152,7 @@ describe('GameSlot（盒子里放什么）', () => {
 })
 
 describe('点一下游戏（B59）', () => {
-  it('canvas 收 pointerdown：坐标与 sideOf 猜的一方交给游戏的 poke、画一圈涟漪、往上报 poke；150 ms 内只算一次；根元素仍不接触摸', async () => {
+  it('canvas 收 pointerdown：坐标与 sideOf 猜的一方交给游戏的 poke、画一圈涟漪、往上报 poke（带游戏说的点中了什么）；150 ms 内只算一次；根元素仍不接触摸', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     const spy = spyGame()
     const w = mount(GameHost, { props: { load: spy.load, state: state(), events: [], sideOf: (x: number) => (x < 50 ? 'red' : 'blue') } })
@@ -157,7 +162,7 @@ describe('点一下游戏（B59）', () => {
     await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
     expect(spy.calls.at(-1)).toBe('poke:red:10,20')
     expect(w.findAll('.ripple')).toHaveLength(1)
-    expect(w.emitted('poke')).toEqual([['red', 10, 20]])
+    expect(w.emitted('poke')).toEqual([['red', 10, 20, 'left']])
     // 太快的第二下不算
     await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
     expect(spy.calls.filter((c) => c.startsWith('poke')).length).toBe(1)
@@ -165,8 +170,8 @@ describe('点一下游戏（B59）', () => {
     await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
     expect(spy.calls.at(-1)).toBe('poke:blue:90,20')
     expect(w.emitted('poke')).toEqual([
-      ['red', 10, 20],
-      ['blue', 90, 20],
+      ['red', 10, 20, 'left'],
+      ['blue', 90, 20, undefined],
     ])
     vi.advanceTimersByTime(600)
     await flushPromises()
@@ -195,7 +200,7 @@ describe('点一下游戏（B59）', () => {
     await flushPromises()
     await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
     expect(w.findAll('.ripple')).toHaveLength(1)
-    expect(w.emitted('poke')).toEqual([['blue', 10, 20]]) // 没传 sideOf：1×1 的假盒子里 y=20 在下半
+    expect(w.emitted('poke')).toEqual([['blue', 10, 20, undefined]]) // 没传 sideOf：1×1 的假盒子里 y=20 在下半
     expect(spy.calls.some((c) => c.startsWith('poke'))).toBe(false)
     w.unmount()
 
@@ -237,8 +242,9 @@ describe('点一下游戏（B59）', () => {
       await flushPromises()
       await flushPromises()
       // 假盒子量出来是 1×1：把 sideOf 的判断按 1000×120 / 150×700 的比例换算，直接调宿主的 sideOf 看结果
-      const host = w.findComponent(GameHost)
-      const sideOf = host.props('sideOf') as (x: number, y: number, w: number, h: number) => string
+      // GameHost 是泛型组件（M13），findComponent 按它的类型推不出 VueWrapper：当普通组件找
+      const host = w.findComponent(GameHost as unknown as DefineComponent)
+      const sideOf = (host.props() as Record<string, unknown>).sideOf as (x: number, y: number, w: number, h: number) => string
       const [W, H] = meta.slot === 'top' ? [1000, 120] : [150, 700]
       expect(sideOf(x, y, W, H), `${meta.slot}/${meta.kind} (${x},${y})`).toBe(team)
       w.unmount()

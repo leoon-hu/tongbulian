@@ -99,6 +99,10 @@ export function helpSections(lang: Lang): HelpSection[] {
             kind: 'p',
             text: 'More ways to play: the top bar has a row of reactions for your team (🔥 😆 😱 😎) that fly across to the other side — the robot answers back, and in "own devices" watchers can cheer too; tap the game scene to poke your character (the train whistles, the tortoise hops…) and it says a line of its own. The robot\'s default speed is "match me": it follows your pace, and it talks. At 7 : 7 it\'s match point; at 8 the scene zooms in and follows the winner\'s character. Pick your own animal in ⚙️ Settings; play the same topic again to see the chapter record; the robot also remembers your last run on that topic and starts at that pace. Background music can be turned off in ⚙️ Settings.',
           },
+          {
+            kind: 'p',
+            text: '🥊 Monster Punch (another way to play): on a topic\'s Practice page switch to the "🥊 Monster Punch" tab. Instead of racing each other, kids punch Rascal Rex together (or each their own): 90 seconds (60 or 120 in ⚙️ Settings), every right answer is a punch, from the 3rd right answer in a row each punch scores 1 more, and in the last 10 seconds 1 more again; knock one out and a bigger one comes in — each knockout is a star. Play solo, with the robot, two on one device, or each on their own device (scan the codes into one room; "Together" starts once two players are in, and players off the ring throw glowing power punches from the stands); with two players choose "Together" (same monster, see who scores most) or "Each their own" (separate monsters, compare scores). A wrong answer costs nothing — the punch just misses. ⏸ at the top pauses the game (the questions are covered while paused); solo games keep this device\'s best score for each topic, and beating it shows "New record!".',
+          },
         ],
       },
       {
@@ -241,6 +245,10 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'p',
           text: '更多玩法：顶栏有自己队的一排表情 🔥 😆 😱 😎，点了飞到对方那边，机器人会回应，「各用各的」时观战的人也能发；点游戏画面里自己队的角色它会有反应（火车鸣笛、乌龟跳一下……），还会冒个对话框说一句自己的台词。机器人快慢默认「跟着你」，还会说话。7 : 7 是决胜题；到 8 分画面会放大、镜头跟着赢的那个角色。「⚙️ 配置」里可以选自己的小动物、关背景音乐；同一个知识点连着打，结果页记本章战绩；机器人还记得你上次在这一章的节奏，一开局就按它来。',
+        },
+        {
+          kind: 'p',
+          text: '🥊 打怪兽（另一种玩法）：在知识点的「练习」页顶上切到「🥊 打怪兽」页签。孩子们不再互相比，而是一起（或各自）打捣蛋龙：限时 90 秒（「⚙️ 配置」里可选 60 / 120 秒），答对一题就打它一拳，连着答对第 3 题起每拳多 1 分、最后 10 秒每拳再多 1 分；打倒一只，下一只更大的接着来，打倒几只就是几颗星。可以一个人打、和机器人一起打、两人一台，也可以每人一台设备（扫码进同一个房间：「一起打」两个人到了就开始，人多时台上每队两个，其他人在观众席举牌、答对了从观众席飞出能量拳）；两个人时选「一起打」（打同一只，最后看谁得分最高）或「各打各的」（各打各的，比得分）。答错不扣分，只是这一拳打空。顶上的 ⏸ 可以暂停（暂停时题目盖住）；一个人打会记下这台设备上每个知识点的最好成绩，打破了写「新纪录！」。',
         },
       ],
     },

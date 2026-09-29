@@ -602,6 +602,35 @@ export const TUNES: Record<string, Tune> = {
   },
 }
 
+/**
+ * Boss 战曲（打怪兽，M11；按 Boss 注册表的 tune 找，不是皮肤）：A 小调、4/4、130 BPM，方波跳音的短动机一句一句往上顶，
+ * 八分音符推进的低音、反拍的短和弦、每一拍都有鼓；最后 10 秒 160 BPM（冲刺时空拍加镲，同对战）
+ */
+TUNES.boss = {
+  bpm: 130,
+  sprintBpm: 160,
+  meter: 4,
+  key: 57,
+  scale: 'minor',
+  octave: 12,
+  chords: [1, 6, 7, 1, 1, 4, 5, 1],
+  melody: [
+    [8, _, 8, 7, 5, _, 3, _],
+    [6, _, 6, 5, 3, _, 1, _],
+    [7, _, 7, 6, 4, _, 2, _],
+    [3, 5, 8, _, 10, _, 8, _],
+    [5, 5, 8, 5, 10, _, 8, 5],
+    [4, _, 6, 4, 8, _, 6, 4],
+    [5, _, 7, 5, 9, _, 7, _],
+    [8, 7, 5, 3, 1, _, _, _],
+  ],
+  lead: { type: 'square', env: 'pluck', gain: 0.5 },
+  bass: 'pulse',
+  pad: 'stab',
+  drums: 'k.skkhs.',
+  level: 1.18,
+}
+
 export function tuneOf(skinId: string): Tune {
   return TUNES[skinId] ?? TUNES.race!
 }

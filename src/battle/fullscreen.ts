@@ -7,12 +7,13 @@ export function isTouchDevice(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 }
 
-export function enterArenaFullscreen(): void {
+/** landscape: false = 不锁横屏（打怪兽一个人打允许竖着拿，M6） */
+export function enterArenaFullscreen(opts: { landscape?: boolean } = {}): void {
   if (!isTouchDevice()) return
   try {
     document.documentElement
       .requestFullscreen?.()
-      ?.then(() => (screen.orientation as { lock?: (o: string) => Promise<void> }).lock?.('landscape')?.catch(() => {}))
+      ?.then(() => (opts.landscape === false ? undefined : (screen.orientation as { lock?: (o: string) => Promise<void> }).lock?.('landscape')?.catch(() => {})))
       .catch(() => {})
   } catch {
     /* 不支持 */

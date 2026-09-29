@@ -4,6 +4,7 @@
  */
 import type { EmoteId } from './emotes'
 import type { AvatarId } from './avatars'
+import type { BossArenaEvent, DurationS, TimedMatch, TimedVariant } from './timed'
 
 export type Team = 'red' | 'blue'
 export const TEAMS: readonly Team[] = ['red', 'blue']
@@ -107,10 +108,26 @@ export interface AutoIdentity {
   avatar?: boolean
 }
 
+/** 房间的玩法（M5 / M13）：battle = 先答对 8 题（第 8 章）；boss = 打怪兽（限时，第 10 章）。建房时定，房间里不换 */
+export type RoomFormat = 'battle' | 'boss'
+export const ROOM_FORMATS: readonly RoomFormat[] = ['battle', 'boss']
+
+/** 打怪兽房间的设置（M5）：一起打 / 各打各的、时长（秒）、哪只 Boss（battle/boss 注册表的 id；服务器只认格式） */
+export interface BossRoomOpts {
+  variant: TimedVariant
+  durationS: DurationS
+  boss: string
+}
+
 /** 整份房间快照（B42：任何变化都发整份） */
 export interface RoomSnapshot {
   code: string
+  /** 玩法；旧版本的快照没有这个字段，按 battle */
+  format: RoomFormat
+  /** 打怪兽房间的设置（format 为 boss 时才有） */
+  boss?: BossRoomOpts
   kpId: string
+  /** 对战的游戏皮肤（打怪兽房间里没用，照样带着） */
   skin: string
   /** 主持人（建房的那个连接；掉线自动交给最早在线的人） */
   hostId: string
@@ -118,8 +135,10 @@ export interface RoomSnapshot {
   locked: boolean
   createdAt: number
   members: Member[]
-  /** 比赛（与单设备同一份状态机）；大厅阶段是 null */
+  /** 比赛（与单设备同一份状态机）；大厅阶段是 null；打怪兽房间一直是 null */
   match: MatchState | null
+  /** 打怪兽的一局（battle/timed.ts 同一份状态机，M13）：计时以服务器为准；对战房间一直是 null */
+  timed: TimedMatch | null
   /** 三个身份各一个 6 位数字口令（B19）：设置页「加入对战」输了就以该身份进房；全服务器唯一 */
   passcodes: Record<Role, string>
 }
@@ -128,7 +147,8 @@ export interface RoomSnapshot {
 export type ClientMsg =
   /** auto：名字 / 小动物哪样是随机的（B17）——随机的跟房间里别人撞了，服务器换一只没人用的 */
   | { type: 'hello'; clientId: string; name: string; version: string; code?: string; t?: Role; avatar?: AvatarId; auto?: AutoIdentity }
-  | { type: 'create'; kpId: string; skin: string }
+  /** format / boss：建打怪兽房间（M5）；不带就是对战房间 */
+  | { type: 'create'; kpId: string; skin: string; format?: RoomFormat; boss?: BossRoomOpts }
   /** 口令换房间号与身份（B19）；服务器回 found，客户端再按链接的方式进房 */
   | { type: 'lookup'; pass: string }
   | { type: 'team'; role: Role }
@@ -171,7 +191,8 @@ export type RoomError =
 /** 服务器 → 客户端 */
 export type ServerMsg =
   | { type: 'state'; room: RoomSnapshot; you: string; /** 服务器当前时刻：客户端算比赛用时用（各设备时钟不一样） */ now: number }
-  | { type: 'event'; e: ArenaEvent }
+  /** 瞬时事件：对战房间是 ArenaEvent，打怪兽房间是 BossArenaEvent（按快照里的 format 分） */
+  | { type: 'event'; e: ArenaEvent | BossArenaEvent }
   | { type: 'error'; error: RoomError }
   | { type: 'found'; code: string; t: Role }
   | { type: 'pong' }

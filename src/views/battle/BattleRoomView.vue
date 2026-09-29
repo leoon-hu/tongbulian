@@ -3,7 +3,8 @@
 //   建房的设备只观战、算主持人，页面上只有三个二维码（红队 / 蓝队 / 观战，各带链接与「复制」）和一句说明；
 //   扫码进来的人先看「三方连接状态」窗口；红蓝两队都有人在线时服务器自动开始 → 竞技场（Arena）→ 结果。
 //   一队有人进来后，建房的设备也能点「以另一队进入」自己上场，或「以观战方进入」到状态窗口只看（B20）。
-// 房间的一切状态都来自服务器的快照（stores/room），这里只画；比赛部分由 stores/battle 的线上模式承接。
+// 房间的一切状态都来自服务器的快照（stores/room），这里只画；比赛部分由 stores/battle 的线上模式承接，
+// 打怪兽的房间（M13）由 stores/boss 承接、比赛中放打怪兽的竞技场（BossArena），流程一样（二维码、口令、自动开始）。
 // 打开就连、不问名字（B17：没自定义的用随机点选的，跟房间里的人撞了服务器换）。
 // 每换到一个画面就把上面的提示语读一遍（B39a）：二维码页的说明 / 「以另一队进入」提示、连接状态窗口的两句、连不上、致命错误、提示条；
 //   竞技场里由倒数 / 读题接手。
@@ -15,9 +16,11 @@ import { lang, ui } from '@/engine/i18n'
 import { hush, sayKeys } from '@/engine/voice'
 import type { Member, Role, Team } from '@/battle/protocol'
 import { useBattleStore } from '@/stores/battle'
+import { useBossStore } from '@/stores/boss'
 import { FATAL_ERRORS, useRoomStore } from '@/stores/room'
 import { useVoiceStore } from '@/stores/voice'
 import Arena from '@/components/battle/Arena.vue'
+import BossArena from '@/components/battle/boss/BossArena.vue'
 import VoiceButton from '@/components/battle/VoiceButton.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import BigButton from '@/components/ui/BigButton.vue'
@@ -30,6 +33,7 @@ const route = useRoute()
 const router = useRouter()
 const room = useRoomStore()
 const battle = useBattleStore()
+const boss = useBossStore()
 const voice = useVoiceStore()
 // 开发时把 room / voice store 挂到 window 上：语音联调脚本（npm run voice:check）看连接状态与音量
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -53,6 +57,11 @@ const toast = computed(() => (room.error && !FATAL_ERRORS.includes(room.error) ?
 const mapPath = computed(() => (snap.value ? mapPathOf(snap.value.kpId) : '/'))
 const me = computed(() => room.me)
 const myRole = computed<Role>(() => me.value?.role ?? 'watch')
+/** 打怪兽的房间（M13）：页头是 🥊、二维码页多一行「打怪兽 · 一起打 · 90 秒」；一起打两个人到了就开始 */
+const isBoss = computed(() => room.format === 'boss')
+const bossOpts = computed(() => snap.value?.boss)
+/** 连接状态窗口的第二句：一起打不分队，两个人到了就开始；别的是红蓝两队都到了 */
+const waitSub = computed(() => (isBoss.value && bossOpts.value?.variant === 'coop' ? 'room.wait.sub.coop' : 'room.wait.sub'))
 
 // 连太久：提示检查网络
 const slow = ref(false)
@@ -124,7 +133,7 @@ const hint = computed<string[] | null>(() => {
   if (!snap.value) return slow.value ? ['room.connect.slow'] : null
   if (room.inMatch) return null
   if (myRole.value === 'watch' && !entered.value) return joinedSide.value ? [`room.enter.hint.${joinedSide.value}`] : ['room.scan']
-  return ['room.wait.title', 'room.wait.sub']
+  return ['room.wait.title', waitSub.value]
 })
 watch(
   () => hint.value?.join(' '),
@@ -145,6 +154,11 @@ function practice(kpId: string): void {
   router.push(to)
 }
 
+/** 打怪兽结果页的「下一章」（B9）：服务器换知识点开新一局，皮肤字段照房间原来的带上 */
+function nextBoss(kpId: string): void {
+  boss.nextChapter(kpId, snap.value?.skin ?? 'race')
+}
+
 function leave(): void {
   // 先记下地图地址：离开房间后快照没了，就不知道是哪个学科 / 年级了
   const to = mapPath.value
@@ -153,7 +167,7 @@ function leave(): void {
 }
 // 有人点了「不玩了」（服务器关掉房间、发 closed）而我们正在结果页：三台设备一起回地图，不用再点「回去」（B9）
 watch(fatal, (e) => {
-  if (e === 'closed' && battle.state?.phase === 'ended') leave()
+  if (e === 'closed' && (battle.state?.phase === 'ended' || boss.state?.phase === 'ended')) leave()
 })
 onBeforeUnmount(() => {
   if (copiedTimer) clearTimeout(copiedTimer)
@@ -186,7 +200,8 @@ onBeforeUnmount(() => {
   </div>
 
   <template v-else-if="room.inMatch">
-    <Arena @exit="leave" @practice="practice" />
+    <BossArena v-if="isBoss" @exit="leave" @practice="practice" @next="nextBoss" />
+    <Arena v-else @exit="leave" @practice="practice" />
     <p v-if="room.status === 'reconnecting'" class="netbar">📶 <RubyText :text="{ k: 'room.reconnecting' }" /></p>
     <p v-else-if="toast" class="netbar" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
   </template>
@@ -194,10 +209,14 @@ onBeforeUnmount(() => {
   <div v-else-if="myRole === 'watch' && !entered" class="codes-page">
     <PageHeader :back="mapPath">
       <template #title>
-        <span class="kp-icon">⚔️</span>
+        <span class="kp-icon">{{ isBoss ? '🥊' : '⚔️' }}</span>
         <RubyText :text="{ k: 'room.title' }" />
       </template>
     </PageHeader>
+    <p v-if="isBoss && bossOpts" class="format-line">
+      🥊 <RubyText :text="{ k: 'boss.tab.boss' }" /> · <RubyText :text="{ k: `boss.variant.${bossOpts.variant}` }" /> ·
+      <RubyText :text="{ k: 'boss.seconds', p: { n: bossOpts.durationS } }" />
+    </p>
     <p v-if="room.status === 'reconnecting'" class="netbar inline">📶 <RubyText :text="{ k: 'room.reconnecting' }" /></p>
     <p v-if="toast" class="toast" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
     <p class="scan-hint"><RubyText :text="{ k: 'room.scan' }" /></p>
@@ -250,7 +269,7 @@ onBeforeUnmount(() => {
     <p v-if="toast" class="toast" role="status"><RubyText :text="{ k: `room.error.${toast}` }" /></p>
     <p class="wait-icon">⏳</p>
     <h2 class="wait-title"><RubyText :text="{ k: 'room.wait.title' }" /></h2>
-    <p class="wait-sub"><RubyText :text="{ k: 'room.wait.sub' }" /></p>
+    <p class="wait-sub"><RubyText :text="{ k: waitSub }" /></p>
     <ul class="sides">
       <li v-for="t in TEAMS" :key="t" :class="[t, { in: membersOf(t).length }]">
         <span class="side-name">{{ t === 'red' ? '🔴' : '🔵' }} <RubyText :text="{ k: `battle.team.${t}` }" /></span>
@@ -275,6 +294,14 @@ onBeforeUnmount(() => {
 <style scoped>
 .room-page {
   display: contents;
+}
+/* 打怪兽房间（M13）：页头下面一行玩法与时长 */
+.format-line {
+  margin: 0 0 4px;
+  text-align: center;
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--c-primary-dark);
 }
 /* 口令（B19）：每张卡的链接下面，数字大一点、三位一组 */
 .pass {
