@@ -1,4 +1,4 @@
-import type { Course, GradeMeta, KnowledgePoint, SubjectMeta } from '@/types/models'
+import type { Course, GradeMeta, KnowledgePoint, Semester, SubjectMeta } from '@/types/models'
 import { mathGrade1 } from '@/content/math/grade1'
 import { mathGrade2 } from '@/content/math/grade2'
 import { mathGrade3 } from '@/content/math/grade3/course'
@@ -78,6 +78,19 @@ export function liveCourses(): { subject: SubjectMeta; grade: GradeMeta; course:
     }
   }
   return out
+}
+
+/** 这门课有哪几册（按单元的 semester，从小到大） */
+export function semestersOf(course: Course): Semester[] {
+  return [...new Set(course.units.map((u) => u.semester))].sort((a, b) => a - b)
+}
+
+/**
+ * 课本封面（F2：选年级页的卡片上并排画这个年级的上下两册）：public/covers/<课程 id>-s<册>.webp，240 像素宽。
+ * 每门上线课程的每一册都要有（测试查着）。封面版权归出版社，只用来标明对应的是哪本教材。
+ */
+export function coverOf(courseId: string, sem: Semester): string {
+  return `covers/${courseId}-s${sem}.webp`
 }
 
 /** 某单元下的知识点 */

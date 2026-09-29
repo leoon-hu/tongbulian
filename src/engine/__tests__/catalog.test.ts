@@ -1,7 +1,8 @@
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
 import '@/content/math/grade2'
-import { getCourse, mapPathOf } from '@/engine/catalog'
+import { coverOf, getCourse, liveCourses, mapPathOf, semestersOf } from '@/engine/catalog'
 
 describe('mapPathOf：从知识点回地图的地址带着它所在的册', () => {
   it('上册不带参数，下册带 ?sem=2；不在目录里回首页', () => {
@@ -20,5 +21,16 @@ describe('mapPathOf：从知识点回地图的地址带着它所在的册', () =
         expect(mapPathOf(kp.id)).toBe(`/s/math/g/${gradeId}${sem === 2 ? '?sem=2' : ''}`)
       }
     }
+  })
+})
+
+describe('课本封面（F2）', () => {
+  it('每门上线课程的每一册都有封面文件（public/covers/<课程 id>-s<册>.webp）', () => {
+    const missing: string[] = []
+    for (const { course } of liveCourses()) {
+      expect(semestersOf(course)).toEqual([1, 2])
+      for (const sem of semestersOf(course)) if (!existsSync(`public/${coverOf(course.id, sem)}`)) missing.push(coverOf(course.id, sem))
+    }
+    expect(missing).toEqual([])
   })
 })

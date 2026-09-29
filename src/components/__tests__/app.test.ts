@@ -156,15 +156,40 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('数学的选年级页：一至三年级可进，四年级起占位', async () => {
+  it('数学的选年级页：一至三年级可进，卡片上是上下两册课本的封面，点下册的封面进下册的地图；四年级起占位（F2）', async () => {
     const w = await mountAt('/s/math')
-    const cards = w.findAll('button.card')
-    const byTitle = (t: string) => cards.find((c) => c.text().includes(t))!
-    expect(byTitle('一年级').attributes('disabled')).toBeUndefined()
-    expect(byTitle('二年级').attributes('disabled')).toBeUndefined()
-    expect(byTitle('三年级').attributes('disabled')).toBeUndefined()
-    expect(byTitle('四年级').attributes('disabled')).toBeDefined()
-    expect(byTitle('四年级').text()).toContain('敬请期待')
+    const live = w.findAll('.card.live')
+    expect(live.map((c) => c.attributes('data-grade'))).toEqual(['g1', 'g2', 'g3'])
+    for (const c of live) {
+      const g = c.attributes('data-grade')!
+      const imgs = c.findAll('.cover img')
+      expect(imgs.map((i) => i.attributes('src')!.replace(/^.*covers\//, 'covers/'))).toEqual([`covers/math-${g}-s1.webp`, `covers/math-${g}-s2.webp`])
+      expect(imgs[0]!.attributes('alt')).toContain('上册')
+      expect(shown(c.find('.cover[data-sem="2"]'))).toBe('下册')
+    }
+    const soon = w.findAll('button.card.soon')
+    expect(soon.map((c) => c.attributes('data-grade'))).toEqual(['g4', 'g5', 'g6'])
+    for (const c of soon) {
+      expect(c.attributes('disabled')).toBeDefined()
+      expect(c.find('.cover').exists()).toBe(false)
+    }
+    expect(shown(soon[0]!)).toContain('敬请期待')
+    // 点二年级下册的封面 → 地图直接是下册页签
+    await live[1]!.find('.cover[data-sem="2"]').trigger('click')
+    await until(() => router.currentRoute.value.name === 'topics')
+    expect(router.currentRoute.value.path).toBe('/s/math/g/g2')
+    expect(router.currentRoute.value.query.sem).toBe('2')
+    w.unmount()
+  })
+
+  it('选年级页：点卡片别处（年级名）进上册的地图', async () => {
+    const w = await mountAt('/s/chinese')
+    const card = w.findAll('.card.live').find((c) => c.attributes('data-grade') === 'g1')!
+    expect(card.findAll('.cover img').map((i) => i.attributes('src')!.replace(/^.*covers\//, 'covers/'))).toEqual(['covers/chinese-g1-s1.webp', 'covers/chinese-g1-s2.webp'])
+    await card.find('.card-title').trigger('click')
+    await until(() => router.currentRoute.value.name === 'topics')
+    expect(router.currentRoute.value.path).toBe('/s/chinese/g/g1')
+    expect(router.currentRoute.value.query.sem).toBeUndefined()
     w.unmount()
   })
 

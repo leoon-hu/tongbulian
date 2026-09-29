@@ -439,6 +439,9 @@ export const SHELL_PINYIN: Record<string, string> = {
   'summary.next': 'xià yì zhāng',
   'summary.quit': 'bú liàn le',
   'summary.lastChapter': 'zhè yí cè dōu liàn wán la',
+  // 选年级页课本封面下面的「上册 / 下册」（F2）
+  'sem.1': 'shàng cè',
+  'sem.2': 'xià cè',
   // 对战与皮肤名
   'battle.hero': 'dá duì kè běn tí jiù dé fēn shuí xiān dá duì tí shuí yíng',
   'battle.title': 'duì zhàn',
