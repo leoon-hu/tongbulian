@@ -12,12 +12,14 @@
 import type { Lang, LStr, Question } from '@/types/models'
 import { hasEntry, translate } from './i18n'
 import { answerLabel } from './answer'
+import { fractionWords } from './fraction'
 
 // 符号组放在 emoji 组前面：⬜ 也算 Extended_Pictographic，但它是算式里的空格子。
 // 算式末尾的「= ?」合成一个片段（读「等于几」），单独一个「几」读起来生硬还容易读错声调。
 // 小括号单独一组：它紧挨着数字，但必须读出来（「括号 3 加 4 括号 乘 5」），不走「独立成项才读」的规则。
+// 分数「3/4」一整组（三年级），读「四分之三」「three fourths」，当一个槽（同 0–100 的数，能并进短语）。
 const TOKEN =
-  /(¥\d+(?:\.\d)?)|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-=?><⬜×÷])|([()（）])|(\p{Extended_Pictographic}\uFE0F?)/gu
+  /(¥\d+(?:\.\d)?)|((?<![\d./])\d{1,3}\/\d{1,3}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-=?><⬜○×÷])|([()（）])|(\p{Extended_Pictographic}\uFE0F?)/gu
 
 /** 符号只有独立成项（两边不挨着字母 / 数字 / 汉字 / emoji）才读：「9 + 5」的 + 读，「ten-frame」的 -、「🐰?」的 ? 不读 */
 const WORDISH_BEFORE = /[\p{L}\p{N}\p{Extended_Pictographic}\uFE0F]$/u
@@ -27,7 +29,10 @@ const WORDISH_AFTER = /^[\p{L}\p{N}\p{Extended_Pictographic}]/u
  * 中文量词（一份表两处用）：数字 2 在它前面读「两」；数字后面的短语只把它留在前一条（`ZH_MEASURE_HEAD`）。
  * 单字量词后面跟着特定字时不是量词——「分成 / 分给 / 只有 / 组成 / 个数 / 排成」——用负向前瞻排除。
  */
-const ZH_MEASURE = '个(?:十|百|千|万|一)?(?!数)|厘米|米|元|角|分(?![成给别针])|时|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
+const ZH_MEASURE =
+  // 长的放前面（「分米」「分钟」要整个留在数字后面，不能只匹配到「分」）；三年级起的长度 / 质量 / 面积 / 时间单位与常用量词
+  '毫米|分米|千米|分钟|平方(?:厘米|分米|米|千米)|千克|克|吨|公斤|斤|小时|秒|周|年(?!级)|次|圈|步|站|格|段|岁|包|套|筒|件|页|场|名|粒|片|趟|节|位|' +
+  '个(?:十|百|千|万|一)?(?!数)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
 /** 中文里数字 2 后面紧跟量词时读「两」：2 个十 → 两个十、2 元 → 两元、2 排 → 两排；序数除外：第 2 个 → 第二个 */
 const LIANG_BEFORE = new RegExp(`^(?:${ZH_MEASURE})`)
 const ORDINAL_BEFORE = /第$/
@@ -140,7 +145,7 @@ function rawTokens(text: string, lang: Lang): Raw[] {
     out.push(r)
   }
   for (const m of text.matchAll(TOKEN)) {
-    const [whole, money, num, han, latin, sym, paren, emoji] = m
+    const [whole, money, fraction, num, han, latin, sym, paren, emoji] = m
     const gap = text.slice(last, m.index)
     const timeColon = /^[:：]$/.test(gap) && /\d$/.test(text.slice(0, last)) && /^\d/.test(whole) // 3:05 里的冒号
     last = m.index + whole.length
@@ -157,11 +162,28 @@ function rawTokens(text: string, lang: Lang): Raw[] {
         push({ kind: 'number', text: j })
         push({ kind: 'phrase', text: 'jiao' })
       }
+    } else if (fraction) {
+      const [n, d] = fraction.split('/').map(Number)
+      push({ kind: 'number', text: fractionWords(n!, d!, lang) })
     } else if (num) {
       if (timeColon && lang === 'en' && /^0\d$/.test(num)) {
         // 英文时刻 1:02 读「1 oh 2」
         push({ kind: 'phrase', text: 'oh' })
         push({ kind: 'number', text: num.slice(1) })
+        continue
+      }
+      if (timeColon && lang === 'zh') {
+        // 中文时刻 14:30 读「14点30」、14:05 读「14点零5」、14:00 读「14点」（三年级 24 时计时法）
+        push({ kind: 'phrase', text: '点' })
+        if (num !== '00') {
+          if (num.startsWith('0')) push({ kind: 'phrase', text: '零' })
+          push({ kind: 'number', text: String(Number(num)) })
+        }
+        continue
+      }
+      if (lang === 'zh' && /^[12]\d{3}$/.test(num) && /^\s*年(?!级)/.test(text.slice(last))) {
+        // 年份按位读：2024 年 → 二零二四年（不是「二千零二十四年」）
+        push({ kind: 'number', text: [...num].map((c) => ZH_DIGITS[Number(c)]).join(''), part: true })
         continue
       }
       const pieces = numberPieces(num, lang)
@@ -190,7 +212,7 @@ function rawTokens(text: string, lang: Lang): Raw[] {
 export const MERGE_MAX = 100
 /**
  * 「槽」= 短语里可以并进去、但每条片段只能有一个的东西：0–MERGE_MAX 的整数（含读成「两」的 2）与 emoji 的名字。
- * 大数拆出来的段、小数不并。emoji 名字也并（2026-09-22 用户说「比」听不清：「🐶 比 🐷 少 8 个」里的「比」
+ * 大数拆出来的段、100 以内的一两位小数也并。emoji 名字也并（2026-09-22 用户说「比」听不清：「🐶 比 🐷 少 8 个」里的「比」
  * 夹在两个 emoji 之间只能单独一条，孤立的第三声字读成完整的降升调，又长又重；并成「比小猪」才是句子里的读法）。
  */
 function isSlot(r: Raw): boolean {
@@ -198,6 +220,8 @@ function isSlot(r: Raw): boolean {
   if (r.kind !== 'number') return false
   // 拆读的大数（三百 / 零 / 一十 / 0–99 的尾数、英文的 3 / 50）：每段词汇量很小，都能并；「两」也是
   if (r.part || !/^\d+(\.\d+)?$/.test(r.text)) return true
+  // 小数（三年级「小数的初步认识」：0.6 元、3.5 米）也并：不并的话「0.6 元 ○ 0.9 元」读成「0.6 / 元和 / 0.9 / 元」，很碎
+  if (/^\d+\.\d{1,2}$/.test(r.text)) return Number(r.text) < MERGE_MAX
   return /^\d+$/.test(r.text) && Number(r.text) <= MERGE_MAX
 }
 
@@ -205,7 +229,8 @@ function isSlot(r: Raw): boolean {
  * 数字后面的短语，留在前一条的「量词头」：「1个十和」留「1个十」、「9元买了」留「9元」、「比1多」什么都不留（「多」是动词）。
  * 中文按量词表取最长的头；英文留到第一个虚词 / 动词为止（「tens and」留 tens、「children each have」留 children、「into」不留）。
  */
-const ZH_MEASURE_HEAD = LIANG_BEFORE
+// 日期的「月 / 日 / 号」也留在数后面（「3月 · 5日」，不是「3 · 月5日」），但它们前面的 2 照读「二」（二月、二日），所以不进量词表
+const ZH_MEASURE_HEAD = new RegExp(`^(?:${ZH_MEASURE}|月|日|号)`)
 const EN_FUNCTION_WORDS = ['and', 'or', 'to', 'than', 'of', 'into', 'from', 'at', 'by', 'with', 'for', 'in', 'on', 'per', 'as']
 const EN_FORWARD_WORDS = new Set([...EN_FUNCTION_WORDS, 'oh', 'each', 'gives', 'give', 'pay', 'pays', 'costs', 'cost', 'have', 'has', 'is', 'are', 'make', 'makes', 'hold', 'holds', 'remainder'])
 const EN_FUNCTION_SET = new Set(EN_FUNCTION_WORDS)

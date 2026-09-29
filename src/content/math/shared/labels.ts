@@ -102,6 +102,7 @@ export const SYMBOL_WORDS = {
     'sym.>': '大于',
     'sym.<': '小于',
     'sym.⬜': '和',
+    'sym.○': '和', // 比大小的圆圈（三年级起课本写「在○里填上>、<或=」）
     'sym.(': '括号',
     'sym.)': '括号',
   },
@@ -116,6 +117,7 @@ export const SYMBOL_WORDS = {
     'sym.>': 'greater than',
     'sym.<': 'less than',
     'sym.⬜': 'and',
+    'sym.○': 'and',
     'sym.(': 'open bracket',
     'sym.)': 'close bracket',
   },

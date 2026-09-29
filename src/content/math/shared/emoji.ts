@@ -20,6 +20,8 @@ export const EMOJI_ZH: Record<string, string> = {
   'emoji.🍞': '面包',
   'emoji.🥚': '鸡蛋',
   'emoji.🥕': '胡萝卜',
+  'emoji.🍍': '菠萝', // 三年级「进一步认识分数」
+  'emoji.🍄': '蘑菇',
   // 动物
   'emoji.🐶': '小狗',
   'emoji.🐱': '小猫',
@@ -110,6 +112,8 @@ export const EMOJI_EN: Record<string, string> = {
   'emoji.🍞': 'bread',
   'emoji.🥚': 'egg',
   'emoji.🥕': 'carrot',
+  'emoji.🍍': 'pineapple',
+  'emoji.🍄': 'mushroom',
   'emoji.🐶': 'puppy',
   'emoji.🐱': 'kitten',
   'emoji.🐰': 'bunny',

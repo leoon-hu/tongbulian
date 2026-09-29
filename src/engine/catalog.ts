@@ -1,6 +1,7 @@
 import type { Course, GradeMeta, KnowledgePoint, SubjectMeta } from '@/types/models'
 import { mathGrade1 } from '@/content/math/grade1'
 import { mathGrade2 } from '@/content/math/grade2'
+import { mathGrade3 } from '@/content/math/grade3/course'
 import { chineseGrade1 } from '@/content/chinese/grade1/course'
 import { chineseGrade2 } from '@/content/chinese/grade2/course'
 
@@ -26,6 +27,7 @@ export function registerCourse(course: Course, load?: () => Promise<unknown>): v
 // 新增内容包：在 content/ 下建包，然后在这里 import + registerCourse 一行（大的包照语文拆成 course.ts + 按需的 index.ts）。
 registerCourse(mathGrade1)
 registerCourse(mathGrade2)
+registerCourse(mathGrade3, () => import('@/content/math/grade3'))
 registerCourse(chineseGrade1, () => import('@/content/chinese/grade1'))
 registerCourse(chineseGrade2, () => import('@/content/chinese/grade2'))
 
@@ -172,7 +174,7 @@ export const SUBJECTS: SubjectMeta[] = [
     grades: [
       grade('g1', 'math-g1'),
       grade('g2', 'math-g2'),
-      grade('g3'),
+      grade('g3', 'math-g3'),
       grade('g4'),
       grade('g5'),
       grade('g6'),

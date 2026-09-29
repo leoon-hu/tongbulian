@@ -2,16 +2,17 @@
 import { computed } from 'vue'
 
 /**
- * 竖式（笔算加减法）：两个数按数位右对齐，运算符写在第二行左侧，下面一条横线，结果留给孩子在脑子里 / 纸上算。
- * 每一位一格，个位对齐个位——这正是笔算要教的「相同数位对齐」。
+ * 竖式（笔算加减乘）：两个数按数位右对齐，运算符写在第二行左侧，下面一条横线，结果留给孩子在脑子里 / 纸上算。
+ * 每一位一格，个位对齐个位——这正是笔算要教的「相同数位对齐」。乘法（多位数乘一位数）一位数写在下面、与个位对齐。
  */
 /** answer：练习页把按的数字写在横线下面（右对齐，比位数多的一位落在运算符那一格）；done = 已经判完，变绿 */
-const props = defineProps<{ a: number; op: '+' | '-'; b: number; answer?: string; done?: boolean }>()
+const props = defineProps<{ a: number; op: '+' | '-' | '×'; b: number; answer?: string; done?: boolean }>()
 
-// 位数：加法要给和留出进位后多出来的一位；减法差不会比被减数长
-const width = computed(() =>
-  Math.max(String(props.a).length, String(props.b).length, props.op === '+' ? String(props.a + props.b).length : 0),
-)
+// 位数：加法要给和留出进位后多出来的一位、乘法给积留够位；减法差不会比被减数长
+const result = computed(() => (props.op === '+' ? props.a + props.b : props.op === '×' ? props.a * props.b : 0))
+const width = computed(() => Math.max(String(props.a).length, String(props.b).length, props.op === '-' ? 0 : String(result.value).length))
+/** 运算符写法：减号用长一点的「−」 */
+const opText = computed(() => (props.op === '-' ? '−' : props.op))
 const digits = (n: number): string[] => String(n).padStart(width.value, ' ').split('')
 const rowA = computed(() => digits(props.a))
 const rowB = computed(() => digits(props.b))
@@ -26,7 +27,7 @@ const rowC = computed(() => (props.answer ?? '').padStart(width.value + 1, ' ').
       <span v-for="(d, i) in rowA" :key="`a${i}`" class="digit">{{ d }}</span>
     </div>
     <div class="row">
-      <span class="op">{{ op === '+' ? '+' : '−' }}</span>
+      <span class="op">{{ opText }}</span>
       <span v-for="(d, i) in rowB" :key="`b${i}`" class="digit">{{ d }}</span>
     </div>
     <div class="rule" />

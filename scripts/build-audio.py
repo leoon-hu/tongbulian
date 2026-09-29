@@ -123,8 +123,28 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"(?<=羊)圈"), "倦"),                                   # 羊圈 juàn
         (re.compile(r"冠(?=必正)"), "关"),                                  # 冠必正 guān
         (re.compile(r"空(?=地)"), "控"),                                    # 空地 kòng
+        # 三年级数学（题目文案里躲不开的，多数本来就读得对，换了也一样）
+        (re.compile(r"长(?=加宽|乘宽)|(?<=更|样)长"), "常"),                # 长乘宽、括号长加宽、一样长、周长更长 cháng
+        (re.compile(r"重(?=[合叠])"), "虫"),                                # 重合、重叠 chóng
+        (re.compile(r"为(?=一个端点)"), "围"),                              # 以点 A 为一个端点 wéi
+        (re.compile(r"校(?=验)"), "叫"),                                    # 校验码 jiào
+        (re.compile(r"(?<=进)率"), "律"),                                   # 进率 lǜ
+        (re.compile(r"(?<=石)磨"), "末"),                                   # 石磨 mò
+        (re.compile(r"^只$"), "枝"),                                        # 拆开的量词「只」单独合成时读 zhī（「12只兔子」没录到时拆成小片段）
     ],
 }
+
+# 英文界面的长度 / 质量单位写符号（三年级：mm、cm、dm、m、km、g、kg），合成时换成单词，免得按字母读（m 读成 em、g 读成 gee）；
+# 前面是单独的 1 用单数（1 meter），其余用复数（5 meters、how many meters）。
+_UNIT_EN = {"mm": "millimeter", "cm": "centimeter", "dm": "decimeter", "km": "kilometer", "m": "meter", "kg": "kilogram", "g": "gram"}
+
+
+def _unit_en(m: "re.Match[str]") -> str:
+    word = _UNIT_EN[m.group(2)]
+    return f"1 {word}" if m.group(1) else f"{word}s"
+
+
+SAY_AS["en"] = [(re.compile(r"(?:(?<![\d.])(1) )?(?<![\w'’.])(mm|cm|dm|km|kg|m|g)\b"), _unit_en)]  # type: ignore[list-item]
 
 # 读一个多音字给的词（语文出题骨架 makers.ts 的 POLY_SAY，「高兴的兴」）：末尾单独那个字合成语音常按它最常见的读音读
 # （兴读成 xīng、重读成 zhòng、倒读成 dǎo），换成读音唯一的同音字再合成。逐条用基频比过（YIN + DTW），读得对的不列；

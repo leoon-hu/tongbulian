@@ -98,7 +98,7 @@ describe('App 集成冒烟', () => {
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('.about .about-links a')
-    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单'])
+    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
     // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
     const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])
@@ -156,14 +156,15 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('数学的选年级页：一、二年级可进，三年级起占位', async () => {
+  it('数学的选年级页：一至三年级可进，四年级起占位', async () => {
     const w = await mountAt('/s/math')
     const cards = w.findAll('button.card')
     const byTitle = (t: string) => cards.find((c) => c.text().includes(t))!
     expect(byTitle('一年级').attributes('disabled')).toBeUndefined()
     expect(byTitle('二年级').attributes('disabled')).toBeUndefined()
-    expect(byTitle('三年级').attributes('disabled')).toBeDefined()
-    expect(byTitle('三年级').text()).toContain('敬请期待')
+    expect(byTitle('三年级').attributes('disabled')).toBeUndefined()
+    expect(byTitle('四年级').attributes('disabled')).toBeDefined()
+    expect(byTitle('四年级').text()).toContain('敬请期待')
     w.unmount()
   })
 

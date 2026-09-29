@@ -2,6 +2,7 @@
 import type { Question } from '@/types/models'
 import type { BlankFill } from '@/components/practice/blank'
 import RubyText from '@/components/ui/RubyText.vue'
+import MathText from '@/components/ui/MathText.vue'
 import TenFrame from '@/components/math/TenFrame.vue'
 import CountingObjects from '@/components/math/CountingObjects.vue'
 import CompareRows from '@/components/math/CompareRows.vue'
@@ -17,6 +18,22 @@ import NumberLine from '@/components/math/NumberLine.vue'
 import RulerGauge from '@/components/math/RulerGauge.vue'
 import AngleGlyph from '@/components/math/AngleGlyph.vue'
 import VerticalForm from '@/components/math/VerticalForm.vue'
+import MotionFigs from '@/components/math/MotionFigs.vue'
+import LongDivision from '@/components/math/LongDivision.vue'
+import TenBlocks from '@/components/math/TenBlocks.vue'
+import CodeStrip from '@/components/math/CodeStrip.vue'
+import ScaleDial from '@/components/math/ScaleDial.vue'
+import SolidScene from '@/components/math/SolidScene.vue'
+import ViewGlyph from '@/components/math/ViewGlyph.vue'
+import DiceGlyph from '@/components/math/DiceGlyph.vue'
+import NetGrid from '@/components/math/NetGrid.vue'
+import GeoFigure from '@/components/math/GeoFigure.vue'
+import FracShape from '@/components/math/FracShape.vue'
+import FracLine from '@/components/math/FracLine.vue'
+import FracSet from '@/components/math/FracSet.vue'
+import TallySheet from '@/components/math/TallySheet.vue'
+import StatTable from '@/components/math/StatTable.vue'
+import MonthCalendar from '@/components/math/MonthCalendar.vue'
 import HanziGrid from '@/components/chinese/HanziGrid.vue'
 import PinyinCard from '@/components/chinese/PinyinCard.vue'
 import ListenCue from '@/components/chinese/ListenCue.vue'
@@ -44,10 +61,10 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
         <span v-if="withSpeaker && i === 0" class="speaker" aria-hidden="true">🔊</span>
         <template v-if="fill && part.expr.includes('?')">
           <template v-for="(seg, k) in part.expr.split('?')" :key="k">
-            <span v-if="k > 0" class="fill-slot" :class="{ empty: fill.value === '', done: fill.done }">{{ fill.value || '?' }}</span>{{ seg }}
+            <span v-if="k > 0" class="fill-slot" :class="{ empty: fill.value === '', done: fill.done }">{{ fill.value || '?' }}</span><MathText :text="seg" />
           </template>
         </template>
-        <template v-else>{{ part.expr }}</template>
+        <MathText v-else :text="part.expr" />
       </div>
       <TenFrame
         v-else-if="part.kind === 'tenframe'"
@@ -88,7 +105,44 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
         :length="part.length"
         :from="part.from"
         :to="part.to"
+        :mm="part.mm"
       />
+      <ScaleDial
+        v-else-if="part.kind === 'scale'"
+        :max="part.max"
+        :major="part.major"
+        :minor="part.minor"
+        :value="part.value"
+        :unit="part.unit"
+      />
+      <SolidScene v-else-if="part.kind === 'solid-scene'" :arrangement="part.arrangement" />
+      <ViewGlyph v-else-if="part.kind === 'views'" :items="part.items" :numbered="part.numbered" />
+      <DiceGlyph v-else-if="part.kind === 'dice'" :front="part.front" :top="part.top" :right="part.right" />
+      <NetGrid v-else-if="part.kind === 'net'" :cells="part.cells" />
+      <GeoFigure v-else-if="part.kind === 'geo'" :figs="part.figs" :numbered="part.numbered" :alt="part.alt" />
+      <FracShape v-else-if="part.kind === 'frac-shape'" :items="part.items" />
+      <FracLine
+        v-else-if="part.kind === 'frac-line'"
+        :units="part.units"
+        :per="part.per"
+        :bracket="part.bracket"
+        :arrow="part.arrow"
+        :unit="part.unit"
+        :ruler="part.ruler"
+        :labels="part.labels"
+      />
+      <FracSet
+        v-else-if="part.kind === 'frac-set'"
+        :icon="part.icon"
+        :groups="part.groups"
+        :per="part.per"
+        :shaded="part.shaded"
+        :dir="part.dir"
+        :boxed="part.boxed"
+      />
+      <TallySheet v-else-if="part.kind === 'tally'" :rows="part.rows" />
+      <StatTable v-else-if="part.kind === 'stat-table'" :title="part.title" :rows="part.rows" :head="part.head" :fill="fill" />
+      <MonthCalendar v-else-if="part.kind === 'calendar'" :title="part.title" :days="part.days" :first="part.first" :mark="part.mark" />
       <VerticalForm
         v-else-if="part.kind === 'vertical'"
         :a="part.a"
@@ -96,6 +150,16 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
         :b="part.b"
         :answer="fill?.value"
         :done="fill?.done"
+      />
+      <TenBlocks v-else-if="part.kind === 'blocks'" :groups="part.groups" :tens="part.tens" :ones="part.ones" />
+      <CodeStrip
+        v-else-if="part.kind === 'code-strip'"
+        :digits="part.digits"
+        :segs="part.segs"
+        :names="part.names"
+        :mark="part.mark"
+        :cell="part.cell"
+        :fit="part.fit"
       />
       <div v-else-if="part.kind === 'angles'" class="angles" :class="{ single: part.items.length === 1 }">
         <AngleGlyph
@@ -106,6 +170,17 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
           :size="part.items.length === 1 ? 128 : 84"
         />
       </div>
+      <MotionFigs v-else-if="part.kind === 'motion-figs'" :items="part.items" :arrows="part.arrows" />
+      <LongDivision
+        v-else-if="part.kind === 'long-division'"
+        :divisor="part.divisor"
+        :dividend="part.dividend"
+        :quotient="part.quotient"
+        :rows="part.rows"
+        :box="part.box"
+        :answer="fill?.value"
+        :done="fill?.done"
+      />
       <HanziGrid v-else-if="part.kind === 'hanzi'" :text="part.text" :mark="part.mark" :fill="fill?.done ? fill.value : undefined" />
       <PinyinCard v-else-if="part.kind === 'pinyin'" :text="part.text" />
       <ListenCue v-else-if="part.kind === 'listen'" />

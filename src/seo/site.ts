@@ -20,14 +20,16 @@ import { HELP_LEAD, HELP_TITLE, helpGames, helpSections } from '@/help/content'
 import { EMOJI_ZH } from '@/content/math/shared/emoji'
 import { KP_SEO as SEO_G1, type KpSeo } from '@/content/math/grade1/seo'
 import { KP_SEO as SEO_G2 } from '@/content/math/grade2/seo'
+import { KP_SEO as SEO_G3 } from '@/content/math/grade3/seo'
 import { KP_SEO as SEO_C1 } from '@/content/chinese/grade1/seo'
 import { KP_SEO as SEO_C2 } from '@/content/chinese/grade2/seo'
-// 语文的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
+// 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
+import '@/content/math/grade3'
 import '@/content/chinese/grade1'
 import '@/content/chinese/grade2'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_C1, ...SEO_C2 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_C1, ...SEO_C2 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -205,11 +207,93 @@ export function stemText(part: StemPart): string {
     case 'number-line':
       return `（数轴 ${part.from}~${part.to}${part.marks?.length ? `，标出 ${part.marks.join('、')}` : ''}）`
     case 'ruler':
-      return `（尺子上从 ${part.from} 厘米到 ${part.to} 厘米的一条线段）`
+      return part.mm ? `（毫米尺上从 ${part.from} 毫米到 ${part.to} 毫米的一条线段）` : `（尺子上从 ${part.from} 厘米到 ${part.to} 厘米的一条线段）`
+    case 'scale':
+      return `（秤面：指针指着 ${part.value}${part.unit === 'g' ? ' 克' : ' 千克'}）`
+    case 'solid-scene':
+      return part.arrangement === 'on' ? '（一个圆柱立在长方体上面）' : '（长方体右边立着一个圆柱）'
+    case 'views':
+      return `（${part.items.length > 1 ? `${part.items.length} 幅` : '一幅'}看到的样子）`
+    case 'dice':
+      return `（正方体的前面是 ${part.front}、上面是 ${part.top}、右面是 ${part.right}）`
+    case 'net':
+      return `（${part.cells.length} 个正方形连成的图形）`
+    case 'geo':
+      return part.alt
+    case 'frac-shape':
+      // 三年级分数 / 小数的平均分图：说成「圆平均分成 8 份，涂了 3 份」
+      return part.items
+        .map((p) => {
+          const name = p.shape === 'polygon' ? ({ 5: '五边形', 6: '六边形', 8: '八边形' } as Record<number, string>)[p.parts] ?? '多边形' : ({ circle: '圆', 'circle-uneven': '圆', rect: '长方形', 'rect-h': '长方形', 'rect-uneven': '长方形', square: '正方形', 'square-diag': '正方形', triangle: '三角形', 'triangle-cut': '三角形', parallelogram: '平行四边形', cross: '十字形', board: '黑板报' } as Record<string, string>)[p.shape]
+          const even = !['circle-uneven', 'rect-uneven', 'triangle-cut', 'board'].includes(p.shape)
+          const whole = p.whole ? `${p.whole} 个涂满的${name}，还有一个` : ''
+          const alt = p.alt?.length ? `，又用另一种颜色涂了 ${p.alt.length} 份` : ''
+          return `（${whole}${name}${even ? '平均分成' : '分成大小不同的'} ${p.parts} 份，涂了 ${p.shaded.length} 份${alt}${p.label ? `，下面写着 ${p.label}` : ''}）`
+        })
+        .join('')
+    case 'frac-line': {
+      const total = part.units * part.per
+      const head = part.ruler
+        ? `（尺子 0~${total}${part.unit ? ` ${part.unit}` : ''}`
+        : part.labels === false
+          ? `（一条线段平均分成 ${total} 段`
+          : `（数轴 0~${part.units}${part.unit ? ` ${part.unit}` : ''}，每 1 平均分成 ${part.per} 小格`
+      const bracket = part.bracket ? (part.labels === false && !part.ruler ? `，括出其中 ${Math.abs(part.bracket[1] - part.bracket[0])} 段` : `，括出刻度 ${part.bracket[0]} 到 ${part.bracket[1]} 的一段`) : ''
+      const arrow = part.arrow !== undefined ? `，箭头指着 0 后面第 ${part.arrow} 个小刻度` : ''
+      return `${head}${bracket}${arrow}）`
+    }
+    case 'frac-set': {
+      const name = part.icon === 'dot' ? '圆点' : (emojiName(part.icon) ?? part.icon)
+      // 每份 1 个：没分组的一堆（涂了几个就说几个）
+      if (part.per === 1) return `（${part.groups} 个${name}${part.shaded ? `，涂了 ${part.shaded} 个` : ''}）`
+      return `（${part.groups * part.per} 个${name}，平均分成 ${part.groups} 份${part.shaded ? `，涂了 ${part.shaded} 份` : ''}）`
+    }
     case 'vertical':
       return `（竖式：${part.a} ${part.op} ${part.b}）`
+    case 'motion-figs':
+      return `（${part.alt}）`
+    case 'long-division': {
+      // 除法竖式：商写的是什么（「?」是要填的空）、下面每一步写了什么
+      const q = part.quotient ? `，商写的是 ${part.quotient.text === '?' ? '（　）' : part.quotient.text.replace(/ /g, '□')}` : ''
+      const rows = part.rows?.length ? `，下面依次写着 ${part.rows.map((r) => (r.text === '?' ? '（　）' : r.text)).join('、')}` : ''
+      const dividend = String(part.dividend)
+        .split('')
+        .map((c, i) => (i === part.box ? '□' : c))
+        .join('')
+      return `（除法竖式：${dividend} ÷ ${part.divisor}${q}${rows}）`
+    }
+    case 'blocks':
+      return `（${part.groups} 组，每组 ${part.tens} 根十块条${part.ones ? `、${part.ones} 个小方块` : ''}）`
+    case 'code-strip': {
+      // 号码按括号分段写，标了名字的写上名字，标出颜色的一段加【】，标出的一位另外说
+      let at = 0
+      const segs = (part.segs ?? [part.digits.length]).map((len, k) => {
+        const digits = part.digits.slice(at, at + len)
+        at += len
+        const name = part.names?.[k] ? zh(part.names[k]!) : ''
+        const label = name ? `${name} ${digits}` : digits
+        return k === part.mark ? `【${label}】` : label
+      })
+      const cell = part.cell === undefined ? '' : `，第 ${part.cell + 1} 位是 ${part.digits[part.cell]}`
+      return `（号码：${segs.join(' | ')}${cell}）`
+    }
     case 'angles':
       return `（${part.items.length} 个角）`
+    case 'tally':
+      // 记录单：「正」字说成几个整字加几画（1–4 画的字形打不出来），√ / ○ 说个数
+      return `（记录单：${part.rows
+        .map((r) => {
+          const full = Math.floor(r.count / 5)
+          const rest = r.count % 5
+          const zheng = `${full ? `${full} 个「正」字` : ''}${full && rest ? '加 ' : ''}${rest ? `${rest} 画` : ''}`
+          return `${zh(r.label)} ${r.mark === 'zheng' ? zheng : `${r.count} 个${r.mark === 'check' ? '√' : '○'}`}`
+        })
+        .join('；')}）`
+    case 'stat-table':
+      // 统计表：一行一行写出来，要填的格子写「?」
+      return `（统计表${part.title ? `：${zh(part.title)}` : ''}）\n${part.rows.map((row) => row.map((c) => (c === null ? '?' : typeof c === 'number' ? String(c) : zh(c))).join(' | ')).join('\n')}`
+    case 'calendar':
+      return `（${zh(part.title)}的月历：1 日是星期${'一二三四五六日'[part.first - 1]}，这个月有 ${part.days} 天${part.mark?.length ? `，圈出了 ${part.mark.join('、')} 日` : ''}）`
     // 语文（§9）
     case 'hanzi':
       return part.mark === undefined ? part.text : `${part.text}（红字：${Array.from(part.text)[part.mark]}）`
@@ -749,7 +833,10 @@ export function homeMeta(): {
   const grades = [...new Set(lcs.map((lc) => zh(lc.grade.title)))].join('、')
   const subjectIds = [...new Set(lcs.map((lc) => lc.subject.id))]
   const subjects = [...new Set(lcs.map((lc) => zh(lc.subject.title)))].join('、')
-  const list = `${lcs.map((lc) => `${lc.name} ${liveKps(lc.course).length} 个`).join('、')}知识点`
+  // 知识点数按学科合计（逐门课列的话，三年级数学加进来描述就超过 160 字了）
+  const bySubject = new Map<string, number>()
+  for (const lc of lcs) bySubject.set(zh(lc.subject.title), (bySubject.get(zh(lc.subject.title)) ?? 0) + liveKps(lc.course).length)
+  const list = `${[...bySubject].map(([s, n]) => `${s} ${n} 个`).join('、')}知识点`
   // 各学科家长会搜的词
   const subjectWords: Record<string, string[]> = { math: ['小学数学对战游戏', '口算练习'], chinese: ['小学语文对战游戏', '识字拼音练习'] }
   return {

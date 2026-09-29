@@ -18,14 +18,14 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [id: string] }>()
 
 /**
- * 文字选项的长度（纯数字的选项不算，770 这种两列放得下）：
+ * 文字选项的长度（纯数字的选项不算，770、分数 3/8、小数 0.5 这种两列放得下）：
  * wordy = 有 3 个字以上的文字（一样多、长方体、12元…，对战手机紧凑版排成一列，窄卡片里不折行）；
  * long = 有 4 个字以上的（平行四边形、11元5角…，字号小一档）
  */
 const textLen = computed(() =>
   props.choiceStyle === 'pinyin' || props.choiceStyle === 'emoji'
     ? 0
-    : Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+$/.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
+    : Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+(?:[./]\d+)?$/.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
 )
 const wordy = computed(() => textLen.value >= 3)
 const long = computed(() => textLen.value > 3)

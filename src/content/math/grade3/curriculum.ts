@@ -1,0 +1,77 @@
+import type { KnowledgePoint, Unit } from '@/types/models'
+
+/**
+ * 人教版三年级数学知识点树（单一事实源），按 2022 版课标教材（三上 2026 秋、三下 2027 春起用；目录以国家中小学智慧教育平台
+ * 上人教社的电子课本为准）。单元 id：m3s<册>u<目录位置>；知识点 id：m3s<册>-<目录位置两位>-<语义名>（位置含 ☆ 的综合与实践，
+ * 所以不一定等于教材的单元编号）。带 ☆ 的是教材里没编号的综合与实践（numbered: false）；两册的「复习与关联」不设知识点。
+ */
+export const UNITS: Unit[] = [
+  { id: 'm3s1u1', semester: 1, order: 1, title: '观察物体' },
+  { id: 'm3s1u2', semester: 1, order: 2, title: '混合运算' },
+  { id: 'm3s1u3', semester: 1, order: 3, title: '毫米、分米和千米' },
+  { id: 'm3s1u4', semester: 1, order: 0, title: '曹冲称象的故事', numbered: false },
+  { id: 'm3s1u5', semester: 1, order: 4, title: '多位数乘一位数' },
+  { id: 'm3s1u6', semester: 1, order: 0, title: '数字编码', numbered: false },
+  { id: 'm3s1u7', semester: 1, order: 5, title: '线和角' },
+  { id: 'm3s1u8', semester: 1, order: 6, title: '分数的初步认识' },
+  { id: 'm3s2u1', semester: 2, order: 1, title: '生活中的运动现象' },
+  { id: 'm3s2u2', semester: 2, order: 2, title: '除数是一位数的除法' },
+  { id: 'm3s2u3', semester: 2, order: 3, title: '长方形和正方形' },
+  { id: 'm3s2u4', semester: 2, order: 4, title: '图形的面积' },
+  { id: 'm3s2u5', semester: 2, order: 5, title: '数据的收集与整理' },
+  { id: 'm3s2u6', semester: 2, order: 0, title: '年、月、日的秘密', numbered: false },
+  { id: 'm3s2u7', semester: 2, order: 6, title: '小数的初步认识' },
+]
+
+export const KNOWLEDGE_POINTS: KnowledgePoint[] = [
+  // ── 上册 ──
+  { id: 'm3s1-01-views', unitId: 'm3s1u1', title: '从不同方向观察物体', icon: '👀', questionTypes: ['view'] },
+  { id: 'm3s1-01-guess', unitId: 'm3s1u1', title: '猜一猜是什么立体图形', icon: '🎲', questionTypes: ['view'] },
+  { id: 'm3s1-01-unfold', unitId: 'm3s1u1', title: '剪开长方体纸盒', icon: '📦', questionTypes: ['view'] },
+  { id: 'm3s1-02-in-order', unitId: 'm3s1u2', title: '只有加减或只有乘除', icon: '➡️', questionTypes: ['mixed-ops'] },
+  { id: 'm3s1-02-mul-first', unitId: 'm3s1u2', title: '先乘除后加减', icon: '⚡', questionTypes: ['mixed-ops'] },
+  { id: 'm3s1-02-parens', unitId: 'm3s1u2', title: '有括号先算括号里的', icon: '🎀', questionTypes: ['mixed-ops'] },
+  { id: 'm3s1-02-steps', unitId: 'm3s1u2', title: '解决多步计算的实际问题', icon: '🧩', questionTypes: ['mixed-ops'] },
+  { id: 'm3s1-03-mm-dm', unitId: 'm3s1u3', title: '毫米、分米的认识', icon: '📏', questionTypes: ['length'] },
+  { id: 'm3s1-03-km', unitId: 'm3s1u3', title: '千米的认识', icon: '🛣️', questionTypes: ['length'] },
+  { id: 'm3s1-03-choose-unit', unitId: 'm3s1u3', title: '填合适的长度单位', icon: '🐜', questionTypes: ['length'] },
+  { id: 'm3s1-03-convert', unitId: 'm3s1u3', title: '长度单位的换算与比较', icon: '🔁', questionTypes: ['length', 'compare'] },
+  { id: 'm3s1-04-mass-units', unitId: 'm3s1u4', title: '认识质量单位', icon: '⚖️', questionTypes: ['mass'] },
+  { id: 'm3s1-04-weighing', unitId: 'm3s1u4', title: '称重大挑战', icon: '🐘', questionTypes: ['mass'] },
+  { id: 'm3s1-05-oral-mul', unitId: 'm3s1u5', title: '口算乘法', icon: '✖️', questionTypes: ['multiply'] },
+  { id: 'm3s1-05-written-mul', unitId: 'm3s1u5', title: '笔算乘法', icon: '✏️', questionTypes: ['multiply'] },
+  { id: 'm3s1-05-zero-mul', unitId: 'm3s1u5', title: '有0的乘法', icon: '⭕', questionTypes: ['multiply', 'compare'] },
+  { id: 'm3s1-05-estimate', unitId: 'm3s1u5', title: '用估算解决问题', icon: '💰', questionTypes: ['multiply'] },
+  { id: 'm3s1-06-digit-code', unitId: 'm3s1u6', title: '数字编码', icon: '🪪', questionTypes: ['code'] },
+  { id: 'm3s1-07-lines', unitId: 'm3s1u7', title: '线段、射线、直线', icon: '📍', questionTypes: ['angle'] },
+  { id: 'm3s1-07-angles', unitId: 'm3s1u7', title: '角的认识', icon: '📐', questionTypes: ['angle'] },
+  { id: 'm3s1-07-angle-kinds', unitId: 'm3s1u7', title: '锐角、直角、钝角', icon: '🕒', questionTypes: ['angle'] },
+  { id: 'm3s1-08-unit-frac', unitId: 'm3s1u8', title: '几分之一', icon: '🍰', questionTypes: ['fraction'] },
+  { id: 'm3s1-08-frac', unitId: 'm3s1u8', title: '几分之几', icon: '🍕', questionTypes: ['fraction', 'compare'] },
+  { id: 'm3s1-08-frac-calc', unitId: 'm3s1u8', title: '分数的简单计算', icon: '🧃', questionTypes: ['fraction'] },
+  { id: 'm3s1-08-frac-of-set', unitId: 'm3s1u8', title: '进一步认识分数', icon: '🍎', questionTypes: ['fraction'] },
+  // ── 下册 ──
+  { id: 'm3s2-01-symmetry', unitId: 'm3s2u1', title: '轴对称图形', icon: '🦋', questionTypes: ['symmetry'] },
+  { id: 'm3s2-01-translate', unitId: 'm3s2u1', title: '平移', icon: '🚡', questionTypes: ['motion'] },
+  { id: 'm3s2-01-rotate', unitId: 'm3s2u1', title: '旋转', icon: '🎡', questionTypes: ['motion'] },
+  { id: 'm3s2-02-oral', unitId: 'm3s2u2', title: '口算除法', icon: '➗', questionTypes: ['divide'] },
+  { id: 'm3s2-02-estimate', unitId: 'm3s2u2', title: '估算', icon: '🎯', questionTypes: ['divide'] },
+  { id: 'm3s2-02-written', unitId: 'm3s2u2', title: '笔算除法', icon: '✍️', questionTypes: ['divide'] },
+  { id: 'm3s2-02-zeros', unitId: 'm3s2u2', title: '商中间或末尾有0的除法', icon: '0️⃣', questionTypes: ['divide'] },
+  { id: 'm3s2-02-solve', unitId: 'm3s2u2', title: '用乘除法解决问题', icon: '🧺', questionTypes: ['multiply', 'divide'] },
+  { id: 'm3s2-03-polygons', unitId: 'm3s2u3', title: '多边形', icon: '🔷', questionTypes: ['shape-match'] },
+  { id: 'm3s2-03-rect-features', unitId: 'm3s2u3', title: '长方形和正方形的特点', icon: '⬜', questionTypes: ['shape-match'] },
+  { id: 'm3s2-03-perimeter', unitId: 'm3s2u3', title: '周长', icon: '📐', questionTypes: ['length'] },
+  { id: 'm3s2-03-rect-perimeter', unitId: 'm3s2u3', title: '长方形和正方形的周长', icon: '🟩', questionTypes: ['length'] },
+  { id: 'm3s2-04-area-units', unitId: 'm3s2u4', title: '面积和面积单位', icon: '🟦', questionTypes: ['area'] },
+  { id: 'm3s2-04-rect-area', unitId: 'm3s2u4', title: '长方形和正方形的面积', icon: '🟨', questionTypes: ['area'] },
+  { id: 'm3s2-04-area-convert', unitId: 'm3s2u4', title: '面积单位间的进率', icon: '🔄', questionTypes: ['area', 'compare'] },
+  { id: 'm3s2-05-record', unitId: 'm3s2u5', title: '数据的收集和记录', icon: '📝', questionTypes: ['stat'] },
+  { id: 'm3s2-05-table', unitId: 'm3s2u5', title: '复式统计表', icon: '📊', questionTypes: ['stat'] },
+  { id: 'm3s2-05-segments', unitId: 'm3s2u5', title: '分段整理数据', icon: '🏃', questionTypes: ['stat'] },
+  { id: 'm3s2-06-calendar', unitId: 'm3s2u6', title: '年历中的秘密', icon: '📅', questionTypes: ['time'] },
+  { id: 'm3s2-06-24h', unitId: 'm3s2u6', title: '作息时间表中的秘密', icon: '⏰', questionTypes: ['time'] },
+  { id: 'm3s2-07-know', unitId: 'm3s2u7', title: '认识小数', icon: '🔹', questionTypes: ['decimal'] },
+  { id: 'm3s2-07-compare', unitId: 'm3s2u7', title: '小数的大小比较', icon: '🆚', questionTypes: ['decimal', 'compare'] },
+  { id: 'm3s2-07-addsub', unitId: 'm3s2u7', title: '简单的小数加、减法', icon: '🛍️', questionTypes: ['decimal'] },
+]

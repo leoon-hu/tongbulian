@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
 import '@/content/math/grade2'
+import '@/content/math/grade3'
 import { KNOWLEDGE_POINTS as G1 } from '@/content/math/grade1/curriculum'
 import { KNOWLEDGE_POINTS as G2 } from '@/content/math/grade2/curriculum'
+import { KNOWLEDGE_POINTS as G3 } from '@/content/math/grade3/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { translate } from '@/engine/i18n'
 import type { Question } from '@/types/models'
 import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
 
-const KNOWLEDGE_POINTS = [...G1, ...G2]
+const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3]
 
 describe('tokenize（中文）', () => {
   it('短语里夹着的数并进短语（一条最多一个数），逗号变成停顿标记；数字后面只留量词头，动词 / 连词跟着后一个数走', () => {
@@ -308,5 +310,21 @@ describe('语文的中文内容（需求 Y3 / Y6）', () => {
     expect(chineseSpeech('云对雨，雪对风。', 'en')).toEqual([zhToken('云对雨'), PAUSE, zhToken('雪对风')])
     expect(tokenize('Which word means the opposite of 开?', 'en')).toEqual(['Which word means the opposite of', zhToken('开')])
     expect(tokenize('How many dots in all?', 'en').every((t) => tokenVoice(t, 'en').lang === 'en')).toBe(true)
+  })
+})
+
+describe('三年级：年份、日期、时刻', () => {
+  it('年份按位读（二零二四年），「年级」「几年」不算', () => {
+    expect(tokenize('2024 年是闰年吗？', 'zh')).toEqual(['二零二四年是闰年吗'])
+    expect(tokenize('三年级 2 年', 'zh')).toEqual(['三年级两年'])
+  })
+  it('日期的「月 / 日」留在数后面，前面的 2 读「二」', () => {
+    expect(tokenize('3 月 5 日是星期几？', 'zh')).toEqual(['3月', '5日是星期几'])
+    expect(tokenize('2 月有几天？', 'zh')).toEqual(['2月有几天'])
+  })
+  it('中文时刻：14:30 读「14点 30」、14:05 读「14点 零5」、14:00 读「14点」；钟点的 2 读「两」', () => {
+    expect(tokenize('14:30', 'zh')).toEqual(['14点', '30'])
+    expect(tokenize('14:05 和 14:00', 'zh')).toEqual(['14点', '零5', '和14点'])
+    expect(tokenize('2 点半', 'zh')).toEqual(['两点半'])
   })
 })
