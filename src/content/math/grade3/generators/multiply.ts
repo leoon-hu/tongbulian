@@ -279,8 +279,10 @@ defineGenerator(ORAL, (d, rng) => {
 
 // ─────────────────────────────────────────────────────────────
 // 笔算乘法（p43–48）：两位数、三位数乘一位数，不进位、一次进位、连续进位；用竖式算。
-// 第 1 档：两位数乘一位数（24 × 2、16 × 3、27 × 4、39 × 2、41 × 8）；例 1–3 的应用题。
-// 第 2 档：三位数乘一位数（213 × 2、162 × 4、326 × 8、499 × 3、824 × 5），积最多 4 位；三位数的应用题。
+// 第 1 档：两位数乘一位数（24 × 2、16 × 3、27 × 4、39 × 2、41 × 8）约 40%；三位数乘一位数约 35%（课本每个例题的「试一试」和
+//          做一做就有：213 × 2、312 × 3、162 × 4、421 × 3、326 × 8、137 × 6，不进位、一次进位、连续进位都有，积最多 4 位）；
+//          例 1–3 的应用题约 25%，含三位数的（东北虎 213 × 3、快递）。
+// 第 2 档：三位数乘一位数（499 × 3、824 × 5，多数要进位）；三位数的应用题。
 // 第 3 档：下面的计算正确吗（12 × 7 = 74、23 × 4 = 812）；四位数乘一位数；两步的应用题（最后一辆车、火车票、高铁座位）。
 // 中间、末尾有 0 的归「有0的乘法」。
 // ─────────────────────────────────────────────────────────────
@@ -305,12 +307,12 @@ function noZeroNumber(rng: RNG, digits: number, b: number, max = 9999): number {
   }
 }
 
-/** 三位数乘一位数（各位都不是 0）：多数要进位 */
-function threeDigit(rng: RNG): [number, number] {
+/** 三位数乘一位数（各位都不是 0）：多数要进位；给了 carry 就按它定要不要进位（第 1 档约 1/4 不进位，像 213 × 2、312 × 3） */
+function threeDigit(rng: RNG, carry?: boolean): [number, number] {
   for (;;) {
     const b = rng.int(2, 9)
     const a = noZeroNumber(rng, 3, b)
-    if (noCarry(a, b) && rng.chance(0.7)) continue
+    if (carry === undefined ? noCarry(a, b) && rng.chance(0.7) : noCarry(a, b) === carry) continue
     return [a, b]
   }
 }
@@ -379,7 +381,7 @@ function writtenWord(d: Difficulty, rng: RNG): Question {
       return { key: 'm3.mul.w.bear', p: { a, k }, value: a * k }
     },
   ]
-  const pool = d === 1 ? two : rng.chance(0.7) ? three : two
+  const pool = rng.chance(d === 1 ? 0.4 : 0.7) ? three : two
   const w = rng.pick(pool)()
   const nums = Object.values(w.p) as number[]
   const [x, y] = [Math.max(...nums), Math.min(...nums)]
@@ -435,8 +437,12 @@ function seatsQ(d: Difficulty, rng: RNG): Question {
 defineGenerator(WRITTEN, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.74) {
+    if (roll < 0.4) {
       const [a, b] = twoDigit(rng)
+      return verticalQ(WRITTEN, d, a, b, rng)
+    }
+    if (roll < 0.75) {
+      const [a, b] = threeDigit(rng, rng.chance(0.75))
       return verticalQ(WRITTEN, d, a, b, rng)
     }
     return writtenWord(d, rng)

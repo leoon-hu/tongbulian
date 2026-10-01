@@ -132,7 +132,7 @@ describe('m3s2-07-know 认识小数', () => {
           const x = fromReading(p.r as { k: string; p: Record<string, unknown> })
           expect(correctLabel(q), q.id).toBe(x)
           const digits = x.split('.')[1]!.length
-          if (d === 1) expect(digits).toBe(1)
+          if (d === 1) expect([1, 2]).toContain(digits)
           if (d === 2) expect(digits).toBe(2)
           return
         }
@@ -160,7 +160,6 @@ describe('m3s2-07-know 认识小数', () => {
           const want = t.k === 'm3.dec.whichDec' ? 'dec' : t.k === 'm3.dec.whichFrac' ? 'frac' : 'int'
           expect(kind(correctLabel(q)), q.id).toBe(want)
           for (const l of labels(q)) if (l !== correctLabel(q)) expect(kind(l), q.id).not.toBe(want)
-          expect(d).toBe(3)
           return
         }
         case 'm3.dec.rulerDm': {
@@ -173,12 +172,24 @@ describe('m3s2-07-know 认识小数', () => {
     })
   })
 
-  it('第 1 档都是一位小数（两位小数从第 2 档起）', () => {
+  it('第 1 档：一位小数为主，约三成是两位小数（例 2、做一做 2 下半）；做一做 1 的尺子、整数分数小数分类也出得到', () => {
+    let two = 0
+    let all = 0
+    const seen = new Set<string>()
     each('m3s2-07-know', (q, d) => {
       if (d !== 1) return
+      all += 1
+      seen.add(main(q).k)
       const n = numOf(correctLabel(q))
-      if (n && n.includes('.')) expect(n.split('.')[1]!.length, q.id).toBe(1)
+      const t = main(q)
+      // 键盘题按问的数算：0.34 米是几厘米、0.05 元是几分
+      const asked = q.input === 'numpad' || /^\d+$/.test(correctLabel(q)) ? str(t.p?.x ?? '') : (n ?? '')
+      if (asked.includes('.') && asked.split('.')[1]!.length === 2) two += 1
+      else if (n && n.includes('.') && n.split('.')[1]!.length === 2) two += 1
     })
+    expect(two / all).toBeGreaterThan(0.25)
+    expect(two / all).toBeLessThan(0.45)
+    for (const k of ['m3.dec.cmToM', 'm3.dec.fenToYuan', 'm3.dec.mcmToM', 'm3.dec.yjfToYuan', 'm3.dec.hundredthsIn', 'm3.dec.rulerDm', 'm3.dec.whichDec', 'm3.dec.mdmToM', 'm3.dec.yjToYuan', 'm3.dec.money', 'm3.dec.writeAs']) expect(seen, k).toContain(k)
   })
 })
 
@@ -243,7 +254,9 @@ describe('m3s2-07-compare 小数的大小比较', () => {
           const scores = (['a', 'b', 'c', 'd'] as const).map((k) => t.p[k] as { p: { who: { k: string }; x: string } })
           const ask = (t.p.ask as { k: string }).k
           const vs = scores.map((s) => milli(s.p.x))
-          const pick = scores[vs.indexOf(ask === 'm3.dec.jumpFirst' ? Math.max(...vs) : Math.min(...vs))]!
+          const rank = ['m3.dec.jumpFirst', 'm3.dec.jumpSecond', 'm3.dec.jumpThird', 'm3.dec.jumpLast'].indexOf(ask)
+          expect(rank, q.id).toBeGreaterThanOrEqual(0)
+          const pick = scores[vs.indexOf([...vs].sort((x, y) => y - x)[rank]!)]!
           expect(correctLabel(q)).toBe(zh(pick.p.who))
           return
         }
@@ -285,8 +298,12 @@ describe('m3s2-07-addsub 简单的小数加、减法', () => {
         // 一位小数
         for (const x of [m[1]!, m[3]!]) expect(x, q.id).toMatch(/^\d+(\.\d)?$/)
         const carry = m[2] === '+' ? (a % 10) + (b % 10) >= 10 : a % 10 < b % 10
-        if (d === 1) expect(carry, `${q.id} 第 1 档不进位、不退位`).toBe(false)
-        if (d === 2) expect(carry, `${q.id} 第 2 档进位 / 退位`).toBe(true)
+        // 整数加小数（6 + 0.6）只在复习单元：第 2 档起
+        const intPlus = !m[1]!.includes('.') || !m[3]!.includes('.')
+        if (d === 1) expect(intPlus, `${q.id} 第 1 档没有整数加小数`).toBe(false)
+        if (d === 2) expect(carry || intPlus, `${q.id} 第 2 档进位 / 退位或整数加小数`).toBe(true)
+        // 整数部分两位的只在进位 / 退位的题里（例 4 的 13.2 − 2.3）
+        if (d === 1 && !carry) expect(Math.max(a, b), q.id).toBeLessThan(100)
         return
       }
       const t = main(q)
@@ -345,6 +362,40 @@ describe('小数题的文字与朗读', () => {
     }
     // 小数整个交给语音合成（不拆成「0 / . / 7」），并且和前后的字并成一句（一条片段最多一个数，G11）
     expect(tokenize('0.7 里面有几个 0.1？', 'zh')).toEqual(['0.7', '里面有几个0.1'])
+  })
+
+  it('选项的写法认不出答案：答案是一位（两位）小数时，干扰项里也有一位（两位）小数', () => {
+    const places = (n: string): number => (n.includes('/') ? -1 : n.includes('.') ? n.split('.')[1]!.length : 0)
+    for (const kp of KPS) {
+      each(kp, (q) => {
+        // 分类题、在选项里挑最大 / 最小的不算（答案本来就由选项之间比出来）
+        if (!q.choices || ['m3.dec.whichDec', 'm3.dec.whichFrac', 'm3.dec.whichInt', 'm3.dec.maxOf', 'm3.dec.minOf', 'm3.dec.priceMax', 'm3.dec.priceMin'].includes(main(q)?.k ?? '')) return
+        const ns = labels(q).map(numOf)
+        if (ns.some((n) => n === null)) return
+        const c = numOf(correctLabel(q))!
+        if (places(c) < 1) return
+        const others = ns.filter((n) => n !== c).map((n) => places(n!))
+        expect(others, `${q.id} 选项 ${labels(q)}`).toContain(places(c))
+      })
+    }
+  })
+
+  it('第 1 档出得到课本的例题与做一做（G12）', () => {
+    const got = (kp: string, test: (q: Question) => boolean): boolean => {
+      const gen = getGenerator(kp)!
+      for (let seed = 1; seed <= 600; seed++) if (test(gen(1, createRng(seed)))) return true
+      return false
+    }
+    // 例 3：课本原数的跳高成绩、1.20 米是多少厘米；做一做 2：带整个的十等分图 2.5 ○ 1.8 这种
+    expect(got('m3s2-07-compare', (q) => main(q)?.k === 'm3.dec.jump' && zh(main(q) as LStr).includes('小明 0.88 米，小刚 1.20 米，小强 0.96 米，小林 1.10 米'))).toBe(true)
+    expect(got('m3s2-07-compare', (q) => main(q)?.k === 'm3.dec.mToCm')).toBe(true)
+    expect(got('m3s2-07-compare', (q) => (part(q, 'frac-shape')?.items ?? []).some((p) => (p.whole ?? 0) > 0))).toBe(true)
+    // 例 4：进位加（1.5 + 3.8）、整数部分两位的退位减（13.2 − 2.3）、课本价目表、20 元够吗、化成角
+    expect(got('m3s2-07-addsub', (q) => part(q, 'expr')?.expr === '1.5 + 3.8 = ?' || main(q)?.k === 'm3.dec.sum2')).toBe(true)
+    expect(got('m3s2-07-addsub', (q) => /^1\d\.\d - \d\.\d = \?$/.test(part(q, 'expr')?.expr ?? ''))).toBe(true)
+    expect(got('m3s2-07-addsub', (q) => main(q)?.k === 'm3.dec.diff2' && zh(main(q) as LStr).includes('卷笔刀 13.2 元'))).toBe(true)
+    expect(got('m3s2-07-addsub', (q) => main(q)?.k === 'm3.dec.enough')).toBe(true)
+    expect(got('m3s2-07-addsub', (q) => main(q)?.k === 'm3.dec.toJiao' && Math.round(Number(main(q).p.a) * 10) % 10 + Math.round(Number(main(q).p.b) * 10) % 10 >= 10)).toBe(true)
   })
 
   it('第 1 档题目够多样（练习固定第 1 档）', () => {

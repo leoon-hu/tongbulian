@@ -94,8 +94,9 @@ describe('m3s1-08-unit-frac 几分之一', () => {
         expect(pic!.shaded).toHaveLength(1)
         expect(isEvenShape(pic!.shape)).toBe(true)
         check(q, { frac: [1, pic!.parts] })
+        // 课本做一做有 1/8、1/12：第 1 档分母 2–12
         if (d === 1) expect(pic!.parts).toBeGreaterThanOrEqual(2)
-        if (d === 1) expect(pic!.parts).toBeLessThanOrEqual(6)
+        if (d === 1) expect(pic!.parts).toBeLessThanOrEqual(12)
         // 选项全是几分之一（孩子不能靠「分子是 1」认出答案）
         for (const l of labels(q)) expect(fracOf(l)![0], q.id).toBe(1)
       } else if (k === 'm3.frac.mooncake' || k === 'm3.frac.paper') {
@@ -161,7 +162,7 @@ describe('m3s1-08-frac 几分之几', () => {
         expect(pic!.shaded.length).toBeLessThan(pic!.parts)
         if (d === 1) {
           expect(pic!.parts, q.id).toBeGreaterThanOrEqual(3)
-          expect(pic!.parts, q.id).toBeLessThanOrEqual(8)
+          expect(pic!.parts, q.id).toBeLessThanOrEqual(10)
         }
         // 干扰项里至少有一个同分母或同分子的（不能一眼认出答案）
         const c = parseF(correctLabel(q))
@@ -181,9 +182,11 @@ describe('m3s1-08-frac 几分之几', () => {
         check(q, { num: pic!.shaded.length })
       } else if (k === 'm3.frac.compare') {
         check(q, { sym: evalExpr(exprOf(q)!) as string })
-        expect(q.type).toBe('compare')
         const [a, b] = exprOf(q)!.split(' ○ ').map(parseF)
-        expect(b![1] === 1 || a![1] === b![1], `${q.id} 不是同分母`).toBe(true)
+        // 例 5(1) 同分母（含和 1 比）、例 5(2) 分子是 1
+        const unit = a![0] === 1 && b![0] === 1 && a![1] !== b![1]
+        expect(b![1] === 1 || a![1] === b![1] || unit, `${q.id} 不是同分母，也不是分子是 1`).toBe(true)
+        if (!unit) expect(q.type).toBe('compare')
         if (d < 3) expect(a![1], q.id).toBeLessThanOrEqual(10)
         // 配的图和算式对得上
         const ps = pics(q)
@@ -236,13 +239,15 @@ describe('m3s1-08-frac-calc 分数的简单计算', () => {
         expect(r[0], q.id).toBeGreaterThan(0)
         expect(r[0], `${q.id} 和不能超过 1`).toBeLessThanOrEqual(r[1])
         const m = /^(\d+)\/(\d+) \+ (\d+)\/(\d+)/.exec(expr)
+        // 第 1 档：分母 2–10（课本例题和做一做的分母都在这里面），被减数小于 1
         if (d === 1) {
-          // 第 1 档：同分母加法，n 取 3–9，和小于 1
-          expect(m, q.id).not.toBeNull()
-          expect(Number(m![2])).toBeGreaterThanOrEqual(3)
-          expect(Number(m![2])).toBeLessThanOrEqual(9)
-          expect(r[0]).toBeLessThan(r[1])
+          expect(r[1], q.id).toBeGreaterThanOrEqual(2)
+          expect(r[1], q.id).toBeLessThanOrEqual(10)
+          const sub = /^(\d+)\/(\d+) - /.exec(expr)
+          if (sub) expect(Number(sub[1]), q.id).toBeLessThan(Number(sub[2]))
         }
+        // 和是 1：选项里还有一个整数（「2」），正确答案不是唯一的整数
+        if (r[0] === r[1]) expect(labels(q), q.id).toContain('2')
         // 配的图：a 份一种颜色、b 份另一种颜色
         const pic = pics(q)[0]
         if (pic && m) {
@@ -260,7 +265,10 @@ describe('m3s1-08-frac-calc 分数的简单计算', () => {
         return
       }
       if (k === 'm3.frac.oneAs') return check(q, { num: parseF(p.u)[1] })
-      expect(d, `${q.id} 应用题只在第 3 档`).toBe(3)
+      // 课本例题、做一做里的应用题第 1 档起就有；练习里的（巧克力、脚踏船、菜地、自驾游、孩子们一共喝了多少）只在第 3 档
+      const BOOK = ['m3.frac.melonSum', 'm3.frac.melonDiff', 'm3.frac.paperLeft', 'm3.frac.ropeLeft', 'm3.frac.ropeLess', 'm3.frac.juiceEach', 'm3.frac.juiceDiff']
+      if (!BOOK.includes(k)) expect(d, `${q.id} 练习里的应用题只在第 3 档`).toBe(3)
+      if (k.startsWith('m3.frac.melon') || k === 'm3.frac.ropeLeft' || k === 'm3.frac.ropeLess') expect(parseF(p.a)[1], q.id).toBe(k.startsWith('m3.frac.melon') ? 8 : 10)
       const a = p.a === undefined ? null : parseF(p.a)
       const b = p.b === undefined ? null : parseF(p.b)
       const one = (...fs: F[]): F => [fs[0]![1] - fs.reduce((s, f) => s + f[0], 0), fs[0]![1]]
@@ -268,20 +276,34 @@ describe('m3s1-08-frac-calc 分数的简单计算', () => {
       else if (k === 'm3.frac.melonDiff') check(q, { frac: [b![0] - a![0], a![1]] })
       else if (k === 'm3.frac.chocoLeft' || k === 'm3.frac.garden' || k === 'm3.frac.trip') check(q, { frac: one(a!, b!) })
       else if (k === 'm3.frac.boats' || k === 'm3.frac.ropeLeft' || k === 'm3.frac.paperLeft') check(q, { frac: one(a!) })
+      else if (k === 'm3.frac.ropeLess') check(q, { frac: [a![0] - (a![1] - a![0]), a![1]] })
+      else if (k === 'm3.frac.juiceEach') check(q, { frac: [1, Number(p.n)] })
       else if (k === 'm3.frac.juiceKids') check(q, { frac: [Number(p.c), Number(p.n)] })
       else if (k === 'm3.frac.juiceDiff') check(q, { frac: [Number(p.c) - Number(p.o), Number(p.n)] })
       else throw new Error(`没核对的题：${q.id}（${k}）`)
-      if (k === 'm3.frac.juiceKids' || k === 'm3.frac.juiceDiff') expect(Number(p.c) + Number(p.o)).toBe(Number(p.n))
+      if (k.startsWith('m3.frac.juice')) expect(Number(p.c) + Number(p.o)).toBe(Number(p.n))
       if (a && b) expect(a[1]).toBe(b[1])
     })
   })
 
-  it('第 2 档有和等于 1 的题，答案写「1」', () => {
+  it('和等于 1 的题答案写「1」，第 1 档就有（做一做 1/2 + 1/2）', () => {
     let ones = 0
-    each('m3s1-08-frac-calc', (q) => {
-      if (correctLabel(q) === '1') ones++
+    each('m3s1-08-frac-calc', (q, d) => {
+      if (d === 1 && correctLabel(q) === '1') ones++
     })
-    expect(ones).toBeGreaterThan(10)
+    expect(ones).toBeGreaterThan(5)
+  })
+
+  it('第 1 档有课本的每一种：加法、和是 1、减法、1 减几分之几、例题和做一做的应用题', () => {
+    const kinds = new Set<string>()
+    each('m3s1-08-frac-calc', (q, d) => {
+      if (d !== 1) return
+      const e = exprOf(q)
+      if (e) kinds.add(e.startsWith('1 - ') ? 'one' : e.includes(' - ') ? 'sub' : correctLabel(q) === '1' ? 'toOne' : 'add')
+      else kinds.add(keyOf(q))
+    })
+    for (const k of ['add', 'toOne', 'sub', 'one', 'm3.frac.melonSum', 'm3.frac.melonDiff', 'm3.frac.paperLeft', 'm3.frac.ropeLeft', 'm3.frac.ropeLess', 'm3.frac.juiceEach', 'm3.frac.juiceDiff'])
+      expect(kinds, k).toContain(k)
   })
 })
 
@@ -297,7 +319,7 @@ describe('m3s1-08-frac-of-set 进一步认识分数', () => {
         expect(set!.shaded).toBeLessThan(set!.groups)
         check(q, { frac: [set!.shaded, set!.groups] })
         if (k === 'm3.frac.setWhole') expect([p.n, p.k, p.m]).toEqual([set!.groups * set!.per, set!.groups, set!.shaded])
-        if (d === 1) expect(set!.groups * set!.per, q.id).toBeLessThanOrEqual(15)
+        expect(set!.groups * set!.per, q.id).toBeLessThanOrEqual(24)
         // 用物体的个数当分母的错法在选项里（和答案不相等时）
         const n = set!.groups * set!.per
         if (set!.per > 1) expect(labels(q), q.id).toContain(`${set!.shaded}/${n}`)
@@ -321,7 +343,8 @@ describe('m3s1-08-frac-of-set 进一步认识分数', () => {
         check(q, { num: (n / f[1]) * f[0] })
         if (set) expect([set.groups, set.per, set.shaded]).toEqual([f[1], n / f[1], 0])
       } else {
-        expect(d, `${q.id} 应用题只在第 3 档`).toBe(3)
+        // 课本例 3、做一做（航模小组、图书角、小棒、三角形）第 1 档起就有；练习里的从第 2 档起
+        if (!['m3.frac.girls', 'm3.frac.boys', 'm3.frac.books', 'm3.frac.sticks', 'm3.frac.paint'].includes(k)) expect(d, q.id).toBeGreaterThanOrEqual(2)
         const n = Number(p.n)
         const of = (f: F): number => {
           expect(n % f[1], q.id).toBe(0)
@@ -365,6 +388,28 @@ describe('分数题的朗读与文字', () => {
         }
       })
     }
+  })
+
+  it('进一步认识分数第 1 档有例 3 求一个数的几分之几、课本的应用题，有 24 个分 3 份这样每份 8 个的', () => {
+    const kinds = new Set<string>()
+    let big = 0
+    each('m3s1-08-frac-of-set', (q, d) => {
+      if (d !== 1) return
+      kinds.add(keyOf(q))
+      const set = part(q, 'frac-set')
+      if (set && set.per >= 6) big++
+    })
+    for (const k of ['m3.frac.setShaded', 'm3.frac.setEach', 'm3.frac.setSome', 'm3.frac.boxUnit', 'm3.frac.ofNum', 'm3.frac.girls', 'm3.frac.boys', 'm3.frac.books']) expect(kinds, k).toContain(k)
+    expect(big).toBeGreaterThan(5)
+  })
+
+  it('几分之一、几分之几第 1 档有比大小、分子分母、1 分米的尺子', () => {
+    const one = new Set<string>()
+    each('m3s1-08-unit-frac', (q, d) => d === 1 && one.add(keyOf(q)))
+    for (const k of ['m3.frac.compare', 'm3.frac.denOf', 'm3.frac.numOf', 'm3.frac.writeAs', 'm3.frac.segmentUnit']) expect(one, k).toContain(k)
+    const some = new Set<string>()
+    each('m3s1-08-frac', (q, d) => d === 1 && some.add(keyOf(q)))
+    for (const k of ['m3.frac.compare', 'm3.frac.rulerDm', 'm3.frac.kUnits']) expect(some, k).toContain(k)
   })
 
   it('第 1 档题目够多样（练习固定第 1 档）', () => {

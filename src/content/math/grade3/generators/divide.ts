@@ -235,16 +235,51 @@ function oralFill(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
+/** 例 1、例 2 本身是分手工纸的应用题：约四分之一照课本的情境出，其余直接口算 */
+function oralPlain(kpId: string, d: Difficulty, x: Div, rng: RNG): Question {
+  if (x.a > 900 || !rng.chance(0.25)) return oralExpr(kpId, d, x, rng)
+  return numberQuestion({
+    kpId,
+    type: 'divide',
+    difficulty: d,
+    sig: `word-paper-${x.a}-${x.b}`,
+    stem: [text('m3.div.o.paper', { a: x.a, b: x.b })],
+    value: x.q,
+    rng,
+    min: 1,
+    max: 999,
+    smart: [x.q * 10, Math.floor(x.q / 10), x.q + 1, x.q - 1].filter((v) => v > 0 && v !== x.q),
+  })
+}
+
+// 课本里估算是「1. 口算除法」小节的例 4（p12），和口算合成一个知识点：第 1 档 口算整十整百整千 30%、两位数 25%、
+// 最高位不够除 25%（例 3）、估算 20%（看成哪个数方便 / 大约是多少 / 商在哪两个数之间、几十多）
 defineGenerator('m3s2-02-oral', (d, rng) => {
   const kpId = 'm3s2-02-oral'
   const roll = rng.next()
-  if (d === 1) return oralExpr(kpId, d, roll < 0.5 ? oralRound(rng) : oralEach(rng), rng)
-  if (d === 2) return oralExpr(kpId, d, roll < 0.65 ? oralShort(rng) : roll < 0.8 ? oralRound(rng) : oralEach(rng), rng)
-  return roll < 0.45 ? oralWord(kpId, d, rng) : roll < 0.7 ? oralFill(kpId, d, rng) : oralExpr(kpId, d, oralShort(rng), rng)
+  if (d === 1) {
+    if (roll < 0.3) return oralPlain(kpId, d, oralRound(rng), rng)
+    if (roll < 0.55) return oralPlain(kpId, d, oralEach(rng), rng)
+    if (roll < 0.8) return oralExpr(kpId, d, oralShort(rng), rng)
+    const k = rng.next()
+    return k < 0.34 ? genHandy(kpId, d, rng) : k < 0.67 ? genAbout(kpId, d, rng) : genTensMore(kpId, d, rng)
+  }
+  if (d === 2)
+    return roll < 0.3
+      ? oralExpr(kpId, d, oralShort(rng), rng)
+      : roll < 0.55
+        ? oralWord(kpId, d, rng)
+        : roll < 0.7
+          ? genEstimateTo(kpId, d, rng)
+          : roll < 0.85
+            ? genTensMore(kpId, d, rng)
+            : oralExpr(kpId, d, rng.chance(0.5) ? oralRound(rng) : oralEach(rng), rng)
+  return roll < 0.3 ? oralFill(kpId, d, rng) : roll < 0.55 ? oralWord(kpId, d, rng) : roll < 0.75 ? genCheapest(kpId, d, rng) : oralExpr(kpId, d, oralShort(rng), rng)
 })
 
 // ─────────────────────────────────────────────────────────────
-// 估算（p12 例 4、练习二 7–9、练习七 5）：把被除数看成接近的整十、整百数来估商；商在哪两个整十数之间
+// 估算（p12 例 4、练习二 7–9、练习七 5）：把被除数看成接近的整十、整百数来估商；商在哪两个整十数之间。
+// 课本例 4 的「≈」这里写成「大约」（朗读读不出「≈」）。
 // ─────────────────────────────────────────────────────────────
 
 /** 估的数：r 是好算的整十 / 整百数（r ÷ b = e），a 在 r 附近（不等于 r） */
@@ -318,20 +353,49 @@ function genTensMore(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 情境里估一估，选项差出数量级（练习二 7 衣服、练习二 8 走路）：大约 50 元 / 500 元 / 5 元 */
-function genEstimateMagnitude(kpId: string, d: Difficulty, rng: RNG): Question {
+/** 把被除数看成 r 能不能用表内除法口算（r ÷ b 是整十、整百数）：例 4 的 283 ÷ 3 看成 300 或 270 都方便，看成 280 不方便 */
+export const handy = (r: number, b: number): boolean => r % (b * 10) === 0
+
+/**
+ * 估算时把被除数看成哪个数比较方便（例 4、做一做 1）：选项都是被除数附近的整十数，只有一个能方便地口算；
+ * 另一个也方便的整十、整百数（283 看成 270 还是 300）不同时放进来。
+ */
+function genHandy(kpId: string, d: Difficulty, rng: RNG): Question {
   const x = estimatePair(rng)
-  if (x.e >= 100) return genEstimateMagnitude(kpId, d, rng)
-  const yuan = rng.chance(0.5)
-  const about = (n: number): LStr => ({ k: yuan ? 'm3.div.aboutYuan' : 'm3.div.aboutM', p: { n } })
+  const base = Math.round(x.a / 10) * 10
+  const wrongs: number[] = []
+  for (const off of [0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50]) {
+    const v = base + off
+    if (v > 0 && v !== x.r && !handy(v, x.b) && wrongs.length < 2) wrongs.push(v)
+  }
   return labelQuestion({
     kpId,
     type: 'divide',
     difficulty: d,
-    sig: `mag-${yuan ? 'y' : 'm'}-${x.a}-${x.b}`,
-    stem: [text(yuan ? 'm3.div.e.clothes' : 'm3.div.e.meters', { a: x.a, b: x.b })],
-    correct: about(x.e),
-    distractors: [about(x.e * 10), about(x.e / 10)],
+    sig: `handy-${x.a}-${x.b}-${x.r}`,
+    stem: [text('m3.div.e.handy', { a: x.a, b: x.b })],
+    correct: String(x.r),
+    distractors: wrongs.map(String),
+    rng,
+  })
+}
+
+/**
+ * 商大约是多少（例 4 骑行、做一做 1 航行、练习二 7 衣服 / 8 走路）：选项只有一个合理的估值，另两个差出 10 倍
+ * （不把 270 看成的 90 和 300 看成的 100 同时放进来）。
+ */
+export const ABOUT_KINDS = ['expr', 'expr', 'bike', 'ship', 'clothes', 'meters'] as const
+function genAbout(kpId: string, d: Difficulty, rng: RNG): Question {
+  const x = estimatePair(rng)
+  const kind = rng.pick(ABOUT_KINDS)
+  return labelQuestion({
+    kpId,
+    type: 'divide',
+    difficulty: d,
+    sig: `about-${kind}-${x.a}-${x.b}`,
+    stem: [text(`m3.div.e.about.${kind}`, { a: x.a, b: x.b })],
+    correct: String(x.e),
+    distractors: [String(x.e * 10), String(x.e / 10)],
     rng,
   })
 }
@@ -359,14 +423,6 @@ function genCheapest(kpId: string, d: Difficulty, rng: RNG): Question {
     })
   }
 }
-
-defineGenerator('m3s2-02-estimate', (d, rng) => {
-  const kpId = 'm3s2-02-estimate'
-  const roll = rng.next()
-  if (d === 1) return genEstimateTo(kpId, d, rng)
-  if (d === 2) return roll < 0.6 ? genTensMore(kpId, d, rng) : genEstimateTo(kpId, d, rng)
-  return roll < 0.45 ? genEstimateMagnitude(kpId, d, rng) : roll < 0.75 ? genCheapest(kpId, d, rng) : genTensMore(kpId, d, rng)
-})
 
 // ─────────────────────────────────────────────────────────────
 // 笔算除法（p15–21 例 1–3、练习三）：只放商里没有 0 的（商中间、末尾有 0 是下一个知识点）
@@ -399,8 +455,9 @@ export function written3short(rng: RNG, withRem: boolean): Div {
   }
 }
 
-/** 第 1 档：直接笔算，三位数的约三成问余数 */
+/** 第 1 档：直接笔算，三位数的约三成问余数；约四分之一照例 1–3 的情境出应用题（志愿者、树苗、读后感、石榴） */
 function genWrittenCalc(kpId: string, d: Difficulty, rng: RNG): Question {
+  if (rng.chance(0.25)) return genWrittenWord(kpId, d, rng, WRITTEN_WORDS.filter((w) => w.example))
   const roll = rng.next()
   if (roll < 0.3) return askQ(kpId, d, written2(rng), rng)
   const x = roll < 0.6 ? written3(rng, rng.chance(0.4)) : written3short(rng, rng.chance(0.6))
@@ -423,47 +480,86 @@ function genDigits(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 验算（p15 没有余数：商 × 除数；p18 有余数：商 × 除数 + 余数） */
+/**
+ * 验算（p15 没有余数：商 × 除数 = 被除数；p18 有余数：商 × 除数 + 余数 = 被除数；p35 结构图）。题干不给被除数的答案可抄：
+ * judge 给一道算好的除法（一半故意算错），用乘法验算判断对不对；pick 选验算用的算式（选项格式一样）；
+ * find 只给商、除数、余数，求被除数。
+ */
+export type CheckKind = 'judge' | 'pick' | 'find'
 function genCheck(kpId: string, d: Difficulty, rng: RNG): Question {
-  const x = rng.chance(0.5) ? written3short(rng, true) : rng.chance(0.5) ? written2(rng) : written3(rng, false)
-  const stem: StemPart[] =
-    x.r > 0
-      ? [text('m3.div.checkRem', { a: x.a, b: x.b, q: x.q, r: x.r }), { kind: 'expr', expr: `${x.q} × ${x.b} + ${x.r} = ?` }]
-      : [text('m3.div.checkExact', { a: x.a, b: x.b, q: x.q }), { kind: 'expr', expr: `${x.q} × ${x.b} = ?` }]
+  const x = rng.chance(0.45) ? written3short(rng, true) : rng.chance(0.5) ? written2(rng) : written3(rng, rng.chance(0.4))
+  const kind = rng.pick<CheckKind>(['judge', 'judge', 'pick', 'find'])
+  const rem = x.r > 0
+  if (kind === 'judge') {
+    const ok = rng.chance(0.5)
+    let q = x.q
+    let r = x.r
+    if (!ok) {
+      // 算错的样子：商差 1，或者（有余数时）余数差 1——都还像一道正常的除法（余数不是 0、比除数小）
+      const r2 = x.r + 1 < x.b ? x.r + 1 : x.r - 1
+      if (rem && r2 > 0 && rng.chance(0.4)) r = r2
+      else q = x.q + (rng.chance(0.5) ? 1 : -1)
+    }
+    return labelQuestion({
+      kpId,
+      type: 'divide',
+      difficulty: d,
+      sig: `check-judge-${x.a}-${x.b}-${q}-${r}`,
+      stem: [text(rem ? 'm3.div.checkJudgeRem' : 'm3.div.checkJudge', { a: x.a, b: x.b, q, r })],
+      correct: opt(ok ? 'm3.opt.right' : 'm3.opt.wrong'),
+      distractors: [opt(ok ? 'm3.opt.wrong' : 'm3.opt.right')],
+      rng,
+    })
+  }
+  if (kind === 'pick') {
+    const right = rem ? `${x.q} × ${x.b} + ${x.r}` : `${x.q} × ${x.b}`
+    const wrongs = rem ? [`${x.q} × ${x.b} - ${x.r}`, `${x.q} × ${x.r} + ${x.b}`] : [`${x.q} + ${x.b}`, `${x.q} ÷ ${x.b}`]
+    return labelQuestion({
+      kpId,
+      type: 'divide',
+      difficulty: d,
+      sig: `check-pick-${x.a}-${x.b}`,
+      stem: [text(rem ? 'm3.div.checkPickRem' : 'm3.div.checkPick', { a: x.a, b: x.b, q: x.q, r: x.r })],
+      correct: right,
+      distractors: wrongs,
+      rng,
+    })
+  }
   return numberQuestion({
     kpId,
     type: 'divide',
     difficulty: d,
-    sig: `check-${x.a}-${x.b}`,
-    stem,
+    sig: `check-find-${x.q}-${x.b}-${x.r}`,
+    stem: [text(rem ? 'm3.div.checkFindRem' : 'm3.div.checkFind', { q: x.q, b: x.b, r: x.r })],
     value: x.a,
     rng,
     min: 1,
     max: 999,
-    smart: [x.q * x.b, x.a + x.r, x.a + 1, x.a - 1].filter((v) => v !== x.a),
+    smart: [x.q * x.b, x.q * x.b - x.r, x.q + x.b + x.r, x.a + 1].filter((v) => v > 0 && v !== x.a),
   })
 }
 
-/** 应用题（例 1–3、做一做、练习三 3 / 5 / 8 / 10）：ask = 问商还是余数 */
+/** 应用题（例 1–3、做一做、练习三 3 / 5 / 8 / 10）：ask = 问商还是余数；example = 例题与做一做的情境（第 1 档用） */
 interface WordTpl {
   key: string
   make: (rng: RNG) => Div
   ask: 'q' | 'r'
+  example?: true
 }
 const WRITTEN_WORDS: WordTpl[] = [
-  { key: 'm3.div.w.volunteers', make: written2, ask: 'q' },
-  { key: 'm3.div.w.trees', make: written2, ask: 'q' },
+  { key: 'm3.div.w.volunteers', make: written2, ask: 'q', example: true },
+  { key: 'm3.div.w.trees', make: written2, ask: 'q', example: true },
   { key: 'm3.div.w.ribbon', make: written2, ask: 'q' },
-  { key: 'm3.div.w.essays', make: (rng) => written3(rng, false), ask: 'q' },
+  { key: 'm3.div.w.essays', make: (rng) => written3(rng, false), ask: 'q', example: true },
   { key: 'm3.div.w.episodes', make: (rng) => written3short(rng, false), ask: 'q' },
-  { key: 'm3.div.w.pomegranates', make: (rng) => written3short(rng, true), ask: 'q' },
-  { key: 'm3.div.w.pomegranatesLeft', make: (rng) => written3short(rng, true), ask: 'r' },
+  { key: 'm3.div.w.pomegranates', make: (rng) => written3short(rng, true), ask: 'q', example: true },
+  { key: 'm3.div.w.pomegranatesLeft', make: (rng) => written3short(rng, true), ask: 'r', example: true },
   { key: 'm3.div.w.drinks', make: (rng) => (rng.chance(0.5) ? written3(rng, true) : written3short(rng, true)), ask: 'q' },
   { key: 'm3.div.w.drinksLeft', make: (rng) => (rng.chance(0.5) ? written3(rng, true) : written3short(rng, true)), ask: 'r' },
   { key: 'm3.div.w.bowls', make: (rng) => written3short(rng, rng.chance(0.5)), ask: 'q' },
 ]
-function genWrittenWord(kpId: string, d: Difficulty, rng: RNG): Question {
-  const tpl = rng.pick(WRITTEN_WORDS)
+function genWrittenWord(kpId: string, d: Difficulty, rng: RNG, pool: WordTpl[] = WRITTEN_WORDS): Question {
+  const tpl = rng.pick(pool)
   const x = tpl.make(rng)
   const value = tpl.ask === 'q' ? x.q : x.r
   return numberQuestion({
@@ -667,18 +763,21 @@ function genStatement(kpId: string, d: Difficulty, rng: RNG, pool: { key: string
   })
 }
 
+// 第 1 档：计算 65%（含例题情境的应用题）、先判断商是几位数 15%（p18 做一做 2）、验算 20%（例 1–3「请验算」、p18）
 defineGenerator('m3s2-02-written', (d, rng) => {
   const kpId = 'm3s2-02-written'
   const roll = rng.next()
-  if (d === 1) return genWrittenCalc(kpId, d, rng)
+  if (d === 1) return roll < 0.65 ? genWrittenCalc(kpId, d, rng) : roll < 0.8 ? genDigits(kpId, d, rng) : genCheck(kpId, d, rng)
   if (d === 2)
-    return roll < 0.25
+    return roll < 0.15
       ? genDigits(kpId, d, rng)
-      : roll < 0.45
+      : roll < 0.3
         ? genCheck(kpId, d, rng)
-        : roll < 0.75
+        : roll < 0.65
           ? genWrittenWord(kpId, d, rng)
-          : genWrittenCalc(kpId, d, rng)
+          : roll < 0.8
+            ? genWrittenFix(kpId, d, rng)
+            : genWrittenCalc(kpId, d, rng)
   return roll < 0.3
     ? genWrittenFix(kpId, d, rng)
     : roll < 0.5
@@ -867,9 +966,26 @@ function genZeroFix(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
+/** 例 6 买跳绳：用 a 元买 b 元一根的跳绳，最多买几根（650 ÷ 5）、还剩多少元（245 ÷ 8 = 30……5） */
+function genRope(kpId: string, d: Difficulty, x: Div, rng: RNG): Question {
+  const left = x.r > 0 && rng.chance(0.5)
+  return numberQuestion({
+    kpId,
+    type: 'divide',
+    difficulty: d,
+    sig: `word-${left ? 'ropeLeft' : 'rope'}-${x.a}-${x.b}`,
+    stem: [text(left ? 'm3.div.z.ropeLeft' : 'm3.div.z.rope', { a: x.a, b: x.b })],
+    value: left ? x.r : x.q,
+    rng,
+    min: 0,
+    max: 999,
+    smart: left ? [x.r + 1, x.r - 1, x.b - x.r, x.q] : quotientSmart(x.q),
+  })
+}
+
 /** 应用题（练习四 2 火车票、3 藤椅、5 飞机、10 商和余数都是 3） */
-function genZeroWord(kpId: string, d: Difficulty, rng: RNG): Question {
-  const kind = rng.pick(['ticket', 'chairs', 'plane', 'riddle'] as const)
+function genZeroWord(kpId: string, d: Difficulty, rng: RNG, kinds: readonly ('ticket' | 'chairs' | 'plane' | 'riddle')[]): Question {
+  const kind = rng.pick(kinds)
   const withZero = (lo: number, hi: number): number => {
     for (;;) {
       const v = rng.int(lo, hi)
@@ -916,30 +1032,48 @@ function genZeroWord(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
+/** 第 2 档的判断只放例 4 的两条：0 除以不是 0 的数得 0、0 不能作除数 */
+const ZERO_STATEMENTS_EASY = ZERO_STATEMENTS.filter((s) => s.key === 'm3.div.st.zeroDiv' || s.key === 'm3.div.st.zeroDivisor')
+
+// 第 1 档：0 的运算 15%（例 4）、208 型 20%（例 5(1)）、216 型 25%（例 5(2)）、650 型 20%（例 6(1)）、
+// 带余数的商中有 0 20%（例 6(2)），例 6 的一部分照课本出买跳绳的应用题
 defineGenerator('m3s2-02-zeros', (d, rng) => {
   const kpId = 'm3s2-02-zeros'
   const roll = rng.next()
-  if (d === 1) return roll < 0.2 ? genZeroFacts(kpId, d, rng) : askQ(kpId, d, roll < 0.6 ? zeroMiddle(rng) : zeroEnd(rng), rng)
-  if (d === 2) {
-    if (roll < 0.3) return askQ(kpId, d, zeroShort(rng, false), rng)
-    if (roll < 0.7) {
-      const x = rng.chance(0.5) ? zeroRem(rng) : zeroShort(rng, true)
-      return rng.chance(0.55) ? askQ(kpId, d, x, rng) : askR(kpId, d, x, rng)
+  if (d === 1) {
+    if (roll < 0.15) return genZeroFacts(kpId, d, rng)
+    if (roll < 0.35) return askQ(kpId, d, zeroMiddle(rng), rng)
+    if (roll < 0.6) return askQ(kpId, d, zeroShort(rng, false), rng)
+    if (roll < 0.8) {
+      const x = zeroEnd(rng)
+      return rng.chance(0.25) ? genRope(kpId, d, x, rng) : askQ(kpId, d, x, rng)
     }
-    return roll < 0.8 ? genZeroFacts(kpId, d, rng) : askQ(kpId, d, rng.chance(0.5) ? zeroMiddle(rng) : zeroEnd(rng), rng)
+    const x = rng.chance(0.5) ? zeroRem(rng) : zeroShort(rng, true)
+    const k = rng.next()
+    return k < 0.3 ? genRope(kpId, d, x, rng) : k < 0.65 ? askQ(kpId, d, x, rng) : askR(kpId, d, x, rng)
   }
+  if (d === 2)
+    return roll < 0.25
+      ? genZeroWord(kpId, d, rng, ['ticket', 'chairs', 'plane'])
+      : roll < 0.45
+        ? genZeroCompare(kpId, d, rng)
+        : roll < 0.65
+          ? genZeroFix(kpId, d, rng)
+          : roll < 0.75
+            ? genStatement(kpId, d, rng, ZERO_STATEMENTS_EASY)
+            : askR(kpId, d, rng.chance(0.5) ? zeroRem(rng) : zeroShort(rng, true), rng)
   return roll < 0.3
     ? genZeroCompare(kpId, d, rng)
     : roll < 0.6
       ? genZeroFix(kpId, d, rng)
       : roll < 0.8
         ? genStatement(kpId, d, rng, ZERO_STATEMENTS)
-        : genZeroWord(kpId, d, rng)
+        : genZeroWord(kpId, d, rng, ['ticket', 'chairs', 'plane', 'riddle'])
 })
 
 // ─────────────────────────────────────────────────────────────
-// 用乘除法解决问题（p27–34 例 7–10、练习五 / 六 / 七、p36 鸡蛋组题）：连乘、连除、先求一份（归一）、先求总数（归总）。
-// 每一步都是两位数、三位数乘除一位数以内。
+// 解决问题（p27–34 例 7–10、练习五 / 六 / 七、p36 鸡蛋组题）：连乘、连除、先求一份（归一）、先求总数（归总）。
+// 每一步都是两位数、三位数乘除一位数以内（除数都是一位数）。
 // ─────────────────────────────────────────────────────────────
 
 interface Solve {
@@ -948,6 +1082,8 @@ interface Solve {
   value: number
   type: 'multiply' | 'divide'
   smart: number[]
+  /** 「哪个综合算式能解决这个问题」：[对的, 错的, 错的]，三个算式格式一样（练习六 7(2)、每个例题都列综合算式） */
+  exprs?: [string, string, string]
 }
 type SolveMaker = (rng: RNG) => Solve | null
 
@@ -957,9 +1093,11 @@ const others = (rng: RNG, lo: number, hi: number, not: number): number => {
     if (v !== not) return v
   }
 }
+/** 不小于 lo 的、step 的最小倍数 */
+const ceilTo = (lo: number, step: number): number => Math.ceil(lo / step) * step
 
-/** 连乘、连除（第 1 档：数都小） */
-export const SOLVE_CHAIN: SolveMaker[] = [
+/** 连乘（例 7 保温杯、做一做 1 方阵、p36 鸡蛋 (1)、练习五 2 大米） */
+export const SOLVE_MUL: SolveMaker[] = [
   (rng) => {
     const a = rng.int(2, 4)
     const b = rng.int(3, 8)
@@ -985,13 +1123,23 @@ export const SOLVE_CHAIN: SolveMaker[] = [
     const c = rng.int(2, 6)
     return { key: 'm3.div.s.rice', p: { a, b, c }, value: a * b * c, type: 'multiply', smart: [a * b, b * c, a * b + c] }
   },
+]
+
+/** 连除（例 8 集体舞 60 ÷ 2 ÷ 3、做一做 2 杯子 960 ÷ 6 ÷ 8、p36 鸡蛋 (2)、练习五 4 药片 / 5 书架）：每一步都整除，总数可以是三位数 */
+export const SOLVE_DIV: SolveMaker[] = [
   (rng) => {
     const a = rng.int(2, 4)
     const b = rng.int(2, 5)
     const k = rng.int(2, 9)
     const t = a * b * k
-    if (t > 99) return null
-    return { key: 'm3.div.s.teams', p: { t, a, b }, value: k, type: 'divide', smart: [t / a, t / b, k + 1] }
+    return {
+      key: 'm3.div.s.teams',
+      p: { t, a, b },
+      value: k,
+      type: 'divide',
+      smart: [t / a, t / b, k + 1],
+      exprs: [`${t} ÷ ${a} ÷ ${b}`, `${t} × ${a} ÷ ${b}`, `${t} ÷ ${a} × ${b}`],
+    }
   },
   (rng) => {
     const a = rng.int(2, 4)
@@ -1000,20 +1148,66 @@ export const SOLVE_CHAIN: SolveMaker[] = [
     const t = a * b * k
     return { key: 'm3.div.s.eggPack', p: { t, a, b }, value: k, type: 'divide', smart: [t / a, t / b, k + 1] }
   },
+  (rng) => {
+    const a = rng.int(4, 9)
+    const b = rng.int(2, 9)
+    const k = rng.int(5, 30)
+    const t = a * b * k
+    if (t < 100 || t > 999) return null
+    return {
+      key: 'm3.div.s.cupBoxes',
+      p: { t, a, b },
+      value: k,
+      type: 'divide',
+      smart: [t / a, t / b, k + 1],
+      exprs: [`${t} ÷ ${a} ÷ ${b}`, `${t} ÷ ${a} × ${b}`, `${t} × ${b} ÷ ${a}`],
+    }
+  },
+  (rng) => {
+    const a = rng.int(2, 4)
+    const b = rng.int(3, 6)
+    const k = rng.int(10, 60)
+    const t = a * b * k
+    if (t > 999) return null
+    return { key: 'm3.div.s.shelves', p: { t, a, b }, value: k, type: 'divide', smart: [t / a, t / b, k + 1] }
+  },
+  (rng) => {
+    const a = rng.int(2, 3)
+    const b = rng.int(2, 3)
+    const k = rng.int(5, 40)
+    return { key: 'm3.div.s.pills', p: { t: a * b * k, a, b }, value: k, type: 'divide', smart: [(a * b * k) / a, (a * b * k) / b, k + 1] }
+  },
 ]
-/** 先求一份、先求总数（第 2 档：例 9 树苗、练习六 1 蜜蜂 / 2 蜗牛 / 7 毽子、例 10 货车和轿车、练习六 3 看书、p36 鸡蛋换大盒） */
+
+/** 先求一份（归一，例 9 树苗、练习六 1 蜜蜂 / 2 蜗牛 / 7 毽子、做一做 1 卡车）；也有反过来求份数的（做一做 1(2) 卡车、p36 鸡蛋 (3)） */
 export const SOLVE_UNIT: SolveMaker[] = [
   (rng) => {
     const a = rng.int(2, 6)
     const u = rng.int(4, 18) * 5
     const b = others(rng, 2, 9, a)
-    return { key: 'm3.div.s.seedlings', p: { a, p: a * u, b }, value: u * b, type: 'multiply', smart: [a * u * b, a * u + b, u * a] }
+    const p = a * u
+    return {
+      key: 'm3.div.s.seedlings',
+      p: { a, p, b },
+      value: u * b,
+      type: 'multiply',
+      smart: [p * b, p + b, u * a],
+      exprs: [`${p} ÷ ${a} × ${b}`, `${p} × ${a} ÷ ${b}`, `${p} ÷ ${b} × ${a}`],
+    }
   },
   (rng) => {
     const a = rng.int(2, 6)
     const u = rng.int(8, 30)
     const b = others(rng, 3, 9, a)
-    return { key: 'm3.div.s.bees', p: { a, p: a * u, b }, value: u * b, type: 'multiply', smart: [a * u * b, a * u + b, u + b] }
+    const p = a * u
+    return {
+      key: 'm3.div.s.bees',
+      p: { a, p, b },
+      value: u * b,
+      type: 'multiply',
+      smart: [p * b, p + b, u + b],
+      exprs: [`${p} ÷ ${a} × ${b}`, `${p} × ${a} ÷ ${b}`, `${p} ÷ ${b} × ${a}`],
+    }
   },
   (rng) => {
     const a = rng.int(2, 5)
@@ -1028,43 +1222,89 @@ export const SOLVE_UNIT: SolveMaker[] = [
     return { key: 'm3.div.s.shuttle', p: { a, p: a * u, b }, value: u * b, type: 'multiply', smart: [a * u * b, a * u + b, u + b] }
   },
   (rng) => {
-    const v = rng.int(4, 8) * 10
-    const t = rng.int(3, 6)
-    const u = rng.int(2, t - 1)
-    if ((v * t) % u !== 0) return null
-    return { key: 'm3.div.s.cars', p: { v, t, u }, value: (v * t) / u, type: 'divide', smart: [v * t, v + t, (v * u) / t] }
+    const a = rng.int(2, 9)
+    const u = rng.int(2, 9)
+    const b = others(rng, 2, 9, a)
+    return { key: 'm3.div.s.trucks', p: { a, p: a * u, b }, value: u * b, type: 'multiply', smart: [a * u * b, a * u + b, u + b] }
   },
   (rng) => {
-    const a = rng.int(5, 20)
-    const b = rng.int(3, 10)
-    const c = others(rng, 2, 30, a)
-    if ((a * b) % c !== 0 || (a * b) / c < 2) return null
-    return { key: 'm3.div.s.pages', p: { a, b, c }, value: (a * b) / c, type: 'divide', smart: [a * b, (c * b) / a, b + 1] }
+    const a = rng.int(2, 9)
+    const u = rng.int(2, 9)
+    const n = rng.int(10, 40)
+    const t = u * n
+    if (t > 999 || n === a) return null
+    return { key: 'm3.div.s.trucksNeed', p: { a, p: a * u, t }, value: n, type: 'divide', smart: [t / a, u, n + 1].filter((v) => Number.isInteger(v)) }
+  },
+  (rng) => {
+    const u = rng.pick([4, 6, 8])
+    const a = rng.int(2, 5)
+    const n = rng.int(6, 30)
+    if (n === a) return null
+    return { key: 'm3.div.s.eggsFill', p: { t: u * a, a, m: u * n }, value: n, type: 'divide', smart: [(u * n) / a, u, n + 1].filter((v) => Number.isInteger(v)) }
+  },
+]
+
+/**
+ * 先求总数（归总，例 10 货车和轿车、练习六 3 看书、做一做 2 电脑、p36 鸡蛋 (4)）：总数 = a × b = c × 答案。
+ * 先定 c（新的每份，一位数）和 b，再取 a 为 c / gcd(b, c) 的倍数，保证能整除，不用反复重抽。
+ */
+function totalPair(rng: RNG, aRange: [number, number], bRange: [number, number], cRange: [number, number], maxN = 999): { a: number; b: number; c: number; n: number } | null {
+  const b = rng.int(bRange[0], bRange[1])
+  const c = rng.int(cRange[0], cRange[1])
+  const step = c / gcd(b, c)
+  const lo = ceilTo(aRange[0], step)
+  if (lo > aRange[1]) return null
+  const a = lo + step * rng.int(0, Math.floor((aRange[1] - lo) / step))
+  const n = (a * b) / c
+  if (a === c || b === c || a * b > maxN || n < 2) return null
+  return { a, b, c, n }
+}
+export const SOLVE_TOTAL: SolveMaker[] = [
+  (rng) => {
+    const t = rng.int(3, 6)
+    const u = rng.int(2, t - 1)
+    const step = u / gcd(10 * t, u)
+    const m = ceilTo(rng.int(4, 9), step)
+    const v = m * 10
+    if (v > 90 || (v * t) / u > 150) return null
+    return {
+      key: 'm3.div.s.cars',
+      p: { v, t, u },
+      value: (v * t) / u,
+      type: 'divide',
+      smart: [v * t, v + t, (v * u) / t].filter((x) => Number.isInteger(x)),
+      exprs: [`${v} × ${t} ÷ ${u}`, `${v} × ${u} ÷ ${t}`, `${v} × ${t} × ${u}`],
+    }
+  },
+  (rng) => {
+    const x = totalPair(rng, [5, 20], [3, 9], [2, 9])
+    if (!x) return null
+    return {
+      key: 'm3.div.s.pages',
+      p: { a: x.a, b: x.b, c: x.c },
+      value: x.n,
+      type: 'divide',
+      smart: [x.a * x.b, x.b + 1, x.n + 1],
+      exprs: [`${x.a} × ${x.b} ÷ ${x.c}`, `${x.a} × ${x.c} ÷ ${x.b}`, `${x.a} × ${x.b} × ${x.c}`],
+    }
   },
   (rng) => {
     const a = rng.pick([4, 6, 8, 10, 12])
-    const b = rng.int(10, 60)
-    const c = others(rng, 4, 12, a)
-    if ((a * b) % c !== 0 || a * b > 999) return null
-    return { key: 'm3.div.s.eggRepack', p: { a, b, c }, value: (a * b) / c, type: 'divide', smart: [a * b, b + 1, (c * b) / a] }
+    const c = others(rng, 4, 9, a)
+    const step = c / gcd(a, c)
+    const b = ceilTo(rng.int(10, 60), step)
+    if (a * b > 999) return null
+    return { key: 'm3.div.s.eggRepack', p: { a, b, c }, value: (a * b) / c, type: 'divide', smart: [a * b, b + 1, (c * b) / a].filter((v) => Number.isInteger(v)) }
+  },
+  (rng) => {
+    const x = totalPair(rng, [2, 6], [6, 20], [2, 9], 120)
+    if (!x) return null
+    return { key: 'm3.div.s.computers', p: { a: x.a, b: x.b, c: x.c }, value: x.n, type: 'divide', smart: [x.a * x.b, x.b + 1, x.n + 1] }
   },
 ]
-/** 三步或反过来想（第 3 档：练习五 5 书架、8 布娃娃、6 游泳池来回、4 药片，练习七 6 绳子剪两段） */
+
+/** 反过来想的（第 2、3 档：练习五 6 游泳池来回、练习七 6 绳子剪两段） */
 export const SOLVE_HARD: SolveMaker[] = [
-  (rng) => {
-    const a = rng.int(2, 4)
-    const b = rng.int(3, 6)
-    const k = rng.int(10, 60)
-    const t = a * b * k
-    if (t > 999) return null
-    return { key: 'm3.div.s.shelves', p: { t, a, b }, value: k, type: 'divide', smart: [t / a, t / b, k + 1] }
-  },
-  (rng) => {
-    const a = rng.int(2, 6)
-    const b = rng.int(4, 9)
-    const k = rng.int(2, 9)
-    return { key: 'm3.div.s.dolls', p: { t: a * b * k, a, b }, value: k, type: 'divide', smart: [a * k, b * k, k + 1] }
-  },
   (rng) => {
     const d = rng.pick([25, 50])
     const k = rng.int(2, 8)
@@ -1073,12 +1313,6 @@ export const SOLVE_HARD: SolveMaker[] = [
   (rng) => {
     const s = rng.int(20, 300)
     return { key: 'm3.div.s.rope', p: { t: s * 3 }, value: s * 2, type: 'divide', smart: [(s * 3) / 2, s, s * 3 * 2] }
-  },
-  (rng) => {
-    const a = rng.int(2, 3)
-    const b = rng.int(1, 3)
-    const k = rng.int(5, 40)
-    return { key: 'm3.div.s.pills', p: { t: a * b * k, a, b }, value: k, type: 'divide', smart: [(a * b * k) / a, (a * b * k) / b, k + 1] }
   },
 ]
 
@@ -1101,10 +1335,33 @@ function genSolve(kpId: string, d: Difficulty, rng: RNG, pool: SolveMaker[]): Qu
   }
 }
 
+/** 哪个综合算式能解决这个问题（练习六 7(2)；例 8–10 都列了综合算式）：三个算式格式一样，只有一个对 */
+function genWhichExpr(kpId: string, d: Difficulty, rng: RNG): Question {
+  const pool = [...SOLVE_DIV, ...SOLVE_UNIT, ...SOLVE_TOTAL]
+  for (;;) {
+    const s = rng.pick(pool)(rng)
+    if (!s?.exprs) continue
+    const [right, ...wrongs] = s.exprs
+    return labelQuestion({
+      kpId,
+      type: s.type,
+      difficulty: d,
+      sig: `expr-${s.key}-${Object.values(s.p).join('-')}`,
+      stem: [text(s.key, s.p), text('m3.div.whichExpr')],
+      correct: right,
+      distractors: wrongs,
+      rng,
+    })
+  }
+}
+
+const SOLVE_KINDS = [SOLVE_MUL, SOLVE_DIV, SOLVE_UNIT, SOLVE_TOTAL]
+
+// 第 1 档：连乘、连除、归一、归总各约四分之一（例 7–10 与它们的做一做）
 defineGenerator('m3s2-02-solve', (d, rng) => {
   const kpId = 'm3s2-02-solve'
   const roll = rng.next()
-  if (d === 1) return genSolve(kpId, d, rng, SOLVE_CHAIN)
-  if (d === 2) return genSolve(kpId, d, rng, roll < 0.75 ? SOLVE_UNIT : SOLVE_CHAIN)
-  return genSolve(kpId, d, rng, roll < 0.6 ? SOLVE_HARD : SOLVE_UNIT)
+  if (d === 1) return genSolve(kpId, d, rng, SOLVE_KINDS[Math.min(3, Math.floor(roll * 4))]!)
+  if (d === 2) return roll < 0.3 ? genWhichExpr(kpId, d, rng) : roll < 0.8 ? genSolve(kpId, d, rng, rng.pick(SOLVE_KINDS)) : genSolve(kpId, d, rng, SOLVE_HARD)
+  return roll < 0.5 ? genSolve(kpId, d, rng, SOLVE_HARD) : roll < 0.7 ? genWhichExpr(kpId, d, rng) : genSolve(kpId, d, rng, rng.pick(SOLVE_KINDS))
 })

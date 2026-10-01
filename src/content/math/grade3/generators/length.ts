@@ -3,8 +3,10 @@ import type { RNG } from '@/engine'
 import { defineGenerator, labelQuestion, numberQuestion } from '@/engine'
 
 // ─────────────────────────────────────────────────────────────
-// 毫米、分米和千米（三上三）：毫米、分米的认识（量一量、进率）、千米的认识（进率、跑道 / 泳池 / 估计距离）、
-// 填合适的长度单位、长度单位的换算与比较。本单元没有小数，换算的答案都是整数。
+// 毫米、分米和千米（三上三）：毫米、分米的认识（量一量读「几厘米几毫米」、进率、选毫米 / 厘米 / 分米、锯木料）、
+// 千米的认识（进率、几个 100 米是 1 千米、选米 / 千米、跑道 / 泳池）、估计距离（例 3：先找一个标准——一步、每分钟走多远、
+// 每站多远；练习六的行 1 千米要多久、能不能按时到校）、长度单位的换算（整理和复习：换算、比大小、加减、对折、重叠）。
+// 本单元没有小数，换算的答案都是整数；单元四才学多位数乘一位数，估计距离只用「几个十 / 几个百」能口算的数。
 // 单位、换算、比大小的公共部分（BASE / convQuestion / compareQuestion）质量单元（mass.ts）也用。
 // ─────────────────────────────────────────────────────────────
 
@@ -100,22 +102,27 @@ export function comparePair(rng: RNG, small: Unit, big: Unit): [number, Unit, nu
 
 // ── 毫米、分米的认识 ──
 
-/** 量一量：毫米尺上压着一条线段 */
+/** 「几厘米几毫米」的选项 */
+const cmMmL = (cm: number, mm: number): LStr => ({ k: 'm3.len.cmMm', p: { cm, mm } })
+
+/**
+ * 量一量：毫米尺上压着一条线段。第 1 档都从 0 起、12–68 毫米（做一做 p21：回形针、钉子读「___厘米___毫米」，量一量「___毫米」）：
+ * 不是整厘米的多半问「几厘米几毫米」（选项），其余问「几毫米」；第 2 档有从整厘米开始的（例 1 做一做：橡皮压在 1 到 6 上）。
+ */
 function rulerQ(d: Difficulty, rng: RNG): Question {
   let from: number
   let to: number
-  if (d === 1) {
+  const roll = rng.next()
+  if (d === 1 || (d === 2 && roll < 0.5)) {
     from = 0
-    to = rng.int(2, 7) * 10
-  } else if (d === 2 && rng.chance(0.5)) {
+    // 第 1 档约四成是整厘米
+    to = d === 1 && roll < 0.4 ? rng.int(2, 6) * 10 : rng.int(12, 68)
+    if (to % 10 === 0 && !(d === 1 && roll < 0.4)) to += rng.int(1, 8) > 4 ? 3 : 7
+  } else if (d === 2) {
     // 从整厘米开始（课本：橡皮压在 1 到 6 上）
     const s = rng.int(1, 3)
     from = s * 10
     to = from + rng.int(2, 7 - s) * 10
-  } else if (d === 2) {
-    from = 0
-    to = rng.int(12, 68)
-    if (to % 10 === 0) to += 4
   } else {
     from = rng.int(3, 25)
     to = from + rng.int(14, 45)
@@ -124,21 +131,34 @@ function rulerQ(d: Difficulty, rng: RNG): Question {
   const len = to - from
   const length = Math.max(6, Math.min(8, Math.ceil(to / 10) + 1))
   const ruler: StemPart = { kind: 'ruler', length, from, to, mm: true }
-  if (d >= 2 && len % 10 !== 0 && len > 10 && rng.chance(0.5)) {
-    // 「这条线段是 2 厘米几毫米？」
+  if (len % 10 !== 0 && len > 10 && rng.chance(0.75)) {
+    // 「这条线段是几厘米几毫米？」：选项是常见的读错（少 / 多读 1 厘米、毫米数从另一头数、两个数对调）
     const cm = Math.floor(len / 10)
     const mm = len % 10
-    return numberQuestion({
+    const wrong: [number, number][] = [
+      [cm, 10 - mm],
+      [cm + 1, mm],
+      [cm - 1, mm],
+      [mm, cm],
+      [cm + 1, 10 - mm],
+    ]
+    const seen = new Set([`${cm}-${mm}`])
+    const distractors: LStr[] = []
+    for (const [a, b] of wrong) {
+      if (a < 1 || b < 1 || b > 9 || seen.has(`${a}-${b}`)) continue
+      seen.add(`${a}-${b}`)
+      distractors.push(cmMmL(a, b))
+      if (distractors.length === 3) break
+    }
+    return labelQuestion({
       kpId: KP_MMDM,
       type: 'length',
       difficulty: d,
       sig: `rcm-${from}-${to}`,
-      stem: [text('m3.len.rulerCmMm', { cm }), ruler],
-      value: mm,
+      stem: [text('m3.len.rulerCmMm'), ruler],
+      correct: cmMmL(cm, mm),
+      distractors,
       rng,
-      min: 1,
-      max: 9,
-      smart: [10 - mm, cm, (to % 10) || 1],
     })
   }
   return numberQuestion({
@@ -250,24 +270,38 @@ function woodQ(d: Difficulty, rng: RNG): Question {
 defineGenerator(KP_MMDM, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.3) return rulerQ(d, rng)
-    if (roll < 0.9) return oneStep(KP_MMDM, d, rng, MMDM_STEPS)
-    const [ua, ub] = rng.pick<[Unit, Unit]>([...MMDM_STEPS, ['m', 'cm']])
-    return rateQuestion(KP_MMDM, 'length', d, ua, ub, rng)
+    // 课本这一节：量一量、1 厘米 = 10 毫米 / 1 分米 = 10 厘米 / 1 米 = 10 分米、例 1 与做一做的换算（含 11 厘米 = 1 分米 1 厘米）、
+    // 选毫米 / 厘米 / 分米（练习五 2、6）、锯木料（做一做 3）
+    if (roll < 0.28) return rulerQ(d, rng)
+    if (roll < 0.53) return oneStep(KP_MMDM, d, rng, MMDM_STEPS)
+    if (roll < 0.6) {
+      const [ua, ub] = rng.pick<[Unit, Unit]>([...MMDM_STEPS, ['m', 'cm']])
+      return rateQuestion(KP_MMDM, 'length', d, ua, ub, rng)
+    }
+    if (roll < 0.8) return chooseUnitQ(KP_MMDM, d, rng, SMALL_UNITS)
+    if (roll < 0.9) return woodQ(d, rng)
+    return splitQ(d, rng)
   }
   if (d === 2) {
-    if (roll < 0.3) return rulerQ(d, rng)
-    if (roll < 0.55) return compoundQ(d, rng)
-    if (roll < 0.8) return splitQ(d, rng)
-    return oneStep(KP_MMDM, d, rng, MMDM_STEPS)
+    if (roll < 0.25) return rulerQ(d, rng)
+    if (roll < 0.4) return compoundQ(d, rng)
+    if (roll < 0.55) return splitQ(d, rng)
+    if (roll < 0.7)
+      return twoLevel(KP_MMDM, d, rng, [
+        ['m', 'cm'],
+        ['dm', 'mm'],
+      ])
+    if (roll < 0.85) return chooseUnitQ(KP_MMDM, d, rng, SMALL_UNITS)
+    return judgeQ(KP_MMDM, 'length', d, rng, thingsIn(SMALL_UNITS), ORDER, 'm3.len.it')
   }
   if (roll < 0.3) return rulerQ(d, rng)
-  if (roll < 0.7)
+  if (roll < 0.6)
     return twoLevel(KP_MMDM, d, rng, [
       ['m', 'cm'],
       ['dm', 'mm'],
     ])
-  return woodQ(d, rng)
+  if (roll < 0.8) return woodQ(d, rng)
+  return judgeQ(KP_MMDM, 'length', d, rng, thingsIn(SMALL_UNITS), ORDER, 'm3.len.it')
 })
 
 // ── 千米的认识 ──
@@ -346,26 +380,40 @@ function kmAddSubQ(d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 估计距离（例 3）：走几步 / 走几分钟 / 坐几站 */
+// ── 估计距离（例 3 及练习六）──
+
+/**
+ * 估计距离：先找一个长度作标准（课本 p26 例 3 的三种标准）——一步大约 50 厘米、两步大约 1 米；每分钟大约走 70 米；
+ * 每站大约 500 米。第 1 档照课本：走几百步、走 10 分钟（「10 个 70 米」）、坐几站；第 2 档多出每分钟 100 米走几分钟、
+ * 反过来问大约要走多少步。乘法只用「几个十 / 几个百」（多位数乘一位数在下一单元）。
+ */
 function estimateQ(d: Difficulty, rng: RNG): Question {
   const roll = rng.next()
   if (roll < 0.34) {
+    if (d >= 2 && rng.chance(0.4)) {
+      // 反过来：大约 m 米，一步大约 50 厘米，大约要走多少步
+      const m = rng.int(1, 6) * 100
+      const value = m * 2
+      return numberQuestion({ kpId: KP_UNIT, type: 'length', difficulty: d, sig: `stepsBack-${m}`, stem: [text('m3.km.stepsBack', { m })], value, rng, min: 1, max: 5000, smart: [m / 2, m, m * 50].filter((x) => isWhole(x) && x !== value) })
+    }
     const n = rng.pick([200, 400, 600, 800, 1000, 1200])
     const value = n / 2
-    return numberQuestion({ kpId: KP_KM, type: 'length', difficulty: d, sig: `steps-${n}`, stem: [text('m3.km.steps', { n })], value, rng, min: 1, max: 5000, smart: [n * 50, n, n * 2, value + 100] })
+    return numberQuestion({ kpId: KP_UNIT, type: 'length', difficulty: d, sig: `steps-${n}`, stem: [text('m3.km.steps', { n })], value, rng, min: 1, max: 5000, smart: [n * 50, n, n * 2, value + 100] })
   }
   if (roll < 0.67) {
-    const v = rng.pick([50, 60, 70, 80])
-    const t = rng.int(5, 15)
+    // 第 1 档照课本走 10 分钟；第 2 档也有每分钟 100 米、走几分钟
+    const fast = d >= 2 && rng.chance(0.5)
+    const v = fast ? 100 : rng.pick([50, 60, 70, 70, 80, 90])
+    const t = fast ? rng.int(3, 15) : 10
     const value = v * t
-    return numberQuestion({ kpId: KP_KM, type: 'length', difficulty: d, sig: `mins-${v}-${t}`, stem: [text('m3.km.minutes', { v, t })], value, rng, min: 1, max: 5000, smart: [v + t, value + v, value - v] })
+    return numberQuestion({ kpId: KP_UNIT, type: 'length', difficulty: d, sig: `mins-${v}-${t}`, stem: [text('m3.km.minutes', { v, t })], value, rng, min: 1, max: 5000, smart: [v + t, value + v, value - v, value * 10].filter((x) => isWhole(x) && x !== value) })
   }
   const n = rng.int(2, 6)
   const value = n * 500
-  return numberQuestion({ kpId: KP_KM, type: 'length', difficulty: d, sig: `stops-${n}`, stem: [text('m3.km.stops', { n })], value, rng, min: 1, max: 10000, smart: [n + 500, value + 500, value - 500] })
+  return numberQuestion({ kpId: KP_UNIT, type: 'length', difficulty: d, sig: `stops-${n}`, stem: [text('m3.km.stops', { n })], value, rng, min: 1, max: 10000, smart: [n + 500, value + 500, value - 500] })
 }
 
-/** 7 时出发，每分钟走 v 米，d 千米，7 时 m 分能走到吗（能 / 不能） */
+/** 7 时出发，每分钟走 v 米，d 千米，7 时 m 分能走到吗（能 / 不能；练习六 7：3 千米、每分钟 100 米、7:45） */
 function lateQ(d: Difficulty, rng: RNG): Question {
   for (;;) {
     const [km, v] = rng.pick<[number, number]>([
@@ -382,7 +430,7 @@ function lateQ(d: Difficulty, rng: RNG): Question {
     if (!Number.isInteger(need) || need > 55 || Math.abs(need - m) < 5) continue
     const can = need <= m
     return labelQuestion({
-      kpId: KP_KM,
+      kpId: KP_UNIT,
       type: 'length',
       difficulty: d,
       sig: `late-${km}-${v}-${m}`,
@@ -397,23 +445,27 @@ function lateQ(d: Difficulty, rng: RNG): Question {
 defineGenerator(KP_KM, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.38) return convQuestion(KP_KM, 'length', d, rng.int(1, 9), 'km', 'm', rng)
-    if (roll < 0.76) return convQuestion(KP_KM, 'length', d, rng.int(1, 9) * 1000, 'm', 'km', rng)
-    if (roll < 0.86) return rateQuestion(KP_KM, 'length', d, 'km', 'm', rng)
-    return hundredsQ(d, rng, [100, 200, 500])
+    // 课本这一节：跑道一圈 400 米、1 千米 = 1000 米、例 2 的换算、几个 100 米是 1 千米、选米 / 千米（练习七 1）
+    if (roll < 0.24) return convQuestion(KP_KM, 'length', d, rng.int(1, 9), 'km', 'm', rng)
+    if (roll < 0.48) return convQuestion(KP_KM, 'length', d, rng.int(1, 9) * 1000, 'm', 'km', rng)
+    if (roll < 0.54) return rateQuestion(KP_KM, 'length', d, 'km', 'm', rng)
+    if (roll < 0.68) return hundredsQ(d, rng, [100, 200, 500])
+    if (roll < 0.88) return chooseUnitQ(KP_KM, d, rng, BIG_UNITS)
+    return trackQ(d, rng)
   }
   if (d === 2) {
-    if (roll < 0.25) return trackQ(d, rng)
-    if (roll < 0.5) return poolQ(d, rng)
-    if (roll < 0.8) return kmAddSubQ(d, rng)
+    if (roll < 0.2) return trackQ(d, rng)
+    if (roll < 0.4) return poolQ(d, rng)
+    if (roll < 0.65) return kmAddSubQ(d, rng)
+    if (roll < 0.8) return chooseUnitQ(KP_KM, d, rng, BIG_UNITS)
     return hundredsQ(d, rng, [100, 200, 250, 500])
   }
-  if (roll < 0.6) return estimateQ(d, rng)
-  if (roll < 0.85) return lateQ(d, rng)
-  return kmAddSubQ(d, rng)
+  if (roll < 0.4) return kmAddSubQ(d, rng)
+  if (roll < 0.7) return poolQ(d, rng)
+  return judgeQ(KP_KM, 'length', d, rng, thingsIn(BIG_UNITS), ORDER, 'm3.len.it')
 })
 
-// ── 填合适的长度单位 ──
+// ── 选单位（并进「毫米、分米的认识」与「千米的认识」）──
 
 export interface Thing {
   id: string
@@ -459,27 +511,28 @@ export function thingStem(prefix: string, t: Thing, u: LStr | string): StemPart[
   return parts
 }
 
-/** 离正确单位远的（第 1 档，一眼就能排除）/ 挨着的（第 2 档，容易混） */
-function unitOptions(order: Unit[], t: Thing, near: boolean, rng: RNG): Unit[] {
-  const correct = t.unit
-  const i = order.indexOf(correct)
-  if (near) {
-    const byDist = rng.shuffle(order.filter((u) => u !== correct && !t.alsoOk?.includes(u))).sort((a, b) => Math.abs(order.indexOf(a) - i) - Math.abs(order.indexOf(b) - i))
-    return byDist.slice(0, 3)
-  }
-  return rng.shuffle(order.filter((u) => Math.abs(order.indexOf(u) - i) >= 2)).slice(0, 2)
-}
+/** 「毫米、分米的认识」选的单位（练习五 2、6：杯子高 1 分米、铅笔粗 7 毫米、牙刷长 16 厘米）与「千米的认识」选的单位 */
+export const SMALL_UNITS: Unit[] = ['mm', 'cm', 'dm']
+export const BIG_UNITS: Unit[] = ['m', 'km']
+/** 正确单位在这几个里的东西 */
+const thingsIn = (units: Unit[]): Thing[] => LENGTH_THINGS.filter((t) => units.includes(t.unit))
 
-function chooseUnitQ(d: Difficulty, rng: RNG): Question {
-  const t = rng.pick(LENGTH_THINGS)
+/**
+ * 选单位：东西只从这一节的单位里挑。选项——毫米、厘米、分米三个都给（第 2 档再加米）；米、千米两个再加厘米
+ * （第 2 档再加分米）。「也说得通」的单位不当错的。
+ */
+function chooseUnitQ(kpId: string, d: Difficulty, rng: RNG, units: Unit[]): Question {
+  const t = rng.pick(thingsIn(units))
+  const extra: Unit[] = units === SMALL_UNITS ? (d >= 2 ? ['m'] : []) : d >= 2 ? ['cm', 'dm'] : ['cm']
+  const wrong = [...units, ...extra].filter((u) => u !== t.unit && !t.alsoOk?.includes(u))
   return labelQuestion({
-    kpId: KP_UNIT,
+    kpId,
     type: 'length',
     difficulty: d,
     sig: `unit-${t.id}`,
     stem: [...thingStem('m3.len.it', t, BLANK), text('m3.u.which')],
     correct: unitL(t.unit),
-    distractors: unitOptions(ORDER, t, d >= 2, rng).map(unitL),
+    distractors: wrong.map(unitL),
     rng,
   })
 }
@@ -522,11 +575,8 @@ function timeQ(d: Difficulty, rng: RNG): Question {
   })
 }
 
-defineGenerator(KP_UNIT, (d, rng) => {
-  if (d <= 2) return chooseUnitQ(d, rng)
-  const roll = rng.next()
-  if (roll < 0.6) return judgeQ(KP_UNIT, 'length', d, rng, LENGTH_THINGS, ORDER, 'm3.len.it')
-  if (roll < 0.9) return timeQ(d, rng)
+/** 练习七 3 (3)：小红家和奶奶家相距 50 千米，她最好步行去（不对） */
+function walkFarQ(d: Difficulty, rng: RNG): Question {
   return labelQuestion({
     kpId: KP_UNIT,
     type: 'length',
@@ -537,9 +587,28 @@ defineGenerator(KP_UNIT, (d, rng) => {
     distractors: [{ k: 'm3.opt.right' }],
     rng,
   })
+}
+
+// 估计距离（m3s1-03-choose-unit，id 沿用原来「填合适的长度单位」的；选单位并进了前两个知识点）
+defineGenerator(KP_UNIT, (d, rng) => {
+  const roll = rng.next()
+  if (d === 1) {
+    if (roll < 0.55) return estimateQ(d, rng)
+    if (roll < 0.75) return timeQ(d, rng)
+    return lateQ(d, rng)
+  }
+  if (d === 2) {
+    if (roll < 0.5) return estimateQ(d, rng)
+    if (roll < 0.8) return lateQ(d, rng)
+    if (roll < 0.9) return timeQ(d, rng)
+    return walkFarQ(d, rng)
+  }
+  if (roll < 0.5) return estimateQ(d, rng)
+  if (roll < 0.85) return lateQ(d, rng)
+  return walkFarQ(d, rng)
 })
 
-// ── 长度单位的换算与比较 ──
+// ── 长度单位的换算（整理和复习、练习七）──
 
 /** 带单位的加减：20 毫米 + 30 毫米 = 几厘米、3 米 - 1 米 = 几分米、2 米 + 3 厘米 = 几厘米 */
 function unitAddSubQ(d: Difficulty, rng: RNG): Question {
@@ -635,14 +704,19 @@ defineGenerator(KP_CONV, (d, rng) => {
     return compareQuestion(KP_CONV, 'compare', d, a, ua, b, ub, rng)
   }
   if (d === 2) {
-    if (roll < 0.35)
+    if (roll < 0.25)
       return twoLevel(KP_CONV, d, rng, [
         ['m', 'mm'],
         ['dm', 'mm'],
         ['m', 'cm'],
         ['km', 'm'],
       ])
-    if (roll < 0.65) return unitAddSubQ(d, rng)
+    if (roll < 0.5) return unitAddSubQ(d, rng)
+    // 练习五 8、9：绳子对折再对折、两块木板重叠
+    if (roll < 0.6) return foldQ(d, rng)
+    if (roll < 0.7) return boardsQ(d, rng)
+    // 练习七 3：「一本小学生字典厚 40 毫米」「一条毛巾长 7 厘米」对不对
+    if (roll < 0.8) return judgeQ(KP_CONV, 'length', d, rng, LENGTH_THINGS, ORDER, 'm3.len.it')
     const [small, big] = rng.pick<[Unit, Unit]>([
       ['mm', 'dm'],
       ['cm', 'm'],

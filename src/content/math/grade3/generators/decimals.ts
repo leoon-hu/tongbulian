@@ -92,7 +92,8 @@ export function decReading(x: string): LStr {
 function tenthUnit(kpId: string, d: Difficulty, rng: RNG): Question {
   const n = rng.int(1, 9)
   const money = rng.chance(0.5)
-  return decQ(kpId, d, `${money ? 'j2y' : 'dm2m'}-${n}`, [T(money ? 'm3.dec.jiaoToYuan' : 'm3.dec.dmToM', { n })], `0.${n}`, [String(n), `0.0${n}`, `${n}0`], rng, money ? 'yuan' : 'm')
+  // 干扰项里留一个一位小数（1.n：和「1 米 n 分米」弄混），免得正确项是唯一的一位小数（一眼就能认出来）
+  return decQ(kpId, d, `${money ? 'j2y' : 'dm2m'}-${n}`, [T(money ? 'm3.dec.jiaoToYuan' : 'm3.dec.dmToM', { n })], `0.${n}`, [`1.${n}`, String(n), `0.0${n}`, `${n}0`], rng, money ? 'yuan' : 'm')
 }
 
 /** 几米几分米、几元几角写成小数（1 米 3 分米是 1.3 米） */
@@ -100,7 +101,8 @@ function mixedTenth(kpId: string, d: Difficulty, rng: RNG): Question {
   const money = rng.chance(0.5)
   const a = money ? rng.int(1, 9) : rng.int(1, 3)
   const b = rng.int(1, 9)
-  return decQ(kpId, d, `${money ? 'yj' : 'mdm'}-${a}-${b}`, [T(money ? 'm3.dec.yjToYuan' : 'm3.dec.mdmToM', { a, b })], `${a}.${b}`, [`${a}.0${b}`, `${b}.${a}`, `${a}${b}`, String(a + b)], rng, money ? 'yuan' : 'm')
+  // a = b 时「b.a」和答案一样被去掉，后面还有「a+1 点 b」顶上：干扰项里总有一位小数
+  return decQ(kpId, d, `${money ? 'yj' : 'mdm'}-${a}-${b}`, [T(money ? 'm3.dec.yjToYuan' : 'm3.dec.mdmToM', { a, b })], `${a}.${b}`, [`${b}.${a}`, `${a}.0${b}`, `${a + 1}.${b}`, `${a}${b}`, String(a + b)], rng, money ? 'yuan' : 'm')
 }
 
 /** 看钱写小数（练习十六 2）：几张 / 几枚元和角 */
@@ -112,7 +114,7 @@ function moneyPic(kpId: string, d: Difficulty, rng: RNG): Question {
   for (let i = 0; i < a % 5; i++) pieces.push({ fen: 100, form: 'coin' })
   if (j >= 5) pieces.push({ fen: 50, form: 'coin' })
   for (let i = 0; i < j % 5; i++) pieces.push({ fen: 10, form: 'coin' })
-  return decQ(kpId, d, `money-${a}-${j}`, [T('m3.dec.money'), { kind: 'money', pieces }], `${a}.${j}`, [`${a}.0${j}`, `${j}.${a}`, String(a + j), `${a}${j}`], rng, 'yuan')
+  return decQ(kpId, d, `money-${a}-${j}`, [T('m3.dec.money'), { kind: 'money', pieces }], `${a}.${j}`, [`${j}.${a}`, `${a}.0${j}`, String(a + j), `${a + 1}.${j}`, `${a}${j}`], rng, 'yuan')
 }
 
 /** 十等分的正方形涂了几条：0.k（第 2 档起前面还有整个涂满的：1.k、2.k） */
@@ -135,20 +137,20 @@ function tenthsIn(kpId: string, d: Difficulty, rng: RNG): Question {
 /** k 个 0.1 是多少（选项） */
 function tenthsMake(kpId: string, d: Difficulty, rng: RNG): Question {
   const k = rng.int(2, 9)
-  return decQ(kpId, d, `tmake-${k}`, [T('m3.dec.tenthsMake', { k })], `0.${k}`, [String(k), `0.0${k}`, `${k}0`, `1.${k}`], rng)
+  return decQ(kpId, d, `tmake-${k}`, [T('m3.dec.tenthsMake', { k })], `0.${k}`, [`1.${k}`, String(k), `0.0${k}`, `${k}0`], rng)
 }
 
-/** k/10 米写成小数（5/10 米 = 0.5 米）；第 3 档 k/100 写成小数（7/100 = 0.07） */
+/** k/10 米写成小数（5/10 米 = 0.5 米）；k/100 写成小数（例 2：1/100 米 = 0.01 米，34/100 = 0.34），第 1 档约三成 */
 function fracToDec(kpId: string, d: Difficulty, rng: RNG): Question {
-  if (d === 3 && rng.chance(0.6)) {
+  if (rng.chance(d === 1 ? 0.3 : 0.6)) {
     const k = rng.chance(0.5) ? rng.int(1, 9) : rng.int(11, 99)
     if (k % 10 === 0) return fracToDec(kpId, d, rng)
     const c = d2(k)
-    const cands = k < 10 ? [`0.${k}`, String(k), `${k}0`] : [d1(k), String(k), `0.${k % 10}${Math.floor(k / 10)}`]
+    const cands = k < 10 ? [`0.${k}`, `1.0${k}`, String(k), `${k}0`] : [d1(k), `0.${k % 10}${Math.floor(k / 10)}`, String(k), `1.${k}`]
     return decQ(kpId, d, `f2d-${k}-100`, [T('m3.dec.fracToDec', { f: `${k}/100` })], c, cands, rng)
   }
   const k = rng.int(1, 9)
-  return decQ(kpId, d, `f2dm-${k}`, [T('m3.dec.fracMToDec', { f: `${k}/10` })], `0.${k}`, [`${k}.10`, `0.0${k}`, String(k)], rng, 'm')
+  return decQ(kpId, d, `f2dm-${k}`, [T('m3.dec.fracMToDec', { f: `${k}/10` })], `0.${k}`, [`${k}.1`, `0.0${k}`, String(k), `${k}.10`], rng, 'm')
 }
 
 /** 0.k 写成分数（选项是分数） */
@@ -163,17 +165,19 @@ function decToFrac(kpId: string, d: Difficulty, rng: RNG): Question {
 function writeAs(kpId: string, d: Difficulty, rng: RNG): Question {
   let c: string
   let cands: string[]
-  if (d === 1) {
+  if (d === 1 && rng.chance(0.6)) {
     const x = rng.chance(0.4) ? 0 : rng.int(1, 9)
     const y = rng.int(1, 9)
     c = `${x}.${y}`
-    cands = x === 0 ? [String(y), `0.0${y}`, `${y}0`] : [`${x}${y}`, `${y}.${x}`, `${x}.0${y}`]
-  } else if (d === 2) {
+    // 零点几：干扰项里也放一个一位小数（相邻的零点几），别让正确项是唯一的一位小数
+    cands = x === 0 ? [`0.${y === 9 ? 8 : y + 1}`, String(y), `0.0${y}`, `${y}0`] : [`${x}${y}`, `${y}.${x}`, `${x}.0${y}`, `${x === 9 ? 8 : x + 1}.${y}`]
+  } else if (d <= 2) {
+    // 两位小数（课本：3.45 读作三点四五），第 1 档约四成
     const x = rng.chance(0.4) ? 0 : rng.int(1, 9)
     const p = rng.int(0, 9)
     const q = rng.int(1, 9)
     c = `${x}.${p}${q}`
-    cands = [`${x}${p}.${q}`, `${x}.${q}${p}`, `${x}${p}${q}`, `${p}${q}`, `${x}.${q}`, `${x}.0${p}${q}`]
+    cands = [`${x}${p}.${q}`, `${x}.${q}${p}`, `${x === 9 ? 8 : x + 1}.${p}${q}`, `${x}${p}${q}`, `${p}${q}`, `${x}.${q}`]
   } else {
     // 课本读法里最容易错的：3.05（中间的 0 读「零」）、4.20（末尾的 0 也要读）、18.5 / 36.6（整数部分两位）
     const kind = rng.int(0, 2)
@@ -181,7 +185,7 @@ function writeAs(kpId: string, d: Difficulty, rng: RNG): Question {
       const x = rng.int(1, 9)
       const q = rng.int(1, 9)
       c = `${x}.0${q}`
-      cands = [`${x}.${q}`, `${x}0.${q}`, `${x}0${q}`]
+      cands = [`${x}.${q}`, `${x}0.${q}`, `${x === 9 ? 8 : x + 1}.0${q}`, `${x}0${q}`]
     } else if (kind === 1) {
       const x = rng.int(1, 9)
       const p = rng.int(1, 9)
@@ -191,7 +195,7 @@ function writeAs(kpId: string, d: Difficulty, rng: RNG): Question {
       const i = rng.int(10, 99)
       const p = rng.int(1, 9)
       c = `${i}.${p}`
-      cands = [`${Math.floor(i / 10)}.${i % 10}${p}`, `${i}${p}`, `${i}.0${p}`]
+      cands = [`${Math.floor(i / 10)}.${i % 10}${p}`, `${i}${p}`, `${i + 1}.${p}`, `${i}.0${p}`]
     }
   }
   return decQ(kpId, d, `write-${c}`, [T('m3.dec.writeAs', { r: decReading(c) })], c, cands, rng)
@@ -208,13 +212,14 @@ function toWhole(kpId: string, d: Difficulty, rng: RNG): Question {
 /** 几厘米 / 几分是多少米 / 元（两位小数：1 厘米是 1/100 米，写成小数是 0.01 米） */
 function hundredthUnit(kpId: string, d: Difficulty, rng: RNG): Question {
   const money = rng.chance(0.4)
+  // 干扰项里也放一个两位小数（1.0n、两位数字对调），正确项不会是唯一的两位小数
   if (money) {
     const n = rng.int(1, 9)
-    return decQ(kpId, d, `f2y-${n}`, [T('m3.dec.fenToYuan', { n })], `0.0${n}`, [`0.${n}`, String(n), `${n}0`], rng, 'yuan')
+    return decQ(kpId, d, `f2y-${n}`, [T('m3.dec.fenToYuan', { n })], `0.0${n}`, [`0.${n}`, `1.0${n}`, String(n), `${n}0`], rng, 'yuan')
   }
   let n = rng.chance(0.75) ? rng.int(11, 99) : rng.int(1, 9)
   if (n % 10 === 0) n += 1
-  const cands = n < 10 ? [`0.${n}`, String(n), `${n}0`] : [d1(n), String(n), `0.${n % 10}${Math.floor(n / 10)}`]
+  const cands = n < 10 ? [`0.${n}`, `1.0${n}`, String(n), `${n}0`] : [d1(n), `0.${n % 10}${Math.floor(n / 10)}`, String(n), `1.${n}`]
   return decQ(kpId, d, `cm2m-${n}`, [T('m3.dec.cmToM', { n })], d2(n), cands, rng, 'm')
 }
 
@@ -231,7 +236,7 @@ function mixedHundredth(kpId: string, d: Difficulty, rng: RNG): Question {
   if (b % 10 === 0) b += 1
   const t = Math.floor(b / 10)
   const o = b % 10
-  return decQ(kpId, d, `mcm-${a}-${b}`, [T('m3.dec.mcmToM', { a, b })], `${a}.${b}`, [`${a}${t}.${o}`, `${a}.${o}${t}`, `${a}${b}`, `${a}.0${b}`], rng, 'm')
+  return decQ(kpId, d, `mcm-${a}-${b}`, [T('m3.dec.mcmToM', { a, b })], `${a}.${b}`, [`${a}${t}.${o}`, `${a}.${o}${t}`, `${a}${b}`, `${a + 1}.${b}`], rng, 'm')
 }
 
 /** 两位小数换回整数问（键盘）：0.34 米是几厘米、有几个 0.01 米，0.05 元是几分 */
@@ -262,32 +267,41 @@ function classify(kpId: string, d: Difficulty, rng: RNG): Question {
 function rulerDm(kpId: string, d: Difficulty, rng: RNG): Question {
   const c = rng.int(1, 9)
   const s = rng.int(0, Math.min(3, 10 - c))
-  return decQ(kpId, d, `rdm-${s}-${c}`, [T('m3.dec.rulerDm'), { kind: 'ruler', length: 10, from: s, to: s + c }], `0.${c}`, [String(c), `0.0${c}`, `0.${s + c}`, `${c}0`], rng, 'dm')
+  // 干扰项：读成终点的刻度（不从 0 起时）、1.c、c、0.0c——至少有一个一位小数
+  const cands = [...(s > 0 && s + c < 10 ? [`0.${s + c}`] : []), `1.${c}`, String(c), `0.0${c}`, `${c}0`]
+  return decQ(kpId, d, `rdm-${s}-${c}`, [T('m3.dec.rulerDm'), { kind: 'ruler', length: 10, from: s, to: s + c }], `0.${c}`, cands, rng, 'dm')
 }
 
 defineGenerator('m3s2-07-know', (d, rng) => {
   const kpId = 'm3s2-07-know'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：一位小数——几分米 / 几角是零点几米 / 元、几米几分米、看钱写小数、十等分图、几个 0.1、读法
-    if (roll < 0.17) return tenthUnit(kpId, d, rng)
-    if (roll < 0.32) return mixedTenth(kpId, d, rng)
-    if (roll < 0.45) return moneyPic(kpId, d, rng)
-    if (roll < 0.58) return barDec(kpId, d, rng)
-    if (roll < 0.68) return tenthsIn(kpId, d, rng)
-    if (roll < 0.76) return tenthsMake(kpId, d, rng)
-    if (roll < 0.84) return fracToDec(kpId, d, rng)
-    if (roll < 0.92) return writeAs(kpId, d, rng)
-    return toWhole(kpId, d, rng)
+    // 一位小数（例 1、做一做 2 上半）：几分米 / 几角是零点几米 / 元、几米几分米、看钱写小数、十等分图、几个 0.1、读法
+    if (roll < 0.09) return tenthUnit(kpId, d, rng)
+    if (roll < 0.16) return mixedTenth(kpId, d, rng)
+    if (roll < 0.22) return moneyPic(kpId, d, rng)
+    if (roll < 0.28) return barDec(kpId, d, rng)
+    if (roll < 0.33) return tenthsIn(kpId, d, rng)
+    if (roll < 0.37) return tenthsMake(kpId, d, rng)
+    if (roll < 0.42) return fracToDec(kpId, d, rng)
+    if (roll < 0.5) return writeAs(kpId, d, rng)
+    if (roll < 0.54) return toWhole(kpId, d, rng)
+    // 两位小数（例 2、做一做 2 下半）：几厘米是多少米、几分是多少元、几米几十几厘米、几元几角几分、34 个 0.01 米
+    if (roll < 0.65) return hundredthUnit(kpId, d, rng)
+    if (roll < 0.76) return mixedHundredth(kpId, d, rng)
+    if (roll < 0.84) return toWhole2(kpId, d, rng)
+    // 做一做 1：尺子上 1 厘米 = 0.1 分米；整数、分数、小数（p86 正文、练习十七 1）
+    if (roll < 0.92) return rulerDm(kpId, d, rng)
+    return classify(kpId, d, rng)
   }
   if (d === 2) {
-    if (roll < 0.22) return hundredthUnit(kpId, d, rng)
-    if (roll < 0.42) return mixedHundredth(kpId, d, rng)
-    if (roll < 0.57) return writeAs(kpId, d, rng)
-    if (roll < 0.72) return toWhole2(kpId, d, rng)
-    if (roll < 0.82) return decToFrac(kpId, d, rng)
-    if (roll < 0.92) return barDec(kpId, d, rng)
-    return toWhole(kpId, d, rng)
+    if (roll < 0.15) return hundredthUnit(kpId, d, rng)
+    if (roll < 0.3) return mixedHundredth(kpId, d, rng)
+    if (roll < 0.45) return writeAs(kpId, d, rng)
+    if (roll < 0.57) return toWhole2(kpId, d, rng)
+    if (roll < 0.7) return decToFrac(kpId, d, rng)
+    if (roll < 0.85) return barDec(kpId, d, rng)
+    return fracToDec(kpId, d, rng)
   }
   if (roll < 0.22) return classify(kpId, d, rng)
   if (roll < 0.44) return writeAs(kpId, d, rng)
@@ -320,9 +334,9 @@ function cmp1(kpId: string, d: Difficulty, rng: RNG): Question {
   return cmpQ(kpId, d, `c1-${unit ?? 'n'}-${a}-${b}`, [T('m3.dec.compare'), cmp], d1(a), d1(b), rng)
 }
 
-/** 看图比较（做一做 2）：两张十等分图，0.4 ○ 0.6；第 2 档起带整个的（2.5 ○ 1.8） */
+/** 看图比较（做一做 2）：两张十等分图，0.4 ○ 0.6；约一半带整个的（2.5 ○ 1.8） */
 function barCmp(kpId: string, d: Difficulty, rng: RNG): Question {
-  const wholes = d >= 2 && rng.chance(0.6)
+  const wholes = rng.chance(d === 1 ? 0.5 : 0.6)
   const w1 = wholes ? rng.int(1, 2) : 0
   const w2 = wholes ? rng.int(1, 2) : 0
   const k1 = rng.int(1, 9)
@@ -387,20 +401,22 @@ function cmp2(kpId: string, d: Difficulty, rng: RNG): Question {
   return cmpQ(kpId, d, `c2-${unit ?? 'n'}-${a}-${b}`, [T('m3.dec.compare'), cmp], a, b, rng)
 }
 
-/** 四名男生的跳高成绩（例 3）：谁是第一名 / 第四名 */
+/** 四名男生的跳高成绩（例 3，课本原数是小明 0.88、小刚 1.20、小强 0.96、小林 1.10 米）：谁是第几名 */
 const JUMP = [88, 96, 110, 120, 105, 92, 99, 115, 125, 101, 90, 130, 85, 118, 108, 95]
+const JUMP_BOOK = [88, 120, 96, 110]
 const JUMPERS = ['ming', 'gang', 'qiang', 'lin'] as const
+const JUMP_ASK = ['m3.dec.jumpFirst', 'm3.dec.jumpSecond', 'm3.dec.jumpThird', 'm3.dec.jumpLast']
 function jump(kpId: string, d: Difficulty, rng: RNG): Question {
-  const vals = rng.shuffle(JUMP).slice(0, 4)
-  const first = rng.chance(0.5)
-  const pickIdx = vals.indexOf(first ? Math.max(...vals) : Math.min(...vals))
+  const vals = rng.chance(0.3) ? [...JUMP_BOOK] : rng.shuffle(JUMP).slice(0, 4)
+  const rank = rng.int(0, 3)
+  const pickIdx = vals.indexOf([...vals].sort((x, y) => y - x)[rank]!)
   const score = (i: number): LStr => ({ k: 'm3.dec.score', p: { who: { k: `m3.dec.who.${JUMPERS[i]}` }, x: d2(vals[i]!) } })
   return labelQuestion({
     kpId,
     type: 'decimal',
     difficulty: d,
-    sig: `jump-${first ? 1 : 4}-${vals.join(',')}`,
-    stem: [T('m3.dec.jump', { a: score(0), b: score(1), c: score(2), d: score(3), ask: { k: first ? 'm3.dec.jumpFirst' : 'm3.dec.jumpLast' } })],
+    sig: `jump-${rank + 1}-${vals.join(',')}`,
+    stem: [T('m3.dec.jump', { a: score(0), b: score(1), c: score(2), d: score(3), ask: { k: JUMP_ASK[rank]! } })],
     correct: { k: `m3.dec.who.${JUMPERS[pickIdx]}` },
     distractors: JUMPERS.filter((_, i) => i !== pickIdx).map((w) => ({ k: `m3.dec.who.${w}` })),
     rng,
@@ -483,18 +499,21 @@ defineGenerator('m3s2-07-compare', (d, rng) => {
   const kpId = 'm3s2-07-compare'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：一位小数比大小（带不带单位）、看十等分图比、米尺上读一位小数、几个一位小数挑最大 / 最小
-    if (roll < 0.45) return cmp1(kpId, d, rng)
-    if (roll < 0.62) return barCmp(kpId, d, rng)
-    if (roll < 0.85) return lineRead(kpId, d, rng)
-    return pickExtreme(kpId, d, rng, false)
+    // 例 3 跳高成绩排名次（化成厘米比）、1.20 米是多少厘米；做一做 1 米尺上填小数、做一做 2 看图比较（一半带整个的）；一位小数比大小
+    if (roll < 0.28) return cmp1(kpId, d, rng)
+    if (roll < 0.45) return barCmp(kpId, d, rng)
+    if (roll < 0.6) return lineRead(kpId, d, rng)
+    if (roll < 0.68) return pickExtreme(kpId, d, rng, false)
+    if (roll < 0.88) return jump(kpId, d, rng)
+    return mToCm(kpId, d, rng)
   }
   if (d === 2) {
-    if (roll < 0.35) return cmp2(kpId, d, rng)
-    if (roll < 0.55) return jump(kpId, d, rng)
-    if (roll < 0.7) return mToCm(kpId, d, rng)
-    if (roll < 0.82) return barCmp(kpId, d, rng)
-    if (roll < 0.92) return lineRead(kpId, d, rng)
+    // 变式：两位小数比大小、小数和分数 / 不同单位比（练习十六 3）、价钱排大小（练习十七 2）
+    if (roll < 0.25) return cmp2(kpId, d, rng)
+    if (roll < 0.45) return cmpMixed(kpId, d, rng)
+    if (roll < 0.65) return prices(kpId, d, rng)
+    if (roll < 0.75) return barCmp(kpId, d, rng)
+    if (roll < 0.85) return lineRead(kpId, d, rng)
     return pickExtreme(kpId, d, rng, true)
   }
   if (roll < 0.3) return cmpMixed(kpId, d, rng)
@@ -508,10 +527,25 @@ defineGenerator('m3s2-07-compare', (d, rng) => {
 // 简单的小数加、减法（p90、练习十六 4–6、练习十七 3、练习十八 7）
 // ═════════════════════════════════════════════════════════════
 
-/** 一道一位小数的加法：第 1 档不进位（有时是 6 + 0.6 这样整数加小数），第 2 档起进位 */
-function addTerms(d: Difficulty, rng: RNG, carry: boolean): { A: number; B: number; S: number; cands: string[] } {
+/** 加法的干扰项（tenths 表示）：进位的忘了进 1、把 13 写进十分位、没对齐小数点；不进位的写成整数 / 两位小数、差 1 */
+function sumCands(A: number, B: number): string[] {
+  const S = A + B
+  const [a, x, b, y] = [Math.floor(A / 10), A % 10, Math.floor(B / 10), B % 10]
+  return x + y >= 10 ? [d1(S - 10), `${a + b}.${x + y}`, `${a + b + 1}.${x + y}`, String(S), d1(S + 1)] : [String(S), d2(S), d1(S + 10), d1(S - 10), d1(S + 1), d1(S - 1)]
+}
+/** 减法的干扰项：退位的大数减小数、忘了退 1；不退位的算成加法、差 1 */
+function diffCands(A: number, B: number): string[] {
+  const R = A - B
+  const [a, x, b, y] = [Math.floor(A / 10), A % 10, Math.floor(B / 10), B % 10]
+  return x < y ? [`${a - b}.${y - x}`, d1(R + 10), d1(A + B), d1(R - 1), d1(R + 1)] : [d1(A + B), d1(R + 10), String(R), d1(R + 1), d1(R - 1)]
+}
+/** 整数部分到两位（13.2、15.8）的机会：第 1 档只在进位 / 退位的题里出（例 4 的 13.2 − 2.3、15.8 + 3.8） */
+const bigChance = (d: Difficulty, carry: boolean): number => (d >= 2 ? 0.4 : carry ? 0.3 : 0)
+
+/** 一道一位小数的加法：carry = 进位；intPlus = 6 + 0.6 这样整数加小数（课本第六单元没有，复习练习十八才有：第 2 档起） */
+function addTerms(d: Difficulty, rng: RNG, carry: boolean, intPlus = false): { A: number; B: number; S: number; cands: string[] } {
   for (;;) {
-    if (!carry && rng.chance(0.2)) {
+    if (intPlus) {
       // 整数 + 小数：6 + 0.6（小数点没对齐会算成 1.2）
       const a = rng.int(1, 9)
       const B = rng.chance(0.5) ? rng.int(1, 9) : rng.int(1, 5) * 10 + rng.int(1, 9)
@@ -519,7 +553,7 @@ function addTerms(d: Difficulty, rng: RNG, carry: boolean): { A: number; B: numb
       const S = A + B
       return { A, B, S, cands: [d1(a + B), `0.${a}${B % 10}`, String(a + (B % 10)), d1(S + 10), d1(S - 1)] }
     }
-    const big = d >= 2 && rng.chance(0.4)
+    const big = rng.chance(bigChance(d, carry))
     const a = big ? rng.int(10, 15) : rng.int(0, 8)
     const b = rng.int(0, big ? 9 : 9 - a)
     const x = rng.int(1, 9)
@@ -530,15 +564,14 @@ function addTerms(d: Difficulty, rng: RNG, carry: boolean): { A: number; B: numb
     const B = b * 10 + y
     const S = A + B
     if (S % 10 === 0) continue
-    const cands = carry ? [d1(S - 10), `${a + b}.${x + y}`, `${a + b + 1}.${x + y}`, String(S), d1(S + 1)] : [String(S), d2(S), d1(S + 10), d1(S - 10), d1(S + 1), d1(S - 1)]
-    return { A, B, S, cands }
+    return { A, B, S, cands: sumCands(A, B) }
   }
 }
 
-/** 一道一位小数的减法：第 1 档不退位，第 2 档起退位（13.2 − 2.3、1.4 − 0.8） */
+/** 一道一位小数的减法：borrow = 退位（13.2 − 2.3、1.4 − 0.8） */
 function subTerms(d: Difficulty, rng: RNG, borrow: boolean): { A: number; B: number; R: number; cands: string[] } {
   for (;;) {
-    const big = d >= 2 && rng.chance(0.4)
+    const big = rng.chance(bigChance(d, borrow))
     const a = big ? rng.int(10, 19) : rng.int(1, 9)
     const b = rng.int(0, Math.min(a - (borrow ? 1 : 0), big ? 9 : a))
     const x = borrow ? rng.int(0, 8) : rng.int(1, 9)
@@ -547,13 +580,12 @@ function subTerms(d: Difficulty, rng: RNG, borrow: boolean): { A: number; B: num
     const B = b * 10 + y
     const R = A - B
     if (R <= 0 || R % 10 === 0 || A % 10 === 0) continue
-    const cands = borrow ? [`${a - b}.${y - x}`, d1(R + 10), d1(A + B), d1(R - 1), d1(R + 1)] : [d1(A + B), d1(R + 10), String(R), d1(R + 1), d1(R - 1)]
-    return { A, B, R, cands }
+    return { A, B, R, cands: diffCands(A, B) }
   }
 }
 
-function addQ(kpId: string, d: Difficulty, rng: RNG, carry: boolean): Question {
-  const { A, B, S, cands } = addTerms(d, rng, carry)
+function addQ(kpId: string, d: Difficulty, rng: RNG, carry: boolean, intPlus = false): Question {
+  const { A, B, S, cands } = addTerms(d, rng, carry, intPlus)
   return decQ(kpId, d, `add-${A}-${B}`, [{ kind: 'expr', expr: `${d1n(A)} + ${d1n(B)} = ?` }], d1(S), cands, rng)
 }
 function subQ(kpId: string, d: Difficulty, rng: RNG, borrow: boolean): Question {
@@ -561,14 +593,14 @@ function subQ(kpId: string, d: Difficulty, rng: RNG, borrow: boolean): Question 
   return decQ(kpId, d, `sub-${A}-${B}`, [{ kind: 'expr', expr: `${d1(A)} - ${d1(B)} = ?` }], d1(R), cands, rng)
 }
 
-/** 化成角来计算（例 4）：1.5 元 + 3.8 元 = 15 角 + 38 角 = 53 角（键盘） */
+/** 化成角来计算（例 4）：1.5 元 + 3.8 元 = 15 角 + 38 角 = 53 角（键盘；课本这道就是进位的） */
 function toJiao(kpId: string, d: Difficulty, rng: RNG): Question {
   const add = rng.chance(0.6)
   if (add) {
-    const { A, B, S } = addTerms(d, rng, d >= 2 && rng.chance(0.5))
+    const { A, B, S } = addTerms(d, rng, rng.chance(0.5))
     return intQ(kpId, d, `jiao-add-${A}-${B}`, [T('m3.dec.toJiao', { a: d1n(A), b: d1n(B) })], S, rng, [A + B + 10, A * 10 + B, S - 10], 999)
   }
-  const { A, B, R } = subTerms(d, rng, d >= 2 && rng.chance(0.5))
+  const { A, B, R } = subTerms(d, rng, rng.chance(0.5))
   return intQ(kpId, d, `jiao-sub-${A}-${B}`, [T('m3.dec.toJiaoSub', { a: d1(A), b: d1(B) })], R, rng, [A + B, R + 10, R - 1], 999)
 }
 
@@ -586,6 +618,35 @@ function priceStory(kpId: string, d: Difficulty, rng: RNG): Question {
   const { A, B, R, cands } = subTerms(d, rng, rng.chance(0.6))
   const key = kind === 1 ? 'm3.dec.diff2' : 'm3.dec.cheaper2'
   return decQ(kpId, d, `${kind === 1 ? 'dear' : 'cheap'}-${x}-${y}-${A}-${B}`, [T(key, { x: one(x), y: one(y), xn: item(x), yn: item(y), a: d1(A), b: d1(B) })], d1(R), cands, rng, 'yuan')
+}
+
+/**
+ * 例 4 的价目表（课本原价）：橡皮 2.3 元、铅笔 1.5 元、卷笔刀 13.2 元、水彩笔 15.8 元、笔袋 3.8 元、笔记本 1.5 元。
+ * 例 4 (1) 铅笔 + 笔袋、(2) 卷笔刀比橡皮贵多少，做一做 (1) 铅笔比卷笔刀便宜多少、(2) 水彩笔和笔袋 20 元够吗，都从这张表出。
+ */
+const BOOK_PRICES: Record<string, number> = { eraser: 23, pencil: 15, sharpener: 132, paint: 158, bag: 38, book: 15 }
+function bookPrice(kpId: string, d: Difficulty, rng: RNG): Question {
+  for (;;) {
+    const [x, y] = rng.shuffle(Object.keys(BOOK_PRICES)).slice(0, 2) as [string, string]
+    const [A, B] = [BOOK_PRICES[x]!, BOOK_PRICES[y]!]
+    const kind = rng.int(0, 3)
+    if (kind === 3) {
+      const S = A + B
+      if (S === 200) continue
+      const ok = S <= 200
+      return labelQuestion({ kpId, type: 'decimal', difficulty: d, sig: `book-enough-${x}-${y}`, stem: [T('m3.dec.enough', { x: one(x), y: one(y), a: d1(A), b: d1(B) })], correct: { k: ok ? 'm3.dec.yes' : 'm3.dec.no' }, distractors: [{ k: ok ? 'm3.dec.no' : 'm3.dec.yes' }], rng })
+    }
+    if (kind === 0) {
+      if ((A + B) % 10 === 0) continue
+      return decQ(kpId, d, `book-sum-${x}-${y}`, [T('m3.dec.sum2', { x: one(x), y: one(y), a: d1n(A), b: d1n(B) })], d1(A + B), sumCands(A, B), rng, 'yuan')
+    }
+    // 贵多少 / 便宜多少：x 是贵的那样
+    if (A === B || (A - B) % 10 === 0) continue
+    const [hi, lo] = A > B ? [x, y] : [y, x]
+    const [H, Lo] = [Math.max(A, B), Math.min(A, B)]
+    const key = kind === 1 ? 'm3.dec.diff2' : 'm3.dec.cheaper2'
+    return decQ(kpId, d, `book-${kind === 1 ? 'dear' : 'cheap'}-${hi}-${lo}`, [T(key, { x: one(hi), y: one(lo), xn: item(hi), yn: item(lo), a: d1(H), b: d1(Lo) })], d1(H - Lo), diffCands(H, Lo), rng, 'yuan')
+  }
 }
 
 /** 20 元够吗（例 4 做一做、练习十七 3）：两样的价钱加起来和 20 元比 */
@@ -660,17 +721,25 @@ defineGenerator('m3s2-07-addsub', (d, rng) => {
   const kpId = 'm3s2-07-addsub'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：一位小数不进位加、不退位减（小数点对齐），化成角来算
-    if (roll < 0.4) return addQ(kpId, d, rng, false)
-    if (roll < 0.75) return subQ(kpId, d, rng, false)
+    // 例 4 与做一做：不进位 / 不退位、进位 / 退位（含 13.2 − 2.3 这样整数部分两位的）、价目表情境与 20 元够吗、化成角来算
+    if (roll < 0.15) return addQ(kpId, d, rng, false)
+    if (roll < 0.3) return subQ(kpId, d, rng, false)
+    if (roll < 0.45) return addQ(kpId, d, rng, true)
+    if (roll < 0.6) return subQ(kpId, d, rng, true)
+    if (roll < 0.7) return priceStory(kpId, d, rng)
+    if (roll < 0.78) return bookPrice(kpId, d, rng)
+    if (roll < 0.85) return enough(kpId, d, rng)
     return toJiao(kpId, d, rng)
   }
   if (d === 2) {
-    if (roll < 0.25) return addQ(kpId, d, rng, true)
-    if (roll < 0.5) return subQ(kpId, d, rng, true)
-    if (roll < 0.72) return priceStory(kpId, d, rng)
-    if (roll < 0.87) return enough(kpId, d, rng)
-    return toJiao(kpId, d, rng)
+    // 变式：竹竿、河水、货车（练习十六 4 / 5）、按规律填数（练习十六 6）、整数加小数（练习十八 7）
+    if (roll < 0.25) return story(kpId, d, rng)
+    if (roll < 0.45) return pattern(kpId, d, rng)
+    if (roll < 0.6) return addQ(kpId, d, rng, false, true)
+    if (roll < 0.7) return addQ(kpId, d, rng, true)
+    if (roll < 0.8) return subQ(kpId, d, rng, true)
+    if (roll < 0.9) return priceStory(kpId, d, rng)
+    return enough(kpId, d, rng)
   }
   if (roll < 0.4) return story(kpId, d, rng)
   if (roll < 0.65) return pattern(kpId, d, rng)

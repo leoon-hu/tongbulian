@@ -49,8 +49,8 @@ describe('轴对称图形（m3s2-01-symmetry）', () => {
         const fig = first![0]!.fig
         expect(SYMMETRIC[fig], `${q.id} 没登记对称与否`).toBeDefined()
         expect(answerKey(q), q.id).toBe(SYMMETRIC[fig] ? 'm3.opt.right' : 'm3.opt.wrong')
-        // 第 1 档不对称的只用一眼看得出的（一般三角形、平行四边形、左转弯箭头、梳子）
-        if (d === 1 && !SYMMETRIC[fig]) expect(['scalene', 'parallelogram', 'arrow', 'comb']).toContain(fig)
+        // 第 1 档不对称的只用一眼看得出的（一般三角形、平行四边形、左转弯箭头、梳子、p3 做一做 1 的水壶）
+        if (d === 1 && !SYMMETRIC[fig]) expect(['scalene', 'parallelogram', 'arrow', 'comb', 'kettle']).toContain(fig)
       } else if (s.startsWith('axes-')) {
         const fig = first![0]!.fig
         expect(answerNum(q), q.id).toBe(fig === 'square' ? 4 : 2)
@@ -120,6 +120,17 @@ describe('平移（m3s2-01-translate）与旋转（m3s2-01-rotate）', () => {
     if (s.startsWith('scene-')) {
       const key = s.slice('scene-'.length)
       expect(answerKey(q), q.id).toBe(TRANSLATE.has(key) ? 'm3.mot.translate' : 'm3.mot.rotate')
+    } else if (s.startsWith('isTr-')) {
+      const key = s.slice('isTr-'.length)
+      expect(answerKey(q), q.id).toBe(TRANSLATE.has(key) ? 'm3.opt.right' : 'm3.opt.wrong')
+    } else if (s.startsWith('picIs-')) {
+      const it = first![0]!
+      expect(it.move, q.id).toBeDefined()
+      expect(answerKey(q), q.id).toBe(it.move === 'turn' ? 'm3.opt.wrong' : 'm3.opt.right')
+    } else if (s.startsWith('pickTr-')) {
+      const hits = q.choices!.filter((c) => shortMotion((c.label as { k: string }).k) === 'translate')
+      expect(hits.length, q.id).toBe(1)
+      expect(hits[0]!.id).toBe((q.answer as { choiceId: string }).choiceId)
     } else if (s.startsWith('pic-')) {
       const it = first![0]!
       expect(it.move, q.id).toBeDefined()
@@ -183,17 +194,35 @@ describe('平移（m3s2-01-translate）与旋转（m3s2-01-rotate）', () => {
   it('平移：答案从图 / 现象反推', () => each('m3s2-01-translate', checkMotion))
   it('旋转：答案从图 / 现象反推', () => each('m3s2-01-rotate', checkMotion))
 
-  it('第 1 档覆盖主干：平移有现象、示意图、小房子（小鱼）能不能重合；旋转有现象、顺时针逆时针、定义', () => {
-    const kinds = (kpId: string): string[] => {
+  it('第 1 档覆盖主干：平移有现象、示意图、挑平移现象、小房子（小鱼）能不能重合；旋转有现象、顺时针逆时针、定义；找下一个图形在旋转第 2 档', () => {
+    const kinds = (kpId: string, tier: 1 | 2): string[] => {
       const out = new Set<string>()
-      each(kpId, (q, d) => d === 1 && out.add(sig(q).split('-')[0]!))
+      each(kpId, (q, d) => d === tier && out.add(sig(q).split('-')[0]!))
       return [...out].sort()
     }
-    expect(kinds('m3s2-01-translate')).toEqual(['overlap', 'pic', 'scene'])
-    expect(kinds('m3s2-01-rotate')).toEqual(['def', 'dir', 'pic', 'scene'])
+    expect(kinds('m3s2-01-translate', 1)).toEqual(['isTr', 'overlap', 'picIs', 'pickTr'])
+    expect(kinds('m3s2-01-rotate', 1)).toEqual(['def', 'dir', 'pic', 'scene'])
+    expect(kinds('m3s2-01-rotate', 2)).toContain('next')
   })
 
-  it('平移现象六成是平移、旋转现象六成是旋转（「这是平移还是旋转」两种答案都出）', () => {
+  it('平移第 1 档只问是不是平移：题目和选项里都没有 p5 才教的「旋转」', () => {
+    each('m3s2-01-translate', (q, d) => {
+      if (d !== 1) return
+      const words = [...questionSpeech(q, 'zh'), ...(q.choices ?? []).map((c) => zh(c.label))].join('')
+      expect(words.includes('旋转'), `${q.id}：${words}`).toBe(false)
+    })
+  })
+
+  it('平移现象六成是平移、旋转现象六成是旋转（「这是平移还是旋转」两种答案都出；「是平移现象，对吗」对 / 不对都出）', () => {
+    let yes = 0
+    let all = 0
+    each('m3s2-01-translate', (q) => {
+      if (!sig(q).startsWith('isTr-')) return
+      all += 1
+      if (answerKey(q) === 'm3.opt.right') yes += 1
+    })
+    expect(yes / all).toBeGreaterThan(0.45)
+    expect(yes / all).toBeLessThan(0.8)
     for (const [kpId, main] of [
       ['m3s2-01-translate', 'm3.mot.translate'],
       ['m3s2-01-rotate', 'm3.mot.rotate'],

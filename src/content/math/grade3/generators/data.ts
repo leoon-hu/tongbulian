@@ -97,12 +97,12 @@ export const SCENES: Record<SceneId, Scene> = {
     hi: 20,
     min: 3,
   },
+  // 练习十五 1：从小刚、小雨两名候选人中选一人
   vote: {
     id: 'vote',
     items: [
       { id: 'gang', icon: '👦' },
       { id: 'yu', icon: '👧' },
-      { id: 'ming', icon: '🧒' },
     ],
     head: 'name',
     unit: 'votes',
@@ -170,6 +170,16 @@ function weatherCounts(rng: RNG): number[] {
 }
 const iconOf = (sc: Scene, id: string): string => sc.items.find((x) => x.id === id)!.icon
 const sigOf = (dt: Data): string => `${dt.sc.id}-${dt.ids.join('.')}-${dt.counts.join('.')}`
+/**
+ * 一张记录单的数据和记号（例 1 课本两种记法：打「√」和画「正」字）：天气以外的 40% 打 √（每类最多 12 个，数得过来），
+ * 算上只画「正」字的一个月的天气（三十来天），约三分之一的记录单打 √。
+ */
+function sheetData(rng: RNG, sc: Scene): { dt: Data; marks?: Mark[] } {
+  const check = sc.id !== 'weather' && rng.chance(0.4)
+  const dt = sceneData(rng, sc, check ? { lo: Math.min(sc.lo, 3), hi: 12 } : {})
+  return { dt, marks: check ? dt.ids.map((): Mark => 'check') : undefined }
+}
+const markTag = (marks?: Mark[]): string => (marks ? `-${marks.join('.')}` : '')
 
 /** 记录单：一类一行，默认画「正」字 */
 export function tallyPart(dt: Data, marks?: Mark[]): StemPart {
@@ -254,17 +264,18 @@ function qDiff(kpId: string, d: Difficulty, dt: Data, part: StemPart, tag: strin
 const KR = 'm3s2-05-record'
 const pickScene = (rng: RNG): Scene => SCENES[rng.pick(SCENE_IDS)]
 
-/** 一行「正」字数一数（例 1、练习十五 1）：5–25 */
+/** 一行记号数一数（例 1、练习十五 1）：「正」字 6–25，√ 4–12（约三分之一） */
 function recOneRow(d: Difficulty, rng: RNG): Question {
   const sc = pickScene(rng)
   const it = rng.pick(sc.items)
-  const dt: Data = { sc, ids: [it.id], counts: [rng.int(6, 25)] }
-  return qCount(KR, d, dt, 0, [tallyPart(dt)], 'one', rng)
+  const check = sc.id !== 'weather' && rng.chance(0.4)
+  const dt: Data = { sc, ids: [it.id], counts: [check ? rng.int(4, 12) : rng.int(6, 25)] }
+  return qCount(KR, d, dt, 0, [tallyPart(dt, check ? ['check'] : undefined)], check ? 'one-check' : 'one', rng)
 }
 /** 三四类的记录单，问其中一类 */
 function recSheetCount(d: Difficulty, rng: RNG): Question {
-  const dt = sceneData(rng, pickScene(rng))
-  return qCount(KR, d, dt, rng.int(0, dt.ids.length - 1), [tallyPart(dt)], 'sheet', rng)
+  const { dt, marks } = sheetData(rng, pickScene(rng))
+  return qCount(KR, d, dt, rng.int(0, dt.ids.length - 1), [tallyPart(dt, marks)], `sheet${markTag(marks)}`, rng)
 }
 /** 把记录的结果填进统计表（例 1「你能把上页统计的结果填入下面的统计表吗？」、做一做 1） */
 function recFill(d: Difficulty, rng: RNG, dt: Data, marks?: Mark[]): Question {
@@ -285,9 +296,9 @@ function recFill(d: Difficulty, rng: RNG, dt: Data, marks?: Mark[]): Question {
 }
 /** 看统计表：哪一类最多 / 最少（练习十四 1「最喜欢（ ）色的人数最多」） */
 function recTableMost(d: Difficulty, rng: RNG, withTally = false): Question {
-  const dt = sceneData(rng, pickScene(rng))
+  const { dt, marks } = sheetData(rng, pickScene(rng))
   const most = !hasLeast(dt.sc) || rng.chance(0.6)
-  return withTally ? qMost(KR, d, dt, most, tallyPart(dt), 'sheet', rng) : qMost(KR, d, dt, most, tablePart(dt), 'table', rng)
+  return withTally ? qMost(KR, d, dt, most, tallyPart(dt, marks), `sheet${markTag(marks)}`, rng) : qMost(KR, d, dt, most, tablePart(dt), 'table', rng)
 }
 /** 「1 个"正"字有（5）画，代表（5）人。」 */
 function recFact(d: Difficulty, rng: RNG): Question {
@@ -306,12 +317,13 @@ function recFact(d: Difficulty, rng: RNG): Question {
   })
 }
 function recTotalOrDiff(d: Difficulty, rng: RNG, total: boolean): Question {
-  const dt = sceneData(rng, pickScene(rng))
+  const { dt, marks } = sheetData(rng, pickScene(rng))
   const tally = rng.chance(0.5)
-  const part = tally ? tallyPart(dt) : tablePart(dt)
-  return total ? qTotal(KR, d, dt, part, tally ? 'sheet' : 'table', rng) : qDiff(KR, d, dt, part, tally ? 'sheet' : 'table', rng)
+  const part = tally ? tallyPart(dt, marks) : tablePart(dt)
+  const tag = tally ? `sheet${markTag(marks)}` : 'table'
+  return total ? qTotal(KR, d, dt, part, tag, rng) : qDiff(KR, d, dt, part, tag, rng)
 }
-/** 做一做 1：路口 10 分钟通过的车，四张记录单用了「正」字、√、○ 三种记号 */
+/** 做一做 1：路口 10 分钟通过的车，四张记录单用了「正」字、√、○ 三种记号（课本：货车 6、大巴车 9、小轿车 33、摩托车 11） */
 function mixedCars(rng: RNG): { dt: Data; marks: Mark[] } {
   const sc = SCENES.car
   const marks = rng.shuffle<Mark>(['zheng', 'check', 'zheng', 'circle'])
@@ -386,17 +398,29 @@ function recTableBig(d: Difficulty, rng: RNG): Question {
 defineGenerator(KR, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.25) return recOneRow(d, rng)
-    if (roll < 0.5) return recSheetCount(d, rng)
-    if (roll < 0.65) return recFill(d, rng, sceneData(rng, pickScene(rng)))
-    if (roll < 0.87) return recTableMost(d, rng)
+    // 例 1：数一行 / 一张记录单（约三分之一打 √）、把结果填进统计表、想去哪里的人数最多、1 个「正」字几画；
+    // 做一做 1：车辆的记录单混用「正」字、√、○，填表、哪种车最多最少
+    if (roll < 0.15) return recOneRow(d, rng)
+    if (roll < 0.32) return recSheetCount(d, rng)
+    if (roll < 0.47) {
+      const { dt, marks } = sheetData(rng, pickScene(rng))
+      return recFill(d, rng, dt, marks)
+    }
+    if (roll < 0.67) {
+      if (rng.chance(0.5)) return recMixed(d, rng)
+      const { dt, marks } = mixedCars(rng)
+      return recFill(d, rng, dt, marks)
+    }
+    if (roll < 0.88) return recTableMost(d, rng, rng.chance(0.3))
     return recFact(d, rng)
   }
   if (d === 2) {
-    if (roll < 0.2) return recTableMost(d, rng, true)
-    if (roll < 0.45) return recTotalOrDiff(d, rng, true)
-    if (roll < 0.7) return recTotalOrDiff(d, rng, false)
-    return recMixed(d, rng)
+    // 练习十四、十五：一共多少、相差多少、全班人数、几个「正」字、没投票的同学
+    if (roll < 0.25) return recTotalOrDiff(d, rng, true)
+    if (roll < 0.45) return recTotalOrDiff(d, rng, false)
+    if (roll < 0.6) return recTableBig(d, rng)
+    if (roll < 0.8) return recMany(d, rng)
+    return recVote(d, rng)
   }
   if (roll < 0.3) return recVote(d, rng)
   if (roll < 0.55) return recMany(d, rng)
@@ -420,11 +444,11 @@ const BOOKS = ['literature', 'sciBook', 'history']
 const GRADES = ['you', 'liang', 'jige', 'bujige']
 const TWO_HEAD: Record<TwoKind, string> = { sport: 'm3.data.head.sport', book: 'm3.data.head.book', level: 'm3.data.head.grade' }
 const TWO_TITLE: Record<TwoKind, string> = { sport: 'm3.data.title.sport', book: 'm3.data.title.book', level: 'm3.data.title.level' }
-/** 表里两行的名字、句子里说的两组 */
+/** 表里两行的名字（课本「男生人数」「一年级时的人数」）、句子里说的两组 */
 const ROW_LABEL: Record<TwoKind, [string, string]> = {
   sport: ['m3.data.boysNum', 'm3.data.girlsNum'],
   book: ['m3.data.boysNum', 'm3.data.girlsNum'],
-  level: ['m3.data.g1', 'm3.data.g3'],
+  level: ['m3.data.g1Num', 'm3.data.g3Num'],
 }
 const GROUP: Record<TwoKind, [string, string]> = {
   sport: ['m3.data.boys', 'm3.data.girls'],
@@ -447,11 +471,14 @@ export function twoData(rng: RNG, kind: TwoKind): Two {
       ids = BOOKS
       rows = [ids.map(() => rng.int(2, 15)), ids.map(() => rng.int(2, 15))]
     } else {
+      // 练习十五 3：同一个班一年级时、三年级时各测一次（课本 30 人），两次的总人数一样；及格的人数用总数减出来
       ids = GRADES
-      rows = [
-        [rng.int(2, 7), rng.int(6, 12), rng.int(10, 18), rng.int(0, 2)],
-        [rng.int(4, 10), rng.int(8, 14), rng.int(5, 14), rng.int(0, 1)],
-      ]
+      const total = rng.int(26, 32)
+      const g1 = [rng.int(2, 7), rng.int(6, 12), 0, rng.int(0, 2)]
+      const g3 = [rng.int(4, 10), rng.int(8, 14), 0, rng.int(0, 1)]
+      g1[2] = total - g1[0]! - g1[1]! - g1[3]!
+      g3[2] = total - g3[0]! - g3[1]! - g3[3]!
+      rows = [g1, g3]
     }
     // 每一组的最多都唯一（问「哪一项最多」）；每一组至少有人
     if (rows.every((r) => uniqueExtreme(r, true) >= 0 && sum(r) > 0)) return { kind, ids, rows }
@@ -586,24 +613,57 @@ function tabTotal(d: Difficulty, rng: RNG, t: Two, whole: boolean): Question {
     smart: [sum(t.rows[1 - r]), v + 1, v - 1, v + 10],
   })
 }
-/** 两张单式统计表（男生一张、女生一张，例 2）：合在一起看，最喜欢某一项的一共有几人 */
-function tabTwoTables(d: Difficulty, rng: RNG): Question {
-  const full = twoData(rng, 'sport')
-  // 两张表并排放不下，各取 3 项
+/** 一题里放两张表时（两张单式表、单式表 + 复式表）各取 3 项，手机上放得下（保持课本的顺序） */
+function threeOf(rng: RNG, kind: 'sport' | 'book'): Two {
+  const full = twoData(rng, kind)
+  if (full.ids.length <= 3) return full
   const keep = rng
-    .shuffle([0, 1, 2, 3])
+    .shuffle(full.ids.map((_, k) => k))
     .slice(0, 3)
     .sort((a, b) => a - b)
-  const t: Two = { kind: 'sport', ids: keep.map((k) => full.ids[k]!), rows: [keep.map((k) => full.rows[0][k]!), keep.map((k) => full.rows[1][k]!)] }
-  const single = (r: 0 | 1): StemPart => ({
+  return { kind, ids: keep.map((k) => full.ids[k]!), rows: [keep.map((k) => full.rows[0][k]!), keep.map((k) => full.rows[1][k]!)] }
+}
+/** 一组（男生或女生）的单式统计表（例 2 上面的两张表：「男生最喜欢的运动项目人数情况」） */
+function singleTable(t: Two, r: 0 | 1): StemPart {
+  const kind = t.kind === 'book' ? 'book' : 'sport'
+  return {
     kind: 'stat-table',
-    title: L('m3.data.title.sportG', { g: L(GROUP.sport[r]) }),
+    title: L(`m3.data.title.${kind}G`, { g: L(GROUP[t.kind][r]) }),
     rows: [
-      [L('m3.data.head.sport'), ...t.ids.map(item)],
+      [L(TWO_HEAD[t.kind]), ...t.ids.map(item)],
       [L('m3.data.head.people'), ...t.rows[r]],
     ],
+  }
+}
+/** 两张单式统计表（男生一张、女生一张，例 2）：合在一起看，最喜欢某一项的一共有几人 */
+function tabTwoTables(d: Difficulty, rng: RNG): Question {
+  const t = threeOf(rng, 'sport')
+  return tabColSum(d, rng, t, [singleTable(t, 0), singleTable(t, 1)], 'two')
+}
+/**
+ * 例 2「像这样的表可以合成一个表」：一组的单式统计表 + 合成的复式统计表（另一组已经填好），复式表里问号那一格照单式表填。
+ * 图书种类（做一做 2）同样。
+ */
+function tabMerge(d: Difficulty, rng: RNG): Question {
+  const t = threeOf(rng, rng.pick(['sport', 'sport', 'book'] as const))
+  const r = rng.int(0, 1) as 0 | 1
+  const c = rng.int(0, t.ids.length - 1)
+  const v = t.rows[r][c]!
+  const merged = twoTable(t)
+  if (merged.kind === 'stat-table') merged.rows[r + 1]![c + 1] = null
+  return numberQuestion({
+    kpId: KT,
+    type: 'stat',
+    difficulty: d,
+    sig: `merge-${twoSig(t)}-${r}-${c}`,
+    stem: [text('m3.data.merge', { g: L(GROUP[t.kind][r]) }), singleTable(t, r), merged],
+    value: v,
+    rng,
+    min: 0,
+    max: 99,
+    // 抄成另一组的同一项、抄错一格
+    smart: [t.rows[1 - r][c]!, ...t.rows[r].filter((_, k) => k !== c), v + 1],
   })
-  return tabColSum(d, rng, t, [single(0), single(1)], 'two')
 }
 
 /** 做一做 1：某市 2016、2020、2024 年空气质量各级别天数（课本的真实数据，这里取前四个级别） */
@@ -721,20 +781,22 @@ export function ropeSumTable(g: number[], b: number[], totals: 'none' | 'full' |
   if (totals !== 'none') rows.push([L('m3.data.sum'), ...g.map((x, i) => (i === totals ? null : x + b[i]!))])
   return { kind: 'stat-table', title: L('m3.data.title.ropeSum'), rows }
 }
+/** 例 3 后半：把女生、男生各等级的人数整理在一张表里（合计、哪个等级最多、几人没及格）——属于「分段整理数据」 */
 function tabRopeSum(d: Difficulty, rng: RNG): Question {
+  const kpId = 'm3s2-05-segments'
   const [g, b] = ropeCounts(rng)
   const sig = `ropesum-${g.join('.')}-${b.join('.')}`
   const roll = rng.next()
   if (roll < 0.45) {
     const c = rng.int(0, 3)
     const v = g[c]! + b[c]!
-    return numberQuestion({ kpId: KT, type: 'stat', difficulty: d, sig: `${sig}-ask${c}`, stem: [text('m3.data.rope.sumAsk'), ropeSumTable(g, b, c)], value: v, rng, min: 0, max: 99, smart: [Math.abs(g[c]! - b[c]!), v + 1, v - 1] })
+    return numberQuestion({ kpId, type: 'stat', difficulty: d, sig: `${sig}-ask${c}`, stem: [text('m3.data.rope.sumAsk'), ropeSumTable(g, b, c)], value: v, rng, min: 0, max: 99, smart: [Math.abs(g[c]! - b[c]!), v + 1, v - 1] })
   }
   if (roll < 0.75) {
     const total = g.map((x, i) => x + b[i]!)
     const at = uniqueExtreme(total, true)
     return labelQuestion({
-      kpId: KT,
+      kpId,
       type: 'stat',
       difficulty: d,
       sig: `${sig}-most`,
@@ -745,25 +807,35 @@ function tabRopeSum(d: Difficulty, rng: RNG): Question {
     })
   }
   const v = g[0]! + b[0]!
-  return numberQuestion({ kpId: KT, type: 'stat', difficulty: d, sig: `${sig}-fail`, stem: [text('m3.data.rope.sumFail'), ropeSumTable(g, b, 'none')], value: v, rng, min: 0, max: 99, smart: [g[0]!, b[0]!, v + 1, g[1]! + b[1]!] })
+  return numberQuestion({ kpId, type: 'stat', difficulty: d, sig: `${sig}-fail`, stem: [text('m3.data.rope.sumFail'), ropeSumTable(g, b, 'none')], value: v, rng, min: 0, max: 99, smart: [g[0]!, b[0]!, v + 1, g[1]! + b[1]!] })
 }
 
 defineGenerator(KT, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    const t = twoData(rng, rng.pick(['sport', 'sport', 'book', 'level'] as const))
-    return roll < 0.55 ? tabCell(d, rng, t) : tabMost(d, rng, t)
+    // 例 2：两张表合成一个表、读一格、男生 / 女生最喜欢哪一项的人最多、参加调查的一共有多少人；
+    // 做一做 1：某市三年的空气质量；做一做 2：图书种类
+    if (roll < 0.25) return tabMerge(d, rng)
+    if (roll < 0.4) return tabAir(d, rng)
+    const t = twoData(rng, rng.pick(['sport', 'sport', 'book'] as const))
+    if (roll < 0.52) return tabCell(d, rng, t)
+    if (roll < 0.72) return tabMost(d, rng, t)
+    if (roll < 0.87) return tabTotal(d, rng, t, rng.chance(0.6))
+    return tabColSum(d, rng, t)
   }
   if (d === 2) {
+    // 练习十四、十五：两张单式表同一项合起来、男女相差几人、体质测试两次的成绩等级、两个分公司的人员
     if (roll < 0.2) return tabTwoTables(d, rng)
-    const t = twoData(rng, rng.pick(['sport', 'book', 'level'] as const))
-    if (roll < 0.45 && t.kind !== 'level') return tabColSum(d, rng, t)
-    if (roll < 0.7) return tabDiff(d, rng, t) ?? tabTotal(d, rng, t, false)
-    return tabTotal(d, rng, t, roll < 0.85)
+    if (roll < 0.35) return tabStaff(d, rng)
+    const t = twoData(rng, rng.pick(['sport', 'book', 'level', 'level'] as const))
+    if (t.kind === 'level' && roll < 0.55) return rng.chance(0.5) ? tabCell(d, rng, t) : tabMost(d, rng, t)
+    if (roll < 0.55) return tabColSum(d, rng, t)
+    if (roll < 0.8) return tabDiff(d, rng, t) ?? tabTotal(d, rng, t, false)
+    return tabTotal(d, rng, t, roll < 0.9)
   }
-  if (roll < 0.3) return tabAir(d, rng)
-  if (roll < 0.55) return tabStaff(d, rng)
-  if (roll < 0.85) return tabRopeSum(d, rng)
+  if (roll < 0.25) return tabAir(d, rng)
+  if (roll < 0.5) return tabStaff(d, rng)
+  if (roll < 0.7) return tabTwoTables(d, rng)
   const t = twoData(rng, 'level')
   return tabDiff(d, rng, t) ?? tabTotal(d, rng, t, false)
 })
@@ -778,12 +850,16 @@ export interface Band {
   kind: BandKind
 }
 export const inBand = (b: Band, v: number): boolean => v >= b.lo && (b.hi === null || v <= b.hi)
-/** 表里、选项里的写法（课本「38 及以下」「39—108」「60 以上」） */
+/** 表里的写法（课本「38 及以下」「39—108」「60 以上」；表格不朗读） */
 export function bandLabel(b: Band): LStr {
   if (b.kind === 'range') return `${b.lo}—${b.hi}`
   if (b.kind === 'max') return L('m3.data.band.max', { a: b.hi! })
   if (b.kind === 'min') return L('m3.data.band.min', { a: b.lo })
   return L('m3.data.band.over', { a: b.lo - 1 })
+}
+/** 选项里的写法：答错时要朗读「正确答案是……」，「—」会读成停顿，区间写成「39 到 108」 */
+export function bandChoice(b: Band): LStr {
+  return b.kind === 'range' ? L('m3.data.band.range', { a: b.lo, b: b.hi! }) : bandLabel(b)
 }
 /** 句子里的说法（带单位，「—」说成「到」） */
 function bandSpoken(b: Band, unit: 'min' | 'cm' | 'times'): LStr {
@@ -939,8 +1015,8 @@ function segWhich(d: Difficulty, rng: RNG): Question {
     difficulty: d,
     sig: `which-${ds.id}-${n}`,
     stem: [text(`m3.data.seg.${ds.id}`, { n })],
-    correct: bandLabel(ds.bands[at]!),
-    distractors: ds.bands.filter((_, k) => k !== at).map(bandLabel),
+    correct: bandChoice(ds.bands[at]!),
+    distractors: ds.bands.filter((_, k) => k !== at).map(bandChoice),
     rng,
   })
 }
@@ -1031,8 +1107,8 @@ function segMost(d: Difficulty, rng: RNG): Question {
       difficulty: d,
       sig: `mostband-${ds.id}-${vs.join('.')}`,
       stem: [text('m3.data.seg.mostBand'), gridPart(L(`m3.data.title.${ds.id}`, { n: 10 }), vs)],
-      correct: bandLabel(ds.bands[at]!),
-      distractors: ds.bands.filter((_, k) => k !== at).map(bandLabel),
+      correct: bandChoice(ds.bands[at]!),
+      distractors: ds.bands.filter((_, k) => k !== at).map(bandChoice),
       rng,
     })
   }
@@ -1040,14 +1116,25 @@ function segMost(d: Difficulty, rng: RNG): Question {
 
 defineGenerator(KS, (d, rng) => {
   const roll = rng.next()
-  if (d === 1) return roll < 0.5 ? segRope(d, rng, 'single') : segWhich(d, rng)
+  if (d === 1) {
+    // 例 3：按标准判等级 / 判在哪一段（常考分界上的数）30%、数一段有几人 35%、哪一段的人数最多 15%、
+    // 把女生男生各等级的人数整理成一张表（合计、哪个等级最多、几人没及格）20%；做一做：身高分段
+    if (roll < 0.15) return segRope(d, rng, rng.chance(0.5) ? 'single' : 'boundary')
+    if (roll < 0.3) return segWhich(d, rng)
+    if (roll < 0.47) return segRopeCount(d, rng, true)
+    if (roll < 0.65) return segCount(d, rng)
+    if (roll < 0.8) return segMost(d, rng)
+    return tabRopeSum(d, rng)
+  }
   if (d === 2) {
-    if (roll < 0.45) return segCount(d, rng)
-    if (roll < 0.75) return segRopeCount(d, rng, false)
-    return segRope(d, rng, 'boundary')
+    // 练习十四 4（男女混在一起）、例 3 男女标准放在一起（108 次男生良好、女生及格）
+    if (roll < 0.3) return segGender(d, rng)
+    if (roll < 0.55) return segRope(d, rng, 'both')
+    if (roll < 0.8) return segCount(d, rng)
+    return segRopeCount(d, rng, true)
   }
   if (roll < 0.3) return segGender(d, rng)
   if (roll < 0.55) return segMost(d, rng)
   if (roll < 0.8) return segRope(d, rng, 'both')
-  return segRopeCount(d, rng, true)
+  return tabRopeSum(d, rng)
 })

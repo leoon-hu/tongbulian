@@ -130,7 +130,7 @@ describe('线段、射线、直线', () => {
       n++
       expect(answer(q)).toBe(key(KIND_KEY[classify(geoOf(q).figs[0]!)]))
     })
-    expect(n).toBeGreaterThan(50)
+    expect(n).toBeGreaterThan(30)
   })
 
   it('四幅图里挑：只有一幅是要找的那种线，就是答案', () => {
@@ -230,26 +230,63 @@ describe('线段、射线、直线', () => {
     expect(seen).toBeGreaterThan(50)
   })
 
-  it('分档：第 1 档是认线、挑线、端点和三种线的区别，第 3 档才有数线段、比长短', () => {
+  it('两点间的距离：答「距离」', () => {
+    let n = 0
+    each(KP, (q) => {
+      if (sigOf(q) !== 'dist') return
+      n++
+      expect(answer(q)).toBe(key('m3.line.distance'))
+    })
+    expect(n).toBeGreaterThan(5)
+  })
+
+  it('分档：第 1 档是课本这一节的认线、挑线、端点、三种线的区别、例 1 哪条路最近与两点间的距离、例 2 想一想比长短；数线段、连线段在后面', () => {
+    const firstTier = new Set<string>()
     each(KP, (q, d) => {
       const s = sigOf(q).split('-')[0]!
-      if (d === 1) expect(['name', 'pick', 'ends', 'fact']).toContain(s)
-      if (d === 3) expect(['segs', 'rays', 'connect', 'overlap', 'strips', 'illusion', 'from']).toContain(s)
+      if (d === 1) {
+        expect(['name', 'pick', 'ends', 'fact', 'dist', 'route', 'overlap']).toContain(s)
+        firstTier.add(s)
+      }
+      if (d === 3) expect(['segs', 'rays', 'connect', 'overlap', 'strips', 'illusion']).toContain(s)
     })
+    expect([...firstTier].sort()).toEqual(['dist', 'ends', 'fact', 'name', 'overlap', 'pick', 'route'])
   })
 })
 
 describe('角的认识', () => {
   const KP = 'm3s1-07-angles'
 
-  it('是不是角：只有两条直直的边、有公共顶点的才是', () => {
+  it('是不是角：只有两条直直的边、有公共顶点的才是；判断题写「……，对吗？」配 对 / 不对', () => {
     each(KP, (q) => {
       if (!sigOf(q).startsWith('is-')) return
       const fig = geoOf(q).figs[0]!
       const lines = fig.items.filter((it) => it.t === 'line') as Extract<GeoItem, { t: 'line' }>[]
       const isAngle = !fig.items.some((it) => it.t === 'curve') && lines.length === 2 && [lines[0]!.a, lines[0]!.b].some((p) => same(p, lines[1]!.a) || same(p, lines[1]!.b))
-      expect(answer(q)).toBe(key(isAngle ? 'm3.line.yes' : 'm3.line.no'))
+      expect(answer(q)).toBe(key(isAngle ? 'm3.line.ok' : 'm3.line.notOk'))
+      expect(translate({ k: textKey(q) }, 'zh')).toMatch(/，对吗？$/)
+      expect(q.choices!.map((c) => translate(c.label, 'zh')).sort()).toEqual(['不对', '对'])
     })
+  })
+
+  it('「∠」的记法：角里标着几，就记作「∠几」', () => {
+    let n = 0
+    each(KP, (q) => {
+      if (!sigOf(q).startsWith('sym-')) return
+      n++
+      const num = geoOf(q).figs[0]!.items.find((it): it is Extract<GeoItem, { t: 'text' }> => it.t === 'text')!.text
+      expect(answer(q)).toBe(labelKey(`∠${num}`))
+      expect(q.choices!.map((c) => c.label)).toContain(`${num}∠`)
+    })
+    expect(n).toBeGreaterThan(15)
+  })
+
+  it('第 1 档有课本这一节的每一种：是不是角、顶点和边、角的定义与折扇、∠ 的记法、比角的大小、数多边形的角', () => {
+    const kinds = new Set<string>()
+    each(KP, (q, d) => {
+      if (d === 1) kinds.add(sigOf(q).split('-')[0]!)
+    })
+    expect([...kinds].sort()).toEqual(['bigger', 'def', 'is', 'parts', 'poly', 'sym'])
   })
 
   it('多边形的角、线段条数都等于顶点个数', () => {
@@ -359,6 +396,20 @@ describe('锐角、直角、钝角', () => {
     expect(n).toBeGreaterThan(50)
   })
 
+  it('第 1 档：看角分类、挑角、和直角比，还有做一做 2 数长方形 / 正方形 / 直角三角形里的直角、三角尺上的角', () => {
+    const kinds = new Set<string>()
+    each(KP, (q, d) => {
+      if (d !== 1) return
+      const s = sigOf(q).split('-')[0]!
+      kinds.add(s)
+      if (s === 'ck') {
+        expect((textParams(q).kind as { k: string }).k).toBe('m3.line.right')
+        expect(polysOf(geoOf(q).figs[0]!)[0]!.pts.length === 4 || interior(polysOf(geoOf(q).figs[0]!)[0]!.pts).some((x) => Math.abs(x - 90) < 0.5)).toBe(true)
+      }
+    })
+    expect([...kinds].sort()).toEqual(['ck', 'kdef', 'kind', 'pk', 'ruler'])
+  })
+
   it('三角尺上一个直角、两个锐角（按图上外面那个三角形的角算）', () => {
     each(KP, (q) => {
       if (!sigOf(q).startsWith('ruler-')) return
@@ -392,6 +443,19 @@ describe('锐角、直角、钝角', () => {
 })
 
 describe('线和角：图和文字', () => {
+  it('图的说明（静态页会印出来）不写答案：不说是哪种线 / 哪种角，不说是不是角、剩几个角、是几边形', () => {
+    const NAMES = /线段|射线|直线|曲线|锐角|直角|钝角|梯形|平行四边形|是角|不是角/
+    for (const kp of ['m3s1-07-lines', 'm3s1-07-angles', 'm3s1-07-angle-kinds']) {
+      each(kp, (q) => {
+        const s = sigOf(q).split('-')[0]!
+        if (['name', 'pick', 'is', 'poly', 'bigger', 'cut', 'kind', 'pk', 'ck'].includes(s)) for (const part of q.stem) if (part.kind === 'geo') expect(part.alt, q.id).not.toMatch(NAMES)
+        if (s === 'poly' || s === 'cut') expect(geoOf(q).alt, q.id).not.toMatch(/[三四五六七八]边形/)
+        if (s === 'route') expect(geoOf(q).alt, q.id).not.toMatch(/直路|弯路|折线/)
+        if (s === 'overlap' || s === 'illusion') expect(geoOf(q).alt, q.id).not.toMatch(/左边|右边|\d+ 格/)
+      })
+    }
+  })
+
   it('图里没有汉字（只有字母、数、问号、emoji），坐标都是有限的数；中英文题干都不含没翻译的键', () => {
     for (const kp of ['m3s1-07-lines', 'm3s1-07-angles', 'm3s1-07-angle-kinds']) {
       each(kp, (q) => {

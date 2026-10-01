@@ -89,8 +89,8 @@ describe('除法竖式（LongDivision）', () => {
     expect(hasBlank({ ...q, input: 'choice' })).toBe(false)
   })
 
-  it('除法五个知识点每种题中英文都能渲染（带竖式的题填上按的数）', () => {
-    for (const kpId of ['m3s2-02-oral', 'm3s2-02-estimate', 'm3s2-02-written', 'm3s2-02-zeros', 'm3s2-02-solve']) {
+  it('除法四个知识点每种题中英文都能渲染（带竖式的题填上按的数）', () => {
+    for (const kpId of ['m3s2-02-oral', 'm3s2-02-written', 'm3s2-02-zeros', 'm3s2-02-solve']) {
       const gen = getGenerator(kpId)!
       const seen = new Set<string>()
       for (let seed = 1; seed <= 150; seed++)

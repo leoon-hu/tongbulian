@@ -17,6 +17,7 @@ const ITEMS_ZH: Record<string, [string, string]> = {
   book: ['一本笔记本', '笔记本'],
   paint: ['一盒水彩笔', '水彩笔'],
   ruler: ['一把尺子', '尺子'],
+  sharpener: ['一个卷笔刀', '卷笔刀'],
 }
 const ITEMS_PY: Record<string, [string, string]> = {
   eraser: ['yí kuài xiàng pí', 'xiàng pí'],
@@ -25,6 +26,7 @@ const ITEMS_PY: Record<string, [string, string]> = {
   book: ['yì běn bǐ jì běn', 'bǐ jì běn'],
   paint: ['yì hé shuǐ cǎi bǐ', 'shuǐ cǎi bǐ'],
   ruler: ['yì bǎ chǐ zi', 'chǐ zi'],
+  sharpener: ['yí gè juǎn bǐ dāo', 'juǎn bǐ dāo'],
 }
 const ITEMS_EN: Record<string, [string, string]> = {
   eraser: ['an eraser', 'the eraser'],
@@ -33,6 +35,7 @@ const ITEMS_EN: Record<string, [string, string]> = {
   book: ['a notebook', 'the notebook'],
   paint: ['a box of paint pens', 'the paint pens'],
   ruler: ['a ruler', 'the ruler'],
+  sharpener: ['a pencil sharpener', 'the pencil sharpener'],
 }
 const items = (t: Record<string, [string, string]>): Dict =>
   Object.fromEntries(Object.entries(t).flatMap(([id, [one, name]]) => [[`m3.dec.one.${id}`, one], [`m3.dec.item.${id}`, name]]))
@@ -89,6 +92,8 @@ export const ZH: Dict = {
   'm3.dec.jump': '跳高成绩：{a}，{b}，{c}，{d}。{ask}',
   'm3.dec.score': '{who} {x} 米',
   'm3.dec.jumpFirst': '谁是第一名？',
+  'm3.dec.jumpSecond': '谁是第二名？',
+  'm3.dec.jumpThird': '谁是第三名？',
   'm3.dec.jumpLast': '谁是第四名？',
   'm3.dec.who.ming': '小明',
   'm3.dec.who.gang': '小刚',
@@ -164,6 +169,8 @@ export const EN: Dict = {
   'm3.dec.jump': 'High-jump results: {a}, {b}, {c}, {d}. {ask}',
   'm3.dec.score': '{who} {x} meters',
   'm3.dec.jumpFirst': 'Who came first?',
+  'm3.dec.jumpSecond': 'Who came second?',
+  'm3.dec.jumpThird': 'Who came third?',
   'm3.dec.jumpLast': 'Who came fourth?',
   'm3.dec.who.ming': 'Ming',
   'm3.dec.who.gang': 'Gang',
@@ -238,6 +245,8 @@ export const PY: Record<string, string> = {
   'm3.dec.jump': 'tiào gāo chéng jì',
   'm3.dec.score': 'mǐ',
   'm3.dec.jumpFirst': 'shuí shì dì yī míng',
+  'm3.dec.jumpSecond': 'shuí shì dì èr míng',
+  'm3.dec.jumpThird': 'shuí shì dì sān míng',
   'm3.dec.jumpLast': 'shuí shì dì sì míng',
   'm3.dec.who.ming': 'xiǎo míng',
   'm3.dec.who.gang': 'xiǎo gāng',

@@ -413,9 +413,11 @@ function genCanFold(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 第 3 档：长方体有几条边（12）、没开口的纸盒要剪开几条边（7：留 5 条让 6 个面连着） */
-function genEdges(kpId: string, d: Difficulty, rng: RNG): Question {
-  const cut = rng.chance(0.5)
+/**
+ * 没开口的纸盒要剪开几条边（7：留 5 条让 6 个面连着，课本例 3 (1)，第 1 档就出）；
+ * 第 3 档另有「长方体有几条边（12）」——课本没问（棱是五年级的内容），只留在第 3 档
+ */
+function genEdges(kpId: string, d: Difficulty, rng: RNG, cut = rng.chance(0.5)): Question {
   return numberQuestion({
     kpId,
     type: 'view',
@@ -433,7 +435,14 @@ function genEdges(kpId: string, d: Difficulty, rng: RNG): Question {
 defineGenerator('m3s1-01-unfold', (d, rng) => {
   const kpId = 'm3s1-01-unfold'
   const roll = rng.next()
-  if (d === 1) return roll < 0.45 ? genUnfoldCount(kpId, d, rng) : roll < 0.75 ? genOpposite(kpId, d, rng) : genCanFold(kpId, d, rng)
-  if (d === 2) return roll < 0.2 ? genUnfoldCount(kpId, d, rng) : roll < 0.6 ? genOpposite(kpId, d, rng) : genCanFold(kpId, d, rng)
+  if (d === 1)
+    return roll < 0.15
+      ? genEdges(kpId, d, rng, true)
+      : roll < 0.5
+        ? genUnfoldCount(kpId, d, rng)
+        : roll < 0.75
+          ? genOpposite(kpId, d, rng)
+          : genCanFold(kpId, d, rng)
+  if (d === 2) return roll < 0.1 ? genEdges(kpId, d, rng, true) : roll < 0.25 ? genUnfoldCount(kpId, d, rng) : roll < 0.6 ? genOpposite(kpId, d, rng) : genCanFold(kpId, d, rng)
   return roll < 0.4 ? genEdges(kpId, d, rng) : roll < 0.7 ? genOpposite(kpId, d, rng) : genCanFold(kpId, d, rng)
 })

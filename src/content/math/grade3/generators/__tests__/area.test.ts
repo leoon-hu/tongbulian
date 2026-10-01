@@ -65,8 +65,10 @@ describe('面积和面积单位', () => {
       expect(value(q)).toBe(cells.length)
       expect(unitOf(textParams(q).u)).toBe(unitOf(textParams(q).u1))
       if (d === 1) expect(cells.length).toBeLessThanOrEqual(12)
+      // 图的说明（静态页会印出来）不写格子数
+      expect(geoOf(q).alt, q.id).not.toMatch(new RegExp(`(^|\\D)${cells.length}(\\D|$)`))
     })
-    expect(n).toBeGreaterThan(80)
+    expect(n).toBeGreaterThan(30)
   })
 
   it('选单位：邮票、手指甲、身份证用平方厘米，手帕、课桌面、书封面用平方分米，黑板、教室、学校用平方米；长度的用长度单位', () => {
@@ -79,6 +81,7 @@ describe('面积和面积单位', () => {
       book: 'dm2',
       board: 'm2',
       room: 'm2',
+      field: 'm2',
       school: 'm2',
       boardLen: 'm',
       height: 'cm',
@@ -102,28 +105,45 @@ describe('面积和面积单位', () => {
     expect(n).toBeGreaterThan(80)
   })
 
-  it('面积的意思；边长 1 的正方形面积是 1 平方（同一个长度单位）', () => {
+  it('面积的意思、统一的面积单位；边长 1 的正方形面积是 1 平方（同一个长度单位），干扰项里也有面积单位', () => {
     each(KP, (q) => {
       if (sigOf(q) === 'def') expect(answer(q)).toBe(key('m3.area.area'))
+      if (sigOf(q) === 'unify') expect(answer(q)).toBe(key('m3.area.unitArea'))
       if (!sigOf(q).startsWith('unitsq-')) return
       const lu = unitOf(textParams(q).lu)
       const correct = q.choices!.find((c) => c.id === (q.answer as { choiceId: string }).choiceId)!.label as unknown as { p: { n: number; u: unknown } }
       expect(correct.p.n).toBe(1)
       expect(unitOf(correct.p.u)).toBe(`${lu}2`)
+      // 正确项不是唯一带「平方」的
+      const areaChoices = q.choices!.filter((c) => translate(c.label, 'zh').includes('平方'))
+      expect(areaChoices.length, q.id).toBeGreaterThanOrEqual(3)
     })
   })
 
-  it('比面积：按两幅图的格子数；相差几格', () => {
+  it('比面积：按两幅图的格子数；相差几格；三个图形哪个最大 / 最小；说明不写格子数', () => {
     let n = 0
-    each(KP, (q) => {
+    let book = 0
+    each(KP, (q, d) => {
       const s = sigOf(q)
-      if (!s.startsWith('cmp-') && !s.startsWith('diff-')) return
+      if (!s.startsWith('cmp-') && !s.startsWith('diff-') && !s.startsWith('three-')) return
       n++
-      const [a, b] = geoOf(q).figs.map((f) => gridOf(f)!.cells!.length) as [number, number]
+      const counts = geoOf(q).figs.map((f) => gridOf(f)!.cells!.length)
+      for (const c of counts) expect(geoOf(q).alt, q.id).not.toMatch(new RegExp(`(^|\\D)${c}(\\D|$)`))
+      if (s.startsWith('three-')) {
+        expect(d).toBeGreaterThanOrEqual(2)
+        expect(new Set(counts).size).toBe(3)
+        const want = s.startsWith('three-max') ? Math.max(...counts) : Math.min(...counts)
+        expect(answer(q)).toBe(labelKey(String(counts.indexOf(want) + 1)))
+        return
+      }
+      const [a, b] = counts as [number, number]
       if (s.startsWith('diff-')) expect(value(q)).toBe(Math.abs(a - b))
       else expect(answer(q)).toBe(a === b ? key('m3.area.same') : labelKey(a > b ? '1' : '2'))
+      // 课本 p53：5 × 2 和 4 × 3 两个长方形
+      if (d === 1 && [a, b].sort().join() === '10,12') book++
     })
     expect(n).toBeGreaterThan(50)
+    expect(book).toBeGreaterThan(0)
   })
 
   it('同样多的小正方形拼成的图形：面积就是个数，周长按格子数', () => {
@@ -134,6 +154,21 @@ describe('面积和面积单位', () => {
       expect(textParams(q).n).toBe(cells.length)
       expect(value(q)).toBe(s.startsWith('tetro-a') ? cells.length : perimOfCells(cells))
     })
+  })
+
+  it('第 1 档有数方格、比面积（p53）、选单位、面积的意思、统一的面积单位、1 平方厘米；四连方和判断在第 2 档', () => {
+    const d1 = new Set<string>()
+    const d2 = new Set<string>()
+    each(KP, (q, d) => {
+      const s = sigOf(q).split('-')[0]!
+      if (d === 1) d1.add(s)
+      if (d === 2) d2.add(s)
+    })
+    for (const k of ['count', 'cmp', 'diff', 'unit', 'def', 'unify', 'unitsq']) expect(d1, k).toContain(k)
+    for (const k of ['tetro', 'judge', 'three']) {
+      expect(d1, k).not.toContain(k)
+      expect(d2, k).toContain(k)
+    }
   })
 
   it('判断题', () => {
@@ -163,10 +198,11 @@ describe('长方形和正方形的面积', () => {
         expect(g.w).toBe(a)
         expect(g.h).toBe(b)
       }
-      if (d === 1) expect(Math.max(a, b)).toBeLessThanOrEqual(9)
-      else expect(Math.min(a, b)).toBeLessThanOrEqual(12)
+      if (d === 1) expect(Math.max(a, b)).toBeLessThanOrEqual(10)
+      // 不出两位数乘两位数（10 × 10 课本 p58 算过）
+      expect(Math.min(a, b) <= 9 || (a === 10 && b === 10), q.id).toBe(true)
     })
-    expect(n).toBeGreaterThan(80)
+    expect(n).toBeGreaterThan(60)
   })
 
   it('文字题按题目里的数重算', () => {
@@ -177,24 +213,30 @@ describe('长方形和正方形的面积', () => {
       'm3.area.wPond': (p) => (p.p! / 4) ** 2,
       'm3.area.wCut': (p) => Math.min(p.a!, p.b!) ** 2,
       'm3.area.wEst': (p) => p.a! * p.b!,
+      'm3.area.wDesk': (p) => p.a! * p.b! * p.k!,
       'm3.area.wYard': (p) => p.a! * p.b!,
       'm3.area.wWall': (p) => p.a! * p.b! - p.c!,
       'm3.area.wRobot': (p) => (p.a! * p.b!) / p.r!,
-      'm3.area.wTwo': (p) => 2 * p.a! * p.b!,
+      'm3.area.wTruck': (p) => p.v! * p.t! * p.w!,
     }
     const seen = new Set<string>()
-    each(KP, (q) => {
+    const firstTier = new Set<string>()
+    each(KP, (q, d) => {
       const k = textKey(q)
       if (!(k in f)) return
       seen.add(k)
+      if (d === 1) firstTier.add(k)
       const p = textParams(q) as Record<string, number>
       const v = f[k]!(p)
       expect(Number.isInteger(v), q.id).toBe(true)
       expect(value(q), q.id).toBe(v)
-      // 拼成正方形：长正好是宽的 2 倍
-      if (k === 'm3.area.wTwo') expect(p.a).toBe(2 * p.b!)
+      if (k === 'm3.area.wHanky') expect(p.a).toBeLessThanOrEqual(4)
+      // 剪最大的正方形：边长是宽（做一做是 10 × 7）
+      if (k === 'm3.area.wCut') expect(p.a).toBeGreaterThan(p.b!)
     })
     expect(seen.size).toBe(Object.keys(f).length)
+    // 例题与做一做在第 1 档（G12）：花坛、手帕、纸、剪最大的正方形、估测面积
+    for (const k of ['m3.area.wBed', 'm3.area.wHanky', 'm3.area.wPaper', 'm3.area.wCut', 'm3.area.wEst', 'm3.area.wDesk']) expect(firstTier, k).toContain(k)
   })
 
   it('同一个长方形问周长或面积：按标的长和宽', () => {
@@ -224,9 +266,19 @@ describe('长方形和正方形的面积', () => {
 
   it('公式选项：长方形长 × 宽，正方形边长 × 边长', () => {
     each(KP, (q) => {
-      if (sigOf(q) === 'formula-rect') expect(answer(q)).toBe(key('m3.rect.fRectA'))
-      if (sigOf(q) === 'formula-sq') expect(answer(q)).toBe(key('m3.rect.fSqSq'))
+      if (sigOf(q) === 'formula-rect') expect(answer(q)).toBe(key('m3.area.fRectA'))
+      if (sigOf(q) === 'formula-sq') expect(answer(q)).toBe(key('m3.area.fSqSq'))
     })
+  })
+
+  it('第 1 档：例 1 看图、公式、周长还是面积都有；L 形、剪去一块、粉刷墙壁、扫地机器人、洒水车只在第 2 档以上', () => {
+    const d1 = new Set<string>()
+    each(KP, (q, d) => {
+      const s = sigOf(q).replace(/^(fig|formula|pa|lshape|cut)-.*/, '$1')
+      if (d === 1) d1.add(s.startsWith('m3.area.') ? s.split('-')[0]! : s)
+    })
+    for (const k of ['fig', 'formula', 'pa']) expect(d1, k).toContain(k)
+    for (const k of ['lshape', 'cut', 'm3.area.wWall', 'm3.area.wRobot', 'm3.area.wTruck', 'm3.area.wPond', 'm3.area.wYard']) expect(d1, k).not.toContain(k)
   })
 })
 
@@ -275,8 +327,41 @@ describe('面积单位间的进率', () => {
       if (k === 'm3.area.tiles') {
         const s = p.s as number
         expect(value(q)).toBe(((p.a as number) * (p.b as number) * 100) / (s * s))
+        // 地砖边长 1、2、3 分米（不出两位数除数），平方米数正好是一块地砖的倍数
+        expect([1, 2, 3]).toContain(s)
+        expect(((p.a as number) * (p.b as number)) % (s * s)).toBe(0)
+      }
+      if (k === 'm3.area.unitSqIn') {
+        expect(value(q)).toBe(100)
+        expect(`${unitOf(p.lu)}-${unitOf(p.su)}`).toMatch(/^(dm-cm2|m-dm2)$/)
       }
     })
+  })
+
+  it('不出 10000：没有平方米直接换平方厘米，比大小里的平方厘米对平方米经平方分米就比得出来', () => {
+    each(KP, (q) => {
+      const k1 = textKey(q, 1)
+      if (textKey(q) === 'm3.u.conv') expect(`${unitOf(textParams(q).ua)}-${unitOf(textParams(q).ub)}`).not.toMatch(/^(m2-cm2|cm2-m2)$/)
+      if (k1 !== 'm3.u.cmpLine') return
+      const p = textParams(q, 1)
+      const pair = [unitOf(p.ua), unitOf(p.ub)].sort().join('-')
+      if (pair === 'cm2-m2') {
+        const cm = unitOf(p.ua) === 'cm2' ? (p.a as number) : (p.b as number)
+        const m = unitOf(p.ua) === 'm2' ? (p.a as number) : (p.b as number)
+        expect(cm, q.id).toBeLessThan(m * 10000)
+        expect(cm % 100, q.id).toBe(0)
+      }
+    })
+  })
+
+  it('第 1 档有例 3 与做一做的换算、进率、交通标志牌（平方分米、平方厘米两问）、比大小', () => {
+    const d1 = new Set<string>()
+    each(KP, (q, d) => {
+      if (d !== 1) return
+      const k = textKey(q) === 'm3.area.sign' ? `sign-${unitOf(textParams(q).su)}` : textKey(q, 1) === 'm3.u.cmpLine' ? 'cmp' : textKey(q)
+      d1.add(k)
+    })
+    for (const k of ['m3.u.conv', 'm3.area.rateQ', 'm3.area.unitSqIn', 'sign-dm2', 'sign-cm2', 'cmp']) expect(d1, k).toContain(k)
   })
 })
 

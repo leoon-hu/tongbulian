@@ -176,6 +176,8 @@ POLY_TAIL: Dict[str, str] = {
     "北斗的斗": "抖",
     "那里的那": "纳",
     "什么的什": "神",
+    "似的的似": "是",
+    "下铺的铺": "瀑",
 }
 # 放在最前面：先按整个词换末尾，再按上下文换词里的字（倒映的倒 → 倒映的到 → 到映的到）
 SAY_AS["zh"] = [(re.compile(f"^{re.escape(w)}$"), w[:-1] + h) for w, h in POLY_TAIL.items()] + SAY_AS["zh"]

@@ -39,9 +39,9 @@ function tableDiv(rng: RNG): [number, number, number] {
 
 // ── 只有加减或只有乘除：从左往右 ──
 
-/** a ± b ± c：第 1 档两位数（结果 0–100），第 2 档起三位数（结果 < 1000） */
+/** a ± b ± c：第 1 档约三分之二两位数（结果 0–100）、三分之一三位数（做一做 120 + 40 - 51），第 2 档起三位数（结果 < 1000） */
 function addSubChain(d: Difficulty, rng: RNG): { expr: string; value: number; wrong: number; first: number } {
-  const big = d >= 2
+  const big = d >= 2 || rng.chance(0.35)
   for (;;) {
     const a = big ? rng.int(100, 500) : rng.int(20, 90)
     const op1 = rng.chance(0.5) ? '+' : '-'
@@ -192,8 +192,9 @@ interface Two {
 function mulFirstExpr(d: Difficulty, rng: RNG): Two {
   const big = d >= 2
   for (;;) {
-    const kind = rng.int(0, big ? 5 : 3)
-    const a = big ? rng.int(100, 499) : rng.int(10, 99)
+    // 第 1 档也有两个乘除式相加减（做一做 4 × 9 - 5 × 3，kind 4、5 约占三分之一）；a 有时是一位数（例 2 的 4 + 6 × 3）
+    const kind = rng.int(0, 5)
+    const a = big ? rng.int(100, 499) : rng.chance(0.25) ? rng.int(2, 9) : rng.int(10, 99)
     if (kind <= 1) {
       // a ± b × c / b × c ± a
       const [b, c, p] = tableMul(rng)
@@ -308,7 +309,8 @@ interface Paren {
 function parenExpr(d: Difficulty, rng: RNG): Paren {
   const big = d >= 2
   for (;;) {
-    const kind = rng.int(0, big ? 7 : 5)
+    // 第 1 档约四分之一是三位数的 a - (b ± c)（做一做 388 - (27 - 18)）
+    const kind = big ? rng.int(0, 7) : rng.chance(0.25) ? rng.int(6, 7) : rng.int(0, 5)
     if (kind === 0 || kind === 1) {
       // (a ± b) × c：和 / 差在 2–9
       const inner = rng.int(2, 9)
@@ -417,7 +419,8 @@ function genMerge(kpId: string, d: Difficulty, rng: RNG): Question {
     sig: `merge-${a}-${b}-${c}`,
     stem: [{ kind: 'text', text: { k: 'm3.mix.merge', p: { s1, s2 } } }],
     correct: `(${a} + ${b}) ÷ ${c}`,
-    distractors: [`${a} + ${b} ÷ ${c}`, `${a} + ${p} ÷ ${c}`],
+    // 干扰项也有带括号的，正确项不是唯一带括号的那个
+    distractors: [`${a} + ${b} ÷ ${c}`, `${a} + (${b} ÷ ${c})`, `(${a} + ${p}) ÷ ${c}`],
     rng,
   })
 }
@@ -463,34 +466,35 @@ function stepProblem(d: Difficulty, rng: RNG): Step {
       const n = rng.int(2, 5)
       return { key: 'm3.step.towels', p: { p, d: d0, n }, value: (p - d0) * n, smart: [p * n, p * n - d0, p - d0] }
     },
+    // 例 5 小军做花 (8 - 3) × 2
+    () => {
+      const b = rng.int(1, 5)
+      const a = b + rng.int(2, 7)
+      const k = rng.int(2, 4)
+      return { key: 'm3.step.flowers', p: { a, b, k }, value: (a - b) * k, smart: [a * k, a - b, a * k - b] }
+    },
+    // 例 6 红黄珠子 72 ÷ 8 - 56 ÷ 8（两次除法都在口诀内）
+    () => {
+      const n = rng.int(4, 9)
+      const yb = rng.int(3, 8)
+      const rb = yb + rng.int(1, 9 - yb)
+      return { key: 'm3.step.beads', p: { a: rb * n, b: yb * n, n }, value: rb - yb, smart: [rb, (rb - yb) * n, yb] }
+    },
+    // 做一做 4：1 支铅笔 3 元、4 个笔记本，一共 19 元
+    () => {
+      const n = rng.int(2, 6)
+      const each = rng.int(2, 9)
+      const p = rng.int(1, 5)
+      return { key: 'm3.step.pencil', p: { n, t: p + n * each, p }, value: each, smart: [(p + n * each) / n, each + 1, p + each] }
+    },
   ]
   if (d >= 2) {
-    pool.push(
-      () => {
-        const b = rng.int(1, 5)
-        const a = b + rng.int(2, 7)
-        const k = rng.int(2, 4)
-        return { key: 'm3.step.flowers', p: { a, b, k }, value: (a - b) * k, smart: [a * k, a - b, a * k - b] }
-      },
-      () => {
-        const n = rng.int(4, 9)
-        const yb = rng.int(3, 8)
-        const rb = yb + rng.int(1, 5)
-        return { key: 'm3.step.beads', p: { a: rb * n, b: yb * n, n }, value: rb - yb, smart: [rb, (rb - yb) * n, yb] }
-      },
-      () => {
-        const p = rng.int(15, 40)
-        const q = rng.int(2, 9)
-        const n = rng.int(2, 6)
-        return { key: 'm3.step.toys', p: { p, q, n }, value: p + n * q, smart: [(p + q) * n, p + q, p * n + q] }
-      },
-      () => {
-        const n = rng.int(2, 6)
-        const each = rng.int(2, 9)
-        const p = rng.int(1, 5)
-        return { key: 'm3.step.pencil', p: { n, t: p + n * each, p }, value: each, smart: [(p + n * each) / n, each + 1, p + each] }
-      },
-    )
+    pool.push(() => {
+      const p = rng.int(15, 40)
+      const q = rng.int(2, 9)
+      const n = rng.int(2, 6)
+      return { key: 'm3.step.toys', p: { p, q, n }, value: p + n * q, smart: [(p + q) * n, p + q, p * n + q] }
+    })
   }
   if (d === 3) {
     pool.push(

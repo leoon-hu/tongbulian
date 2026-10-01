@@ -224,12 +224,17 @@ describe('答案从号码上反推', () => {
   it('第 1 档的题够多样，出生年份涉及不同的号码', () => {
     const ids = new Set<string>()
     const years = new Set<number>()
+    const keys = new Set<string>()
     each((q, d) => {
       if (d !== 1) return
       ids.add(q.id)
+      keys.add(textKeys(q)[0]!)
       if (textKeys(q)[0] === 'm3.code.year') years.add(Number(correctLabel(q).replace(/\D/g, '')))
     })
     expect(ids.size).toBeGreaterThanOrEqual(20)
     expect(years.size).toBeGreaterThanOrEqual(6)
+    // 课本 p58 的核心句「第十七位单数为男性、双数为女性」第 1 档就练（题里写着规则）
+    expect(keys).toContain('m3.code.sexBy17')
+    expect(keys).not.toContain('m3.code.sex')
   })
 })

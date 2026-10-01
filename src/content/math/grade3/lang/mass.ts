@@ -1,4 +1,5 @@
-// 三上「☆ 曹冲称象的故事」的词条：认识质量单位（克、千克、吨，选单位 / 换算 / 读秤）与称重大挑战（标准物、比轻重、曹冲称象求和）。
+// 三上「☆ 曹冲称象的故事」的词条：认识质量单位（克、千克、吨，选单位 / 换算 / 读秤）与称重我很行（比轻重、大约有几个、
+// 称重大挑战的标准物、曹冲称象求和）。
 // 单位与换算模板在 lang/length.ts 的 m3.u.*。课本说「质量」「有多重」「称一称」；「重」读 zhòng，只出现在「一样重」「重多少」这类词里。
 import type { Dict } from '@/engine/i18n'
 
@@ -23,11 +24,12 @@ export const ZH: Dict = {
   // ── 读秤 ──
   'm3.mass.readKg': '秤上的东西有几千克？',
   'm3.mass.readG': '秤上的东西有几克？',
+  'm3.mass.readBody': '小明站在体重秤上，他的体重是几千克？',
   // ── 公斤、斤（课本「小讲堂」）──
   'm3.mass.jinOfGongjin': '1 公斤 = 2 斤。{k} 公斤 = 几斤？',
   'm3.mass.gOfJin': '1 斤 = 500 克。{k} 斤 = 几克？',
   'm3.mass.gongjin': '1 公斤 = 几千克？',
-  // ── 称重大挑战 ──
+  // ── 称重我很行（含称重大挑战的盐袋）──
   'm3.mass.salt': '{thing}和 {k} 袋 200 克的盐一样重，{thing}大约有几克？',
   'm3.mass.salt1': '{thing}和 1 袋 200 克的盐一样重，{thing}大约有几克？',
   'm3.mass.th.torch': '手电筒',
@@ -37,6 +39,8 @@ export const ZH: Dict = {
   'm3.mass.th.case': '笔袋',
   'm3.mass.th.ball': '篮球',
   'm3.mass.diff': '一个{a}有 {x} 克，一个{b}有 {y} 克，{a}比{b}重多少克？',
+  'm3.mass.diffAbout': '一个{a}有 {x} 克，一个{b}有 {y} 克。{a}比{b}大约重多少克？',
+  'm3.mass.gN': '{n} 克',
   'm3.mass.f.apple': '苹果',
   'm3.mass.f.orange': '橙子',
   'm3.mass.f.pear': '梨',
@@ -46,6 +50,7 @@ export const ZH: Dict = {
   'm3.mass.cao4': '曹冲分四次称出船上的石头，分别有 {a} 千克、{b} 千克、{c} 千克、{e} 千克。大象大约有几吨？',
   'm3.mass.beans': '5 粒黄豆大约有 1 克，{g} 克黄豆大约有多少粒？',
   'm3.mass.tomato': '1 千克西红柿大约有 6 个，{k} 千克西红柿大约有几个？',
+  'm3.mass.pears': '5 个梨大约有 1 千克，{k} 千克梨大约有几个？',
   'm3.mass.sacks': '每袋粮食有 100 千克，{k} 袋一共有多少千克？',
   'm3.mass.sacksTon': '每袋粮食有 100 千克，几袋是 1 吨？',
   'm3.mass.sacksOfTons': '每袋粮食有 100 千克，{t} 吨粮食要装几袋？',
@@ -70,6 +75,7 @@ export const EN: Dict = {
   'm3.mass.it.whale': 'A blue whale weighs about {n} {u}',
   'm3.mass.readKg': 'How many kilograms are on the scale?',
   'm3.mass.readG': 'How many grams are on the scale?',
+  'm3.mass.readBody': 'Ming stands on the scale. How many kilograms does he weigh?',
   'm3.mass.jinOfGongjin': '1 gongjin = 2 jin. {k} gongjin = how many jin?',
   'm3.mass.gOfJin': '1 jin = 500 g. {k} jin = how many g?',
   'm3.mass.gongjin': '1 gongjin = how many kg?',
@@ -82,6 +88,8 @@ export const EN: Dict = {
   'm3.mass.th.case': 'pencil case',
   'm3.mass.th.ball': 'basketball',
   'm3.mass.diff': 'One {a} weighs {x} g and one {b} weighs {y} g. How many grams heavier is the {a}?',
+  'm3.mass.diffAbout': 'One {a} weighs {x} g and one {b} weighs {y} g. About how many grams heavier is the {a}?',
+  'm3.mass.gN': '{n} g',
   'm3.mass.f.apple': 'apple',
   'm3.mass.f.orange': 'orange',
   'm3.mass.f.pear': 'pear',
@@ -91,6 +99,7 @@ export const EN: Dict = {
   'm3.mass.cao4': 'Cao Chong weighed the stones on the boat in four goes: {a} kg, {b} kg, {c} kg and {e} kg. About how many tons is the elephant?',
   'm3.mass.beans': '5 soybeans weigh about 1 g. About how many soybeans are in {g} g?',
   'm3.mass.tomato': '1 kg of tomatoes is about 6 tomatoes. About how many tomatoes are in {k} kg?',
+  'm3.mass.pears': '5 pears weigh about 1 kg. About how many pears are in {k} kg?',
   'm3.mass.sacks': 'Each sack of grain is 100 kg. How many kilograms are {k} sacks?',
   'm3.mass.sacksTon': 'Each sack of grain is 100 kg. How many sacks make 1 ton?',
   'm3.mass.sacksOfTons': 'Each sack of grain is 100 kg. How many sacks are needed for {t} tons of grain?',
@@ -115,6 +124,7 @@ export const PY: Record<string, string> = {
   'm3.mass.it.whale': 'yì tóu lán jīng dà yuē yǒu',
   'm3.mass.readKg': 'chèng shàng de dōng xi yǒu jǐ qiān kè',
   'm3.mass.readG': 'chèng shàng de dōng xi yǒu jǐ kè',
+  'm3.mass.readBody': 'xiǎo míng zhàn zài tǐ zhòng chèng shàng tā de tǐ zhòng shì jǐ qiān kè',
   'm3.mass.jinOfGongjin': 'gōng jīn jīn gōng jīn jǐ jīn',
   'm3.mass.gOfJin': 'jīn kè jīn jǐ kè',
   'm3.mass.gongjin': 'gōng jīn jǐ qiān kè',
@@ -127,6 +137,8 @@ export const PY: Record<string, string> = {
   'm3.mass.th.case': 'bǐ dài',
   'm3.mass.th.ball': 'lán qiú',
   'm3.mass.diff': 'yí gè yǒu kè yí gè yǒu kè bǐ zhòng duō shao kè',
+  'm3.mass.diffAbout': 'yí gè yǒu kè yí gè yǒu kè bǐ dà yuē zhòng duō shao kè',
+  'm3.mass.gN': 'kè',
   'm3.mass.f.apple': 'píng guǒ',
   'm3.mass.f.orange': 'chéng zi',
   'm3.mass.f.pear': 'lí',
@@ -136,6 +148,7 @@ export const PY: Record<string, string> = {
   'm3.mass.cao4': 'cáo chōng fēn sì cì chēng chū chuán shàng de shí tou fēn bié yǒu qiān kè qiān kè qiān kè qiān kè dà xiàng dà yuē yǒu jǐ dūn',
   'm3.mass.beans': 'lì huáng dòu dà yuē yǒu kè kè huáng dòu dà yuē yǒu duō shao lì',
   'm3.mass.tomato': 'qiān kè xī hóng shì dà yuē yǒu gè qiān kè xī hóng shì dà yuē yǒu jǐ gè',
+  'm3.mass.pears': 'gè lí dà yuē yǒu qiān kè qiān kè lí dà yuē yǒu jǐ gè',
   'm3.mass.sacks': 'měi dài liáng shi yǒu qiān kè dài yí gòng yǒu duō shao qiān kè',
   'm3.mass.sacksTon': 'měi dài liáng shi yǒu qiān kè jǐ dài shì dūn',
   'm3.mass.sacksOfTons': 'měi dài liáng shi yǒu qiān kè dūn liáng shi yào zhuāng jǐ dài',

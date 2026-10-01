@@ -65,8 +65,8 @@ function itemAlt(it: MotionItem): string {
   bits.push(name)
   if (it.axis) bits.push(`，上面画着一条红虚线（${AXIS_NAME[it.axis]}）`)
   if (it.arrow && !it.move) bits.push(`，旁边的箭头是${it.arrow === 'cw' ? '顺时针' : '逆时针'}方向`)
-  if (it.move === 'turn') bits.push(`，虚线是原来的样子，实线是${it.arrow === 'ccw' ? '逆时针' : '顺时针'}转过的样子`)
-  else if (it.move) bits.push(`，虚线是原来的位置，实线${it.move === 'up' ? '往上' : it.move === 'right' ? '往右' : '斜着往下'}移动了一段，朝向没变`)
+  if (it.move === 'turn') bits.push(`，虚线是原来的样子，实线和虚线的中心在同一个地方、朝向不一样，旁边的箭头是${it.arrow === 'ccw' ? '逆时针' : '顺时针'}方向`)
+  else if (it.move) bits.push(`，虚线是原来的位置，实线在虚线的${it.move === 'up' ? '上面' : it.move === 'right' ? '右边' : '斜下方'}，朝向和虚线一样`)
   return bits.join('')
 }
 
@@ -112,11 +112,11 @@ export const SYMMETRIC: Partial<Record<MotionFig, boolean>> = {
   fish: false,
   flag: false,
 }
-/** 第 1 档：课本例 1 与练习一 1、p3 做一做 1 的图形；不对称的只用一眼看得出的 */
+/** 第 1 档：课本例 1 与练习一 1、p3 做一做 1 的图形（水壶也在做一做 1 里）；不对称的只用一眼看得出的 */
 const SYM_EASY: MotionFig[] = ['rect', 'square', 'circle', 'iso-tall', 'pentagon', 'star', 'paddle', 'plane', 'hoodie', 'car', 'leaf', 'kite', 'heart']
-const ASYM_EASY: MotionFig[] = ['scalene', 'parallelogram', 'arrow', 'comb']
+export const ASYM_EASY: MotionFig[] = ['scalene', 'parallelogram', 'arrow', 'comb', 'kettle']
 const SYM_ALL: MotionFig[] = [...SYM_EASY, 'iso-flat', 'dragonfly', 'tree']
-const ASYM_ALL: MotionFig[] = [...ASYM_EASY, 'kettle', 'fish', 'flag']
+const ASYM_ALL: MotionFig[] = [...ASYM_EASY, 'fish', 'flag']
 
 function genIsSym(kpId: string, d: Difficulty, rng: RNG): Question {
   const yes = rng.chance(0.55)
@@ -397,6 +397,63 @@ function genNotMotion(kpId: string, d: Difficulty, rng: RNG, main: 'translate' |
 }
 
 // ─────────────────────────────────────────────────────────────
+// 平移第 1 档只问「是不是平移」（p4 做一做 1「哪些是平移现象」）：旋转到 p5 才教，平移知识点第 1 档的题目和选项里都不出「旋转」；
+// 分平移还是旋转的题放在旋转知识点（p6 做一做 1）和平移的第 2、3 档。
+// ─────────────────────────────────────────────────────────────
+
+/** 「……，这是平移现象，对吗？」约六成是平移现象 */
+function genIsTranslate(kpId: string, d: Difficulty, rng: RNG): Question {
+  const yes = rng.chance(0.6)
+  const s = rng.pick(SCENES.filter((x) => (x.motion === 'translate') === yes))
+  const stem: StemPart[] = [text('m3.mot.isTranslate', { scene: { k: s.key } })]
+  if (s.icon) stem.push({ kind: 'picture', icon: s.icon })
+  return labelQuestion({
+    kpId,
+    type: 'motion',
+    difficulty: d,
+    sig: `isTr-${s.key}`,
+    stem,
+    correct: opt(yes ? 'm3.opt.right' : 'm3.opt.wrong'),
+    distractors: [opt(yes ? 'm3.opt.wrong' : 'm3.opt.right')],
+    rng,
+  })
+}
+
+/** 示意图（p4 电梯、滑梯下面的图）：虚线是原来的位置，实线是现在的。这是平移，对吗？ */
+function genPictureIs(kpId: string, d: Difficulty, rng: RNG): Question {
+  const slide = rng.chance(0.6)
+  const fig = rng.pick(['house', 'fish', 'flag', 'rect'] as const)
+  const item: MotionItem = slide ? { fig, move: rng.pick(['up', 'right', 'slide'] as const) } : { fig, move: 'turn', arrow: rng.pick(['cw', 'ccw'] as const) }
+  return labelQuestion({
+    kpId,
+    type: 'motion',
+    difficulty: d,
+    sig: `picIs-${fig}-${item.move}${item.arrow ? `-${item.arrow}` : ''}`,
+    stem: [text('m3.mot.picIsTranslate'), figs([item])],
+    correct: opt(slide ? 'm3.opt.right' : 'm3.opt.wrong'),
+    distractors: [opt(slide ? 'm3.opt.wrong' : 'm3.opt.right')],
+    rng,
+  })
+}
+
+/** 「下面哪个是平移现象？」三个短说法里挑出唯一的平移现象（p4 做一做 1） */
+function genPickTranslate(kpId: string, d: Difficulty, rng: RNG): Question {
+  const withShort = SCENES.filter((s) => s.short)
+  const hit = rng.pick(withShort.filter((s) => s.motion === 'translate'))
+  const others = rng.shuffle(withShort.filter((s) => s.motion !== 'translate')).slice(0, 2)
+  return labelQuestion({
+    kpId,
+    type: 'motion',
+    difficulty: d,
+    sig: `pickTr-${hit.short}-${others.map((o) => o.short).join(',')}`,
+    stem: [text('m3.mot.pickTranslate')],
+    correct: opt(hit.short!),
+    distractors: others.map((o) => opt(o.short!)),
+    rng,
+  })
+}
+
+// ─────────────────────────────────────────────────────────────
 // 平移：哪个能通过平移和红色的重合（p5 做一做 2 小房子、练习一 3 小鱼）。
 // 只有朝向完全一样的才能通过平移重合；转过的、翻过来的都不行。小房子的门在右边，翻过来门就到了左边。
 // ─────────────────────────────────────────────────────────────
@@ -471,16 +528,23 @@ function genCountOverlap(kpId: string, d: Difficulty, rng: RNG): Question {
 defineGenerator('m3s2-01-translate', (d, rng) => {
   const kpId = 'm3s2-01-translate'
   const roll = rng.next()
-  if (d === 1) return roll < 0.4 ? genScene(kpId, d, rng, 'translate') : roll < 0.62 ? genPicture(kpId, d, rng, 'translate') : genCanOverlap(kpId, d, rng)
-  if (d === 2)
+  if (d === 1)
     return roll < 0.35
+      ? genIsTranslate(kpId, d, rng)
+      : roll < 0.55
+        ? genPictureIs(kpId, d, rng)
+        : roll < 0.7
+          ? genPickTranslate(kpId, d, rng)
+          : genCanOverlap(kpId, d, rng)
+  if (d === 2)
+    return roll < 0.3
       ? genCanOverlap(kpId, d, rng)
-      : roll < 0.6
+      : roll < 0.55
         ? genCountOverlap(kpId, d, rng)
-        : roll < 0.8
+        : roll < 0.75
           ? genScene(kpId, d, rng, 'translate')
           : genDefinition(kpId, d, rng, ['translate', 'rotate'])
-  return roll < 0.4 ? genCountOverlap(kpId, d, rng) : roll < 0.75 ? genNotMotion(kpId, d, rng, 'translate') : genCanOverlap(kpId, d, rng)
+  return roll < 0.35 ? genCountOverlap(kpId, d, rng) : roll < 0.65 ? genNotMotion(kpId, d, rng, 'translate') : roll < 0.85 ? genCanOverlap(kpId, d, rng) : genPicture(kpId, d, rng, 'translate')
 })
 
 // ─────────────────────────────────────────────────────────────
@@ -572,12 +636,14 @@ defineGenerator('m3s2-01-rotate', (d, rng) => {
           ? genPicture(kpId, d, rng, 'rotate')
           : genDefinition(kpId, d, rng, ['rotate', 'cw', 'ccw', 'clock'])
   if (d === 2)
-    return roll < 0.25
+    return roll < 0.2
       ? genDirection(kpId, d, rng)
-      : roll < 0.6
+      : roll < 0.5
         ? genClockPattern(kpId, d, rng)
-        : roll < 0.75
-          ? genDefinition(kpId, d, rng, ['cw', 'ccw', 'clock'])
-          : genNotMotion(kpId, d, rng, 'rotate')
+        : roll < 0.7
+          ? genNextShape(kpId, d, rng)
+          : roll < 0.85
+            ? genDefinition(kpId, d, rng, ['cw', 'ccw', 'clock'])
+            : genNotMotion(kpId, d, rng, 'rotate')
   return roll < 0.45 ? genNextShape(kpId, d, rng) : roll < 0.75 ? genClockPattern(kpId, d, rng) : genNotMotion(kpId, d, rng, 'rotate')
 })

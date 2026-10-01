@@ -4,10 +4,12 @@ import { defineGenerator, labelKey, labelQuestion, numberQuestion } from '@/engi
 import { dir, fitFig, geoPart, irregularPts, mapItem, r1, regularPts, rotate, shapeSig, text } from './lines'
 
 // ─────────────────────────────────────────────────────────────
-// 长方形和正方形（三下三）：多边形、长方形和正方形的特点、周长、长方形和正方形的周长（含拼图游戏「四连方」）。
+// 长方形和正方形（三下三）：按课本三个小节设知识点——多边形（含例 1 长方形和正方形的特点、做一做 3 / 4）、
+// 周长（含例 2 长方形和正方形的周长、例 3 怎样拼周长最短、练习九 / 十）、拼图游戏（四连方）。
 // 图里边上只标数（课本写「（单位：厘米）」），单位写在题目里；「长」只在「长方形」「长度」「边长」「周长」里出现，
-// 公式选项「(长 + 宽) × 2」「长 × 宽」「长 + 宽」和比较题的「更长」「一样长」是单独的「长」（读法表里要有规则）。
-// 课本不讨论「正方形是不是长方形」，这里也不出这种题。
+// 公式选项「(长 + 宽) × 2」「长 + 宽 × 2」这些和比较题的「更长」「一样长」是单独的「长」（读法表里要有规则）。
+// 课本不讨论「正方形是不是长方形」，这里也不出这种题；课本没教「梯形」，选项和图的说明里都不出这个名字。
+// 图的说明（alt）只描述图上画了什么，不写答案：静态页会把它印出来。
 // ─────────────────────────────────────────────────────────────
 
 export type LenUnit = 'cm' | 'dm' | 'm'
@@ -176,7 +178,7 @@ const NOT_TETROS: Record<'corner' | 'three' | 'five', GeoPt[][]> = {
       [0, 0],
       [1, 0],
       [0, 1],
-      [2, 2],
+      [2, 1],
     ],
   ],
   three: [
@@ -275,7 +277,7 @@ function genPolyName(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `name-${n}-${shapeSig(pts)}`,
-    stem: [text('m3.rect.polyName'), geoPart([fitFig(polyItems(pts), 12)], `（一个${regular ? '' : '不规则的'}${POLY_ZH[n]}）`)],
+    stem: [text('m3.rect.polyName'), geoPart([fitFig(polyItems(pts), 12)], `（一个${regular ? '每条边一样长的' : '随手画的'}多边形）`)],
     correct: polyName(n),
     distractors: nameChoices(n, rng),
     rng,
@@ -292,7 +294,7 @@ function genPolyCount(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `count-${corners ? 'c' : 's'}-${n}-${shapeSig(pts)}`,
-    stem: [text(corners ? 'm3.rect.cornersQ' : 'm3.rect.sidesQ'), geoPart([fitFig(polyItems(pts), 12)], `（一个${POLY_ZH[n]}）`)],
+    stem: [text(corners ? 'm3.rect.cornersQ' : 'm3.rect.sidesQ'), geoPart([fitFig(polyItems(pts), 12)], '（一个多边形）')],
     value: n,
     rng,
     min: 0,
@@ -398,7 +400,6 @@ function curvyItems(kind: Curvy): GeoItem[] {
       ]
   }
 }
-const CURVY_ZH: Record<Curvy, string> = { circle: '圆', half: '半圆', leaf: '树叶形', door: '拱门形', fan: '扇形' }
 
 /** 哪一个不是多边形（有弯的边） */
 function genNotPoly(kpId: string, d: Difficulty, rng: RNG): Question {
@@ -407,17 +408,14 @@ function genNotPoly(kpId: string, d: Difficulty, rng: RNG): Question {
   const ns = rng.shuffle([3, 4, 5, 6]).slice(0, count - 1)
   const at = rng.int(0, count - 1)
   const figs: GeoFig[] = []
-  const zh: string[] = []
   let k = 0
   for (let i = 0; i < count; i++) {
     if (i === at) {
       const turn = rng.pick([0, 0, 90, 180, 270])
       figs.push(fitFig(curvyItems(curvy).map((it) => mapItem(it, (p) => rotate(p, turn))), 8))
-      zh.push(CURVY_ZH[curvy])
     } else {
       const n = ns[k++]!
       figs.push(fitFig(polyItems(somePolygon(n, rng.chance(0.5), rng, 55), null), 8))
-      zh.push(POLY_ZH[n]!)
     }
   }
   return numberQuestion({
@@ -425,7 +423,8 @@ function genNotPoly(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `notpoly-${curvy}-${at}-${ns.join('')}`,
-    stem: [text('m3.rect.notPoly'), geoPart(figs, `（${zh.map((z, i) => `${i + 1}：${z}`).join('；')}）`, true)],
+    // 说明不点名哪个是弯的（静态页会印出来）
+    stem: [text('m3.rect.notPoly'), geoPart(figs, `（编了号的 ${count} 个图形，有的边是直的，有的边是弯的）`, true)],
     value: at + 1,
     rng,
     min: 1,
@@ -469,7 +468,7 @@ function genRegular(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `reg-${n}-${at}-${figs.map((f) => shapeSig((f.items[0] as { pts: GeoPt[] }).pts)).join('|')}`,
-    stem: [text('m3.rect.regularPick', { name: L(`m3.rect.reg${n}`) }), geoPart(figs, `（三个${POLY_ZH[n]}，${at + 1} 号每条边都一样长）`, true)],
+    stem: [text('m3.rect.regularPick', { name: L(`m3.rect.reg${n}`) }), geoPart(figs, `（编了号的三个${POLY_ZH[n]}）`, true)],
     value: at + 1,
     rng,
     min: 1,
@@ -559,28 +558,27 @@ function genConcave(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `concave-${i}-${turn}`,
-    stem: [text('m3.rect.polyName'), geoPart([fitFig(polyItems(pts), 12)], `（一个凹进去的${POLY_ZH[c.n]}）`)],
+    stem: [text('m3.rect.polyName'), geoPart([fitFig(polyItems(pts), 12)], '（一个有一处凹进去的多边形）')],
     correct: polyName(c.n),
     distractors: nameChoices(c.n, rng),
     rng,
   })
 }
 
-defineGenerator('m3s2-03-polygons', (d, rng) => {
-  const kpId = 'm3s2-03-polygons'
-  const roll = rng.next()
-  if (d === 1) return roll < 0.45 ? genPolyName(kpId, d, rng) : roll < 0.8 ? genPolyCount(kpId, d, rng) : genPolyFact(kpId, d, rng)
-  if (d === 2) return roll < 0.3 ? genPolyName(kpId, d, rng) : roll < 0.55 ? genPolyCount(kpId, d, rng) : roll < 0.75 ? genPolyText(kpId, d, rng) : genNotPoly(kpId, d, rng)
-  return roll < 0.35 ? genRegular(kpId, d, rng) : roll < 0.7 ? genConcave(kpId, d, rng) : roll < 0.85 ? genNotPoly(kpId, d, rng) : genPolyText(kpId, d, rng)
-})
-
-// ─────────────────────────────────────────────────────────────
-// 长方形和正方形的特点：长方形对边相等、4 个直角；正方形 4 条边都相等、4 个直角
-// ─────────────────────────────────────────────────────────────
+// ── 多边形小节的例 1：长方形和正方形各有什么特点——长方形对边相等、4 个直角；正方形 4 条边都相等、4 个直角 ──
 
 const UNITS: LenUnit[] = ['cm', 'cm', 'dm', 'm']
 
-/** 长方形两条相邻的边标了数，另一条边标「?」：对边相等（做一做 p41 3） */
+/** 图的说明：上、右、下、左四条边各标着什么（只说图上写的，不说答案） */
+function sideAlt(labels: (string | null)[], u: LenUnit): string {
+  const SIDE = ['上边', '右边', '下边', '左边']
+  return labels
+    .map((l, i) => (l === null ? '' : `${SIDE[i]}标着${l === '?' ? '问号' : ` ${l}${LEN_ZH[u]}`}`))
+    .filter(Boolean)
+    .join('，')
+}
+
+/** 长方形两条相邻的边标了数，另一条边标「?」：对边相等（做一做 p41 3：长 12、宽 8 厘米） */
 function genOppSide(kpId: string, d: Difficulty, rng: RNG): Question {
   const u = rng.pick(UNITS)
   const a = rng.int(6, d === 1 ? 20 : 40)
@@ -599,7 +597,7 @@ function genOppSide(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `opp-${a}-${b}-${u}-${labels.map((x) => x ?? '_').join('')}`,
-    stem: [text('m3.rect.qSide', { u: lenL(u) }), geoPart([fitFig(rectItems(W, H, labels), 6)], `（长方形：长 ${a}${LEN_ZH[u]}、宽 ${b}${LEN_ZH[u]}，问号在${askHoriz ? '长' : '宽'}的对边上）`)],
+    stem: [text('m3.rect.qSide', { u: lenL(u) }), geoPart([fitFig(rectItems(W, H, labels), 6)], `（长方形，${sideAlt(labels, u)}）`)],
     value: askHoriz ? a : b,
     rng,
     min: 1,
@@ -622,7 +620,7 @@ function genSquareSide(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `sq-${a}-${u}-${known}${ask}`,
-    stem: [text('m3.rect.qSideSq', { u: lenL(u) }), geoPart([fitFig(rectItems(110, 110, labels, 'c'), 6)], `（正方形：一条边 ${a}${LEN_ZH[u]}）`)],
+    stem: [text('m3.rect.qSideSq', { u: lenL(u) }), geoPart([fitFig(rectItems(110, 110, labels, 'c'), 6)], `（正方形，${sideAlt(labels, u)}）`)],
     value: a,
     rng,
     min: 1,
@@ -669,7 +667,7 @@ function genRectFeature(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 按特点说图形：4 条边都相等、4 个直角 → 正方形；对边相等、4 个直角 → 长方形（不把正方形放进长方形那题的选项） */
+/** 按特点说图形：4 条边都相等、4 个直角 → 正方形；对边相等、4 个直角 → 长方形（不把正方形放进长方形那题的选项；课本没教梯形，不拿它当选项） */
 function genWhichShape(kpId: string, d: Difficulty, rng: RNG): Question {
   const sq = rng.chance(0.5)
   return labelQuestion({
@@ -679,7 +677,7 @@ function genWhichShape(kpId: string, d: Difficulty, rng: RNG): Question {
     sig: `which-${sq ? 'sq' : 'rect'}`,
     stem: [text(sq ? 'm3.rect.whichSq' : 'm3.rect.whichRect')],
     correct: L(sq ? 'm3.rect.square' : 'm3.rect.rect'),
-    distractors: sq ? [L('m3.rect.rect'), L('m3.rect.para')] : [L('m3.rect.para'), L('m3.rect.trap')],
+    distractors: sq ? [L('m3.rect.rect'), L('m3.rect.para')] : [L('m3.rect.para'), L('m3.rect.p3')],
     rng,
   })
 }
@@ -741,9 +739,10 @@ function quadPts(q: Quad, rng: RNG): GeoPt[] {
       ]
   }
 }
-const QUAD_ZH: Record<Quad, string> = { rect: '长方形', square: '正方形', para: '平行四边形', rhombus: '四条边一样长、没有直角的四边形', trap: '梯形', rtrap: '有两个直角的梯形' }
+const YES: LStr = { k: 'm3.rect.yes' }
+const NO: LStr = { k: 'm3.rect.no' }
 
-/** 这个四边形是长方形吗 / 是正方形吗（看边和角） */
+/** 这个四边形是长方形 / 正方形，对吗（看边和角；判断题一律「……，对吗？」配 对 / 不对） */
 function genIsRect(kpId: string, d: Difficulty, rng: RNG): Question {
   const askSq = rng.chance(0.45)
   const yes = rng.chance(0.45)
@@ -755,14 +754,14 @@ function genIsRect(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'shape-match',
     difficulty: d,
     sig: `is-${askSq ? 'sq' : 'rect'}-${q}-${shapeSig(pts)}`,
-    stem: [text(askSq ? 'm3.rect.isSq' : 'm3.rect.isRect'), geoPart([fitFig(polyItems(pts, 'a'), 10)], `（一个${QUAD_ZH[q]}）`)],
-    correct: L(yes ? 'm3.line.yes' : 'm3.line.no'),
-    distractors: [L(yes ? 'm3.line.no' : 'm3.line.yes')],
+    stem: [text(askSq ? 'm3.rect.isSq' : 'm3.rect.isRect'), geoPart([fitFig(polyItems(pts, 'a'), 10)], '（一个四边形）')],
+    correct: yes ? YES : NO,
+    distractors: [yes ? NO : YES],
     rng,
   })
 }
 
-/** 用长方形纸折出最大的正方形，边长等于长方形的宽（做一做 p41 4） */
+/** 用长方形纸折出最大的正方形，边长等于长方形的宽（做一做 p41 4）；也问「正方形的边长与长方形的宽怎么样」 */
 function genFold(kpId: string, d: Difficulty, rng: RNG): Question {
   const u = rng.pick<LenUnit>(['cm', 'cm', 'dm'])
   const b = rng.int(4, 15)
@@ -773,12 +772,28 @@ function genFold(kpId: string, d: Difficulty, rng: RNG): Question {
     { t: 'line', a: [H, 0], b: [H, H], dash: true, stroke: 'd' },
     { t: 'line', a: [0, 0], b: [H, H], dash: true, stroke: 'soft' },
   ]
+  if (rng.chance(0.3)) {
+    const plain = rectItems(W, H, [])
+    return labelQuestion({
+      kpId,
+      type: 'shape-match',
+      difficulty: d,
+      sig: 'foldeq',
+      stem: [
+        text('m3.rect.foldEq'),
+        geoPart([fitFig([...plain, { t: 'line', a: [H, 0], b: [H, H], dash: true, stroke: 'd' }, { t: 'line', a: [0, 0], b: [H, H], dash: true, stroke: 'soft' }], 6)], '（长方形纸，虚线是折痕）'),
+      ],
+      correct: L('m3.rect.equal'),
+      distractors: [L('m3.rect.notEqual')],
+      rng,
+    })
+  }
   return numberQuestion({
     kpId,
     type: 'shape-match',
     difficulty: d,
     sig: `fold-${a}-${b}-${u}`,
-    stem: [text('m3.rect.fold', { u: lenL(u) }), geoPart([fitFig(items, 6)], `（长方形纸：长 ${a}${LEN_ZH[u]}、宽 ${b}${LEN_ZH[u]}，虚线是折痕）`)],
+    stem: [text('m3.rect.fold', { u: lenL(u) }), geoPart([fitFig(items, 6)], `（长方形纸，下边标着 ${a}${LEN_ZH[u]}，左边标着 ${b}${LEN_ZH[u]}，虚线是折痕）`)],
     value: b,
     rng,
     min: 1,
@@ -787,59 +802,36 @@ function genFold(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 四连方（拼图游戏 p49）：能拼出几种（5），哪一个是四连方（角碰角的、3 个的、5 个的都不是） */
-function genTetro(kpId: string, d: Difficulty, rng: RNG): Question {
-  if (rng.chance(0.3)) {
-    return numberQuestion({
-      kpId,
-      type: 'shape-match',
-      difficulty: d,
-      sig: 'tetro-count',
-      stem: [text('m3.rect.tetroCount')],
-      value: 5,
-      rng,
-      min: 0,
-      max: 9,
-      smart: [4, 6, 3],
-    })
-  }
-  const good = rng.pick(Object.keys(TETROS) as (keyof typeof TETROS)[])
-  const bads = rng.shuffle(['corner', 'three', 'five'] as const).slice(0, 2)
-  const at = rng.int(0, 2)
-  const shapes: GeoPt[][] = []
-  const zh: string[] = []
-  let k = 0
-  for (let i = 0; i < 3; i++) {
-    if (i === at) {
-      shapes.push(orient(TETROS[good], rng.int(0, 3), rng.chance(0.5)))
-      zh.push('四连方')
-      continue
-    }
-    const bad = bads[k++]!
-    shapes.push(orient(rng.pick(NOT_TETROS[bad]), rng.int(0, 3), rng.chance(0.5)))
-    zh.push(bad === 'corner' ? '4 个正方形，有两个只是角碰角' : bad === 'three' ? '3 个正方形' : '5 个正方形')
-  }
-  const figs = shapes.map((s) => gridFig(s, { px: 22, margin: 0, lines: false, fill: 'b' }))
-  return numberQuestion({
-    kpId,
-    type: 'shape-match',
-    difficulty: d,
-    sig: `tetro-${good}-${bads.join('.')}-${at}`,
-    stem: [text('m3.rect.tetroPick'), geoPart(figs, `（${zh.map((z, i) => `${i + 1}：${z}`).join('；')}）`, true)],
-    value: at + 1,
-    rng,
-    min: 1,
-    max: 3,
-    input: 'choice',
-  })
-}
-
-defineGenerator('m3s2-03-rect-features', (d, rng) => {
-  const kpId = 'm3s2-03-rect-features'
+// 多边形：课本「多边形」小节（p39–42）——分一分（几边形、边和角一样多、由线段围成）、例 1 长方形和正方形的特点、
+// 做一做 3（填边长）、做一做 4（折最大的正方形）；第 2 档放不看图的、哪个不是多边形、正多边形（生活中的数学）、是不是长方形；
+// 第 3 档放凹进去的多边形
+defineGenerator('m3s2-03-polygons', (d, rng) => {
+  const kpId = 'm3s2-03-polygons'
   const roll = rng.next()
-  if (d === 1) return roll < 0.35 ? genOppSide(kpId, d, rng) : roll < 0.55 ? genSquareSide(kpId, d, rng) : roll < 0.75 ? genRectCount(kpId, d, rng) : genRectFeature(kpId, d, rng)
-  if (d === 2) return roll < 0.3 ? genIsRect(kpId, d, rng) : roll < 0.5 ? genWhichShape(kpId, d, rng) : roll < 0.75 ? genOppSide(kpId, d, rng) : genSquareSide(kpId, d, rng)
-  return roll < 0.35 ? genFold(kpId, d, rng) : roll < 0.75 ? genTetro(kpId, d, rng) : genIsRect(kpId, d, rng)
+  if (d === 1) {
+    if (roll < 0.18) return genPolyName(kpId, d, rng)
+    if (roll < 0.3) return genPolyCount(kpId, d, rng)
+    if (roll < 0.4) return genPolyFact(kpId, d, rng)
+    if (roll < 0.55) return genOppSide(kpId, d, rng)
+    if (roll < 0.63) return genSquareSide(kpId, d, rng)
+    if (roll < 0.71) return genRectCount(kpId, d, rng)
+    if (roll < 0.85) return genRectFeature(kpId, d, rng)
+    return genFold(kpId, d, rng)
+  }
+  if (d === 2) {
+    if (roll < 0.12) return genPolyName(kpId, d, rng)
+    if (roll < 0.22) return genPolyCount(kpId, d, rng)
+    if (roll < 0.34) return genPolyText(kpId, d, rng)
+    if (roll < 0.46) return genNotPoly(kpId, d, rng)
+    if (roll < 0.58) return genRegular(kpId, d, rng)
+    if (roll < 0.72) return genIsRect(kpId, d, rng)
+    if (roll < 0.84) return genWhichShape(kpId, d, rng)
+    return roll < 0.92 ? genOppSide(kpId, d, rng) : genSquareSide(kpId, d, rng)
+  }
+  if (roll < 0.35) return genConcave(kpId, d, rng)
+  if (roll < 0.55) return genNotPoly(kpId, d, rng)
+  if (roll < 0.75) return genIsRect(kpId, d, rng)
+  return roll < 0.9 ? genPolyText(kpId, d, rng) : genRegular(kpId, d, rng)
 })
 
 // ─────────────────────────────────────────────────────────────
@@ -881,18 +873,35 @@ function sidesOf(pts: GeoPt[], avg: number, step = 1, min = 2): number[] {
   return lens.map((l) => Math.max(min, Math.round((l / mean) * (avg / step)) * step))
 }
 
-/** 四边形 / 五边形各边标了长度，求周长 */
+/** 飞镖形的凹四边形（做一做 p44 1 的第一幅）：两条长边、两条短边 */
+function dartPts(rng: RNG): GeoPt[] {
+  const len = rng.int(95, 120)
+  const half = rng.int(36, 48)
+  const notch = rng.int(28, 45)
+  const turn = rng.pick([0, 90, 180, 270])
+  return (
+    [
+      [0, 0],
+      [len, half],
+      [0, 2 * half],
+      [notch, half],
+    ] as GeoPt[]
+  ).map((p) => rotate(p, turn))
+}
+
+/** 四边形 / 五边形各边标了长度，求周长（第 1 档有凸四边形和做一做 p44 1 的飞镖形凹四边形） */
 function genPolyPerim(kpId: string, d: Difficulty, rng: RNG): Question {
+  const dart = d === 1 && rng.chance(0.35)
   const n = d === 1 ? 4 : rng.pick([4, 5])
   const u = rng.pick(UNITS)
-  const pts = irregularPts(n, 80, rng)
+  const pts = dart ? dartPts(rng) : irregularPts(n, 80, rng)
   const sides = sidesOf(pts, rng.int(6, 14))
   const value = sides.reduce((x, y) => x + y, 0)
   return numberQuestion({
     kpId,
     type: 'length',
     difficulty: d,
-    sig: `poly-${sides.join('.')}-${u}`,
+    sig: `poly-${dart ? 'dart-' : ''}${sides.join('.')}-${u}`,
     stem: [text('m3.rect.perimOf', { shape: L(`m3.rect.p${n}`), u: lenL(u) }), geoPart([fitFig([{ t: 'poly', pts, fill: 'b', stroke: 'b', labels: sides.map(String) }], 6)], `（${POLY_ZH[n]}，各边分别是 ${sides.join('、')}${LEN_ZH[u]}）`)],
     value,
     rng,
@@ -1074,17 +1083,7 @@ function genCmpPerim(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-defineGenerator('m3s2-03-perimeter', (d, rng) => {
-  const kpId = 'm3s2-03-perimeter'
-  const roll = rng.next()
-  if (d === 1) return roll < 0.4 ? genTriPerim(kpId, d, rng) : roll < 0.7 ? genPolyPerim(kpId, d, rng) : genPerimDef(kpId, d, rng)
-  if (d === 2) return roll < 0.25 ? genPark(kpId, d, rng) : roll < 0.55 ? genRegPerim(kpId, d, rng) : roll < 0.85 ? genGridPerim(kpId, d, rng) : genPolyPerim(kpId, d, rng)
-  return roll < 0.55 ? genCmpPerim(kpId, d, rng) : roll < 0.8 ? genGridPerim(kpId, d, rng) : genPark(kpId, d, rng)
-})
-
-// ─────────────────────────────────────────────────────────────
-// 长方形和正方形的周长：长方形的周长 = (长 + 宽) × 2，正方形的周长 = 边长 × 4
-// ─────────────────────────────────────────────────────────────
+// ── 周长小节的例 2：长方形的周长 = (长 + 宽) × 2，正方形的周长 = 边长 × 4 ──
 
 /** 看图求长方形 / 正方形的周长（例 2） */
 function genRectPerimFig(kpId: string, d: Difficulty, rng: RNG): Question {
@@ -1128,7 +1127,7 @@ function genRectPerimFig(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 周长公式（p44「长方形的周长 = ____」） */
+/** 周长公式（p44「长方形的周长 = ____」）：干扰项和正确项同一种写法、都是算周长时常犯的错（不用下一单元的面积公式） */
 function genPerimFormula(kpId: string, d: Difficulty, rng: RNG): Question {
   const sq = rng.chance(0.5)
   return labelQuestion({
@@ -1138,7 +1137,7 @@ function genPerimFormula(kpId: string, d: Difficulty, rng: RNG): Question {
     sig: `formula-${sq ? 'sq' : 'rect'}`,
     stem: [text(sq ? 'm3.rect.howSqP' : 'm3.rect.howRectP')],
     correct: L(sq ? 'm3.rect.fSq4' : 'm3.rect.fRectP'),
-    distractors: sq ? [L('m3.rect.fSqSq'), L('m3.rect.fSqPlus')] : [L('m3.rect.fRectA'), L('m3.rect.fRectS')],
+    distractors: sq ? [L('m3.rect.fSq2'), L('m3.rect.fSqPlus')] : rng.shuffle([L('m3.rect.fRectNoParen'), L('m3.rect.fRectP4'), L('m3.rect.fRect2W')]).slice(0, 2),
     rng,
   })
 }
@@ -1259,11 +1258,25 @@ function genTilesPerim(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 怎样拼周长最短（例 3）：同样多的小正方形，拼得越接近正方形周长越短 */
+/** 怎样拼周长最短（例 3 用 16 张、做一做用 36 张边长 1 分米的正方形纸）：同样多的小正方形，拼得越接近正方形周长越短 */
 function genTilesBest(kpId: string, d: Difficulty, rng: RNG): Question {
-  const n = rng.pick([8, 12, 16, 18])
+  const n = rng.pick(d === 1 ? [16, 16, 36, 12, 18, 24] : [8, 12, 16, 18, 20, 24, 36])
+  // 课本 16 张这一例也画了拼成一排的；张数多了一排太长画不下，就不放一排的拼法
   const ways: [number, number][] = []
-  for (let r = 1; r * r <= n; r++) if (n % r === 0) ways.push([r, n / r])
+  for (let r = n > 18 ? 2 : 1; r * r <= n; r++) if (n % r === 0) ways.push([r, n / r])
+  if (rng.chance(0.25) && Math.sqrt(n) % 1 === 0) {
+    // 课本例 3 的问法：拼出什么形周长最短（16、36 张能拼成正方形）
+    return labelQuestion({
+      kpId,
+      type: 'length',
+      difficulty: d,
+      sig: `bestshape-${n}`,
+      stem: [text('m3.rect.tilesShape', { n })],
+      correct: L('m3.rect.square'),
+      distractors: [L('m3.rect.rect')],
+      rng,
+    })
+  }
   const three = rng.shuffle(ways).slice(0, 3)
   const best = three.reduce((x, y) => (x[0] + x[1] <= y[0] + y[1] ? x : y))
   const figs = three.map(([r, c]) => {
@@ -1450,15 +1463,424 @@ function genCombo(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-defineGenerator('m3s2-03-rect-perimeter', (d, rng) => {
-  const kpId = 'm3s2-03-rect-perimeter'
+/** 一根绳子围成长方形，长和宽都是整厘米数，有几种围法（练习九 13：22 厘米）；长 + 宽是单数，围不成正方形 */
+function genRope(kpId: string, d: Difficulty, rng: RNG): Question {
+  const half = rng.pick([7, 9, 11, 13])
+  const value = (half - 1) / 2
+  return numberQuestion({
+    kpId,
+    type: 'length',
+    difficulty: d,
+    sig: `rope-${2 * half}`,
+    stem: [text('m3.rect.rope', { p: 2 * half })],
+    value,
+    rng,
+    min: 1,
+    max: 20,
+    smart: [half - 1, value + 1, value - 1],
+  })
+}
+
+/** 一根铁丝平均分成两段，分别围成一个正方形和一个长方形（练习九 14：48 厘米） */
+function genWire(kpId: string, d: Difficulty, rng: RNG): Question {
+  const each = rng.pick([12, 24, 36])
+  const total = 2 * each
+  const ask = rng.pick(['sq', 'long', 'wide'] as const)
+  const value = ask === 'sq' ? each / 4 : ask === 'long' ? each / 3 : each / 6
+  return numberQuestion({
+    kpId,
+    type: 'length',
+    difficulty: d,
+    sig: `wire-${total}-${ask}`,
+    stem: [text(ask === 'sq' ? 'm3.rect.wireSq' : ask === 'long' ? 'm3.rect.wireLong' : 'm3.rect.wireWide', { p: total })],
+    value,
+    rng,
+    min: 1,
+    max: 99,
+    smart: ask === 'sq' ? [total / 4, each / 2, value + 2] : ask === 'long' ? [each / 2, each / 6, total / 3] : [each / 3, each / 4, total / 6],
+  })
+}
+
+// 周长：课本「周长」小节（p43–45）——周长的意思和求法、做一做 1（量出各边再相加，含飞镖形）、例 2 长方形和正方形的周长
+// （看图算、公式、做一做的花坛）、例 3 怎样拼周长最短（16 张、36 张）都在第 1 档；练习九 / 十的变式（公园、篮球场、
+// 作业本课桌黑板、比周长、一面靠墙、拼成的长方形、围法、铁丝、剪成两个正方形、正多边形、方格图）放第 2 档；
+// 组合图形、4 个长方形拼大正方形、长方形加正方形放第 3 档
+defineGenerator('m3s2-03-perimeter', (d, rng) => {
+  const kpId = 'm3s2-03-perimeter'
   const roll = rng.next()
-  if (d === 1) return roll < 0.55 ? genRectPerimFig(kpId, d, rng) : roll < 0.72 ? genPerimFormula(kpId, d, rng) : genPerimWord(kpId, d, rng)
-  if (d === 2) return roll < 0.7 ? genPerimWord(kpId, d, rng) : genRectPerimFig(kpId, d, rng)
-  if (roll < 0.14) return genWall(kpId, d, rng)
-  if (roll < 0.3) return genTilesPerim(kpId, d, rng)
-  if (roll < 0.46) return genTilesBest(kpId, d, rng)
-  if (roll < 0.66) return genCompositePerim(kpId, d, rng)
-  if (roll < 0.8) return genTwoSquares(kpId, d, rng)
-  return roll < 0.9 ? genPinwheel(kpId, d, rng) : genCombo(kpId, d, rng)
+  if (d === 1) {
+    if (roll < 0.1) return genPerimDef(kpId, d, rng)
+    if (roll < 0.22) return genTriPerim(kpId, d, rng)
+    if (roll < 0.32) return genPolyPerim(kpId, d, rng)
+    if (roll < 0.55) return genRectPerimFig(kpId, d, rng)
+    if (roll < 0.65) return genPerimFormula(kpId, d, rng)
+    if (roll < 0.85) return genPerimWord(kpId, d, rng)
+    return genTilesBest(kpId, d, rng)
+  }
+  if (d === 2) {
+    if (roll < 0.1) return genPark(kpId, d, rng)
+    if (roll < 0.18) return genRegPerim(kpId, d, rng)
+    if (roll < 0.26) return genGridPerim(kpId, d, rng)
+    if (roll < 0.4) return genPerimWord(kpId, d, rng)
+    if (roll < 0.46) return genRectPerimFig(kpId, d, rng)
+    if (roll < 0.55) return genCmpPerim(kpId, d, rng)
+    if (roll < 0.62) return genWall(kpId, d, rng)
+    if (roll < 0.69) return genTwoSquares(kpId, d, rng)
+    if (roll < 0.78) return genTilesPerim(kpId, d, rng)
+    if (roll < 0.84) return genTilesBest(kpId, d, rng)
+    if (roll < 0.92) return genRope(kpId, d, rng)
+    return genWire(kpId, d, rng)
+  }
+  if (roll < 0.35) return genCompositePerim(kpId, d, rng)
+  if (roll < 0.5) return genPinwheel(kpId, d, rng)
+  if (roll < 0.65) return genCombo(kpId, d, rng)
+  if (roll < 0.8) return genCmpPerim(kpId, d, rng)
+  return roll < 0.9 ? genPolyPerim(kpId, d, rng) : genGridPerim(kpId, d, rng)
+})
+
+// ─────────────────────────────────────────────────────────────
+// 拼图游戏（p49）：用 4 个同样的小正方形边和边重合拼成的图形是「四连方」，一共 5 种；用四连方拼长方形、正方形
+// ─────────────────────────────────────────────────────────────
+
+/** 不画方格纸的小正方形拼图（每块一种颜色，外沿描边，一块一块分得清） */
+const pieceFig = (pieces: GeoPt[][], px = 22): GeoFig => {
+  const all = pieces.flat()
+  const { w, h } = cellBox(all)
+  const tones: GeoTone[] = ['b', 'c', 'a', 'd']
+  return { w, h, px, items: pieces.map((cells, i) => ({ t: 'grid', x: 0, y: 0, w, h, cells, fill: tones[i % tones.length], lines: false }) as GeoItem) }
+}
+const shapeFig = (cells: GeoPt[]): GeoFig => gridFig(cells, { px: 22, margin: 0, lines: false, fill: 'b' })
+
+/** 能拼出几种（5） */
+function genTetroCount(kpId: string, d: Difficulty, rng: RNG): Question {
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: 'tetro-count',
+    stem: [text('m3.rect.tetroCount')],
+    value: 5,
+    rng,
+    min: 0,
+    max: 9,
+    smart: [4, 6, 3],
+  })
+}
+
+type TetroKind = keyof typeof TETROS
+type NotTetro = keyof typeof NOT_TETROS
+const TETRO_KINDS = Object.keys(TETROS) as TetroKind[]
+
+/** 哪一个是四连方（角碰角的、3 个的、5 个的都不是） */
+function genTetroPick(kpId: string, d: Difficulty, rng: RNG): Question {
+  const good = rng.pick(TETRO_KINDS)
+  const bads = rng.shuffle(['corner', 'three', 'five'] as const).slice(0, 2)
+  const at = rng.int(0, 2)
+  const shapes: GeoPt[][] = []
+  let k = 0
+  for (let i = 0; i < 3; i++) {
+    if (i === at) shapes.push(orient(TETROS[good], rng.int(0, 3), rng.chance(0.5)))
+    else shapes.push(orient(rng.pick(NOT_TETROS[bads[k++]!]), rng.int(0, 3), rng.chance(0.5)))
+  }
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `tetro-${good}-${bads.join('.')}-${at}`,
+    stem: [text('m3.rect.tetroPick'), geoPart(shapes.map(shapeFig), '（编了号的三个用小正方形拼成的图形）', true)],
+    value: at + 1,
+    rng,
+    min: 1,
+    max: 3,
+    input: 'choice',
+  })
+}
+
+/** 这个图形是四连方，对吗 */
+function genTetroJudge(kpId: string, d: Difficulty, rng: RNG): Question {
+  const yes = rng.chance(0.5)
+  const kind: TetroKind | NotTetro = yes ? rng.pick(TETRO_KINDS) : rng.pick<NotTetro>(['corner', 'corner', 'three', 'five'])
+  const base = yes ? TETROS[kind as TetroKind] : rng.pick(NOT_TETROS[kind as NotTetro])
+  const quarter = rng.int(0, 3)
+  const flip = rng.chance(0.5)
+  const cells = orient(base, quarter, flip)
+  return labelQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `judge-${kind}-${cells.map((c) => c.join('.')).join('_')}`,
+    stem: [text('m3.rect.tetroJudge'), geoPart([shapeFig(cells)], '（一个用小正方形拼成的图形）')],
+    correct: yes ? YES : NO,
+    distractors: [yes ? NO : YES],
+    rng,
+  })
+}
+
+/** 拼图时边和边要重合：哪一种拼法符合要求（课本：可以拼成两格一排，不能角碰角） */
+function genEdgeRule(kpId: string, d: Difficulty, rng: RNG): Question {
+  const three = rng.chance(0.5)
+  const good: GeoPt[] = three
+    ? rng.pick<GeoPt[]>([
+        [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+        ],
+        [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+        ],
+      ])
+    : [
+        [0, 0],
+        [1, 0],
+      ]
+  const bad: GeoPt[] = three
+    ? rng.pick<GeoPt[]>([
+        [
+          [0, 0],
+          [1, 0],
+          [2, 1],
+        ],
+        [
+          [0, 0],
+          [1, 1],
+          [2, 1],
+        ],
+      ])
+    : [
+        [0, 0],
+        [1, 1],
+      ]
+  const turnG = rng.int(0, 3)
+  const turnB = rng.int(0, 3)
+  const goodFirst = rng.chance(0.5)
+  const g = orient(good, turnG, false)
+  const b = orient(bad, turnB, false)
+  const shapes = goodFirst ? [g, b] : [b, g]
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `edge-${shapes.map((s) => s.map((c) => c.join('.')).join('_')).join('|')}`,
+    stem: [text('m3.rect.edgeRule'), geoPart(shapes.map(shapeFig), `（编了号的两个图形，都是 ${good.length} 个小正方形拼的）`, true)],
+    value: goodFirst ? 1 : 2,
+    rng,
+    min: 1,
+    max: 2,
+    input: 'choice',
+  })
+}
+
+/** 用四连方拼出方格纸上的长方形 / 正方形，要用几个（课本试一试：4 × 5 的长方形；2 个拼成 2 × 4，再放 2 个拼成正方形） */
+const TILE_SIZES: Record<'easy' | 'hard', [number, number][]> = {
+  easy: [
+    [4, 2],
+    [4, 4],
+    [5, 4],
+    [4, 3],
+    [6, 2],
+  ],
+  hard: [
+    [6, 4],
+    [8, 2],
+    [8, 4],
+    [7, 4],
+    [6, 6],
+  ],
+}
+function genTileRect(kpId: string, d: Difficulty, rng: RNG): Question {
+  const [w0, h0] = rng.pick(TILE_SIZES[d === 1 ? 'easy' : 'hard'])
+  const [w, h] = rng.chance(0.5) ? [w0, h0] : [h0, w0]
+  const sq = w === h
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `tile-${w}x${h}`,
+    stem: [text(sq ? 'm3.rect.tileSq' : 'm3.rect.tileRect'), geoPart([{ w, h, px: 24, items: [{ t: 'grid', x: 0, y: 0, w, h }] }], `（方格纸上画着一个${sq ? '正方形' : '长方形'}，横着 ${w} 格、竖着 ${h} 格）`)],
+    value: (w * h) / 4,
+    rng,
+    min: 1,
+    max: 20,
+    smart: [w * h, (w * h) / 4 + 1, w + h],
+  })
+}
+
+/** 拼好的图：每块一种颜色 */
+const row = (y: number, x0: number, n: number): GeoPt[] => Array.from({ length: n }, (_, i) => [x0 + i, y] as GeoPt)
+const col = (x: number, y0: number, n: number): GeoPt[] => Array.from({ length: n }, (_, i) => [x, y0 + i] as GeoPt)
+const square2 = (x: number, y: number): GeoPt[] => [
+  [x, y],
+  [x + 1, y],
+  [x, y + 1],
+  [x + 1, y + 1],
+]
+/** 几种拼好的长方形 / 正方形（每块都是四连方） */
+const TILINGS: GeoPt[][][] = [
+  // 2 × 4：两个一字形（课本「我可以用四连方拼成长方形」）
+  [row(0, 0, 4), row(1, 0, 4)],
+  // 2 × 4：两个 L 形
+  [
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    [
+      [1, 0],
+      [2, 0],
+      [3, 0],
+      [3, 1],
+    ],
+  ],
+  // 4 × 4：两个一字形 + 两个 L 形（课本「再放 2 个四连方可以拼成一个正方形」）
+  [
+    row(0, 0, 4),
+    row(1, 0, 4),
+    [
+      [0, 2],
+      [0, 3],
+      [1, 3],
+      [2, 3],
+    ],
+    [
+      [1, 2],
+      [2, 2],
+      [3, 2],
+      [3, 3],
+    ],
+  ],
+  // 4 × 4：四个田字形
+  [square2(0, 0), square2(2, 0), square2(0, 2), square2(2, 2)],
+  // 3 × 4：三个一字形
+  [row(0, 0, 4), row(1, 0, 4), row(2, 0, 4)],
+  // 2 × 6：两个一字形 + 一个田字形
+  [row(0, 0, 4), row(1, 0, 4), square2(4, 0)],
+  // 4 × 5：五个竖着的一字形
+  [col(0, 0, 4), col(1, 0, 4), col(2, 0, 4), col(3, 0, 4), col(4, 0, 4)],
+  // 4 × 5：四个横着的一字形 + 一个竖着的
+  [row(0, 0, 4), row(1, 0, 4), row(2, 0, 4), row(3, 0, 4), col(4, 0, 4)],
+]
+
+/** 这个长方形 / 正方形是用几个四连方拼成的 */
+function genTiledCount(kpId: string, d: Difficulty, rng: RNG): Question {
+  const i = rng.int(0, TILINGS.length - 1)
+  const n = TILINGS[i]!.length
+  // 一半横过来画（沿对角线翻一下，每块还是四连方）
+  const turn = rng.chance(0.5)
+  const shown = turn ? TILINGS[i]!.map((p) => p.map(([x, y]) => [y, x] as GeoPt)) : TILINGS[i]!
+  const { w, h } = cellBox(shown.flat())
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `tiled-${i}-${turn ? 't' : 'n'}`,
+    stem: [text(w === h ? 'm3.rect.tiledSq' : 'm3.rect.tiledRect'), geoPart([pieceFig(shown)], `（用几块不同颜色的四连方拼成的${w === h ? '正方形' : '长方形'}，横着 ${w} 格、竖着 ${h} 格）`)],
+    value: n,
+    rng,
+    min: 1,
+    max: 12,
+    smart: [w * h, n + 1, n - 1],
+  })
+}
+
+/** 2 个一字形拼成长方形，再放几个能拼成正方形；4 个四连方拼成的正方形每条边有几个小正方形 */
+function genTetroSquare(kpId: string, d: Difficulty, rng: RNG): Question {
+  if (rng.chance(0.5)) {
+    const tall = rng.chance(0.5)
+    const pieces = tall ? [col(0, 0, 4), col(1, 0, 4)] : [row(0, 0, 4), row(1, 0, 4)]
+    return numberQuestion({
+      kpId,
+      type: 'shape-match',
+      difficulty: d,
+      sig: `sqmore-${tall ? 'v' : 'h'}`,
+      stem: [text('m3.rect.sqMore'), geoPart([pieceFig(pieces)], '（两个一字形的四连方拼成的长方形）')],
+      value: 2,
+      rng,
+      min: 1,
+      max: 9,
+      smart: [4, 1, 3],
+    })
+  }
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: 'sqside-4',
+    stem: [text('m3.rect.sqSide4')],
+    value: 4,
+    rng,
+    min: 1,
+    max: 16,
+    smart: [16, 2, 8],
+  })
+}
+
+/** 每个小正方形边长 1 厘米，四连方的周长（一字、L、Z、T 都是 10，田字是 8） */
+function genTetroPerim(kpId: string, d: Difficulty, rng: RNG): Question {
+  const kind = rng.pick(TETRO_KINDS)
+  const cells = orient(TETROS[kind], rng.int(0, 3), rng.chance(0.5))
+  const value = cellPerimeter(cells)
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `tperim-${kind}-${cells.map((c) => c.join('.')).join('_')}`,
+    stem: [text('m3.rect.tetroPerim'), geoPart([gridFig(cells, { px: 26 })], '（方格纸上的一个四连方）')],
+    value,
+    rng,
+    min: 1,
+    max: 20,
+    smart: [16, 4, value === 10 ? 8 : 10],
+  })
+}
+
+/** 三个四连方里，哪一个和另外两个不是同一种（转一转、翻一翻能重合的算同一种） */
+function genOddTetro(kpId: string, d: Difficulty, rng: RNG): Question {
+  const [same, other] = rng.shuffle(TETRO_KINDS.filter((k) => k !== 'O')).slice(0, 2) as [TetroKind, TetroKind]
+  const at = rng.int(0, 2)
+  const shapes: GeoPt[][] = []
+  for (let i = 0; i < 3; i++) shapes.push(orient(TETROS[i === at ? other : same], rng.int(0, 3), rng.chance(0.5)))
+  return numberQuestion({
+    kpId,
+    type: 'shape-match',
+    difficulty: d,
+    sig: `odd-${same}-${other}-${at}-${shapes.map((s) => s.map((c) => c.join('.')).join('_')).join('|')}`,
+    stem: [text('m3.rect.oddTetro'), geoPart(shapes.map(shapeFig), '（编了号的三个四连方）', true)],
+    value: at + 1,
+    rng,
+    min: 1,
+    max: 3,
+    input: 'choice',
+  })
+}
+
+// 拼图游戏：课本「拼图游戏」小节（p49）——什么是四连方、能拼出几种、边和边要重合、用四连方拼长方形和正方形都在第 1 档；
+// 第 2 档放更大的长方形、四连方的周长、哪一个不是同一种
+defineGenerator('m3s2-03-puzzle', (d, rng) => {
+  const kpId = 'm3s2-03-puzzle'
+  const roll = rng.next()
+  if (d === 1) {
+    if (roll < 0.1) return genTetroCount(kpId, d, rng)
+    if (roll < 0.3) return genTetroPick(kpId, d, rng)
+    if (roll < 0.48) return genTetroJudge(kpId, d, rng)
+    if (roll < 0.58) return genEdgeRule(kpId, d, rng)
+    if (roll < 0.76) return genTileRect(kpId, d, rng)
+    if (roll < 0.86) return genTetroSquare(kpId, d, rng)
+    return genTiledCount(kpId, d, rng)
+  }
+  if (d === 2) {
+    if (roll < 0.15) return genTetroPick(kpId, d, rng)
+    if (roll < 0.3) return genTetroJudge(kpId, d, rng)
+    if (roll < 0.5) return genTileRect(kpId, d, rng)
+    if (roll < 0.7) return genTetroPerim(kpId, d, rng)
+    if (roll < 0.85) return genOddTetro(kpId, d, rng)
+    return genTiledCount(kpId, d, rng)
+  }
+  if (roll < 0.35) return genOddTetro(kpId, d, rng)
+  if (roll < 0.65) return genTetroPerim(kpId, d, rng)
+  return roll < 0.85 ? genTileRect(kpId, d, rng) : genTetroSquare(kpId, d, rng)
 })

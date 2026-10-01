@@ -77,7 +77,7 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm3s1-03-choose-unit': '1581a706-63ac-322a-d7bf-079275e45a23', // 问题解决（估测距离）
   'm3s1-03-convert': '72e98438-ec47-e585-d7af-8c6a6595a38d', // 分米的认识及单位换算
   'm3s1-04-mass-units': 'f9bd2529-b44e-0406-df57-53e858a510a7', // 认识质量单位
-  'm3s1-04-weighing': '3a8e7100-c431-76f1-977e-bbb4c28624a5', // 称重大挑战
+  'm3s1-04-weighing': '0a465815-7203-0c7c-fd90-59e7ee01c5a5', // 称重我很行
   'm3s1-05-oral-mul': '7d54be2f-2ddf-2422-42bf-a4fece6902ce', // 口算乘法
   'm3s1-05-written-mul': '1946cec5-ab9f-502a-b9a6-629dd3c43e34', // 笔算乘法(不进位)
   'm3s1-05-zero-mul': 'c3804eae-3108-a371-9174-38dcd495bc98', // 笔算乘法(0的乘法)
@@ -94,14 +94,12 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm3s2-01-translate': 'a2889266-d9ab-f013-093f-9d5266539266', // 平移
   'm3s2-01-rotate': '33c73a8e-771c-b337-5991-a64819ef2756', // 旋转
   'm3s2-02-oral': '26662dec-139c-6420-5a03-4a86b78129fd', // 口算除法
-  'm3s2-02-estimate': 'b13d4ce8-ef90-4f5a-0f28-3d84b9d3b2ad', // 口算除法（估算）
   'm3s2-02-written': '71cc59b7-8f79-2c2e-544c-e09f9f5039ee', // 一位数除两位数
   'm3s2-02-zeros': '1fd907e1-ad2a-d121-cdbb-eb8274dd153d', // 商中间有0的除法
   'm3s2-02-solve': '29a8f6c0-3ef2-b371-926f-30763aaa85e6', // 解决问题（连乘）
   'm3s2-03-polygons': 'd9f62162-baa2-f889-e581-7b1fb1e7bc80', // 多边形的认识
-  'm3s2-03-rect-features': '193253cd-d89e-3a5d-7d59-7d22a6ecaed4', // 长方形和正方形的认识
   'm3s2-03-perimeter': '12fadb80-b9a2-eb5e-eca7-802bb60010f9', // 认识周长
-  'm3s2-03-rect-perimeter': '71aa1e0b-dd21-e7b9-2f62-11fefea1eccf', // 长方形和正方形的周长
+  'm3s2-03-puzzle': '1e558419-73dc-32a2-26a6-ef920ed899b4', // 拼图游戏
   'm3s2-04-area-units': '79c0917c-42d4-7b90-81f4-dcf110f974e2', // 面积的概念
   'm3s2-04-rect-area': '51a6d7d7-4161-b577-434b-b38fadfe8b29', // 长方形和正方形的面积计算
   'm3s2-04-area-convert': '701a8905-0591-9b63-7ffa-a1995515c1ed', // 面积单位间的进率

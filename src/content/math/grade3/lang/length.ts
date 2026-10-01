@@ -1,4 +1,5 @@
-// 三上「毫米、分米和千米」的词条，另有长度 / 质量单位与换算、比大小的通用模板（m3.u.*，质量单元也用）。
+// 三上「毫米、分米和千米」的词条（毫米分米、千米、估计距离、长度单位的换算），另有长度 / 质量单位与换算、比大小的
+// 通用模板（m3.u.*，质量单元也用）。
 // 课本题目一律写汉字单位「3厘米=（ ）毫米」；英文界面用单位符号（mm、cm、dm、m、km、g、kg），吨写 tons。
 // 朗读的坑：「长」只出现在「长度」里（「一根 2 米长的木料」改成「长度相同」「有几分米」）；「重叠」的「重」读 chóng，
 // 和数字隔开、别单独成片段；括号「（ ）」会读成「括号」，要填的空写成「___」。
@@ -27,8 +28,8 @@ export const ZH: Dict = {
   'm3.u.isRight': '这样说对吗？',
   // ── 毫米、分米（量一量、进率）──
   'm3.len.rulerMm': '这条线段有几毫米？',
-  'm3.len.rulerCm': '这条线段有几厘米？',
-  'm3.len.rulerCmMm': '这条线段是 {cm} 厘米几毫米？',
+  'm3.len.rulerCmMm': '这条线段是几厘米几毫米？',
+  'm3.len.cmMm': '{cm} 厘米 {mm} 毫米',
   'm3.u.rate': '1 {ua} = 几{ub}？',
   'm3.len.wood': '把一根 {m} 米的木料锯成长度相同的 {k} 根，每根有几分米？',
   'm3.len.fold': '一根 {dm} 分米的绳子，对折后再对折，每段有几厘米？',
@@ -38,8 +39,10 @@ export const ZH: Dict = {
   'm3.km.track': '跑道一圈是 400 米，小明跑了 {n} 圈，一共跑了几千米？',
   'm3.km.pool': '游泳池的长度是 {n} 米，游 1 千米要游几个来回？',
   'm3.km.roundTrip': '往返一次就是一个来回。',
-  'm3.km.steps': '小明走一步大约是 50 厘米，走 {n} 步大约是多少米？',
-  'm3.km.minutes': '小红每分钟大约走 {v} 米，从家到学校要走 {t} 分钟，从家到学校大约有多少米？',
+  // ── 估计距离（例 3：先找一个长度作标准）──
+  'm3.km.steps': '小明走一步大约是 50 厘米，两步大约是 1 米。从家到学校要走 {n} 步左右，大约有多少米？',
+  'm3.km.stepsBack': '从家到学校大约有 {m} 米，小明走一步大约是 50 厘米，大约要走多少步？',
+  'm3.km.minutes': '小红每分钟大约走 {v} 米，从家到学校要走 {t} 分钟左右，从家到学校大约有多少米？',
   'm3.km.stops': '坐公交车上学要坐 {n} 站，每站大约是 500 米，一共大约是多少米？',
   'm3.km.late': '王老师家离学校 {d} 千米，他每分钟大约走 {v} 米。7 时从家出发，7 时 {m} 分能走到学校吗？',
   'm3.km.time': '用下面的方法走完 1 千米，大约要用多少时间？',
@@ -50,7 +53,7 @@ export const ZH: Dict = {
   'm3.km.min': '{n} 分',
   'm3.km.hour': '1 小时',
   'm3.km.walkFar': '小红家和奶奶家相距 50 千米，她最好走路去。',
-  // ── 填合适的长度单位：每样东西一句话，{u} 是单位（问的时候是「___」）──
+  // ── 选单位、说法对不对：每样东西一句话，{u} 是单位（问的时候是「___」）──
   'm3.len.it.ant': '蚂蚁的长度大约是 {n} {u}',
   'm3.len.it.pencilThick': '铅笔大约粗 {n} {u}',
   'm3.len.it.book': '语文书大约厚 {n} {u}',
@@ -97,8 +100,8 @@ export const EN: Dict = {
   'm3.u.which': 'Which unit fits?',
   'm3.u.isRight': 'Is this right?',
   'm3.len.rulerMm': 'How many millimeters long is this segment?',
-  'm3.len.rulerCm': 'How many centimeters long is this segment?',
-  'm3.len.rulerCmMm': 'This segment is {cm} cm and how many mm?',
+  'm3.len.rulerCmMm': 'How many cm and mm long is this segment?',
+  'm3.len.cmMm': '{cm} cm {mm} mm',
   'm3.u.rate': '1 {ua} = how many {ub}?',
   'm3.len.wood': 'A {m} m piece of wood is sawn into {k} pieces of the same length. How many dm is each piece?',
   'm3.len.fold': 'A {dm} dm rope is folded in half, then in half again. How many cm is each part?',
@@ -107,7 +110,8 @@ export const EN: Dict = {
   'm3.km.track': 'One lap of the track is 400 m. Ming ran {n} laps. How many km did he run?',
   'm3.km.pool': 'A pool is {n} m from end to end. How many round trips make 1 km?',
   'm3.km.roundTrip': 'There and back once is one round trip.',
-  'm3.km.steps': 'One of Ming’s steps is about 50 cm. About how many meters are {n} steps?',
+  'm3.km.steps': 'One of Ming’s steps is about 50 cm, so two steps are about 1 m. It takes about {n} steps from home to school. About how many meters is it?',
+  'm3.km.stepsBack': 'It is about {m} m from home to school. One of Ming’s steps is about 50 cm. About how many steps does it take?',
   'm3.km.minutes': 'Hong walks about {v} m a minute and takes {t} minutes to get to school. About how many meters is it?',
   'm3.km.stops': 'The bus ride to school is {n} stops, about 500 m each. About how many meters in all?',
   'm3.km.late': 'Mr Wang lives {d} km from school and walks about {v} m a minute. He leaves home at 7 o’clock. Can he get to school by 7:{m}?',
@@ -165,8 +169,8 @@ export const PY: Record<string, string> = {
   'm3.u.which': 'tián shén me dān wèi hé shì',
   'm3.u.isRight': 'zhè yàng shuō duì ma',
   'm3.len.rulerMm': 'zhè tiáo xiàn duàn yǒu jǐ háo mǐ',
-  'm3.len.rulerCm': 'zhè tiáo xiàn duàn yǒu jǐ lí mǐ',
-  'm3.len.rulerCmMm': 'zhè tiáo xiàn duàn shì lí mǐ jǐ háo mǐ',
+  'm3.len.rulerCmMm': 'zhè tiáo xiàn duàn shì jǐ lí mǐ jǐ háo mǐ',
+  'm3.len.cmMm': 'lí mǐ háo mǐ',
   'm3.u.rate': 'jǐ',
   'm3.len.wood': 'bǎ yì gēn mǐ de mù liào jù chéng cháng dù xiāng tóng de gēn měi gēn yǒu jǐ fēn mǐ',
   'm3.len.fold': 'yì gēn fēn mǐ de shéng zi duì zhé hòu zài duì zhé měi duàn yǒu jǐ lí mǐ',
@@ -175,8 +179,9 @@ export const PY: Record<string, string> = {
   'm3.km.track': 'pǎo dào yì quān shì mǐ xiǎo míng pǎo le quān yí gòng pǎo le jǐ qiān mǐ',
   'm3.km.pool': 'yóu yǒng chí de cháng dù shì mǐ yóu qiān mǐ yào yóu jǐ gè lái huí',
   'm3.km.roundTrip': 'wǎng fǎn yí cì jiù shì yí gè lái huí',
-  'm3.km.steps': 'xiǎo míng zǒu yí bù dà yuē shì lí mǐ zǒu bù dà yuē shì duō shao mǐ',
-  'm3.km.minutes': 'xiǎo hóng měi fēn zhōng dà yuē zǒu mǐ cóng jiā dào xué xiào yào zǒu fēn zhōng cóng jiā dào xué xiào dà yuē yǒu duō shao mǐ',
+  'm3.km.steps': 'xiǎo míng zǒu yí bù dà yuē shì lí mǐ liǎng bù dà yuē shì mǐ cóng jiā dào xué xiào yào zǒu bù zuǒ yòu dà yuē yǒu duō shao mǐ',
+  'm3.km.stepsBack': 'cóng jiā dào xué xiào dà yuē yǒu mǐ xiǎo míng zǒu yí bù dà yuē shì lí mǐ dà yuē yào zǒu duō shao bù',
+  'm3.km.minutes': 'xiǎo hóng měi fēn zhōng dà yuē zǒu mǐ cóng jiā dào xué xiào yào zǒu fēn zhōng zuǒ yòu cóng jiā dào xué xiào dà yuē yǒu duō shao mǐ',
   'm3.km.stops': 'zuò gōng jiāo chē shàng xué yào zuò zhàn měi zhàn dà yuē shì mǐ yí gòng dà yuē shì duō shao mǐ',
   'm3.km.late': 'wáng lǎo shī jiā lí xué xiào qiān mǐ tā měi fēn zhōng dà yuē zǒu mǐ shí cóng jiā chū fā shí fēn néng zǒu dào xué xiào ma',
   'm3.km.time': 'yòng xià miàn de fāng fǎ zǒu wán qiān mǐ dà yuē yào yòng duō shao shí jiān',

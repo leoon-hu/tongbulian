@@ -166,6 +166,17 @@ describe('年历中的秘密（m3s2-06-calendar）', () => {
           expect(keyOf(correctLabel(q)), q.id).toBe(monthLength(y, 2) === 29 ? 'm3.cal.leap' : 'm3.cal.common')
           break
         }
+        case 'm3.cal.every4': {
+          kinds.add('every4')
+          const [y0, y] = [p.y0 as number, p.y as number]
+          // 给出的是闰年；问的是课本年历附近的年份（不碰整百年，「每 4 年一个」就够判断）
+          expect(monthLength(y0, 2), q.id).toBe(29)
+          expect(y).not.toBe(y0)
+          expect(y % 100, q.id).not.toBe(0)
+          expect(keyOf(correctLabel(q)), q.id).toBe((y - y0) % 4 === 0 ? 'm3.cal.leap' : 'm3.cal.common')
+          expect(keyOf(correctLabel(q)), q.id).toBe(monthLength(y, 2) === 29 ? 'm3.cal.leap' : 'm3.cal.common')
+          break
+        }
         case 'm3.cal.twoMonths':
           kinds.add('twoMonths')
           expect([monthOf(p.m1), monthOf(p.m2)]).not.toContain(2)
@@ -193,7 +204,9 @@ describe('年历中的秘密（m3s2-06-calendar）', () => {
           const got = dateOf(correctLabel(q))
           expect(got, q.id).toEqual({ m: r.getUTCMonth() + 1, d: r.getUTCDate() })
           expect(r.getUTCFullYear()).toBe(y)
-          expect(k === 'm3.cal.afterYear', q.id).toBe(a.m <= 2 && got.m >= 2)
+          // 跨过 2 月底（或从 1 月跨进 2 月）一定说了平年闰年；2 月里不跨月的只出到 28 日以内，不用说
+          expect(k === 'm3.cal.afterYear', q.id).toBe(a.m <= 2 && got.m >= 2 && !(a.m === 2 && got.m === 2))
+          if (a.m === 2 && got.m === 2) for (const c of q.choices!) expect(dateOf(c.label).d, q.id).toBeLessThanOrEqual(28)
           // 干扰项都是真实存在的别的日期
           for (const c of q.choices!) {
             const x = dateOf(c.label)
@@ -205,15 +218,41 @@ describe('年历中的秘密（m3s2-06-calendar）', () => {
           throw new Error(`没有检查到的题：${q.id} ${k}`)
       }
     })
-    expect([...kinds].sort()).toEqual(['after', 'afterYear', 'bigOrSmall', 'convert', 'countWd', 'daysOf', 'facts', 'leapRule', 'marked', 'span', 'spanYear', 'thisDays', 'thisKind', 'thisYear', 'twoMonths', 'wdCalc', 'yearDays'])
+    expect([...kinds].sort()).toEqual(['after', 'afterYear', 'bigOrSmall', 'convert', 'countWd', 'daysOf', 'every4', 'facts', 'leapRule', 'marked', 'span', 'spanYear', 'thisDays', 'thisKind', 'thisYear', 'twoMonths', 'wdCalc', 'yearDays'])
   })
 
-  it('第 1 档：大月小月、某月几天、一年几个月、看月历；2 月的天数一定配着月历', () => {
+  it('第 1 档：年历中的秘密这一节的全部（大月小月、某月几天、看月历、平年闰年、同月的再过几天与经过几天）；整百年只在第 3 档', () => {
+    const seen = new Set<string>()
     each('m3s2-06-calendar', (q, d) => {
+      const { k, p } = textOf(q)
+      if (k === 'm3.cal.leapRule' && d < 3) expect((p.y as number) % 100, q.id).not.toBe(0)
       if (d !== 1) return
-      const { k } = textOf(q)
-      expect(['m3.cal.daysOf', 'm3.cal.bigOrSmall', 'm3.cal.monthsInYear', 'm3.cal.bigCount', 'm3.cal.smallCount', 'm3.cal.bigDays', 'm3.cal.smallDays', 'm3.cal.thisDays', 'm3.cal.thisKind'], q.id).toContain(k)
+      seen.add(k)
+      expect(
+        ['m3.cal.daysOf', 'm3.cal.bigOrSmall', 'm3.cal.monthsInYear', 'm3.cal.bigCount', 'm3.cal.smallCount', 'm3.cal.bigDays', 'm3.cal.smallDays', 'm3.cal.thisDays', 'm3.cal.thisKind', 'm3.cal.thisYear', 'm3.cal.febDays', 'm3.cal.every4', 'm3.cal.after', 'm3.cal.span'],
+        q.id,
+      ).toContain(k)
+      if (k === 'm3.cal.after' || k === 'm3.cal.span') {
+        const a = dateOf(p.a)
+        const b = k === 'm3.cal.after' ? dateOf(correctLabel(q)) : dateOf(p.b)
+        expect(b.m, `${q.id} 第 1 档不跨月`).toBe(a.m)
+      }
     })
+    // 课本的红字（看 2 月月历判断、2 月几天）、每 4 年一个闰年、用一用 1 都出得到
+    for (const k of ['m3.cal.thisYear', 'm3.cal.febDays', 'm3.cal.every4', 'm3.cal.after', 'm3.cal.span']) expect(seen, k).toContain(k)
+  })
+
+  it('第 2 档出得到课本用一用 3 的原题：寒假 37 天、暑假 55 天', () => {
+    const got = new Set<number>()
+    each('m3s2-06-calendar', (q, d) => {
+      if (d !== 2) return
+      const { k, p } = textOf(q)
+      if (k !== 'm3.cal.span' && k !== 'm3.cal.spanYear') return
+      const a = dateOf(p.a)
+      const b = dateOf(p.b)
+      if ((a.m === 1 && a.d === 24 && b.m === 3 && b.d === 1) || (a.m === 7 && a.d === 8 && b.m === 8 && b.d === 31)) got.add(numAnswer(q))
+    })
+    expect([...got].sort()).toEqual([37, 55])
   })
 
   it('星期的选项：四个不同的星期，只有一个对', () => {
@@ -334,6 +373,31 @@ describe('作息时间表中的秘密（m3s2-06-24h）', () => {
           expect(numAnswer(q), q.id).toBe(e / 60 - 12)
           break
         }
+        case 'm3.cal.shopSupperFrom': {
+          kinds.add(k)
+          const [s] = span(table!.rows[1]![1] as string)
+          const x = correctLabel(q) as { k: string; p: { h: number; m: number } }
+          expect(x.p.h * 60 + x.p.m + 12 * 60, q.id).toBe(s)
+          break
+        }
+        case 'm3.cal.planRead':
+        case 'm3.cal.planReadH': {
+          kinds.add('planRead')
+          // 问的时刻在表里，是下午 / 晚上的
+          const cells = table!.rows.slice(1).flatMap((r) => (r[0] as string).split('—'))
+          expect(cells, q.id).toContain(p.HM)
+          const t = minutes(p.HM as string)
+          expect(t, q.id).toBeGreaterThanOrEqual(13 * 60)
+          expect(keyOf(p.part as LStr), q.id).toBe(t < 19 * 60 ? 'm3.cal.pm' : 'm3.cal.eve')
+          if (k === 'm3.cal.planReadH') {
+            expect(t % 60).toBe(0)
+            expect(numAnswer(q), q.id).toBe(t / 60 - 12)
+          } else {
+            const x = correctLabel(q) as { k: string; p: { h: number; m: number } }
+            expect(x.p.h * 60 + x.p.m + 12 * 60, q.id).toBe(t)
+          }
+          break
+        }
         default:
           throw new Error(`没有检查到的题：${q.id} ${k}`)
       }
@@ -341,8 +405,51 @@ describe('作息时间表中的秘密（m3s2-06-24h）', () => {
       for (const c of q.choices ?? []) expect(zh(c.label), q.id).not.toMatch(/\d\.\d/)
     })
     expect([...kinds].sort()).toEqual(
-      ['clock', 'elapsed', 'facts', 'from24', 'fromHm', 'm3.cal.actHm', 'm3.cal.actMin', 'm3.cal.actStart', 'm3.cal.schoolTotal', 'm3.cal.shopClose', 'm3.cal.shopTotal', 'm3.cal.shopTotalHm', 'to24', 'toHm'].sort(),
+      [
+        'clock',
+        'elapsed',
+        'facts',
+        'from24',
+        'fromHm',
+        'm3.cal.actHm',
+        'm3.cal.actMin',
+        'm3.cal.actStart',
+        'm3.cal.schoolTotal',
+        'm3.cal.shopClose',
+        'm3.cal.shopSupperFrom',
+        'm3.cal.shopTotal',
+        'm3.cal.shopTotalHm',
+        'planRead',
+        'to24',
+        'toHm',
+      ].sort(),
     )
+  })
+
+  it('第 1 档：找一找四问、整十分 / 半时的几时几分、上午的钟面、读作息表，饭店题照课本原数（下午 4 时 30 分、晚上 9 时、8 小时）', () => {
+    const seen = new Set<string>()
+    const book = new Map<string, number | string>()
+    each('m3s2-06-24h', (q, d) => {
+      if (d !== 1) return
+      const { k, p } = textOf(q)
+      seen.add(k)
+      const clock = q.stem.find((x) => x.kind === 'clock') as Extract<StemPart, { kind: 'clock' }> | undefined
+      if (clock) {
+        expect(clock.minute % 10, q.id).toBe(0)
+        if (keyOf(p.part as LStr) === 'm3.cal.am') seen.add('amClock')
+        if (clock.minute) seen.add('clockHm')
+      }
+      if (k === 'm3.cal.to24hm') expect((p.m as number) % 10, q.id).toBe(0)
+      // 作息表算时长在第 2 档
+      expect(['m3.cal.actMin', 'm3.cal.actHm', 'm3.cal.actStart', 'm3.cal.elapsed', 'm3.cal.elapsedParts', 'm3.cal.shopTotalHm', 'm3.cal.schoolTotal'], q.id).not.toContain(k)
+      if (k.startsWith('m3.cal.shop')) {
+        const table = q.stem.find((x): x is Table => x.kind === 'stat-table')!
+        expect(table.rows.map((r) => r[1]), q.id).toEqual(['11:00—14:30', '16:30—21:00'])
+        book.set(k, k === 'm3.cal.shopSupperFrom' ? zh(correctLabel(q)) : numAnswer(q))
+      }
+    })
+    for (const k of ['m3.cal.dayHours', 'm3.cal.dayLaps', 'm3.cal.toNoon', 'm3.cal.toMidnight', 'm3.cal.planRead', 'amClock', 'clockHm', 'm3.cal.to24hm']) expect(seen, k).toContain(k)
+    expect(Object.fromEntries(book)).toEqual({ 'm3.cal.shopSupperFrom': '4 时 30 分', 'm3.cal.shopClose': 9, 'm3.cal.shopTotal': 8 })
   })
 
   it('经过时间的选项互不相同、都在 10 分钟以上', () => {

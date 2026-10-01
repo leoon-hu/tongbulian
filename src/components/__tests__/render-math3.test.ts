@@ -37,3 +37,21 @@ describe('三年级数学题目渲染冒烟测试（每个知识点三档各挂�
     })
   }
 })
+
+describe('秤面（ScaleDial）照课本的刻度', () => {
+  it('体重秤 100 小格、每 10 格一个数、第 5 格画长一点、画大一点；盘秤每 50 克一个数；读屏说明不说指针指着几', async () => {
+    const { default: ScaleDial } = await import('@/components/math/ScaleDial.vue')
+    const body = mount(ScaleDial, { props: { max: 100, major: 10, minor: 10, value: 27, unit: 'kg' } })
+    expect(body.findAll('line.tick')).toHaveLength(100)
+    expect(body.findAll('line.tick.big')).toHaveLength(10)
+    expect(body.findAll('line.tick.mid')).toHaveLength(10)
+    expect(body.find('svg').attributes('style')).toContain('230px')
+    expect(body.find('svg').attributes('aria-label')).not.toContain('27')
+    body.unmount()
+    const pan = mount(ScaleDial, { props: { max: 1000, major: 50, minor: 1, value: 350, unit: 'g' } })
+    expect(pan.findAll('text.num').map((t) => t.text())).toEqual(Array.from({ length: 20 }, (_, i) => String(i * 50)))
+    expect(pan.findAll('line.tick.mid')).toHaveLength(0)
+    expect(pan.find('svg').attributes('aria-label')).not.toContain('350')
+    pan.unmount()
+  })
+})

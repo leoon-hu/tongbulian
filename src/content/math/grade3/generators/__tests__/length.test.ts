@@ -56,8 +56,8 @@ function expected(q: Question): string | number | null {
         expect(r.to).toBeLessThanOrEqual(r.length * 10)
         const len = r.to - r.from
         if (k === 'm3.len.rulerMm') return len
-        expect(Math.floor(len / 10)).toBe(num(p.cm))
-        return len % 10
+        expect(len % 10, q.id).not.toBe(0)
+        return `${Math.floor(len / 10)} 厘米 ${len % 10} 毫米`
       }
       case 'm3.len.wood':
         return (num(p.m) * 10) / num(p.k)
@@ -73,6 +73,8 @@ function expected(q: Question): string | number | null {
         return 1000 / (2 * num(p.n))
       case 'm3.km.steps':
         return (num(p.n) * 50) / 100
+      case 'm3.km.stepsBack':
+        return (num(p.m) * 100) / 50
       case 'm3.km.minutes':
         return num(p.v) * num(p.t)
       case 'm3.km.stops':
@@ -82,9 +84,10 @@ function expected(q: Question): string | number | null {
       case 'm3.km.walkFar':
         return '不对'
       case 'm3.mass.readKg':
+      case 'm3.mass.readBody':
       case 'm3.mass.readG': {
         const s = q.stem.find((x) => x.kind === 'scale') as Extract<StemPart, { kind: 'scale' }>
-        expect(s.unit).toBe(k === 'm3.mass.readKg' ? 'kg' : 'g')
+        expect(s.unit).toBe(k === 'm3.mass.readG' ? 'g' : 'kg')
         expect(s.value).toBeGreaterThan(0)
         expect(s.value).toBeLessThan(s.max)
         return s.value
@@ -102,6 +105,14 @@ function expected(q: Question): string | number | null {
       case 'm3.mass.diff':
         expect(num(p.x)).toBeGreaterThan(num(p.y))
         return num(p.x) - num(p.y)
+      case 'm3.mass.diffAbout': {
+        // 大约重多少：相差数离整十只差 1、2，答案是最接近的整十
+        const gap = num(p.x) - num(p.y)
+        const ten = Math.round(gap / 10) * 10
+        expect(Math.abs(gap - ten), q.id).toBeLessThanOrEqual(2)
+        expect(gap % 10, q.id).not.toBe(0)
+        return `${ten} 克`
+      }
       case 'm3.mass.cao3':
         return num(p.a) + num(p.b) + num(p.c)
       case 'm3.mass.cao4': {
@@ -113,6 +124,8 @@ function expected(q: Question): string | number | null {
         return 5 * num(p.g)
       case 'm3.mass.tomato':
         return 6 * num(p.k)
+      case 'm3.mass.pears':
+        return 5 * num(p.k)
       case 'm3.mass.sacks':
         return 100 * num(p.k)
       case 'm3.mass.sacksTon':
@@ -155,22 +168,28 @@ describe('毫米、分米和千米 / 曹冲称象：答案能从题目反推出�
   }
 })
 
-describe('选单位的题', () => {
-  it('第 1 档的干扰单位离正确单位至少隔一级，第 2 档是挨着的；「也说得通」的单位不当错的', () => {
-    const order: Unit[] = ['mm', 'cm', 'dm', 'm', 'km']
-    const gen = getGenerator('m3s1-03-choose-unit')!
-    for (let seed = 1; seed <= 150; seed++) {
-      for (const d of [1, 2] as const) {
-        const q = gen(d, createRng(seed))
-        const it = texts(q)[0]!
-        const t = LENGTH_THINGS.find((x) => it.k.endsWith(`.${x.id}`))!
-        const wrong = q.choices!.map((c) => (c.label as { k: string }).k.replace('m3.u.', '') as Unit).filter((u) => u !== t.unit)
-        expect(wrong.length).toBe(d === 1 ? 2 : 3)
-        for (const u of wrong) {
-          expect(t.alsoOk ?? []).not.toContain(u)
-          if (d === 1) expect(Math.abs(order.indexOf(u) - order.indexOf(t.unit))).toBeGreaterThanOrEqual(2)
+describe('选单位的题（并进了「毫米、分米的认识」「千米的认识」）', () => {
+  const SECTIONS: { kp: string; units: Unit[]; opts: Record<1 | 2, Unit[]> }[] = [
+    { kp: 'm3s1-03-mm-dm', units: ['mm', 'cm', 'dm'], opts: { 1: ['mm', 'cm', 'dm'], 2: ['mm', 'cm', 'dm', 'm'] } },
+    { kp: 'm3s1-03-km', units: ['m', 'km'], opts: { 1: ['cm', 'm', 'km'], 2: ['cm', 'dm', 'm', 'km'] } },
+  ]
+  it('东西只从这一节的单位里挑，选项是这一节的几个单位（「也说得通」的单位不当错的）；第 1 档出得到', () => {
+    for (const { kp, units, opts } of SECTIONS) {
+      const gen = getGenerator(kp)!
+      let seen = 0
+      for (let seed = 1; seed <= 150; seed++) {
+        for (const d of [1, 2] as const) {
+          const q = gen(d, createRng(seed))
+          if (!q.id.includes(':unit-')) continue
+          if (d === 1) seen++
+          const it = texts(q)[0]!
+          const t = LENGTH_THINGS.find((x) => it.k.endsWith(`.${x.id}`))!
+          expect(units).toContain(t.unit)
+          const all = q.choices!.map((c) => (c.label as { k: string }).k.replace('m3.u.', '') as Unit)
+          expect(all.sort()).toEqual(opts[d].filter((u) => u === t.unit || !t.alsoOk?.includes(u)).sort())
         }
       }
+      expect(seen, kp).toBeGreaterThan(10)
     }
   })
 
@@ -197,5 +216,80 @@ describe('朗读：「长」「重」不单独成片段', () => {
         }
       }
     }
+  })
+})
+
+/** 第 1 档 150 个种子出过的题的 sig 前缀（id 冒号后、第一个「-」前） */
+function firstTierKinds(kpId: string): Set<string> {
+  const gen = getGenerator(kpId)!
+  const kinds = new Set<string>()
+  for (let seed = 1; seed <= 150; seed++) kinds.add(gen(1, createRng(seed)).id.split(':')[1]!.split('-')[0]!)
+  return kinds
+}
+
+describe('课本例题与做一做在第 1 档都出得到（G12）', () => {
+  it('毫米、分米的认识：量一量（读几厘米几毫米、几毫米）、换算、进率、选单位、锯木料、11 厘米 = 1 分米几厘米', () => {
+    expect([...firstTierKinds('m3s1-03-mm-dm')].sort()).toEqual(['conv', 'rate', 'rcm', 'rmm', 'split', 'unit', 'wood'].sort())
+  })
+  it('千米的认识：换算、进率、几个 100 米是 1 千米、选米 / 千米、跑道', () => {
+    expect([...firstTierKinds('m3s1-03-km')].sort()).toEqual(['conv', 'rate', 'per', 'unit', 'track'].sort())
+  })
+  it('估计距离：一步、每分钟、每站三种标准，行 1 千米要多久，能不能按时到校', () => {
+    expect([...firstTierKinds('m3s1-03-choose-unit')].sort()).toEqual(['late', 'mins', 'steps', 'stops', 'time'].sort())
+  })
+  it('认识质量单位：选单位、读秤、进率、换算', () => {
+    expect([...firstTierKinds('m3s1-04-mass-units')].sort()).toEqual(['conv', 'rate', 'scale', 'unit'].sort())
+  })
+  it('称重我很行：大约重多少、黄豆 / 西红柿 / 梨、粮食、盐袋、曹冲称象求和', () => {
+    expect([...firstTierKinds('m3s1-04-weighing')].sort()).toEqual(['about', 'beans', 'cao', 'pears', 'sacks', 'salt', 'tomato'].sort())
+  })
+  it('第 1 档读尺子都从 0 起、12–68 毫米；有一半上下问「几厘米几毫米」', () => {
+    const gen = getGenerator('m3s1-03-mm-dm')!
+    let cmMm = 0
+    let rulers = 0
+    for (let seed = 1; seed <= 600; seed++) {
+      const q = gen(1, createRng(seed))
+      const r = q.stem.find((s) => s.kind === 'ruler') as Extract<StemPart, { kind: 'ruler' }> | undefined
+      if (!r) continue
+      rulers++
+      expect(r.from).toBe(0)
+      expect(r.to).toBeGreaterThanOrEqual(12)
+      expect(r.to).toBeLessThanOrEqual(68)
+      if (q.id.includes(':rcm-')) cmMm++
+    }
+    expect(cmMm / rulers).toBeGreaterThan(0.3)
+    expect(cmMm / rulers).toBeLessThan(0.6)
+  })
+  it('估计距离第 1 档只用「几个十 / 几个百」：每分钟走几十米就走 10 分钟', () => {
+    const gen = getGenerator('m3s1-03-choose-unit')!
+    for (let seed = 1; seed <= 150; seed++) {
+      const q = gen(1, createRng(seed))
+      const m = texts(q).find((x) => x.k === 'm3.km.minutes')
+      if (m) expect(num(m.p.t), q.id).toBe(10)
+    }
+  })
+})
+
+describe('读秤照课本的刻度（D2）', () => {
+  it('盘秤 1000 克每 50 克一个刻度、读整 50 克；手提秤 5 千克每千克 10 小格、读整千克；体重秤每小格 1 千克；500 克盘秤每小格 10 克', () => {
+    const gen = getGenerator('m3s1-04-mass-units')!
+    const kinds = new Set<string>()
+    for (let seed = 1; seed <= 300; seed++) {
+      for (const d of [1, 2] as const) {
+        const q = gen(d, createRng(seed))
+        const s = q.stem.find((x) => x.kind === 'scale') as Extract<StemPart, { kind: 'scale' }> | undefined
+        if (!s) continue
+        const tick = s.major / (s.minor ?? 1)
+        kinds.add(`${d}:${s.max}${s.unit}`)
+        if (s.max === 1000) expect([s.major, s.minor]).toEqual([50, 1])
+        if (s.max === 5) expect([s.major, s.minor]).toEqual([1, 10])
+        if (s.max === 100) expect([s.major, s.minor, s.unit]).toEqual([10, 10, 'kg'])
+        if (s.max === 500) expect([s.major, s.minor]).toEqual([50, 5])
+        // 指针正好指在一个刻度上，手提秤只读整千克
+        expect(Math.abs(s.value / tick - Math.round(s.value / tick)), q.id).toBeLessThan(1e-9)
+        if (s.max === 5) expect(Number.isInteger(s.value)).toBe(true)
+      }
+    }
+    expect([...kinds].sort()).toEqual(['1:1000g', '1:100kg', '1:5kg', '2:1000g', '2:100kg', '2:500g', '2:5kg'].sort())
   })
 })

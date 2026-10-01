@@ -92,7 +92,7 @@ function pick(d: Difficulty, sig: string, stem: StemPart[], correct: LStr, distr
   return labelQuestion({ kpId: KP, type: 'code', difficulty: d, sig, stem, correct, distractors, rng })
 }
 
-// ── 第 1 档：几位数字、各段有几位、标出的一段是什么码、出生在哪一年 ──
+// ── 第 1 档：几位数字、各段有几位、标出的一段是什么码、出生在哪一年、按写出的规则看第十七位分辨性别（sexQ 在下面） ──
 
 function idLenQ(d: Difficulty, rng: RNG): Question {
   return num(d, 'len-id', [text('m3.code.idLen'), idStrip(rng.pick(ALL_IDS))], 18, rng, [15, 17, 16])
@@ -142,11 +142,11 @@ function oddEvenQ(d: Difficulty, rng: RNG): Question {
   const odd = isMale(id)
   return pick(d, `odd-${id}`, [text('m3.code.oddEven'), idStrip(id, { segs: true, cell: 16 })], opt(odd ? 'odd' : 'even'), [opt(odd ? 'even' : 'odd')], rng)
 }
-/** 第 2 档题里写着规则、标出第十七位；第 3 档什么都不给（要知道看第十七位） */
+/** 第 1、2 档题里写着规则、标出第十七位（课本 p58 说一说的核心句）；第 3 档什么都不给（要知道看第十七位） */
 function sexQ(d: Difficulty, rng: RNG): Question {
   const id = rng.pick(ALL_IDS)
   const male = isMale(id)
-  const stem = d === 2 ? [text('m3.code.sexBy17'), idStrip(id, { segs: true, cell: 16 })] : [text('m3.code.sex'), idStrip(id)]
+  const stem = d <= 2 ? [text('m3.code.sexBy17'), idStrip(id, { segs: true, cell: 16 })] : [text('m3.code.sex'), idStrip(id)]
   return pick(d, `sex${d}-${id}`, stem, opt(male ? 'male' : 'female'), [opt(male ? 'female' : 'male')], rng)
 }
 function twinsQ(d: Difficulty, rng: RNG): Question {
@@ -214,10 +214,11 @@ function isbnQ(d: Difficulty, rng: RNG): Question {
 defineGenerator(KP, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.12) return idLenQ(d, rng)
-    if (roll < 0.2) return postLenQ(d, rng)
-    if (roll < 0.45) return segLenQ(d, rng)
-    if (roll < 0.7) return whichSegQ(d, rng)
+    if (roll < 0.1) return idLenQ(d, rng)
+    if (roll < 0.17) return postLenQ(d, rng)
+    if (roll < 0.37) return segLenQ(d, rng)
+    if (roll < 0.58) return whichSegQ(d, rng)
+    if (roll < 0.78) return sexQ(d, rng)
     return yearQ(d, rng)
   }
   if (d === 2) {

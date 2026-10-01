@@ -212,12 +212,36 @@ describe('统计表要填的那一格：练习页把按的数字填进格子里�
     expect(choice).toBeGreaterThanOrEqual(3)
   })
 
-  it('没有空格子的统计表不算「有空可填」', () => {
+  it('没有空格子的统计表不算「有空可填」；合表题（单式表 + 有空格子的复式表）算', () => {
     const gen = getGenerator('m3s2-05-table')!
-    for (let seed = 1; seed <= 30; seed++) {
+    let plain = 0
+    let merge = 0
+    for (let seed = 1; seed <= 60; seed++) {
       const q = gen(1, createRng(seed))
-      expect(hasBlank(q), q.id).toBe(false)
-      expect(hasChoiceBlank(q), q.id).toBe(false)
+      const empty = q.stem.some((p) => p.kind === 'stat-table' && p.rows.some((r) => r.includes(null)))
+      if (!empty) plain += 1
+      else merge += 1
+      expect(hasBlank(q), q.id).toBe(empty && q.input === 'numpad')
+      expect(hasChoiceBlank(q), q.id).toBe(empty && q.input === 'choice')
     }
+    expect(plain).toBeGreaterThan(10)
+    expect(merge).toBeGreaterThan(3)
+  })
+
+  it('合表题：两张表都画出来，只有复式表里有一格「?」', () => {
+    const gen = getGenerator('m3s2-05-table')!
+    let seen = 0
+    for (let seed = 1; seed <= 200 && seen < 4; seed++) {
+      const q = gen(1, createRng(seed))
+      if (!q.id.includes(':merge-')) continue
+      seen += 1
+      const w = mount(QuestionRenderer, { props: { question: q } })
+      const tables = w.findAll('.stat-table')
+      expect(tables).toHaveLength(2)
+      expect(tables[0]!.findAll('td.ask')).toHaveLength(0)
+      expect(tables[1]!.findAll('td.ask')).toHaveLength(1)
+      w.unmount()
+    }
+    expect(seen).toBeGreaterThan(0)
   })
 })

@@ -90,5 +90,8 @@ const segs = computed<Seg[]>(() => {
   border-style: solid;
   border-color: var(--c-green);
   background: #e9faf2;
+  /* 空格里没字时，inline-block 按下边框对齐（上面的 -0.28em 让框正好包住一行字）；填上字以后改按框里那行字的基线对齐，
+     不然整框跟着往下沉约半个字（2026-10-01 用户截图「偏下了」）。这样填进去的词和两边的字在同一条基线上，框的位置也和空着时差不多 */
+  vertical-align: baseline;
 }
 </style>

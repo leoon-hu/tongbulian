@@ -3,9 +3,10 @@ import type { GeoFig, GeoItem, GeoPt, LStr, Question, StemPart } from '@/types/m
 import '@/content/math/grade3' // 副作用：注册生成器与词条
 import { createRng, getGenerator, labelKey } from '@/engine'
 import { translate } from '@/engine/i18n'
-import { cellPerimeter, polyomino } from '../rect'
+import { cellPerimeter, orient, polyomino } from '../rect'
 
 // 长方形和正方形（三下三）的专项检查：答案都从题目本身（图上的顶点、边上标的数、方格，题干的参数）重新推一遍。
+// 三个知识点按课本小节：多边形（含长方形和正方形的特点）、周长（含长方形和正方形的周长）、拼图游戏。
 
 const SEEDS = 150
 function each(kpId: string, fn: (q: Question, d: 1 | 2 | 3) => void): void {
@@ -32,6 +33,17 @@ const answer = (q: Question): string => {
   return labelKey(q.choices!.find((c) => c.id === id)!.label)
 }
 const value = (q: Question): number => Number(answer(q))
+/** 第 1 档出得到的题型（签名开头的那一段） */
+function firstTierKinds(kpId: string, seeds = 400): Set<string> {
+  const gen = getGenerator(kpId)!
+  const out = new Set<string>()
+  for (let seed = 1; seed <= seeds; seed++) {
+    const q = gen(1, createRng(seed))
+    const s = sigOf(q)
+    out.add(s.split('-')[0]!)
+  }
+  return out
+}
 const key = (k: string): string => labelKey({ k })
 const polysOf = (fig: GeoFig): Poly[] => fig.items.filter((it): it is Poly => it.t === 'poly')
 const gridOf = (fig: GeoFig): Grid => fig.items.find((it): it is Grid => it.t === 'grid')!
@@ -119,7 +131,7 @@ describe('多边形', () => {
       else expect(answer(q)).toBe(key(`m3.rect.p${pts.length}`))
       if (!s.startsWith('concave')) expect(interior(pts).every((a) => a < 157)).toBe(true)
     })
-    expect(n).toBeGreaterThan(200)
+    expect(n).toBeGreaterThan(100)
   })
 
   it('不看图的：几边形有几个角、几条边的多边形有几个角', () => {
@@ -159,8 +171,8 @@ describe('多边形', () => {
   })
 })
 
-describe('长方形和正方形的特点', () => {
-  const KP = 'm3s2-03-rect-features'
+describe('多边形：例 1 长方形和正方形的特点、做一做 3 / 4', () => {
+  const KP = 'm3s2-03-polygons'
 
   it('标问号的边：长方形等于它对面那条边，正方形等于标出的那条边', () => {
     let n = 0
@@ -179,48 +191,41 @@ describe('长方形和正方形的特点', () => {
         expect(e[0]).toBeGreaterThan(e[1]!)
       } else expect(value(q)).toBe(labelNums(p)[0])
     })
-    expect(n).toBeGreaterThan(100)
+    expect(n).toBeGreaterThan(40)
   })
 
-  it('是长方形吗 / 是正方形吗：看图上的角是不是都是直角、边是不是都一样长', () => {
+  it('是长方形 / 是正方形，对吗：看图上的角是不是都是直角、边是不是都一样长；判断题配「对 / 不对」', () => {
+    let n = 0
     each(KP, (q) => {
       if (!sigOf(q).startsWith('is-')) return
+      n++
       const pts = polysOf(geoOf(q).figs[0]!)[0]!.pts
       const rights = pts.length === 4 && interior(pts).every((a) => Math.abs(a - 90) < 0.5)
       const e = edges(pts)
       const equal = Math.max(...e) - Math.min(...e) < 0.5
       const yes = textKey(q) === 'm3.rect.isSq' ? rights && equal : rights
-      expect(answer(q)).toBe(key(yes ? 'm3.line.yes' : 'm3.line.no'))
+      expect(answer(q)).toBe(key(yes ? 'm3.rect.yes' : 'm3.rect.no'))
+      expect(translate({ k: textKey(q) }, 'zh')).toMatch(/，对吗？$/)
     })
+    expect(n).toBeGreaterThan(20)
   })
 
-  it('折出最大的正方形：边长是长方形的宽（标出的两个数里小的那个）', () => {
+  it('折出最大的正方形：边长是长方形的宽（标出的两个数里小的那个）；边长与宽相等', () => {
+    let n = 0
     each(KP, (q) => {
+      if (sigOf(q) === 'foldeq') {
+        n++
+        expect(answer(q)).toBe(key('m3.rect.equal'))
+      }
       if (!sigOf(q).startsWith('fold-')) return
       const [a, b] = labelNums(polysOf(geoOf(q).figs[0]!)[0]!)
       expect(value(q)).toBe(Math.min(a!, b!))
       expect(a).not.toBe(b)
     })
+    expect(n).toBeGreaterThan(2)
   })
 
-  it('四连方：答案那幅是 4 个边挨着边的正方形，别的都不是；能拼出 5 种', () => {
-    let n = 0
-    each(KP, (q) => {
-      const s = sigOf(q)
-      if (s === 'tetro-count') expect(value(q)).toBe(5)
-      if (!s.startsWith('tetro-') || s === 'tetro-count') return
-      n++
-      const ok = geoOf(q).figs.map((f) => {
-        const cells = gridOf(f).cells!
-        return cells.length === 4 && edgeConnected(cells)
-      })
-      expect(ok.filter(Boolean)).toHaveLength(1)
-      expect(value(q)).toBe(ok.indexOf(true) + 1)
-    })
-    expect(n).toBeGreaterThan(20)
-  })
-
-  it('特点与名称', () => {
+  it('特点与名称；课本没教梯形，选项里没有', () => {
     each(KP, (q) => {
       const s = sigOf(q)
       if (s.startsWith('cnt-')) expect(value(q)).toBe(4)
@@ -232,7 +237,104 @@ describe('长方形和正方形的特点', () => {
         // 不拿正方形当「对边相等、4 个直角」的干扰项（正方形也符合）
         expect(q.choices!.map((c) => labelKey(c.label))).not.toContain(key('m3.rect.square'))
       }
+      for (const c of q.choices ?? []) expect(translate(c.label, 'zh')).not.toContain('梯形')
     })
+  })
+
+  it('第 1 档：分一分、边和角一样多、例 1 的特点、做一做 3 填边长、做一做 4 折正方形都出得到', () => {
+    const kinds = firstTierKinds(KP)
+    for (const k of ['name', 'count', 'fact', 'opp', 'sq', 'cnt', 'feat', 'fold', 'foldeq']) expect(kinds, k).toContain(k)
+  })
+})
+
+describe('拼图游戏', () => {
+  const KP = 'm3s2-03-puzzle'
+  const isTetro = (cells: GeoPt[]): boolean => cells.length === 4 && edgeConnected(cells)
+  /** 转一转、翻一翻以后最小的写法：同一种四连方写出来一样 */
+  const canon = (cells: GeoPt[]): string =>
+    [0, 1, 2, 3]
+      .flatMap((k) => [orient(cells, k, false), orient(cells, k, true)])
+      .map((c) => c.map((p) => p.join('.')).join('_'))
+      .sort()[0]!
+
+  it('四连方：答案那幅是 4 个边挨着边的正方形，别的都不是；能拼出 5 种', () => {
+    let n = 0
+    each(KP, (q) => {
+      const s = sigOf(q)
+      if (s === 'tetro-count') expect(value(q)).toBe(5)
+      if (!s.startsWith('tetro-') || s === 'tetro-count') return
+      n++
+      const ok = geoOf(q).figs.map((f) => isTetro(gridOf(f).cells!))
+      expect(ok.filter(Boolean)).toHaveLength(1)
+      expect(value(q)).toBe(ok.indexOf(true) + 1)
+    })
+    expect(n).toBeGreaterThan(20)
+  })
+
+  it('是四连方，对吗：按图上的格子判断；边和边重合的拼法：答案那幅连成一片、另一幅有角碰角', () => {
+    let judge = 0
+    let edge = 0
+    each(KP, (q) => {
+      const s = sigOf(q)
+      if (s.startsWith('judge-')) {
+        judge++
+        expect(answer(q)).toBe(key(isTetro(gridOf(geoOf(q).figs[0]!).cells!) ? 'm3.rect.yes' : 'm3.rect.no'))
+      }
+      if (s.startsWith('edge-')) {
+        edge++
+        const ok = geoOf(q).figs.map((f) => edgeConnected(gridOf(f).cells!))
+        expect(ok.filter(Boolean)).toHaveLength(1)
+        expect(value(q)).toBe(ok.indexOf(true) + 1)
+        // 另一幅也是同样多的格子，只是有一处角碰角
+        const [a, b] = geoOf(q).figs.map((f) => gridOf(f).cells!.length)
+        expect(a).toBe(b)
+      }
+    })
+    expect(judge).toBeGreaterThan(30)
+    expect(edge).toBeGreaterThan(10)
+  })
+
+  it('拼长方形 / 正方形：要用的个数 = 小方格数 ÷ 4；拼好的图每块都是四连方、不重叠、正好铺满', () => {
+    let n = 0
+    each(KP, (q) => {
+      const s = sigOf(q)
+      if (s.startsWith('tile-')) {
+        n++
+        const g = gridOf(geoOf(q).figs[0]!)
+        expect((g.w * g.h) % 4).toBe(0)
+        expect(value(q)).toBe((g.w * g.h) / 4)
+      }
+      if (s.startsWith('tiled-') || s.startsWith('sqmore-')) {
+        const fig = geoOf(q).figs[0]!
+        const pieces = fig.items.map((it) => (it as Grid).cells!)
+        for (const p of pieces) expect(isTetro(p), q.id).toBe(true)
+        const all = pieces.flat().map((c) => c.join())
+        expect(new Set(all).size).toBe(all.length)
+        expect(all.length).toBe(fig.w * fig.h)
+        if (s.startsWith('tiled-')) expect(value(q)).toBe(pieces.length)
+        else expect(value(q)).toBe(2)
+      }
+      if (s === 'sqside-4') expect(value(q)).toBe(4)
+    })
+    expect(n).toBeGreaterThan(30)
+  })
+
+  it('四连方的周长：按图上的格子数；哪一个不是同一种：只有它转一转、翻一翻和别的对不上', () => {
+    each(KP, (q) => {
+      const s = sigOf(q)
+      if (s.startsWith('tperim-')) expect(value(q)).toBe(perimOfCells(gridOf(geoOf(q).figs[0]!).cells!))
+      if (s.startsWith('odd-')) {
+        const forms = geoOf(q).figs.map((f) => canon(gridOf(f).cells!))
+        const odd = forms.map((f) => forms.filter((g) => g === f).length === 1)
+        expect(odd.filter(Boolean)).toHaveLength(1)
+        expect(value(q)).toBe(odd.indexOf(true) + 1)
+      }
+    })
+  })
+
+  it('第 1 档：能拼几种、哪个是四连方、对不对、边和边重合、拼长方形和正方形都出得到', () => {
+    const kinds = firstTierKinds(KP)
+    for (const k of ['tetro', 'judge', 'edge', 'tile', 'tiled', 'sqmore', 'sqside']) expect(kinds, k).toContain(k)
   })
 })
 
@@ -255,7 +357,7 @@ describe('周长', () => {
         expect(Math.max(...k) / Math.min(...k)).toBeLessThan(1.02)
       }
     })
-    expect(n).toBeGreaterThan(150)
+    expect(n).toBeGreaterThan(40)
   })
 
   it('正多边形：边长 × 边数（图上每条边一样长，只标一条）', () => {
@@ -295,8 +397,8 @@ describe('周长', () => {
   })
 })
 
-describe('长方形和正方形的周长', () => {
-  const KP = 'm3s2-03-rect-perimeter'
+describe('周长：例 2 长方形和正方形的周长、例 3 怎样拼周长最短、练习九 / 十', () => {
+  const KP = 'm3s2-03-perimeter'
 
   it('看图求周长：长方形 (长 + 宽) × 2，正方形边长 × 4', () => {
     let n = 0
@@ -312,7 +414,34 @@ describe('长方形和正方形的周长', () => {
       }
       if (d === 1) for (const x of nums) expect(x).toBeLessThanOrEqual(30)
     })
-    expect(n).toBeGreaterThan(100)
+    expect(n).toBeGreaterThan(30)
+  })
+
+  it('围法、铁丝（练习九 13、14）：按题目里的数重算', () => {
+    let n = 0
+    each(KP, (q) => {
+      const s = sigOf(q)
+      if (s.startsWith('rope-')) {
+        n++
+        const half = num(q, 'p') / 2
+        let ways = 0
+        for (let w = 1; w < half - w; w++) ways++
+        expect(half % 2).toBe(1) // 围不成正方形，不用争正方形算不算
+        expect(value(q)).toBe(ways)
+      }
+      if (s.startsWith('wire-')) {
+        n++
+        const each = num(q, 'p') / 2
+        const k = textKey(q)
+        if (k === 'm3.rect.wireSq') expect(value(q)).toBe(each / 4)
+        else {
+          const wide = each / 2 / 3
+          expect(Number.isInteger(wide)).toBe(true)
+          expect(value(q)).toBe(k === 'm3.rect.wireLong' ? 2 * wide : wide)
+        }
+      }
+    })
+    expect(n).toBeGreaterThan(5)
   })
 
   it('文字题按题目里的数重算', () => {
@@ -333,16 +462,19 @@ describe('长方形和正方形的周长', () => {
       'm3.rect.combo': (p) => p.p1! + p.p2! - 2 * (p.p2! / 4),
     }
     const seen = new Set<string>()
-    each(KP, (q) => {
-      const k = textKey(q)
-      if (!(k in f)) return
-      seen.add(k)
-      const p = textParams(q) as Record<string, number>
-      expect(value(q), q.id).toBe(f[k]!(p))
-      // 长比宽长、宽不是 0
-      if ('a' in p && 'b' in p) expect(p.a).toBeGreaterThan(p.b!)
-    })
-    expect(seen.size).toBe(Object.keys(f).length)
+    const gen = getGenerator(KP)!
+    for (let seed = 1; seed <= 600; seed++)
+      for (const d of [1, 2, 3] as const) {
+        const q = gen(d, createRng(seed))
+        const k = textKey(q)
+        if (!(k in f)) continue
+        seen.add(k)
+        const p = textParams(q) as Record<string, number>
+        expect(value(q), q.id).toBe(f[k]!(p))
+        // 长比宽长、宽不是 0
+        if ('a' in p && 'b' in p) expect(p.a).toBeGreaterThan(p.b!)
+      }
+    expect([...seen].sort()).toEqual(Object.keys(f).sort())
   })
 
   it('拼成的图形：按图上的小正方形算周长；拼法里周长最短的是最接近正方形的那种', () => {
@@ -359,6 +491,11 @@ describe('长方形和正方形的周长', () => {
         expect(per.filter((x) => x === min)).toHaveLength(1)
         expect(value(q)).toBe(per.indexOf(min) + 1)
         for (const f of geoOf(q).figs) expect(gridOf(f).cells!.length).toBe(num(q, 'n'))
+      }
+      // 拼出什么形周长最短：张数能排成正方形的（16、36），答案是正方形
+      if (s.startsWith('bestshape-')) {
+        expect(Number.isInteger(Math.sqrt(num(q, 'n')))).toBe(true)
+        expect(answer(q)).toBe(key('m3.rect.square'))
       }
     })
   })
@@ -383,17 +520,29 @@ describe('长方形和正方形的周长', () => {
     expect(n).toBeGreaterThan(20)
   })
 
-  it('公式选项：长方形 (长 + 宽) × 2，正方形边长 × 4', () => {
+  it('公式选项：长方形 (长 + 宽) × 2，正方形边长 × 4；干扰项不用下一单元的面积公式', () => {
     each(KP, (q) => {
+      if (!sigOf(q).startsWith('formula-')) return
       if (sigOf(q) === 'formula-rect') expect(answer(q)).toBe(key('m3.rect.fRectP'))
       if (sigOf(q) === 'formula-sq') expect(answer(q)).toBe(key('m3.rect.fSq4'))
+      const shown = q.choices!.map((c) => translate(c.label, 'zh'))
+      for (const area of ['长 × 宽', '边长 × 边长', '长 + 宽']) expect(shown).not.toContain(area)
     })
+  })
+
+  it('第 1 档：周长的意思、量出各边相加（含飞镖形）、例 2 看图算与公式、花坛、例 3 拼成周长最短都出得到', () => {
+    const kinds = firstTierKinds(KP)
+    for (const k of ['def', 'how', 'tri', 'poly', 'rectfig', 'sqfig', 'formula', 'm3.rect.wBed', 'best']) expect(kinds, k).toContain(k)
+    const gen = getGenerator(KP)!
+    let dart = 0
+    for (let seed = 1; seed <= 400; seed++) if (sigOf(gen(1, createRng(seed))).startsWith('poly-dart')) dart++
+    expect(dart).toBeGreaterThan(3)
   })
 })
 
 describe('长方形和正方形：图和文字', () => {
   it('图里没有汉字、坐标都是有限的数，标在边上的只有数和问号；中英文选项都翻译了', () => {
-    for (const kp of ['m3s2-03-polygons', 'm3s2-03-rect-features', 'm3s2-03-perimeter', 'm3s2-03-rect-perimeter']) {
+    for (const kp of ['m3s2-03-polygons', 'm3s2-03-perimeter', 'm3s2-03-puzzle']) {
       each(kp, (q) => {
         for (const part of q.stem) {
           if (part.kind !== 'geo') continue
@@ -407,6 +556,22 @@ describe('长方形和正方形：图和文字', () => {
             }
         }
         for (const lang of ['zh', 'en'] as const) for (const c of q.choices ?? []) expect(translate(c.label, lang)).not.toMatch(/m3\./)
+      })
+    }
+  })
+
+  it('图的说明（静态页会印出来）不写答案：不点名几边形、不说哪一个是、不出「梯形」', () => {
+    for (const kp of ['m3s2-03-polygons', 'm3s2-03-perimeter', 'm3s2-03-puzzle']) {
+      each(kp, (q) => {
+        const geo = q.stem.find((p): p is Geo => p.kind === 'geo')
+        if (!geo) return
+        const s = sigOf(q)
+        expect(geo.alt, q.id).not.toContain('梯形')
+        if (/^(name|count|concave)-/.test(s)) expect(geo.alt, q.id).not.toMatch(/[三四五六七八]边形|三角形/)
+        // 选几号的题：说明里不出「几号」「四连方」这种点名的话
+        if (/^(notpoly|reg|tetro|odd|edge)-/.test(s)) expect(geo.alt, q.id).not.toMatch(/\d：|\d 号/)
+        if (s.startsWith('tetro-') || s.startsWith('judge-')) expect(geo.alt, q.id).not.toContain('四连方')
+        if (s.startsWith('opp-') || s.startsWith('fold-')) expect(geo.alt, q.id).not.toMatch(/问号在|长 \d|宽 \d/)
       })
     }
   })

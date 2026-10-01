@@ -224,7 +224,8 @@ describe('笔算乘法', () => {
         expect(askedExpr(q), q.id).toBe(`${v.a} × ${v.b} = ?`)
         expect(answerNumber(q), q.id).toBe(v.a * v.b)
         expect(String(v.a), `${q.id} 笔算乘法的多位数里没有 0（有 0 的归「有0的乘法」）`).not.toContain('0')
-        expect(String(v.a).length, q.id).toBe(d === 1 ? 2 : d === 2 ? 3 : 4)
+        // 第 1 档两位数、三位数都有（课本的试一试、做一做），第 2 档三位数，第 3 档四位数
+        expect(d === 1 ? [2, 3] : [d === 2 ? 3 : 4], q.id).toContain(String(v.a).length)
         return
       }
       if (textOf(q)?.k === 'm3.mul.check') {
@@ -248,6 +249,25 @@ describe('笔算乘法', () => {
     })
     expect(carry).toBeGreaterThan(plain)
     expect(plain).toBeGreaterThan(10)
+  })
+
+  it('第 1 档两位数、三位数乘一位数都有，三位数里也有不进位的；应用题里有三位数的', () => {
+    const len = new Map<number, number>()
+    let plain3 = 0
+    let word3 = 0
+    each(WRITTEN, (q, d) => {
+      if (d !== 1) return
+      const v = stemsOf(q, 'vertical')[0]
+      if (v) {
+        const n = String(v.a).length
+        len.set(n, (len.get(n) ?? 0) + 1)
+        if (n === 3 && noCarry(v.a, v.b)) plain3++
+      } else if (/^m3\.mul\.w\.(courier|flowerBox|bike|bear)$/.test(textOf(q)?.k ?? '')) word3++
+    })
+    expect(len.get(2)).toBeGreaterThan(40)
+    expect(len.get(3)).toBeGreaterThan(35)
+    expect(plain3).toBeGreaterThan(5)
+    expect(word3).toBeGreaterThan(8)
   })
 
   it('判断题里对的错的都有', () => {

@@ -102,8 +102,8 @@ describe('数据的收集和记录（m3s2-05-record）', () => {
       if (tally) {
         for (const r of tally.rows) {
           expect(r.count, q.id).toBeGreaterThan(0)
-          // 第 1 档一行最多 5 个「正」字；√、○ 最多 12 个（数得过来）
-          if (d === 1) expect(r.count, q.id).toBeLessThanOrEqual(25)
+          // 第 1 档一行最多 7 个「正」字（做一做 1 的小轿车 33 辆）；√、○ 最多 12 个（数得过来）
+          if (d === 1) expect(r.count, q.id).toBeLessThanOrEqual(35)
           if (r.mark !== 'zheng') expect(r.count, q.id).toBeLessThanOrEqual(12)
         }
         // 一个月的天气：三类加起来是 30 或 31 天
@@ -113,17 +113,42 @@ describe('数据的收集和记录（m3s2-05-record）', () => {
     expect([...kinds].sort()).toEqual(['count', 'diff', 'fact', 'fill', 'many', 'most', 'total', 'vote'])
   })
 
-  it('第 1 档：一行或一张记录单、统计表的读法，不出投票推理和混合记号', () => {
+  it('第 1 档：例 1 与做一做都出得到——打 √ 和画「正」字两种记录单、车辆的三种记号、填表、最多；不出投票推理', () => {
+    let sheets = 0
+    let check = 0
+    let mixed = 0
+    const kinds = new Set<string>()
     each('m3s2-05-record', (q, d) => {
       if (d !== 1) return
-      expect(textOf(q).k).not.toBe('m3.data.vote.absent')
-      for (const r of tallyOf(q)?.rows ?? []) expect(r.mark).toBe('zheng')
+      const { k } = textOf(q)
+      expect(k).not.toBe('m3.data.vote.absent')
+      kinds.add(k.replace(/^m3\.data\.(trip|car|weather|color|vote|club|fruit)\./, ''))
+      const marks = new Set((tallyOf(q)?.rows ?? []).map((r) => r.mark))
+      if (!marks.size) return
+      sheets += 1
+      if (marks.size === 1 && marks.has('check')) check += 1
+      if (marks.size > 1) {
+        mixed += 1
+        expect(k.startsWith('m3.data.car.') || k === 'm3.data.fillTable', q.id).toBe(true)
+      }
+    })
+    expect(check / sheets).toBeGreaterThan(0.15)
+    expect(mixed / sheets).toBeGreaterThan(0.15)
+    for (const k of ['count', 'most', 'least', 'm3.data.fillTable', 'm3.data.zhengStrokes', 'm3.data.zhengMeans']) expect(kinds, k).toContain(k)
+  })
+
+  it('投票只有小刚、小雨两名候选人（练习十五 1）', () => {
+    each('m3s2-05-record', (q) => {
+      const tally = tallyOf(q)
+      const [table] = tablesOf(q)
+      const labels = tally ? tally.rows.map((r) => r.label) : table ? (table.rows[0]!.slice(1) as LStr[]) : []
+      for (const l of labels) expect(keyOf(l), q.id).not.toBe('m3.data.item.ming')
     })
   })
 })
 
 describe('复式统计表（m3s2-05-table）', () => {
-  const GROUP_ROW: Record<string, string> = { 'm3.data.boys': 'm3.data.boysNum', 'm3.data.girls': 'm3.data.girlsNum', 'm3.data.g1': 'm3.data.g1', 'm3.data.g3': 'm3.data.g3' }
+  const GROUP_ROW: Record<string, string> = { 'm3.data.boys': 'm3.data.boysNum', 'm3.data.girls': 'm3.data.girlsNum', 'm3.data.g1': 'm3.data.g1Num', 'm3.data.g3': 'm3.data.g3Num' }
   /** 统计表的一行：第一格的词条键 → 后面的数 */
   const rowOf = (t: Table, key: string): number[] => t.rows.find((r) => keyOf(r[0] as LStr) === key)!.slice(1) as number[]
   const colOf = (t: Table, x: LStr): number => t.rows[0]!.findIndex((c, i) => i > 0 && same(c as LStr, x)) - 1
@@ -135,8 +160,27 @@ describe('复式统计表（m3s2-05-table）', () => {
       const tables = tablesOf(q)
       const t = tables[0]!
       // 表里除了表头都是数（要填的格子是 null）
-      for (const row of t.rows.slice(1)) for (const c of row.slice(1)) expect(c === null || typeof c === 'number', q.id).toBe(true)
-      if (k.endsWith('.cell')) {
+      for (const tb of tables) for (const row of tb.rows.slice(1)) for (const c of row.slice(1)) expect(c === null || typeof c === 'number', q.id).toBe(true)
+      // 体质测试：同一个班两次测试的总人数一样（练习十五 3）
+      if (t.rows.some((r) => keyOf(r[0] as LStr) === 'm3.data.g1Num')) {
+        const sumOf = (key: string): number => rowOf(t, key).reduce((a, b) => a + b, 0)
+        expect(sumOf('m3.data.g1Num'), q.id).toBe(sumOf('m3.data.g3Num'))
+      }
+      if (k === 'm3.data.merge') {
+        kinds.add('merge')
+        // 单式表 + 复式表：复式表里只有一格是空的，其余格子和数据一致；空的那一格照单式表（问的那一组）填
+        expect(tables).toHaveLength(2)
+        const [single, merged] = tables as [Table, Table]
+        const rowKey = GROUP_ROW[keyOf(p.g as LStr)]!
+        const cells = merged.rows.flatMap((r, i) => r.slice(1).map((c, j) => ({ i, j, c })))
+        const empty = cells.filter((x) => x.c === null)
+        expect(empty, q.id).toHaveLength(1)
+        const { i, j } = empty[0]!
+        expect(keyOf(merged.rows[i]![0] as LStr), q.id).toBe(rowKey)
+        // 两张表的项目一样、顺序一样
+        expect(single.rows[0]!.slice(1).map((c) => keyOf(c as LStr))).toEqual(merged.rows[0]!.slice(1).map((c) => keyOf(c as LStr)))
+        expect(numAnswer(q), q.id).toBe(single.rows[1]![j + 1])
+      } else if (k.endsWith('.cell')) {
         kinds.add('cell')
         expect(numAnswer(q), q.id).toBe(rowOf(t, GROUP_ROW[keyOf(p.g as LStr)]!)[colOf(t, p.x as LStr)])
       } else if (k.endsWith('.most') && k !== 'm3.data.air.most') {
@@ -159,7 +203,7 @@ describe('复式统计表（m3s2-05-table）', () => {
       } else if (k === 'm3.data.level.more' || k === 'm3.data.level.fewer') {
         kinds.add('level')
         const c = colOf(t, p.x as LStr)
-        const v = rowOf(t, 'm3.data.g3')[c]! - rowOf(t, 'm3.data.g1')[c]!
+        const v = rowOf(t, 'm3.data.g3Num')[c]! - rowOf(t, 'm3.data.g1Num')[c]!
         expect(k.endsWith('more') ? v : -v, q.id).toBeGreaterThan(0)
         expect(numAnswer(q), q.id).toBe(Math.abs(v))
       } else if (k === 'm3.data.rowTotal' || k === 'm3.data.level.rowTotal') {
@@ -201,32 +245,20 @@ describe('复式统计表（m3s2-05-table）', () => {
         }
         // 三位数（课本 133、267……）
         expect(Math.max(...b1, ...b2)).toBeGreaterThanOrEqual(100)
-      } else if (k.startsWith('m3.data.rope.sum')) {
-        kinds.add('ropeSum')
-        const g = rowOf(t, 'm3.data.girlsNum')
-        const b = rowOf(t, 'm3.data.boysNum')
-        const sumRow = t.rows.find((r) => keyOf(r[0] as LStr) === 'm3.data.sum')
-        if (k === 'm3.data.rope.sumAsk') {
-          const at = sumRow!.indexOf(null) - 1
-          sumRow!.slice(1).forEach((c, i) => c !== null && expect(c).toBe(g[i]! + b[i]!))
-          expect(numAnswer(q), q.id).toBe(g[at]! + b[at]!)
-        } else if (k === 'm3.data.rope.sumMost') {
-          const total = g.map((x, i) => x + b[i]!)
-          const max = Math.max(...total)
-          expect(total.filter((x) => x === max)).toHaveLength(1)
-          expect(same(correctLabel(q), t.rows[0]![total.indexOf(max) + 1] as LStr), q.id).toBe(true)
-        } else {
-          // 不及格一栏两行相加（这张表没有合计行）
-          expect(sumRow).toBeUndefined()
-          expect(keyOf(t.rows[0]![1] as LStr)).toBe('m3.data.lv.fail')
-          expect(numAnswer(q), q.id).toBe(g[0]! + b[0]!)
-        }
       } else throw new Error(`没有检查到的题：${q.id} ${k}`)
     })
-    expect([...kinds].sort()).toEqual(['air', 'cell', 'colSum', 'diff', 'grandTotal', 'level', 'most', 'ropeSum', 'rowTotal', 'staff', 'two'])
+    expect([...kinds].sort()).toEqual(['air', 'cell', 'colSum', 'diff', 'grandTotal', 'level', 'merge', 'most', 'rowTotal', 'staff', 'two'])
   })
 
-  it('手机上放得下：一张表最多 5 栏（表头 + 4 项），两张单式表各 4 栏', () => {
+  it('第 1 档：例 2 合表、哪一项最多、一共多少人，做一做的空气质量、图书都出得到', () => {
+    const kinds = new Set<string>()
+    each('m3s2-05-table', (q, d) => {
+      if (d === 1) kinds.add(textOf(q).k)
+    })
+    for (const k of ['m3.data.merge', 'm3.data.sport.most', 'm3.data.book.most', 'm3.data.grandTotal', 'm3.data.rowTotal', 'm3.data.air.most', 'm3.data.air.more']) expect(kinds, k).toContain(k)
+  })
+
+  it('手机上放得下：一张表最多 5 栏（表头 + 4 项），一题两张表时各 4 栏', () => {
     each('m3s2-05-table', (q) => {
       const tables = tablesOf(q)
       for (const t of tables) for (const r of t.rows) expect(r.length, q.id).toBeLessThanOrEqual(tables.length === 2 ? 4 : 5)
@@ -251,23 +283,23 @@ describe('分段整理数据（m3s2-05-segments）', () => {
     ],
   }
   const levelOf = (g: 'boy' | 'girl', n: number): string => ROPE[g].find(([, lo, hi]) => n >= lo && n <= hi)![0]
-  // 练习十五 4 阅读时间、练习十四 4 做家务的时间、例 3 做一做的身高：分段的写法 → 范围
+  // 练习十五 4 阅读时间、练习十四 4 做家务的时间、例 3 做一做的身高：选项里分段的写法（区间写「到」，答错时要朗读）→ 范围
   const BANDS: Record<string, [string, number, number][]> = {
     read: [
-      ['0—30', 0, 30],
-      ['31—60', 31, 60],
+      ['0 到 30', 0, 30],
+      ['31 到 60', 31, 60],
       ['60 以上', 61, Infinity],
     ],
     chore: [
       ['10 及以下', -Infinity, 10],
-      ['11—20', 11, 20],
-      ['21—30', 21, 30],
+      ['11 到 20', 11, 20],
+      ['21 到 30', 21, 30],
       ['31 及以上', 31, Infinity],
     ],
     height: [
       ['119 及以下', -Infinity, 119],
-      ['120—129', 120, 129],
-      ['130—139', 130, 139],
+      ['120 到 129', 120, 129],
+      ['130 到 139', 130, 139],
       ['140 及以上', 140, Infinity],
     ],
   }
@@ -325,6 +357,28 @@ describe('分段整理数据（m3s2-05-segments）', () => {
         const max = Math.max(...counts)
         expect(counts.filter((c) => c === max)).toHaveLength(1)
         expect(zh(correctLabel(q)), q.id).toBe(BANDS[set]![counts.indexOf(max)]![0])
+      } else if (k.startsWith('m3.data.rope.sum')) {
+        kinds.add('ropeSum')
+        // 例 3 后半的整理表：等级 × 女生人数、男生人数（、合计）
+        const row = (key: string): number[] => t!.rows.find((r) => keyOf(r[0] as LStr) === key)!.slice(1) as number[]
+        const g = row('m3.data.girlsNum')
+        const b = row('m3.data.boysNum')
+        const sumRow = t!.rows.find((r) => keyOf(r[0] as LStr) === 'm3.data.sum')
+        expect(t!.rows[0]!.slice(1).map((c) => keyOf(c as LStr))).toEqual(['m3.data.lv.fail', 'm3.data.lv.pass', 'm3.data.lv.good', 'm3.data.lv.excellent'])
+        if (k === 'm3.data.rope.sumAsk') {
+          const at = sumRow!.indexOf(null) - 1
+          sumRow!.slice(1).forEach((c, i) => c !== null && expect(c).toBe(g[i]! + b[i]!))
+          expect(numAnswer(q), q.id).toBe(g[at]! + b[at]!)
+        } else if (k === 'm3.data.rope.sumMost') {
+          const total = g.map((x, i) => x + b[i]!)
+          const max = Math.max(...total)
+          expect(total.filter((x) => x === max)).toHaveLength(1)
+          expect(keyOf(correctLabel(q)), q.id).toBe(keyOf(t!.rows[0]![total.indexOf(max) + 1] as LStr))
+        } else {
+          // 不及格一栏两行相加（这张表没有合计行）
+          expect(sumRow).toBeUndefined()
+          expect(numAnswer(q), q.id).toBe(g[0]! + b[0]!)
+        }
       } else if (k === 'm3.data.rope.countLevel') {
         kinds.add('ropeCount')
         const g = keyOf(p.g as LStr) === 'm3.data.boys' ? 'boy' : 'girl'
@@ -337,7 +391,21 @@ describe('分段整理数据（m3s2-05-segments）', () => {
         expect(numAnswer(q), q.id).toBe(nums.filter((n) => levelOf(g, n) === lv).length)
       } else throw new Error(`没有检查到的题：${q.id} ${k}`)
     })
-    expect([...kinds].sort()).toEqual(['count', 'gender', 'level', 'most', 'ropeCount', 'which'])
+    expect([...kinds].sort()).toEqual(['count', 'gender', 'level', 'most', 'ropeCount', 'ropeSum', 'which'])
+  })
+
+  it('第 1 档：例 3 判等级、数一段有几人、哪一段最多、整理成表（合计、几人没及格），做一做的身高都出得到', () => {
+    const kinds = new Set<string>()
+    each('m3s2-05-segments', (q, d) => {
+      if (d === 1) kinds.add(textOf(q).k)
+    })
+    for (const k of ['m3.data.rope.levelOf', 'm3.data.seg.height', 'm3.data.height.countIn', 'm3.data.rope.countLevel', 'm3.data.seg.mostBand', 'm3.data.rope.sumAsk', 'm3.data.rope.sumMost', 'm3.data.rope.sumFail']) expect(kinds, k).toContain(k)
+  })
+
+  it('选项、答案里的区间写「到」，不写「—」（答错时要朗读，「—」会读成停顿）', () => {
+    each('m3s2-05-segments', (q) => {
+      for (const c of q.choices ?? []) expect(zh(c.label), q.id).not.toContain('—')
+    })
   })
 
   it('第 1 档常考分界上的数（116、115、33……），各段都出', () => {

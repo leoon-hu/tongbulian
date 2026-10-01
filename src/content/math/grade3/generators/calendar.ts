@@ -148,10 +148,10 @@ function calThisYear(d: Difficulty, rng: RNG): Question {
     rng,
   })
 }
-/** 平年 365 天、闰年 366 天；平年 2 月 28 天、闰年 29 天 */
-function calYearDays(d: Difficulty, rng: RNG): Question {
+/** 平年 365 天、闰年 366 天；平年 2 月 28 天、闰年 29 天（febOnly = 只问 2 月几天：p78 红字「2 月有 29 天的年份是闰年，有 28 天的是平年」） */
+function calYearDays(d: Difficulty, rng: RNG, febOnly = false): Question {
   const kind: YearKind = rng.pick(['common', 'leap'])
-  const feb = rng.chance(0.5)
+  const feb = febOnly || rng.chance(0.5)
   const v = feb ? (kind === 'leap' ? 29 : 28) : kind === 'leap' ? 366 : 365
   return numberQuestion({
     kpId: KC,
@@ -214,10 +214,28 @@ function calWdCalc(d: Difficulty, rng: RNG, same: boolean): Question {
   const w = shiftWd(w1, day - 1)
   return labelQuestion({ kpId: KC, type: 'time', difficulty: d, sig: `wdcalc-${w1}-${day}`, stem: [text('m3.cal.wdCalc', { wd: wd(w1), d: day })], correct: wd(w), distractors: weekdayChoices(w), rng })
 }
-/** 用脚注的规则判断：2028、2100、2000 年是平年还是闰年 */
+/** 「每 4 年有一个闰年」（p78 找一找）：给出一个闰年，判断课本年历上的别的年份（2015–2032，不碰整百年） */
+const LEAP_SEEDS = [2016, 2020, 2024]
+function calEvery4(d: Difficulty, rng: RNG): Question {
+  const y0 = rng.pick(LEAP_SEEDS)
+  let y = calYear(rng)
+  while (y === y0) y = calYear(rng)
+  const leap = isLeap(y)
+  return labelQuestion({
+    kpId: KC,
+    type: 'time',
+    difficulty: d,
+    sig: `every4-${y0}-${y}`,
+    stem: [text('m3.cal.every4', { y0, y })],
+    correct: L(leap ? 'm3.cal.leap' : 'm3.cal.common'),
+    distractors: [L(leap ? 'm3.cal.common' : 'm3.cal.leap')],
+    rng,
+  })
+}
+/** 用脚注的规则判断：2028、2100、2000 年是平年还是闰年（centuries = 也出整百年，第 3 档） */
 const CENTURIES = [1900, 2000, 2100, 2400]
-function calLeapRule(d: Difficulty, rng: RNG): Question {
-  const y = rng.chance(0.35) ? rng.pick(CENTURIES) : rng.int(1996, 2036)
+function calLeapRule(d: Difficulty, rng: RNG, centuries = true): Question {
+  const y = centuries ? (rng.chance(0.35) ? rng.pick(CENTURIES) : rng.int(1996, 2036)) : rng.int(2001, 2036)
   const leap = isLeap(y)
   return labelQuestion({
     kpId: KC,
@@ -237,8 +255,8 @@ function calTwoMonths(d: Difficulty, rng: RNG): Question {
   const v = daysIn(2025, m1) + daysIn(2025, m2)
   return numberQuestion({ kpId: KC, type: 'time', difficulty: d, sig: `two-${m1}`, stem: [text('m3.cal.twoMonths', { m1: mon(m1), m2: mon(m2) })], value: v, rng, min: 0, max: 99, smart: [60, 61, 62, v + 1, v - 1] })
 }
-/** 头尾两天都算的经过天数（寒暑假）：same = 同一个月（不出 2 月）；碰到 2 月要说这一年是平年还是闰年 */
-function calSpan(d: Difficulty, rng: RNG, same: boolean): Question {
+/** 头尾两天都算的经过天数（寒暑假）：same = 同一个月（不出 2 月）；否则跨 1 到 cross 个月；碰到 2 月要说这一年是平年还是闰年 */
+function calSpan(d: Difficulty, rng: RNG, same: boolean, cross = 2): Question {
   const kind: YearKind = rng.pick(['common', 'leap'])
   const y = KIND_YEAR[kind]
   let m1: number
@@ -251,7 +269,7 @@ function calSpan(d: Difficulty, rng: RNG, same: boolean): Question {
     d2 = rng.int(d1 + 3, daysIn(y, m1))
   } else {
     m1 = rng.int(1, 10)
-    m2 = m1 + rng.int(1, 2)
+    m2 = m1 + rng.int(1, cross)
     d1 = rng.int(Math.min(10, daysIn(y, m1)), daysIn(y, m1))
     d2 = rng.int(1, daysIn(y, m2))
   }
@@ -272,20 +290,47 @@ function calSpan(d: Difficulty, rng: RNG, same: boolean): Question {
     smart: [v - 1, v + 1, v + (withFeb ? (kind === 'leap' ? -1 : 1) : 1), v - 2],
   })
 }
-/** 从某天起再过 n 天是几月几日（课本 p79 用一用 1 改写：「从 1 月 7 日起，再过 3 天」）；same = 不跨月（不出 2 月）；碰到 2 月要说平年还是闰年 */
+/** 课本 p79 用一用 3 的原题：2026 年 1 月 24 日至 3 月 1 日放寒假（37 天）、7 月 8 日至 8 月 31 日放暑假（55 天） */
+const BOOK_SPANS: [number, number, number, number][] = [
+  [1, 24, 3, 1],
+  [7, 8, 8, 31],
+]
+function calSpanBook(d: Difficulty, rng: RNG): Question {
+  const [m1, d1, m2, d2] = rng.pick(BOOK_SPANS)
+  const v = spanDays(KIND_YEAR.common, m1, d1, m2, d2)
+  const withFeb = m1 <= 2 && m2 >= 2
+  const p = { a: date(m1, d1), b: date(m2, d2) }
+  return numberQuestion({
+    kpId: KC,
+    type: 'time',
+    difficulty: d,
+    sig: `span-${withFeb ? 'common' : 'x'}-${m1}.${d1}-${m2}.${d2}`,
+    stem: [withFeb ? text('m3.cal.spanYear', { kind: L('m3.cal.common'), ...p }) : text('m3.cal.span', p)],
+    value: v,
+    rng,
+    min: 0,
+    max: 999,
+    smart: [v - 1, v + 1, v + 2, v - 2],
+  })
+}
+/**
+ * 从某天起再过 n 天是几月几日（课本 p79 用一用 1 改写：「从 1 月 7 日起，再过 3 天」「从 2 月 6 日起，再过 15 天」）；
+ * same = 不跨月（2 月只出 28 日以内、选项也在 28 日以内，用不着说平年闰年）；跨过 2 月底要说平年还是闰年
+ */
 function calAfter(d: Difficulty, rng: RNG, same: boolean): Question {
   const kind: YearKind = rng.pick(['common', 'leap'])
   const y = KIND_YEAR[kind]
   for (;;) {
-    const m = same ? rng.pick(NON_FEB) : rng.int(1, 12)
+    const m = rng.int(1, 12)
     const day = rng.int(1, daysIn(y, m))
     const n = rng.int(2, same ? 15 : 20)
     const r = addDays(y, m, day, n)
     if (r.m > 12 || (same ? r.m !== m : r.m === m)) continue
+    if (same && m === 2 && r.d + 2 > 28) continue
     // 下一天的月份 / 日期：选项是再过 n − 1、n + 1、n + 2 天（头尾算错、多数一天）
     const others = [n - 1, n + 1, n + 2].map((k) => addDays(y, m, day, k)).filter((x) => x.m <= 12)
     if (others.length < 3) continue
-    const withFeb = m <= 2 && r.m >= 2
+    const withFeb = m <= 2 && r.m >= 2 && !(m === 2 && r.m === 2)
     const a = date(m, day)
     return labelQuestion({
       kpId: KC,
@@ -303,20 +348,29 @@ function calAfter(d: Difficulty, rng: RNG, same: boolean): Question {
 defineGenerator(KC, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.3) return calDaysOf(d, rng)
-    if (roll < 0.55) return calBigSmall(d, rng)
-    if (roll < 0.7) return calFacts(d, rng)
-    return calThisMonth(d, rng)
+    // 年历中的秘密的全部：大月小月、某月几天（记一记）、看月历、平年闰年（红字 + 每 4 年一个）、用一用 1 / 3 的同月版
+    if (roll < 0.18) return calDaysOf(d, rng)
+    if (roll < 0.32) return calBigSmall(d, rng)
+    if (roll < 0.42) return calFacts(d, rng)
+    if (roll < 0.55) return calThisMonth(d, rng)
+    if (roll < 0.67) return calThisYear(d, rng)
+    if (roll < 0.75) return calYearDays(d, rng, true)
+    if (roll < 0.84) return calEvery4(d, rng)
+    if (roll < 0.92) return calAfter(d, rng, true)
+    return calSpan(d, rng, true)
   }
   if (d === 2) {
-    if (roll < 0.2) return calThisYear(d, rng)
-    if (roll < 0.3) return calYearDays(d, rng)
-    if (roll < 0.45) return calConvert(d, rng)
-    if (roll < 0.6) return calMarked(d, rng)
-    if (roll < 0.7) return calCountWd(d, rng)
-    if (roll < 0.8) return calWdCalc(d, rng, true)
-    if (roll < 0.9) return calSpan(d, rng, true)
-    return calAfter(d, rng, true)
+    // 变式：全年几天（复习）、年月换算、认星期、跨月的天数（含课本的寒暑假）、不给提示判断平年闰年
+    if (roll < 0.14) return calYearDays(d, rng)
+    if (roll < 0.25) return calConvert(d, rng)
+    if (roll < 0.36) return calMarked(d, rng)
+    if (roll < 0.45) return calCountWd(d, rng)
+    if (roll < 0.54) return calWdCalc(d, rng, true)
+    if (roll < 0.62) return calLeapRule(d, rng, false)
+    if (roll < 0.7) return calSpanBook(d, rng)
+    if (roll < 0.8) return calSpan(d, rng, false, 1)
+    if (roll < 0.92) return calAfter(d, rng, false)
+    return calTwoMonths(d, rng)
   }
   if (roll < 0.25) return calLeapRule(d, rng)
   if (roll < 0.5) return calSpan(d, rng, false)
@@ -375,9 +429,9 @@ function h24From(d: Difficulty, rng: RNG): Question {
   const v = H - 12
   return numberQuestion({ kpId: K24, type: 'time', difficulty: d, sig: `from24-${H}`, stem: [text('m3.cal.from24', { H, part: part(partOf(H)) })], value: v, rng, min: 0, max: 24, smart: [H - 10, H, v + 1, v - 1] })
 }
-/** 钟面 + 下午 / 晚上 → 24 时计时法（用一用 1）；选择题（钟面配数字键盘在手机上放不下一屏） */
-function h24Clock(d: Difficulty, rng: RNG): Question {
-  const p = pickPart(rng, false)
+/** 钟面 + 上午 / 下午 / 晚上 → 24 时计时法（用一用 1：上午 6 时、上午 9 时、下午 6 时……）；选择题（钟面配数字键盘在手机上放不下一屏） */
+function h24Clock(d: Difficulty, rng: RNG, withAm = false): Question {
+  const p = pickPart(rng, withAm)
   const h = rng.int(...HOURS[p])
   const v = to24(p, h)
   return numberQuestion({
@@ -390,7 +444,8 @@ function h24Clock(d: Difficulty, rng: RNG): Question {
     rng,
     min: 0,
     max: 24,
-    smart: [h, h + 10, v + 1, v - 1],
+    // 上午的时刻也加了 12；下午的忘了加 12
+    smart: p === 'am' ? [h + 12, h + 10, v + 1, v - 1] : [h, h + 10, v + 1, v - 1],
     input: 'choice',
   })
 }
@@ -400,10 +455,11 @@ function hmChoices(H: number, m: number): string[] {
   const out = [`${h}:${pad(m)}`, `${H < 23 ? H + 1 : H - 2}:${pad(m)}`, m % 10 === 0 ? `${H}:0${m / 10}` : `${H - 1}:${pad(m)}`]
   return [...new Set(out)].filter((x) => x !== `${H}:${pad(m)}`)
 }
-function h24ToHm(d: Difficulty, rng: RNG, withClock: boolean): Question {
+/** round = 分钟只取整十（30 分就是半时；用一用 1 的「晚上 8 时 30 分」），第 1 档用 */
+function h24ToHm(d: Difficulty, rng: RNG, withClock: boolean, round = false): Question {
   const p = pickPart(rng, false)
   const h = rng.int(...HOURS[p])
-  const m = rng.pick([10, 15, 20, 25, 30, 35, 40, 45, 50])
+  const m = rng.pick(round ? [10, 20, 30, 30, 40, 50] : [10, 15, 20, 25, 30, 35, 40, 45, 50])
   const H = to24(p, h)
   return labelQuestion({
     kpId: K24,
@@ -542,6 +598,46 @@ function h24Shop(d: Difficulty, rng: RNG): Question {
   }
   return labelQuestion({ kpId: K24, type: 'time', difficulty: d, sig: `${sig}-hm`, stem: [text('m3.cal.shopTotalHm'), shopPart(ls, le, ds, de)], correct: durLabel(total), distractors: durChoices(total), rng })
 }
+/** 下午 / 晚上几时几分的选项：正确的 + 没减 12、减成了 10、差 1 时 */
+function hmLabels(H: number, m: number): { correct: LStr; distractors: LStr[] } {
+  const hm = (h: number): LStr => L('m3.cal.hm', { h, m, mm: pad(m) })
+  return { correct: hm(H - 12), distractors: [hm(H), hm(H - 10), hm(H - 11)] }
+}
+/** 用一用 3 的原题（照课本的数）：营业时间 11:00—14:30、16:30—21:00，晚餐从下午几时几分到晚上几时、一天一共营业几小时 */
+const BOOK_SHOP = [11 * 60, 14.5 * 60, 16.5 * 60, 21 * 60] as const
+function h24ShopBook(d: Difficulty, rng: RNG): Question {
+  const [ls, le, ds, de] = BOOK_SHOP
+  const table = shopPart(ls, le, ds, de)
+  const kind = rng.int(0, 2)
+  if (kind === 0) {
+    const H = Math.floor(ds / 60)
+    return labelQuestion({ kpId: K24, type: 'time', difficulty: d, sig: 'shopbook-from', stem: [text('m3.cal.shopSupperFrom'), table], ...hmLabels(H, ds % 60), rng })
+  }
+  if (kind === 1) {
+    const v = de / 60 - 12
+    return numberQuestion({ kpId: K24, type: 'time', difficulty: d, sig: 'shopbook-close', stem: [text('m3.cal.shopClose'), table], value: v, rng, min: 0, max: 24, smart: [de / 60, v + 1, v - 1] })
+  }
+  const v = (le - ls + (de - ds)) / 60
+  return numberQuestion({ kpId: K24, type: 'time', difficulty: d, sig: 'shopbook-total', stem: [text('m3.cal.shopTotal'), table], value: v, rng, min: 0, max: 24, smart: [v + 1, v - 1, 10] })
+}
+/** 读作息时间表（p80「妈妈的时间表中 14:30 是怎么回事？」）：表里下午 / 晚上的一个时刻是几时几分（整时问几时） */
+function h24PlanRead(d: Difficulty, rng: RNG): Question {
+  for (;;) {
+    const slots = schedule(rng)
+    const times = [...new Set(slots.flatMap((x) => [x.s, x.e]))].filter((t) => t >= 13 * 60 && t < 24 * 60)
+    if (!times.length) continue
+    const t = rng.pick(times)
+    const H = Math.floor(t / 60)
+    const m = t % 60
+    const p = { HM: clock(t), part: part(partOf(H)) }
+    const sig = `planread-${slots.map((x) => `${x.act}${x.s}.${x.e}`).join('-')}-${t}`
+    if (!m) {
+      const v = H - 12
+      return numberQuestion({ kpId: K24, type: 'time', difficulty: d, sig, stem: [text('m3.cal.planReadH', p), schedulePart(slots)], value: v, rng, min: 0, max: 24, smart: [H, H - 10, v + 1, v - 1] })
+    }
+    return labelQuestion({ kpId: K24, type: 'time', difficulty: d, sig, stem: [text('m3.cal.planRead', p), schedulePart(slots)], ...hmLabels(H, m), rng })
+  }
+}
 /** 在校时间（练习十八 5：早上 8 时 10 分到校，12 时放学；下午 2 时到校，17 时放学 → 6 小时 50 分；课本写「分钟」，选项卡里写「分」免得折行） */
 export function schoolPart(amIn: number, amOut: number, pmIn: number, pmOut: number): StemPart {
   return {
@@ -574,16 +670,24 @@ function h24School(d: Difficulty, rng: RNG): Question {
 defineGenerator(K24, (d, rng) => {
   const roll = rng.next()
   if (d === 1) {
-    if (roll < 0.45) return h24To(d, rng)
-    if (roll < 0.75) return h24From(d, rng)
-    return h24Clock(d, rng)
+    // 作息时间表中的秘密的全部：读作息表、找一找四问、24 时计时法（整时与整十分、半时，带钟面）、饭店营业时间的原题
+    if (roll < 0.15) return h24To(d, rng)
+    if (roll < 0.28) return h24From(d, rng)
+    if (roll < 0.38) return h24Clock(d, rng, true)
+    if (roll < 0.5) return h24ToHm(d, rng, true, true)
+    if (roll < 0.58) return h24ToHm(d, rng, false, true)
+    if (roll < 0.73) return h24Facts(d, rng)
+    if (roll < 0.85) return h24ShopBook(d, rng)
+    return h24PlanRead(d, rng)
   }
   if (d === 2) {
-    if (roll < 0.25) return h24ToHm(d, rng, false)
-    if (roll < 0.45) return h24ToHm(d, rng, true)
-    if (roll < 0.6) return h24FromHm(d, rng)
-    if (roll < 0.75) return h24Facts(d, rng)
-    return h24Elapsed(d, rng)
+    // 变式：任意分钟的换算、经过的时间、按作息表 / 营业时间 / 在校时间算时长
+    if (roll < 0.15) return h24ToHm(d, rng, rng.chance(0.5))
+    if (roll < 0.3) return h24FromHm(d, rng)
+    if (roll < 0.45) return h24Elapsed(d, rng)
+    if (roll < 0.7) return h24Schedule(d, rng)
+    if (roll < 0.9) return h24Shop(d, rng)
+    return h24School(d, rng)
   }
   if (roll < 0.4) return h24Schedule(d, rng)
   if (roll < 0.7) return h24Shop(d, rng)

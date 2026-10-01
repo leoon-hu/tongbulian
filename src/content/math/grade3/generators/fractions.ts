@@ -135,9 +135,9 @@ function writeAs(kpId: string, d: Difficulty, n: number, dd: number, rng: RNG): 
   })
 }
 
-/** 分母 / 分子是几（键盘） */
+/** 分母 / 分子是几（键盘；p75「分子、分数线、分母」） */
 function partName(kpId: string, d: Difficulty, n: number, dd: number, rng: RNG): Question {
-  const den = n === 1 || rng.chance(0.6)
+  const den = rng.chance(n === 1 ? 0.7 : 0.6)
   return numberQuestion({
     kpId,
     type: 'fraction',
@@ -188,7 +188,8 @@ function cmpQ(kpId: string, d: Difficulty, sig: string, stem: StemPart[], a: Fra
 
 /** 分子是 1 的分数比大小：「等分的份数越多，每份就越小」；配两幅一样大的长方形 */
 function cmpUnit(kpId: string, d: Difficulty, rng: RNG, withPic: boolean): Question {
-  const maxD = d === 1 ? 6 : d === 2 ? 10 : 12
+  // 例 5(2) 1/2 ○ 1/3、做一做 1/10 ○ 1/7：第 1 档分母就到 10
+  const maxD = d <= 2 ? 10 : 12
   const a = rng.int(2, maxD)
   let b = rng.int(2, maxD)
   if (b === a) b = a === maxD ? a - 1 : a + 1
@@ -235,12 +236,15 @@ defineGenerator('m3s1-08-unit-frac', (d, rng) => {
   const kpId = 'm3s1-08-unit-frac'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：看图说出几分之一（分母 2–6）；也有一句话 + 图、读法
+    // 课本 p74–75、例 5(2)：看图说出几分之一（做一做有 1/8、1/12，分母到 12）、月饼和纸、线段括出一份（试一试）、
+    // 读法与分子 / 分母、分子是 1 的分数比大小（等分的份数越多，每份就越小）
+    if (roll < 0.38) return pickUnit(kpId, d, rng.int(2, 12), rng)
     const n = rng.int(2, 6)
-    if (roll < 0.55) return pickUnit(kpId, d, n, rng)
-    if (roll < 0.75) return textUnit(kpId, d, n, rng)
-    if (roll < 0.87) return writeAs(kpId, d, 1, n, rng)
-    return segmentUnit(kpId, d, n, rng)
+    if (roll < 0.5) return textUnit(kpId, d, n, rng)
+    if (roll < 0.6) return writeAs(kpId, d, 1, rng.int(2, 10), rng)
+    if (roll < 0.7) return partName(kpId, d, 1, rng.int(2, 10), rng)
+    if (roll < 0.8) return segmentUnit(kpId, d, n, rng)
+    return cmpUnit(kpId, d, rng, rng.chance(0.6))
   }
   if (d === 2) {
     const n = rng.int(2, 10)
@@ -299,7 +303,7 @@ function fracToUnits(kpId: string, d: Difficulty, n: number, rng: RNG): Question
 
 /** 同分母的分数比大小（含 n/n，和 1 比）：「平均分成相同的份数后，涂的份数越多，对应的分数越大」 */
 function cmpSame(kpId: string, d: Difficulty, rng: RNG): Question {
-  const n = d === 1 ? rng.int(3, 8) : d === 2 ? rng.int(3, 10) : rng.pick([rng.int(5, 12), rng.pick([15, 16, 20])])
+  const n = d <= 2 ? rng.int(3, 10) : rng.pick([rng.int(5, 12), rng.pick([15, 16, 20])])
   const a = rng.int(1, n)
   // 第 2 档起偶尔和 1 比（6/6 ○ 1、5/6 ○ 1）
   if (d >= 2 && rng.chance(0.2)) {
@@ -411,11 +415,15 @@ defineGenerator('m3s1-08-frac', (d, rng) => {
   const kpId = 'm3s1-08-frac'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：看图写几分之几（分母 3–8，涂 1 到 n−1 份）、几个 1/n 是几分之几、m/n 里面有几个 1/n
-    const n = rng.int(3, 8)
-    if (roll < 0.55) return pickFrac(kpId, d, n, rng)
-    if (roll < 0.75) return unitsToFrac(kpId, d, n, rng)
-    return fracToUnits(kpId, d, n, rng)
+    // 课本 p76–78：看图写几分之几（分母 3–10，涂 1 到 n−1 份）、例 3 几个 1/n 是几分之几、做一做 m/n 里面有几个 1/n、
+    // 例 4 1 分米的尺子上括出几分之几分米、例 5 同分母比大小（含 6/6 ○ 5/6）与分子是 1 的比大小
+    const n = rng.int(3, 10)
+    if (roll < 0.38) return pickFrac(kpId, d, n, rng)
+    if (roll < 0.5) return unitsToFrac(kpId, d, n, rng)
+    if (roll < 0.62) return fracToUnits(kpId, d, n, rng)
+    if (roll < 0.77) return rulerDm(kpId, d, rng)
+    if (roll < 0.94) return cmpSame(kpId, d, rng)
+    return cmpUnit(kpId, d, rng, true)
   }
   if (d === 2) {
     const n = rng.int(3, 10)
@@ -438,9 +446,9 @@ defineGenerator('m3s1-08-frac', (d, rng) => {
 // 分数的简单计算（p81–84、练习十六、练习十八 3–4）
 // ═════════════════════════════════════════════════════════════
 
-/** a/n + b/n（第 1 档 a + b < n，配一幅图：a 份一种颜色、b 份另一种颜色） */
+/** a/n + b/n（和小于 1 时一半配一幅图：a 份一种颜色、b 份另一种颜色）；toOne = 和是 1（做一做 1/2 + 1/2） */
 function addFrac(kpId: string, d: Difficulty, rng: RNG, toOne = false): Question {
-  const n = d === 1 ? rng.int(3, 9) : rng.int(3, 12)
+  const n = toOne ? rng.int(2, d === 1 ? 10 : 12) : d === 1 ? rng.int(3, 9) : rng.int(3, 12)
   let a: number, b: number
   if (toOne) {
     a = rng.int(1, n - 1)
@@ -460,13 +468,17 @@ function addFrac(kpId: string, d: Difficulty, rng: RNG, toOne = false): Question
   const correct: Frac = toOne ? [1, 1] : [s, n]
   // 常见错：分母也相加（3/16）、少算 / 多算一份、只写了一个加数
   const cands: Frac[] = toOne ? [[s, 2 * n], [n - 1, n], [a, n], [b, n], [1, n]] : [[s, 2 * n], [s + 1, n], [s - 1, n], [a * b, n], [s, n + 1]]
-  return fracQ(kpId, d, `add-${a}-${b}-${n}${withPic ? '-p' : ''}`, stem, correct, cands, rng)
+  const sig = `add-${a}-${b}-${n}${withPic ? '-p' : ''}`
+  if (!toOne) return fracQ(kpId, d, sig, stem, correct, cands, rng)
+  // 和是 1：选项里另放一个整数「2」（分子相加当成了得数），整数就不只正确答案一个（不然一眼就能认出）
+  return labelQuestion({ kpId, type: 'fraction', difficulty: d, sig, stem, correct: '1', distractors: ['2', ...fracWrongs(correct, cands, 2)], rng })
 }
 
 /** a/n − b/n（差 > 0） */
 function subFrac(kpId: string, d: Difficulty, rng: RNG): Question {
-  const n = rng.int(3, 12)
-  const a = rng.int(2, n)
+  // 第 1 档照例 1(2) 与做一做（2/8 − 1/8、4/5 − 2/5、8/9 − 7/9、5/6 − 1/6）：分母 3–10，被减数小于 1
+  const n = d === 1 ? rng.int(3, 10) : rng.int(3, 12)
+  const a = rng.int(2, d === 1 ? n - 1 : n)
   const b = rng.int(1, a - 1)
   const r = a - b
   // 常见错：分母也相减（2/0 不成立的就跳过）、加成了、少减 / 多减一份
@@ -508,9 +520,13 @@ function oneAs(kpId: string, d: Difficulty, rng: RNG): Question {
   return numberQuestion({ kpId, type: 'fraction', difficulty: d, sig: `oneas-${n}`, stem: [T('m3.frac.oneAs', { u: fs(1, n) })], value: n, rng, min: 1, max: 20, smart: [1, n - 1, n + 1] })
 }
 
-/** 应用题（例 1、例 2、练习十六）：西瓜、巧克力、脚踏船、菜地、自驾游、彩绳、果汁、彩纸 */
-function calcStory(kpId: string, d: Difficulty, rng: RNG): Question {
-  const kind = rng.int(0, 9)
+/**
+ * 应用题。book = 课本例题与做一做（第 1 档起）：例 1 西瓜（分母 8）、例 2 彩纸（剩下几分之几）、做一做 2 彩绳（分母 10：
+ * 编手链用了几分之几、比编中国结少用了几分之几）、做一做 3 果汁（每人喝了一瓶的几分之几、孩子们比老人们多喝了几分之几）；
+ * 否则是练习十六、十八的巧克力、脚踏船、菜地、自驾游、孩子们一共喝了几分之几（第 3 档）。
+ */
+function calcStory(kpId: string, d: Difficulty, rng: RNG, book: boolean): Question {
+  const kind = book ? rng.pick([0, 1, 7, 7, 8, 9, 10]) : rng.pick([2, 3, 4, 5, 6, 11])
   // 两部分（a + b < n）
   const two = (n: number): [number, number] => {
     const a = rng.int(1, n - 2)
@@ -546,15 +562,21 @@ function calcStory(kpId: string, d: Difficulty, rng: RNG): Question {
   if (kind === 7) {
     const a = rng.int(1, 9)
     const paper = rng.chance(0.5)
-    const n = paper ? rng.pick([4, 5, 6, 8]) : 10
+    const n = paper ? rng.pick([4, 4, 5, 6, 8]) : 10
     const x = paper ? rng.int(1, n - 1) : a
     return fracQ(kpId, d, `${paper ? 'paper' : 'rope'}-${x}-${n}`, [T(paper ? 'm3.frac.paperLeft' : 'm3.frac.ropeLeft', { a: fs(x, n) })], [n - x, n], [[x, n], [n - x + 1, n], [n - x - 1, n], [1, n]], rng)
   }
-  // 果汁：c 个孩子 + o 位老人正好 n 杯
+  if (kind === 10) {
+    // 编手链比编中国结少用了几分之几：中国结用的要多于一半（7/10 → 7/10 − 3/10 = 4/10）
+    const a = rng.int(6, 9)
+    return fracQ(kpId, d, `rope-less-${a}`, [T('m3.frac.ropeLess', { a: fs(a, 10) })], [2 * a - 10, 10], [[10 - a, 10], [a, 10], [2 * a - 9, 10], [2 * a - 11, 10]], rng)
+  }
+  // 果汁：c 个孩子 + o 位老人正好 n 杯（课本 3 个孩子、2 位老人、5 杯）
   const n = rng.int(5, 9)
   const c = rng.int(Math.ceil(n / 2) + (n % 2 === 0 ? 1 : 0), n - 1)
   const o = n - c
-  if (kind === 8) return fracQ(kpId, d, `juice-kids-${c}-${o}`, [T('m3.frac.juiceKids', { n, c, o })], [c, n], [[o, n], [c, o], [c, n + 1], [c - 1, n], [1, n]], rng)
+  if (kind === 8) return fracQ(kpId, d, `juice-each-${c}-${o}`, [T('m3.frac.juiceEach', { n, c, o })], [1, n], [[1, c], [1, o], [c, n], [n, 1], [1, n + 1]], rng)
+  if (kind === 11) return fracQ(kpId, d, `juice-kids-${c}-${o}`, [T('m3.frac.juiceKids', { n, c, o })], [c, n], [[o, n], [c, o], [c, n + 1], [c - 1, n], [1, n]], rng)
   return fracQ(kpId, d, `juice-diff-${c}-${o}`, [T('m3.frac.juiceDiff', { n, c, o })], [c - o, n], [[c, n], [o, n], [c + o, n], [c - o + 1, n]], rng)
 }
 
@@ -562,19 +584,25 @@ defineGenerator('m3s1-08-frac-calc', (d, rng) => {
   const kpId = 'm3s1-08-frac-calc'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：同分母相加（和小于 1），看作几个 1/n 来算
-    if (roll < 0.65) return addFrac(kpId, d, rng)
-    return unitsCalc(kpId, d, rng)
+    // 课本 p81–82：例 1(1) 同分母相加（做一做含 1/2 + 1/2 和是 1）、例 1(2) 与做一做的减法、例 2 1 − 3/4、
+    // 例题和做一做的应用题（西瓜、彩纸、彩绳、果汁）
+    if (roll < 0.25) return addFrac(kpId, d, rng)
+    if (roll < 0.35) return addFrac(kpId, d, rng, true)
+    if (roll < 0.6) return subFrac(kpId, d, rng)
+    if (roll < 0.75) return oneMinus(kpId, d, rng)
+    return calcStory(kpId, d, rng, true)
   }
   if (d === 2) {
-    if (roll < 0.28) return subFrac(kpId, d, rng)
-    if (roll < 0.5) return oneMinus(kpId, d, rng)
-    if (roll < 0.65) return addFrac(kpId, d, rng, true)
-    if (roll < 0.75) return oneAs(kpId, d, rng)
-    if (roll < 0.87) return unitsCalc(kpId, d, rng)
-    return addFrac(kpId, d, rng)
+    // 「想：1 个 1/8 加 2 个 1/8 是 3 个 1/8」、1 可以看作几个 1/n、分母到 12
+    if (roll < 0.2) return unitsCalc(kpId, d, rng)
+    if (roll < 0.32) return oneAs(kpId, d, rng)
+    if (roll < 0.47) return subFrac(kpId, d, rng)
+    if (roll < 0.6) return oneMinus(kpId, d, rng)
+    if (roll < 0.7) return addFrac(kpId, d, rng, true)
+    if (roll < 0.82) return addFrac(kpId, d, rng)
+    return calcStory(kpId, d, rng, true)
   }
-  if (roll < 0.7) return calcStory(kpId, d, rng)
+  if (roll < 0.7) return calcStory(kpId, d, rng, false)
   if (roll < 0.85) return oneMinus(kpId, d, rng)
   return subFrac(kpId, d, rng)
 })
@@ -602,11 +630,11 @@ function setPart(icon: string, k: number, per: number, shaded: number, rng: RNG)
   return dir ? { kind: 'frac-set', icon, groups: k, per, shaded, dir } : { kind: 'frac-set', icon, groups: k, per, shaded }
 }
 
-/** k 份、每份 per 个（n = k × per ≤ max；minPer = 每份至少几个） */
-function setShape(rng: RNG, max: number, minPer = 1): { k: number; per: number; n: number } {
+/** k 份、每份 per 个（n = k × per ≤ max；minPer / maxPer = 每份至少 / 至多几个；课本例 2 是 24 瓶分 3 份，每份 8 个） */
+function setShape(rng: RNG, max: number, minPer = 1, maxPer = 8): { k: number; per: number; n: number } {
   for (;;) {
     const k = rng.pick([2, 3, 4, 5, 6, 8])
-    const per = rng.int(minPer, 5)
+    const per = rng.int(minPer, maxPer)
     const n = k * per
     if (n >= 4 && n <= max) return { k, per, n }
   }
@@ -614,7 +642,7 @@ function setShape(rng: RNG, max: number, minPer = 1): { k: number; per: number; 
 
 /** 看图：涂色的部分是这些物体的几分之几（常见错：用物体的个数当分母、没涂的份数当分母、写反） */
 function setPick(kpId: string, d: Difficulty, rng: RNG): Question {
-  const { k, per, n } = setShape(rng, d === 1 ? 15 : 24)
+  const { k, per, n } = setShape(rng, 24)
   const m = rng.int(1, k - 1)
   const o = rng.pick(OBJECTS)
   const told = per > 1 && rng.chance(0.4)
@@ -624,9 +652,10 @@ function setPick(kpId: string, d: Difficulty, rng: RNG): Question {
 
 /** 平均分成 k 份，每份（或 m 份）有几个（键盘） */
 function setShare(kpId: string, d: Difficulty, rng: RNG): Question {
-  const { k, per, n } = setShape(rng, d === 1 ? 15 : 30, 2)
+  const { k, per, n } = setShape(rng, d === 1 ? 24 : 30, 2)
   const o = rng.pick(OBJECTS.filter((x) => x.key !== 'dot'))
-  const some = d >= 2 && k > 2 && rng.chance(0.5)
+  // 例 2 试一试：平均分成 6 份，其中的 1 份、2 份、3 份……各有几瓶
+  const some = k > 2 && rng.chance(d === 1 ? 0.4 : 0.5)
   const m = some ? rng.int(2, k - 1) : 1
   const withPic = n <= 24
   const stem: StemPart[] = [T(some ? 'm3.frac.setSome' : 'm3.frac.setEach', { n, k, m, obj: objName(o) })]
@@ -637,7 +666,7 @@ function setShare(kpId: string, d: Difficulty, rng: RNG): Question {
 
 /** 一盒苹果平均分成 k 份，每份是这盒苹果的 1/k（开头「一盒苹果平均分成 2 份」） */
 function setUnit(kpId: string, d: Difficulty, rng: RNG): Question {
-  const { k, per, n } = setShape(rng, d === 1 ? 15 : 24, 2)
+  const { k, per, n } = setShape(rng, 24, 2)
   const o = rng.pick(OBJECTS.filter((x) => x.key !== 'dot' && x.key !== 'ball'))
   return fracQ(kpId, d, `box-${o.key}-${n}-${k}`, [T('m3.frac.boxUnit', { n, k, obj: objName(o) })], [1, k], [[1, n], [per, n], [1, per], [k, n], [per, k]], rng)
 }
@@ -655,8 +684,9 @@ function ofNumber(kpId: string, d: Difficulty, rng: RNG): Question {
 }
 
 /** 应用题（例 3、练习十七、练习十八、练习十九）：先求一份是多少，再求几份 */
-function setStory(kpId: string, d: Difficulty, rng: RNG): Question {
-  const kind = rng.int(0, 10)
+function setStory(kpId: string, d: Difficulty, rng: RNG, book = false): Question {
+  // book = 课本例 3（航模小组的女生、男生）、做一做（图书角 45 本的 4/9）、p86 做一做 3、4（9 个三角形涂 1/3、10 根小棒取 2/5）
+  const kind = book ? rng.pick([0, 1, 1, 5, 5, 9]) : rng.int(0, 10)
   const num = (key: string, p: Record<string, LStr | number>, value: number, sig: string, smart: number[]): Question =>
     numberQuestion({ kpId, type: 'fraction', difficulty: d, sig, stem: [T(key, p)], value, rng, min: 1, max: 99, smart })
   if (kind === 0) {
@@ -750,15 +780,20 @@ defineGenerator('m3s1-08-frac-of-set', (d, rng) => {
   const kpId = 'm3s1-08-frac-of-set'
   const roll = rng.next()
   if (d === 1) {
-    // 主干：把一些物体平均分，看图写分数；平均分成几份，每份几个；一盒平均分，每份是几分之一
-    if (roll < 0.5) return setPick(kpId, d, rng)
-    if (roll < 0.8) return setShare(kpId, d, rng)
-    return setUnit(kpId, d, rng)
+    // 课本 p85–87：一盒平均分，每份是几分之一；例 1、例 2 看图写分数、每份 / 几份有几个（12 个、24 瓶）；
+    // 例 3 求一个数的几分之几（12 人的 2/3）与做一做（45 本的 4/9、9 个三角形、10 根小棒）
+    if (roll < 0.25) return setPick(kpId, d, rng)
+    if (roll < 0.4) return setShare(kpId, d, rng)
+    if (roll < 0.5) return setUnit(kpId, d, rng)
+    if (roll < 0.8) return ofNumber(kpId, d, rng)
+    return setStory(kpId, d, rng, true)
   }
   if (d === 2) {
-    if (roll < 0.45) return ofNumber(kpId, d, rng)
-    if (roll < 0.7) return setPick(kpId, d, rng)
-    if (roll < 0.85) return setShare(kpId, d, rng)
+    // 变式：练习十七、十八的应用题（兔子、面粉、合唱队、绳子、钟面、爷爷的年龄、两只猫）
+    if (roll < 0.3) return ofNumber(kpId, d, rng)
+    if (roll < 0.55) return setStory(kpId, d, rng)
+    if (roll < 0.75) return setPick(kpId, d, rng)
+    if (roll < 0.9) return setShare(kpId, d, rng)
     return setUnit(kpId, d, rng)
   }
   if (roll < 0.75) return setStory(kpId, d, rng)

@@ -246,7 +246,8 @@ function genName(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `name-${kind}-${rot}-${letters ? 'L' : midDots ? 'M' : ''}${endDots ? 'D' : ''}`,
-    stem: [text('m3.line.name'), geoPart([fitFig(lineItems(kind, rot, { letters, endDots, midDots }), 18)], lineAlt(kind, letters, endDots))],
+    // 图的说明不说是哪种线（静态页会印出来，别把答案写出来）
+    stem: [text('m3.line.name'), geoPart([fitFig(lineItems(kind, rot, { letters, endDots, midDots }), 18)], `（一条${letters ? '标着字母 A、B 的' : ''}线）`)],
     correct,
     distractors: [...STRAIGHT.map(kindL), NONE].filter((x) => labelKey(x) !== labelKey(correct)),
     rng,
@@ -265,7 +266,7 @@ function genPick(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `pick-${target}-${kinds.join(',')}`,
-    stem: [text('m3.line.pick', { kind: kindL(target) }), geoPart(figs, `（${kinds.map((k, i) => `${i + 1}：${KIND_ZH[k]}`).join('；')}）`, true)],
+    stem: [text('m3.line.pick', { kind: kindL(target) }), geoPart(figs, '（四幅图，编号 1 到 4，各画着一条线）', true)],
     value: kinds.indexOf(target) + 1,
     rng,
     min: 1,
@@ -330,6 +331,20 @@ function genInfinite(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
+/** 两点间所有连线中线段最短，这条线段的长度叫作两点间的距离（p62 红字） */
+function genDistance(kpId: string, d: Difficulty, rng: RNG): Question {
+  return labelQuestion({
+    kpId,
+    type: 'angle',
+    difficulty: d,
+    sig: 'dist',
+    stem: [text('m3.line.distQ')],
+    correct: { k: 'm3.line.distance' },
+    distractors: [{ k: 'm3.line.route' }, kindL('line')],
+    rng,
+  })
+}
+
 /** 两点之间三条路：一条弯路、一条直路、一条折线，哪条最近（例 1、做一做 2） */
 function genRoute(kpId: string, d: Difficulty, rng: RNG): Question {
   const place = rng.pick([
@@ -366,7 +381,7 @@ function genRoute(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `route-${place.icon}-${up}-${nums.join('')}`,
-    stem: [text(place.key), geoPart([fitFig(items, 16)], `（从家到${place.zh}有三条路：${nums[0]} 号是弯路，${nums[1]} 号是直路，${nums[2]} 号是折线）`)],
+    stem: [text(place.key), geoPart([fitFig(items, 16)], `（从家到${place.zh}有三条路，分别标着 1、2、3 号）`)],
     value: nums[1]!,
     rng,
     min: 1,
@@ -489,7 +504,7 @@ function genOverlap(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `overlap-${ab}-${cd}`,
-    stem: [text('m3.line.overlap'), geoPart([fitFig(items, 16)], `（点 A、C 重合，${rel === '=' ? '点 B、D 也重合' : `点 B 在点 D 的${rel === '>' ? '右' : '左'}边`}）`), { kind: 'expr', expr: 'AB ○ CD' }],
+    stem: [text('m3.line.overlap'), geoPart([fitFig(items, 16)], '（线段 AB 和 CD 画在同一条线上，点 A、C 重合在左端）'), { kind: 'expr', expr: 'AB ○ CD' }],
     correct: rel,
     distractors: RELS.filter((r) => r !== rel),
     rng,
@@ -571,7 +586,7 @@ function genIllusion(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `illusion-${x1}-${l1}-${x2}-${l2}-${topOut ? 'o' : 'i'}`,
-    stem: [text('m3.line.illusion'), geoPart([{ w: 12, h: 7, px: 22, items }], `（方格上两条线段：AB 占 ${l1} 格，CD 占 ${l2} 格，两头画着方向相反的箭头）`), { kind: 'expr', expr: 'AB ○ CD' }],
+    stem: [text('m3.line.illusion'), geoPart([{ w: 12, h: 7, px: 22, items }], '（方格上两条线段 AB 和 CD，两头画着方向相反的箭头）'), { kind: 'expr', expr: 'AB ○ CD' }],
     correct: rel,
     distractors: RELS.filter((r) => r !== rel),
     rng,
@@ -581,18 +596,30 @@ function genIllusion(kpId: string, d: Difficulty, rng: RNG): Question {
 defineGenerator('m3s1-07-lines', (d, rng) => {
   const kpId = 'm3s1-07-lines'
   const roll = rng.next()
-  if (d === 1) return roll < 0.34 ? genName(kpId, d, rng) : roll < 0.58 ? genPick(kpId, d, rng) : roll < 0.78 ? genEnds(kpId, d, rng) : genFact(kpId, d, rng)
-  if (d === 2) {
-    if (roll < 0.22) return genRoute(kpId, d, rng)
-    if (roll < 0.36) return genThrough(kpId, d, rng)
-    if (roll < 0.52) return genSegFrom(kpId, d, rng)
-    if (roll < 0.62) return genInfinite(kpId, d, rng)
-    return roll < 0.82 ? genName(kpId, d, rng) : genPick(kpId, d, rng)
+  if (d === 1) {
+    // 课本这一节：认线（做一做 1）、三种线的区别、例 1 哪条路最近与「两点间的距离」、例 2 想一想（点 A 与点 C 重合比长短）
+    if (roll < 0.2) return genName(kpId, d, rng)
+    if (roll < 0.34) return genPick(kpId, d, rng)
+    if (roll < 0.46) return genEnds(kpId, d, rng)
+    if (roll < 0.6) return genFact(kpId, d, rng)
+    if (roll < 0.65) return genDistance(kpId, d, rng)
+    if (roll < 0.85) return genRoute(kpId, d, rng)
+    return genOverlap(kpId, d, rng)
   }
-  if (roll < 0.28) return genCountOnLine(kpId, d, rng)
-  if (roll < 0.44) return genConnect(kpId, d, rng)
-  if (roll < 0.6) return genOverlap(kpId, d, rng)
-  if (roll < 0.78) return genStrips(kpId, d, rng)
+  if (d === 2) {
+    // 练习十二：过一点 / 两点画直线、以 A 为端点的线段、看一看量一量、木条重叠
+    if (roll < 0.14) return genThrough(kpId, d, rng)
+    if (roll < 0.3) return genSegFrom(kpId, d, rng)
+    if (roll < 0.4) return genInfinite(kpId, d, rng)
+    if (roll < 0.56) return genStrips(kpId, d, rng)
+    if (roll < 0.68) return genIllusion(kpId, d, rng)
+    if (roll < 0.8) return genRoute(kpId, d, rng)
+    return roll < 0.9 ? genName(kpId, d, rng) : genPick(kpId, d, rng)
+  }
+  if (roll < 0.3) return genCountOnLine(kpId, d, rng)
+  if (roll < 0.5) return genConnect(kpId, d, rng)
+  if (roll < 0.65) return genOverlap(kpId, d, rng)
+  if (roll < 0.82) return genStrips(kpId, d, rng)
   return genIllusion(kpId, d, rng)
 })
 
@@ -645,22 +672,22 @@ function notAngleItems(kind: 'round' | 'curved', deg: number, rot: number, L = 1
 
 const ANGLE_ROTS = Array.from({ length: 24 }, (_, i) => i * 15)
 
-/** 下面的图形是角吗（练习十三 1） */
+/** 这个图形是角，对吗（练习十三 1；判断题一律「……，对吗？」配 对 / 不对） */
 function genIsAngle(kpId: string, d: Difficulty, rng: RNG): Question {
   const yes = rng.chance(0.5)
   const deg = rng.pick([35, 50, 65, 90, 110, 130, 150])
   const rot = rng.pick(ANGLE_ROTS)
   const not = rng.pick(['round', 'curved'] as const)
   const items = yes ? angleItems(deg, rot, { arms: [rng.int(9, 13) * 10, rng.int(9, 13) * 10] }) : notAngleItems(not, deg, rot)
-  const alt = yes ? '（从一个点引出的两条直直的线）' : not === 'round' ? '（两条线，连接的地方是一段弯弯的圆弧）' : '（一条边是直的，另一条边是弯的）'
   return labelQuestion({
     kpId,
     type: 'angle',
     difficulty: d,
     sig: `is-${yes ? 'y' : not}-${deg}-${rot}`,
-    stem: [text('m3.line.isAngle'), geoPart([fitFig(items, 14)], alt)],
-    correct: { k: yes ? 'm3.line.yes' : 'm3.line.no' },
-    distractors: [{ k: yes ? 'm3.line.no' : 'm3.line.yes' }],
+    // 图的说明不说是不是角（静态页会印出来）
+    stem: [text('m3.line.isAngle'), geoPart([fitFig(items, 14)], '（一个由两条线组成的图形）')],
+    correct: { k: yes ? 'm3.line.ok' : 'm3.line.notOk' },
+    distractors: [{ k: yes ? 'm3.line.notOk' : 'm3.line.ok' }],
     rng,
   })
 }
@@ -680,6 +707,25 @@ function genParts(kpId: string, d: Difficulty, rng: RNG): Question {
     min: 0,
     max: 4,
     smart: vertex ? [2, 0, 3] : [1, 3, 4],
+  })
+}
+
+/** 角通常用符号「∠」来表示，右图的角可以记作「∠1」（p66）：图上角里标着一个数，选它的记法 */
+function genSymbol(kpId: string, d: Difficulty, rng: RNG): Question {
+  const n = rng.int(1, 4)
+  const deg = rng.pick([30, 40, 50, 60, 70, 110, 130])
+  const rot = rng.pick([0, 0, 15, 30, 330, 345])
+  const items: GeoItem[] = [...angleItems(deg, rot, { arms: [130, 120], vertex: true, mark: 'arc' }), { t: 'text', at: along([0, 0], dir(rot + deg / 2), 42), text: String(n) }]
+  // 选项读出来是「1」「1」（∠ 不读），答错时只读正确答案，所以不用另配读法
+  return labelQuestion({
+    kpId,
+    type: 'angle',
+    difficulty: d,
+    sig: `sym-${n}-${deg}-${rot}`,
+    stem: [text('m3.line.symbolQ'), geoPart([fitFig(items, 14)], `（一个角，角里标着数 ${n}）`)],
+    correct: `∠${n}`,
+    distractors: [`${n}∠`, '∠'],
+    rng,
   })
 }
 
@@ -710,7 +756,12 @@ function genAngleDef(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-const POLY_ZH: Record<number, string> = { 3: '三角形', 4: '四边形', 5: '五边形', 6: '六边形', 7: '七边形', 8: '八边形' }
+/** 剪去一个角的图怎么剪（说明不说剩下几个角） */
+const CUT_ALT = {
+  sides: '（一张正方形纸，虚线从相邻两条边上各取一点，剪去一个角）',
+  vertex: '（一张正方形纸，虚线从一个顶点剪到一条边上）',
+  diagonal: '（一张正方形纸，虚线连着两个相对的顶点）',
+} as const
 
 /** 多边形有几个角、几条线段（练习十四 2）：d1 规则的三、四、五边形，d2 起有不规则的、六边形、八边形 */
 function genPolyAngles(kpId: string, d: Difficulty, rng: RNG): Question {
@@ -723,7 +774,7 @@ function genPolyAngles(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `poly-${ask}-${n}-${shapeSig(pts)}`,
-    stem: [text(ask === 'segs' ? 'm3.line.segsIn' : 'm3.line.anglesIn'), geoPart([fitFig([{ t: 'poly', pts, fill: 'b', stroke: 'b' }], 12)], `（一个${regular ? '' : '不规则的'}${POLY_ZH[n]}）`)],
+    stem: [text(ask === 'segs' ? 'm3.line.segsIn' : 'm3.line.anglesIn'), geoPart([fitFig([{ t: 'poly', pts, fill: 'b', stroke: 'b' }], 12)], `（一个${regular ? '' : '不规则的'}多边形）`)],
     value: n,
     rng,
     min: 0,
@@ -751,7 +802,7 @@ function genBigger(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `bigger-${a}-${b}`,
-    stem: [text('m3.line.whichBigger'), geoPart(figs, `（两个角：${big} 号的张口大、边短）`, true)],
+    stem: [text('m3.line.whichBigger'), geoPart(figs, '（两个角，编号 1、2，边画得一长一短）', true)],
     correct: String(big),
     distractors: [String(3 - big), { k: 'm3.line.same' }],
     rng,
@@ -912,7 +963,7 @@ function genCut(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `cut-${way}-${turn}-${shapeSig(keep)}`,
-    stem: [text('m3.line.cut'), geoPart([fitFig(items, 12)], `（正方形纸沿虚线剪去一个角，剩下的是${POLY_ZH[value]}）`)],
+    stem: [text('m3.line.cut'), geoPart([fitFig(items, 12)], CUT_ALT[way])],
     value,
     rng,
     min: 0,
@@ -924,7 +975,15 @@ function genCut(kpId: string, d: Difficulty, rng: RNG): Question {
 defineGenerator('m3s1-07-angles', (d, rng) => {
   const kpId = 'm3s1-07-angles'
   const roll = rng.next()
-  if (d === 1) return roll < 0.4 ? genIsAngle(kpId, d, rng) : roll < 0.58 ? genParts(kpId, d, rng) : roll < 0.75 ? genAngleDef(kpId, d, rng) : genPolyAngles(kpId, d, rng)
+  if (d === 1) {
+    // p66–67：角的定义、顶点和边、「∠1」的记法、打开折扇张口越大角越大；练习十四 2 数多边形的角
+    if (roll < 0.28) return genIsAngle(kpId, d, rng)
+    if (roll < 0.44) return genParts(kpId, d, rng)
+    if (roll < 0.6) return genAngleDef(kpId, d, rng)
+    if (roll < 0.72) return genSymbol(kpId, d, rng)
+    if (roll < 0.82) return genBigger(kpId, d, rng)
+    return genPolyAngles(kpId, d, rng)
+  }
   if (d === 2) return roll < 0.3 ? genPolyAngles(kpId, d, rng) : roll < 0.6 ? genBigger(kpId, d, rng) : roll < 0.82 ? genCross(kpId, d, rng) : genIsAngle(kpId, d, rng)
   return roll < 0.3 ? genFan(kpId, d, rng) : roll < 0.5 ? genCube(kpId, d, rng) : roll < 0.8 ? genCut(kpId, d, rng) : genBigger(kpId, d, rng)
 })
@@ -936,7 +995,6 @@ defineGenerator('m3s1-07-angles', (d, rng) => {
 type AngleKind = 'acute' | 'right' | 'obtuse'
 const AKINDS: AngleKind[] = ['acute', 'right', 'obtuse']
 const akindL = (k: AngleKind): LStr => ({ k: `m3.line.${k}` })
-const AKIND_ZH: Record<AngleKind, string> = { acute: '锐角', right: '直角', obtuse: '钝角' }
 const kindOf = (deg: number): AngleKind => (deg < 90 ? 'acute' : deg === 90 ? 'right' : 'obtuse')
 
 /** 按档取一个角的度数：d1 / d2 锐角 25–65、钝角 115–160（离直角远），d3 锐角 65–78、钝角 102–115（接近直角） */
@@ -957,7 +1015,7 @@ function genKind(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `kind-${deg}-${rot}-${mark ?? 'n'}`,
-    stem: [text('m3.line.kindQ'), geoPart([fitFig(angleItems(deg, rot, { vertex: true, mark }), 14)], `（一个${AKIND_ZH[kind]}${mark === 'right' ? '，画着直角记号' : ''}）`)],
+    stem: [text('m3.line.kindQ'), geoPart([fitFig(angleItems(deg, rot, { vertex: true, mark }), 14)], `（一个角${mark === 'right' ? '，顶点处画着小方块' : ''}）`)],
     correct: akindL(kind),
     distractors: AKINDS.filter((k) => k !== kind).map(akindL),
     rng,
@@ -975,7 +1033,7 @@ function genPickKind(kpId: string, d: Difficulty, rng: RNG): Question {
     type: 'angle',
     difficulty: d,
     sig: `pk-${target}-${degs.join('.')}`,
-    stem: [text('m3.line.pick', { kind: akindL(target) }), geoPart(figs, `（${order.map((k, i) => `${i + 1}：${AKIND_ZH[k]}`).join('；')}）`, true)],
+    stem: [text('m3.line.pick', { kind: akindL(target) }), geoPart(figs, '（三个角，编号 1 到 3）', true)],
     value: order.indexOf(target) + 1,
     rng,
     min: 1,
@@ -1095,7 +1153,9 @@ function genCountKind(kpId: string, d: Difficulty, rng: RNG): Question {
   let pts: GeoPt[]
   let angles: number[]
   let name: string
-  if (d === 2) {
+  let rtri = false
+  // 第 1、2 档是做一做 p68 2 的三种图形（长方形、正方形、直角三角形）；第 3 档是练习十三 5 的各种三角形和四边形
+  if (d <= 2) {
     const s = rng.pick(['rect', 'square', 'rtri'] as const)
     if (s === 'rtri') ({ pts, angles } = trianglePts('right', rng))
     else {
@@ -1109,11 +1169,13 @@ function genCountKind(kpId: string, d: Difficulty, rng: RNG): Question {
       ]
       angles = [90, 90, 90, 90]
     }
-    name = { rect: '长方形', square: '正方形', rtri: '直角三角形' }[s]
+    // 说明里不说「直角三角形」（静态页会印出来，等于把直角数写出来）
+    name = { rect: '长方形', square: '正方形', rtri: '三角形' }[s]
+    rtri = s === 'rtri'
   } else if (rng.chance(0.5)) {
     const kind = rng.pick(AKINDS)
     ;({ pts, angles } = trianglePts(kind, rng))
-    name = `${AKIND_ZH[kind]}三角形`
+    name = '三角形'
   } else {
     const q = rng.pick(['para', 'trap', 'rtrap', 'rect'] as const)
     const a = rng.pick([50, 55, 60, 65, 70])
@@ -1151,9 +1213,10 @@ function genCountKind(kpId: string, d: Difficulty, rng: RNG): Question {
       ]
       angles = [90, 90, 90, 90]
     }
-    name = { para: '平行四边形', trap: '梯形', rtrap: '直角梯形', rect: '长方形' }[q]
+    // 课本没教梯形、平行四边形的名字：说明里一律叫四边形
+    name = '四边形'
   }
-  const ask: AngleKind = d === 2 ? (name === '直角三角形' && rng.chance(0.4) ? 'acute' : 'right') : rng.pick(AKINDS)
+  const ask: AngleKind = d === 1 ? 'right' : d === 2 ? (rtri && rng.chance(0.4) ? 'acute' : 'right') : rng.pick(AKINDS)
   const value = angles.filter((x) => kindOf(x) === ask).length
   const turn = rng.pick([0, 0, 15, -15, 90, 180])
   const shown = pts.map((p) => rotate(p, turn))
@@ -1174,7 +1237,14 @@ function genCountKind(kpId: string, d: Difficulty, rng: RNG): Question {
 defineGenerator('m3s1-07-angle-kinds', (d, rng) => {
   const kpId = 'm3s1-07-angle-kinds'
   const roll = rng.next()
-  if (d === 1) return roll < 0.5 ? genKind(kpId, d, rng) : roll < 0.75 ? genPickKind(kpId, d, rng) : genKindDef(kpId, d, rng)
-  if (d === 2) return roll < 0.3 ? genCountKind(kpId, d, rng) : roll < 0.58 ? genClock(kpId, d, rng) : roll < 0.72 ? genRuler(kpId, d, rng) : roll < 0.88 ? genKind(kpId, d, rng) : genPickKind(kpId, d, rng)
+  if (d === 1) {
+    // p67–68：三角尺上的直角、做一做 2 数直角、例 3 锐角比直角小、钝角比直角大、「每个三角尺上都有两个锐角」
+    if (roll < 0.36) return genKind(kpId, d, rng)
+    if (roll < 0.54) return genPickKind(kpId, d, rng)
+    if (roll < 0.7) return genKindDef(kpId, d, rng)
+    if (roll < 0.9) return genCountKind(kpId, d, rng)
+    return genRuler(kpId, d, rng)
+  }
+  if (d === 2) return roll < 0.3 ? genCountKind(kpId, d, rng) : roll < 0.58 ? genClock(kpId, d, rng) : roll < 0.68 ? genRuler(kpId, d, rng) : roll < 0.86 ? genKind(kpId, d, rng) : genPickKind(kpId, d, rng)
   return roll < 0.4 ? genKind(kpId, d, rng) : roll < 0.6 ? genPickKind(kpId, d, rng) : genCountKind(kpId, d, rng)
 })

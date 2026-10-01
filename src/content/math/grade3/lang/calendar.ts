@@ -39,6 +39,7 @@ export const ZH: Dict = {
   'm3.cal.countWd': '这个月有几个{wd}？',
   'm3.cal.wdCalc': '这个月的 1 日是{wd}，{d} 日是星期几？',
   'm3.cal.leapRule': '{y} 年是平年还是闰年？',
+  'm3.cal.every4': '每 4 年有一个闰年。{y0} 年是闰年，{y} 年是平年还是闰年？',
   'm3.cal.twoMonths': '{m1}和 {m2}一共有几天？',
   'm3.cal.span': '从 {a}到 {b}，头尾两天都算，一共有多少天？',
   'm3.cal.spanYear': '这一年是{kind}。从 {a}到 {b}，头尾两天都算，一共有多少天？',
@@ -89,6 +90,9 @@ export const ZH: Dict = {
   'm3.cal.shopTotal': '饭店一天一共营业几小时？',
   'm3.cal.shopTotalHm': '饭店一天一共营业几小时几分？',
   'm3.cal.shopClose': '饭店晚上几时关门？',
+  'm3.cal.shopSupperFrom': '晚餐从下午几时几分开始营业？',
+  'm3.cal.planRead': '作息时间表里的 {HM} 是{part}几时几分？',
+  'm3.cal.planReadH': '作息时间表里的 {HM} 是{part}几时？',
   'm3.cal.schoolTotal': '小亮全天在校几小时几分？',
 }
 
@@ -119,6 +123,7 @@ export const EN: Dict = {
   'm3.cal.countWd': 'How many {wd}s are there in this month?',
   'm3.cal.wdCalc': 'Day 1 of this month is a {wd}. What day of the week is day {d}?',
   'm3.cal.leapRule': 'Is {y} a common year or a leap year?',
+  'm3.cal.every4': 'There is one leap year every 4 years. {y0} is a leap year. Is {y} a common year or a leap year?',
   'm3.cal.twoMonths': 'How many days are there in {m1} and {m2} together?',
   'm3.cal.span': 'From {a} to {b}, counting both the first and the last day, how many days are there?',
   'm3.cal.spanYear': 'This year is a {kind}. From {a} to {b}, counting both the first and the last day, how many days are there?',
@@ -167,6 +172,9 @@ export const EN: Dict = {
   'm3.cal.shopTotal': 'How many hours is the restaurant open in a day?',
   'm3.cal.shopTotalHm': 'How long is the restaurant open in a day?',
   'm3.cal.shopClose': 'At what hour in the evening does the restaurant close?',
+  'm3.cal.shopSupperFrom': 'At what time in the afternoon does the restaurant start serving supper?',
+  'm3.cal.planRead': 'In the timetable, what time {part} is {HM}?',
+  'm3.cal.planReadH': 'In the timetable, what hour {part} is {HM}?',
   'm3.cal.schoolTotal': 'How long is Xiaoliang at school in the whole day?',
 }
 
@@ -197,6 +205,7 @@ export const PY: Record<string, string> = {
   'm3.cal.countWd': 'zhè ge yuè yǒu jǐ gè',
   'm3.cal.wdCalc': 'zhè ge yuè de rì shì rì shì xīng qī jǐ',
   'm3.cal.leapRule': 'nián shì píng nián hái shi rùn nián',
+  'm3.cal.every4': 'měi nián yǒu yí gè rùn nián nián shì rùn nián nián shì píng nián hái shi rùn nián',
   'm3.cal.twoMonths': 'hé yí gòng yǒu jǐ tiān',
   'm3.cal.span': 'cóng dào tóu wěi liǎng tiān dōu suàn yí gòng yǒu duō shao tiān',
   'm3.cal.spanYear': 'zhè yì nián shì cóng dào tóu wěi liǎng tiān dōu suàn yí gòng yǒu duō shao tiān',
@@ -245,5 +254,8 @@ export const PY: Record<string, string> = {
   'm3.cal.shopTotal': 'fàn diàn yì tiān yí gòng yíng yè jǐ xiǎo shí',
   'm3.cal.shopTotalHm': 'fàn diàn yì tiān yí gòng yíng yè jǐ xiǎo shí jǐ fēn',
   'm3.cal.shopClose': 'fàn diàn wǎn shang jǐ shí guān mén',
+  'm3.cal.shopSupperFrom': 'wǎn cān cóng xià wǔ jǐ shí jǐ fēn kāi shǐ yíng yè',
+  'm3.cal.planRead': 'zuò xī shí jiān biǎo lǐ de shì jǐ shí jǐ fēn',
+  'm3.cal.planReadH': 'zuò xī shí jiān biǎo lǐ de shì jǐ shí',
   'm3.cal.schoolTotal': 'xiǎo liàng quán tiān zài xiào jǐ xiǎo shí jǐ fēn',
 }
