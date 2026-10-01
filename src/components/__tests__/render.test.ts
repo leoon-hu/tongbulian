@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import type { StemPart } from '@/types/models'
 import '@/content/math/grade1' // 副作用：注册生成器与词条
@@ -14,6 +15,9 @@ import NumberLine from '@/components/math/NumberLine.vue'
 import RulerGauge from '@/components/math/RulerGauge.vue'
 import AngleGlyph from '@/components/math/AngleGlyph.vue'
 import ShapeGlyph from '@/components/math/ShapeGlyph.vue'
+import MoneyStack from '@/components/math/MoneyStack.vue'
+import TenFrame from '@/components/math/TenFrame.vue'
+import { tenFrameProps } from '@/content/math/shared/demo'
 import VerticalForm from '@/components/math/VerticalForm.vue'
 import { hasBlank } from '@/components/practice/blank'
 import ChoiceCards from '@/components/ui/ChoiceCards.vue'
@@ -101,7 +105,16 @@ describe('答案填在题目里（U5）', () => {
     let blanks = 0
     for (const kp of registered) {
       for (const q of buildSession(kp.id, 8, { seed: 3 })) {
-        const expected = q.input === 'numpad' && q.stem.some((p) => (p.kind === 'expr' && p.expr.includes('?')) || p.kind === 'vertical')
+        // 二年级还有除法竖式里空着的商 / 余数（有余数的除法）和统计表里要填的那一格（分类与整理）
+        const expected =
+          q.input === 'numpad' &&
+          q.stem.some(
+            (p) =>
+              (p.kind === 'expr' && p.expr.includes('?')) ||
+              p.kind === 'vertical' ||
+              (p.kind === 'long-division' && [p.quotient, ...(p.rows ?? [])].some((r) => r?.text === '?')) ||
+              (p.kind === 'stat-table' && p.rows.some((r) => r.includes(null))),
+          )
         expect(hasBlank(q)).toBe(expected)
         if (!expected) continue
         blanks += 1
@@ -115,6 +128,8 @@ describe('答案填在题目里（U5）', () => {
           const cells = w.findAll('.vertical .answer .typed').map((c) => c.text())
           expect(cells.slice(-2)).toEqual(['1', '2'])
         }
+        if (q.stem.some((p) => p.kind === 'long-division')) expect(w.findAll('.long-division .num.typed').map((c) => c.text())).toEqual(['1', '2'])
+        if (q.stem.some((p) => p.kind === 'stat-table')) expect(w.find('.stat-table .q').text()).toBe('12')
         w.unmount()
       }
     }
@@ -154,25 +169,78 @@ describe('位置：题干方位词与图标轴一致（回归：QuestionRenderer
     fb: { own: ['前', '后'], foreign: ['左', '右', '上', '下'] },
   }
 
-  it('三轴题目渲染出的方向字都自洽，上下题不再退回左右', () => {
-    const gen = getGenerator('s1-00-position')!
-    const seen = new Set<string>()
-    for (let seed = 1; seed <= 200; seed++) {
-      const q = gen(((seed % 3) + 1) as 1 | 2 | 3, createRng(seed))
-      const line = q.stem.find((p) => p.kind === 'lineup') as
-        | Extract<StemPart, { kind: 'lineup' }>
-        | undefined
-      if (!line?.axis) continue
-      seen.add(line.axis)
+  it('前后、左右两个轴的题目渲染出的方向字都自洽（一年级只教前后左右，不出上下）', () => {
+    for (const kpId of ['s1-00-position', 's1-01-ordinal']) {
+      const gen = getGenerator(kpId)!
+      const seen = new Set<string>()
+      for (let seed = 1; seed <= 120; seed++) {
+        const q = gen(((seed % 3) + 1) as 1 | 2 | 3, createRng(seed))
+        const line = q.stem.find((p) => p.kind === 'lineup') as
+          | Extract<StemPart, { kind: 'lineup' }>
+          | undefined
+        if (!line?.axis) continue
+        seen.add(line.axis)
+        const w = mount(QuestionRenderer, { props: { question: q } })
+        const html = w.html()
+        const { own, foreign } = AXIS_CHARS[line.axis]
+        for (const c of own) expect(html).toContain(c)
+        for (const c of foreign) expect(html).not.toContain(c)
+        w.unmount()
+      }
+      // 两个轴都覆盖到才算真的锁住
+      expect(seen).toEqual(new Set(['lr', 'fb']))
+    }
+  })
+})
+
+describe('一年级的教具（2026-10-01 按课本核对后）', () => {
+  it('平面图形：SVG 直边，颜色由 tone 定、和图形无关，转了角度也不出 NaN', () => {
+    const a = mount(ShapeGlyph, { props: { shape: 'square', tone: 2, turn: 45 } })
+    const b = mount(ShapeGlyph, { props: { shape: 'triangle', tone: 2, form: 1 } })
+    expect(a.find('svg.flat.square polygon').attributes('fill')).toBe(b.find('svg.flat.triangle polygon').attributes('fill'))
+    expect(a.html()).not.toContain('NaN')
+    expect(a.find('polygon').attributes('points')!.split(' ')).toHaveLength(4)
+    a.unmount()
+    b.unmount()
+    const c = mount(ShapeGlyph, { props: { shape: 'circle', tone: 4 } })
+    expect(c.find('svg.flat.circle circle').exists()).toBe(true)
+    c.unmount()
+  })
+
+  it('认识人民币：分币也能画，金额写成「几角几分」；50 元是绿色', () => {
+    const w = mount(MoneyStack, { props: { pieces: [{ fen: 5000, form: 'note' }, { fen: 5, form: 'coin' }] } })
+    const pieces = w.findAll('.piece')
+    expect(pieces.map((p) => p.text())).toEqual(['50元', '5分'])
+    expect(pieces[1]!.classes()).toContain('fen')
+    expect(pieces[0]!.attributes('style')).toMatch(/63, 154, 107|#3f9a6b/i)
+    w.unmount()
+  })
+
+  it('答错讲解：5 + 8 格里放 8、拆 5，最后一句按原题说「所以 5 + 8 = 13」', async () => {
+    vi.useFakeTimers()
+    const w = mount(TenFrame, { props: { ...tenFrameProps({ kind: 'make-ten', a: 5, b: 8 }), autoDemo: true } })
+    expect(w.findAll('.dot.orange')).toHaveLength(8)
+    expect(w.findAll('.dot.blue')).toHaveLength(5)
+    vi.advanceTimersByTime(6000)
+    await nextTick()
+    expect(w.find('.caption').text().replace(/[a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]/g, '')).toContain('所以 5 + 8 = 13')
+    w.unmount()
+    vi.useRealTimers()
+  })
+
+  it('拼一拼、七巧板的图（GeoFigure）能画出来', () => {
+    const gen = getGenerator('s2-01-flat-shapes')!
+    let checked = 0
+    for (let seed = 1; seed <= 80; seed++) {
+      const q = gen(1, createRng(seed))
+      if (!q.stem.some((p) => p.kind === 'geo')) continue
+      checked++
       const w = mount(QuestionRenderer, { props: { question: q } })
-      const html = w.html()
-      const { own, foreign } = AXIS_CHARS[line.axis]
-      for (const c of own) expect(html).toContain(c)
-      for (const c of foreign) expect(html).not.toContain(c)
+      expect(w.findAll('path').length).toBeGreaterThan(1)
+      expect(w.html()).not.toContain('NaN')
       w.unmount()
     }
-    // 覆盖到上下前后左右三个轴才算真的锁住
-    expect(seen).toEqual(new Set(['lr', 'ud', 'fb']))
+    expect(checked).toBeGreaterThan(5)
   })
 })
 
@@ -307,7 +375,7 @@ describe('拼音注音', () => {
       },
     })
     const cards = w.findAll('button')
-    expect(cards[0]!.findAll('rt').map((r) => r.text())).toEqual(['yí', 'yàng', 'duō'])
+    expect(cards[0]!.findAll('rt').map((r) => r.text())).toEqual(['tóng', 'yàng', 'duō'])
     expect(cards[1]!.findAll('rt')).toHaveLength(0)
     expect(cards[2]!.findAll('rt')).toHaveLength(0)
     expect(cards[3]!.findAll('rt').map((r) => r.text())).toEqual(['yuán', 'jiǎo'])

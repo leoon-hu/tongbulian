@@ -84,8 +84,8 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
       <TimesRows v-else-if="part.kind === 'times-rows'" :icon="part.icon" :per="part.per" :rows="part.rows" />
       <ClockFace v-else-if="part.kind === 'clock'" :hour="part.hour" :minute="part.minute" />
       <MoneyStack v-else-if="part.kind === 'money'" :pieces="part.pieces" />
-      <ShapeGlyph v-else-if="part.kind === 'shape'" :shape="part.shape" :size="96" />
-      <ShapeGroup v-else-if="part.kind === 'shape-group'" :shapes="part.shapes" />
+      <ShapeGlyph v-else-if="part.kind === 'shape'" :shape="part.shape" :size="96" :tone="part.tone" :turn="part.turn" :form="part.form" />
+      <ShapeGroup v-else-if="part.kind === 'shape-group'" :shapes="part.shapes" :tones="part.tones" :turns="part.turns" :forms="part.forms" />
       <TileGrid v-else-if="part.kind === 'tiles'" :rows="part.rows" :cols="part.cols" />
       <PatternSequence v-else-if="part.kind === 'sequence'" :cells="part.cells" />
       <Lineup

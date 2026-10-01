@@ -20,7 +20,8 @@ const emit = defineEmits<{ select: [id: string] }>()
 /**
  * 文字选项的长度（纯数字的选项不算，770、分数 3/8、小数 0.5 这种两列放得下）：
  * wordy = 有 3 个字以上的文字（一样多、长方体、12元…，对战手机紧凑版排成一列，窄卡片里不折行）；
- * long = 有 4 个字以上的（平行四边形、11元5角…，字号小一档）
+ * long = 有 4 个字以上的（平行四边形、11元5角…，字号小一档）；
+ * longer = 6 个字以上（九千零三十六这种汉字读法、语文的短句），再小一点、两边留白收窄，手机上两列不在词中间折行
  */
 const textLen = computed(() =>
   props.choiceStyle === 'pinyin' || props.choiceStyle === 'emoji'
@@ -29,10 +30,11 @@ const textLen = computed(() =>
 )
 const wordy = computed(() => textLen.value >= 3)
 const long = computed(() => textLen.value > 3)
+const longer = computed(() => textLen.value >= 6)
 </script>
 
 <template>
-  <div class="cards" :class="[{ wordy, long }, choiceStyle ? `as-${choiceStyle}` : '']">
+  <div class="cards" :class="[{ wordy, long, longer }, choiceStyle ? `as-${choiceStyle}` : '']">
     <button
       v-for="c in choices"
       :key="c.id"
@@ -78,6 +80,10 @@ const long = computed(() => textLen.value > 3)
 .cards.long .card {
   font-size: var(--fs-lg);
   padding: 6px 8px;
+}
+.cards.longer .card {
+  font-size: 20px;
+  padding: 6px 4px;
 }
 /* 语文（需求 Y3 / Y4）：拼音用初学者字体（单层 a / g）；考认字的字是不注音的楷体大字；图放大 */
 .cards.as-pinyin .card {

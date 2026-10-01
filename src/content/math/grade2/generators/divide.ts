@@ -3,7 +3,7 @@ import type { RNG } from '@/engine'
 import { defineGenerator, labelQuestion, numberQuestion } from '@/engine'
 
 // ─────────────────────────────────────────────────────────────
-// 表内除法：平均分（看图）、用口诀求商（2~6 / 7~9）、用除法解决问题
+// 表内除法：平均分（看图）、除法（被除数 / 除数 / 商、写算式）、用口诀求商（1~6 / 7~9）、用除法解决问题
 // ─────────────────────────────────────────────────────────────
 
 const ITEMS = ['🍎', '🍬', '⭐', '🎈', '🍪', '🌸', '🎁', '🧁', '🥟', '🍓']
@@ -68,7 +68,31 @@ function genShare(d: Difficulty, rng: RNG): Question {
   const t = k * each
   const pic: StemPart = { kind: 'objects', icon: item, count: t }
   const roll = rng.next()
-  if (roll < 0.4) {
+  if (roll < 0.15) {
+    // 做一做「哪些分法是平均分」：每一排是一份，一样多才是平均分
+    const equal = rng.chance(0.5)
+    const counts = Array.from({ length: k }, () => each)
+    if (!equal) {
+      const i = rng.int(0, k - 1)
+      const j = (i + rng.int(1, k - 1)) % k
+      counts[i] = each + 1
+      counts[j] = each - 1
+    }
+    return labelQuestion({
+      kpId,
+      type: 'divide',
+      difficulty: d,
+      sig: `isEqual-${counts.join(',')}`,
+      stem: [
+        { kind: 'text', text: { k: 'q.div.isEqual' } },
+        { kind: 'compare-rows', rows: counts.map((count) => ({ icon: item, count })) },
+      ],
+      correct: { k: equal ? 'opt.tf.yes' : 'opt.tf.no' },
+      distractors: [{ k: equal ? 'opt.tf.no' : 'opt.tf.yes' }],
+      rng,
+    })
+  }
+  if (roll < 0.5) {
     return numberQuestion({
       kpId,
       type: 'divide',
@@ -82,7 +106,7 @@ function genShare(d: Difficulty, rng: RNG): Question {
       smart: [k, t - k, each + 1, each - 1],
     })
   }
-  if (roll < 0.7) {
+  if (roll < 0.8) {
     return numberQuestion({
       kpId,
       type: 'divide',
@@ -111,22 +135,28 @@ function genShare(d: Difficulty, rng: RNG): Question {
 }
 defineGenerator('m2s1-03-share', genShare)
 
-// ── 认识除法算式：被除数 / 除数 / 商 各在哪、平均分怎么写成除法 ──
+// ── 除法（例 3、例 4）：把平均分写成除法算式；被除数 / 除数 / 商 各在哪 ──
 function genDivParts(d: Difficulty, rng: RNG): Question {
   const kpId = 'm2s1-03-div-parts'
   const divisor = rng.int(2, 6)
   const quotient = rng.int(2, 6)
   const dividend = divisor * quotient
-  if (d >= 2 && rng.chance(0.4)) {
-    // 把 t 个平均分成 k 份每份 q 个，写成除法算式
+  if (rng.chance(0.45)) {
+    // 例 3「每 4 个放一盘」（包含分）、例 4「平均放在 3 个盘子里」（等分），都写成除法算式
     const item = rng.pick(ITEMS)
+    const groups = rng.chance(0.5)
     return labelQuestion({
       kpId,
       type: 'divide',
       difficulty: d,
-      sig: `write-${dividend}-${divisor}`,
+      sig: `write-${groups ? 'g' : 'e'}-${dividend}-${divisor}`,
       stem: [
-        { kind: 'text', text: { k: 'q.div.writeEq', p: { item, t: dividend, k: divisor, q: quotient } } },
+        {
+          kind: 'text',
+          text: groups
+            ? { k: 'q.div.writeEqGroups', p: { item, t: dividend, n: divisor, k: quotient } }
+            : { k: 'q.div.writeEq', p: { item, t: dividend, k: divisor, q: quotient } },
+        },
         { kind: 'objects', icon: item, count: dividend },
       ],
       correct: `${dividend} ÷ ${divisor} = ${quotient}`,
@@ -154,24 +184,25 @@ function genDivParts(d: Difficulty, rng: RNG): Question {
 }
 defineGenerator('m2s1-03-div-parts', genDivParts)
 
-// ── 用 2~6 的乘法口诀求商 ──
+// ── 用 1~6 的乘法口诀求商（例 1「想：3 和几相乘得 12」、例 2 一句口诀算两道除法；练一练 6 ÷ 1、6 ÷ 6、被盖住的数）──
 defineGenerator('m2s1-03-div-6', (d, rng) => {
   const kpId = 'm2s1-03-div-6'
-  const divisor = rng.int(2, d === 1 ? 5 : 6)
-  const quotient = rng.int(1, d === 1 ? 5 : 6)
+  const divisor = rng.chance(0.1) ? 1 : rng.int(2, 6)
+  const quotient = rng.int(1, 6)
   const roll = rng.next()
-  if (d === 3 && roll < 0.3) return missingPart(kpId, d, divisor, quotient, rng)
-  if (d === 1 && roll < 0.3) return fromMultiplication(kpId, d, divisor, quotient, rng)
+  if (roll < (d === 3 ? 0.3 : 0.2)) return missingPart(kpId, d, divisor, quotient, rng)
+  if (d < 3 && roll < 0.45) return fromMultiplication(kpId, d, divisor, quotient, rng)
   return quotientQuestion(kpId, d, divisor * quotient, divisor, rng)
 })
 
-// ── 用 7、8、9 的乘法口诀求商（7~9 的表内乘、除法）──
+// ── 用 7~9 的乘法口诀求商（例 4「7 × 8 = 56 → 56 ÷ 8、56 ÷ 7」、例 5「54 ÷ 9」；练一练「8 × □ = 64」）──
 defineGenerator('m2s1-06-div-9', (d, rng) => {
   const kpId = 'm2s1-06-div-9'
-  const big = d === 1 ? 7 : d === 2 ? 8 : rng.pick([7, 8, 9])
+  const big = rng.pick([7, 8, 9])
   const other = rng.int(1, 9)
   const roll = rng.next()
-  if (d === 3 && roll < 0.3) return missingPart(kpId, d, big, other, rng)
+  if (roll < (d === 3 ? 0.3 : 0.2)) return missingPart(kpId, d, big, other, rng)
+  if (d < 3 && roll < 0.4) return fromMultiplication(kpId, d, other, big, rng)
   // 除数与商谁是 7~9 都有
   return rng.chance(0.5) ? quotientQuestion(kpId, d, big * other, big, rng) : quotientQuestion(kpId, d, big * other, other, rng)
 })
@@ -183,7 +214,7 @@ export function word(kpId: string, d: Difficulty, sig: string, text: LStr, value
 
 function genDivSolve(d: Difficulty, rng: RNG): Question {
   const kpId = 'm2s1-03-div-solve'
-  const cap = d === 1 ? 5 : 6 // 这一单元只到 6 的口诀
+  const cap = 6 // 这一单元只到 6 的口诀
   const item = rng.pick(ITEMS)
   const k = rng.int(2, cap)
   const each = rng.int(2, cap)

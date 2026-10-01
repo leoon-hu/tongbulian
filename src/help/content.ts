@@ -171,6 +171,10 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
+            text: 'Want a teacher to explain it first? On the topic map, next to each topic’s “To do / Done” there is “▶ Video”: it opens that section’s video lesson on the National Smart Education Platform (new tab; the platform’s pages load slowly on phones).',
+          },
+          {
+            kind: 'p',
             text: 'Free, no ads, no account. Progress is stored only in this browser. Switch between 中文 and English at the top; questions, pinyin and speech follow.',
           },
         ],
@@ -315,6 +319,10 @@ export function helpSections(lang: Lang): HelpSection[] {
         {
           kind: 'p',
           text: '每个汉字都标拼音（语文题里考认字的那个字除外），进题自动朗读，题干下方的 🔊 可以再听一遍。答错会读出并显示正确答案，有教具的知识点会演示一遍（凑十法、破十法有动画）；不计时、不扣分、没有排行。',
+        },
+        {
+          kind: 'p',
+          text: '想先听老师讲一遍：知识点地图上每个知识点的「未完成 / 已完成」旁边有「▶ 视频」，点开是国家中小学智慧教育平台上这一节的同步课（新窗口打开，平台的页面在手机上加载得慢一些）。',
         },
         {
           kind: 'p',

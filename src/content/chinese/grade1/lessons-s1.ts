@@ -1,5 +1,6 @@
 // 一年级语文上册（统编新教材，2024 秋起用）每一课的出题材料（需求 R4c / §9）。课文按新版课本原文；
-// 格式见 content/chinese/shared/spec.ts。拼音统一查 py.ts，笔画数与第一笔按规范笔顺。
+// 格式见 content/chinese/shared/spec.ts。拼音统一查 py.ts。zi / xie 逐课照书后识字表、写字表（识字表里的蓝字不进 zi），
+// 笔画数与第一笔照课本田字格上方印的笔顺（「右」课本印的是先写横）。
 import type { LessonSpec } from '@/content/chinese/shared/spec'
 
 export const LESSONS_S1: LessonSpec[] = [
@@ -7,7 +8,7 @@ export const LESSONS_S1: LessonSpec[] = [
   {
     kp: 'c1s1-01-tiandiren',
     zi: '天 地 人 你 我 他',
-    xie: '人2撇 天4横',
+    // 这一课不写字（写字表从识字 2 起）
     pic: ['🌤️ 天 天空', '🌏 地 大地', '🧍 人 人'],
     ask: [
       '!说自己的时候，用哪个字？=我/你/他/人',
@@ -16,13 +17,14 @@ export const LESSONS_S1: LessonSpec[] = [
       '!哪个字说的是我们头顶上面的？=天/地/人/大',
       '!哪个字说的是我们脚下踩着的？=地/天/他/也',
     ],
-    mix: { 1: 'listen:4 ask:3 pic:2 zipic:1', 2: 'listen:2 ask:2 strokes:1 first:1', 3: 'strokes:2 first:2 ask:1' },
+    mix: { 1: 'listen:4 ask:3 pic:2 zipic:1', 2: 'listen:3 ask:2 pic:1 zipic:1', 3: 'listen:2 ask:2 zipic:1' },
   },
   {
     kp: 'c1s1-01-jinmu',
-    zi: '一 二 三 四 五 金 木 水 火 土 上 下',
+    // 金木水火土只在课文里，不是本课生字（课文的字仍可看图认）
+    zi: '一 二 三 四 五 上 下',
     digits: '1一 2二 3三 4四 5五',
-    xie: '一1横 二2横 三3横 上3竖 下3横 土3横 木4横 五4横 火4点 水4 四5竖',
+    xie: '一1横 二2横 三3横 上3竖',
     pic: ['🪙 金 金子', '🌳 木 树木', '💧 水 水', '🔥 火 火'],
     cloze: [
       '一二三[四]五，|六/二/十',
@@ -39,7 +41,7 @@ export const LESSONS_S1: LessonSpec[] = [
   {
     kp: 'c1s1-01-kouer',
     zi: '口 耳 目 手 足 站 坐',
-    xie: '口3竖 耳6横 目5竖 手4撇 足7竖',
+    xie: '口3竖 耳6横 目5竖 手4撇',
     pic: ['👄 口 嘴巴', '👂 耳 耳朵', '👁️ 目 眼睛', '✋ 手 小手', '🦶 足 小脚', '🧍 站 站着', '🪑 坐 坐下'],
     ask: [
       '!用来看东西的是哪个字？=目/耳/口/手',
@@ -61,7 +63,7 @@ export const LESSONS_S1: LessonSpec[] = [
   {
     kp: 'c1s1-01-riyue',
     zi: '日 月 山 川 水 火 田 禾',
-    xie: '日4竖 田5竖 禾5撇 火4点',
+    xie: '日4竖 火4点 田5竖 禾5撇',
     pic: ['☀️ 日 太阳', '🌙 月 月亮', '⛰️ 山 大山', '🏞️ 川 河流', '💧 水 水', '🔥 火 火', '🌾 禾 禾苗'],
     ask: [
       '!哪个字像连在一起的几座高峰？=山/川/火/田',
@@ -78,7 +80,8 @@ export const LESSONS_S1: LessonSpec[] = [
     kp: 'c1s1-01-garden',
     zi: '六 七 八 九 十',
     digits: '1一 2二 3三 4四 5五 6六 7七 8八 9九 10十',
-    xie: '人2撇 天4横 口3竖 田5竖 日4竖 目5竖',
+    // 九在园地二才写
+    xie: '六4点 七2横 八2撇 十2横',
     cloze: [
       '一片两片三[四]片，|五/六/二',
       '一片两片三四片，\n五片六片七[八]片。|九/六/四',
@@ -91,12 +94,14 @@ export const LESSONS_S1: LessonSpec[] = [
       '红掌拨清[波]。|水/河/坡',
     ],
     ask: [
+      // 识字加油站：「你能猜出这是什么吗？」
+      '「一片两片三四片」说的是什么？=❄️雪花/🍂树叶/🐦小鸟/🌧️雨点',
       '鹅的毛是什么颜色的？=白色/红色/绿色/黑色',
       '鹅的脚掌是什么颜色的？=红色/白色/绿色/黄色',
       '鹅在哪里游？=绿水里/草地上/天空中/树林里',
     ],
     poet: ['咏鹅 骆宾王'],
-    mix: { 1: 'digit:3 cloze:4 ask:2 listen:1', 2: 'cloze:3 poet:1 strokes:1 first:1', 3: 'poet:1 strokes:2 first:2 cloze:1' },
+    mix: { 1: 'digit:3 cloze:4 ask:2 listen:1', 2: 'cloze:3 ask:1 poet:1 strokes:1 first:1', 3: 'poet:1 strokes:2 first:2 cloze:1' },
   },
 
   // ── 第二单元 汉语拼音 ──
@@ -119,34 +124,48 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-02-bpmf',
+    // 拼音课的识字条（识字表）：这时还在学拼音，以拼音题为主，生字只加一点
+    zi: '爸 妈',
     py: {
       letters: 'b p m f',
-      syl: 'bā八 bá拔 bǎ靶 bà爸 bō波 bí鼻 bù布 pá爬 pò破 pī批 pǔ普 mǎ马 mō摸 mǐ米 mù木 fā发 fó佛 fǔ斧',
-      pic: ['8️⃣ bā 八', '👃 bí 鼻', '🐴 mǎ 马', '🍚 mǐ 米', '🪵 mù 木', '🪓 fǔ 斧', '🧗 pá 爬'],
+      // 读法要读音唯一（Y4）：fā、fó 没有读音唯一的常用字，不给读法（不出听音 / 拼读题）
+      syl: 'bā八 bá拔 bǎ靶 bà爸 bō波 bí鼻 bù布 pá爬 pò破 pī批 pǔ普 mǎ马 mō摸 mǐ米 mù木 fā fó fǔ斧',
+      pic: ['8️⃣ bā 八', '🎯 bǎ 靶', '👃 bí 鼻', '🐴 mǎ 马', '🍚 mǐ 米', '🪵 mù 木', '🪓 fǔ 斧', '🧗 pá 爬'],
+      words: ['bà-ba 爸爸', 'mā-ma 妈妈'],
       kinds: 'initial',
     },
-    mix: { 1: 'spell:3 hear:3 picpy:2 kind:1 tone:1', 2: 'spell:2 hear:2 initial:1 pypic:1 tone:1', 3: 'initial:2 pypic:2 hear:1' },
+    mix: { 1: 'spell:3 hear:3 picpy:2 kind:1 tone:1 listen:1', 2: 'spell:2 hear:2 initial:1 pypic:1 tone:1 pyzi:1', 3: 'initial:2 pypic:2 hear:1 pyword:1 zipy:1' },
   },
   {
     kp: 'c1s1-02-dtnl',
+    zi: '大 马 路 土',
     py: {
       letters: 'd t n l',
-      syl: 'dǎ打 dé德 dī低 dú读 tā他 tè特 tǐ体 tú图 ná拿 nǐ你 nù怒 nǚ女 lā拉 lè勒 lǐ里 lù路 lǘ驴',
+      syl: 'dǎ打 dé德 dī低 dú独 tā他 tè特 tǐ tú图 ná拿 nǐ你 nù怒 nǚ女 lā拉 lè lǐ里 lù路 lǘ驴',
       pic: ['🐰 tù 兔', '🖼️ tú 图', '🛣️ mǎ-lù 马路'],
       words: ['dà-dì 大地', 'mǎ-lù 马路', 'ní-tǔ 泥土'],
       kinds: 'initial',
     },
     cloze: [
-      '小白兔，穿皮[袄]，|衣/帽/鞋',
+      '小白兔，穿皮[袄]，|球/帽/鞋',
       '耳朵长，尾巴[小]。|大/白/多',
       '三瓣嘴，胡子[翘]，|跑/飞/叫',
       '一动一动总在[笑]。|哭/睡/飞',
     ],
-    mix: { 1: 'spell:3 hear:3 pyword:1 kind:1 cloze:1', 2: 'spell:2 hear:2 initial:1 picpy:1 cloze:1', 3: 'initial:2 cloze:2 picpy:1 tone:1' },
+    mix: { 1: 'spell:3 hear:3 pyword:1 kind:1 cloze:1 listen:1', 2: 'spell:2 hear:2 initial:1 picpy:1 cloze:1 pyzi:1', 3: 'initial:2 cloze:2 picpy:1 tone:1 zipy:1' },
   },
   {
     kp: 'c1s1-02-garden',
-    zi: '他 八 马 七 地 你 目 土 足',
+    // 识字加油站（拼音本封面）；本 学 校 班 级 姓 名 王 里的韵母还没学全，只出听音选字
+    zi: '本 学 校 班 级 姓 名 王',
+    xie: '九2撇 王4横',
+    // 用拼音：读准声调（dǎ—dà mō—mǒ bí—bǐ pǔ—pù），比一比 b—d、f—t
+    py: {
+      letters: '',
+      syl: 'dǎ打 dà大 mō摸 mǒ bí鼻 bǐ笔 pǔ普 pù',
+      pic: ['🖍️ là-bǐ 蜡笔', '🍚 dà-mǐ 大米', '🗺️ dì-tú 地图'],
+      words: ['là-bǐ 蜡笔', 'dà-mǐ 大米', 'fú-tī 扶梯', 'dì-tú 地图'],
+    },
     cloze: [
       '远看山有[色]，|声/白/花',
       '远看山有色，\n近听水无[声]。|色/音/水',
@@ -161,15 +180,17 @@ export const LESSONS_S1: LessonSpec[] = [
       '小灰兔把白菜吃完了，又去做什么？=向老山羊要白菜/自己种白菜/去河边玩/去找小白兔',
       '只有自己种，才有吃不完的什么？=菜/花/草/果子',
     ],
-    mix: { 1: 'pyzi:3 zipy:2 cloze:3 anto:1', 2: 'cloze:2 anto:2 zipy:2 listen:1 ask:1', 3: 'ask:2 anto:1 cloze:1' },
+    mix: { 1: 'cloze:3 listen:2 hear:2 pyword:1 anto:1', 2: 'cloze:2 anto:1 hear:1 picpy:1 ask:1 strokes:1 first:1', 3: 'ask:2 anto:1 cloze:1 pypic:1 strokes:1 first:1' },
   },
 
   // ── 第三单元 汉语拼音 ──
   {
     kp: 'c1s1-03-gkh',
+    zi: '哥 弟 画 花',
     py: {
       letters: 'g k h',
-      syl: 'gā嘎 gè个 gù故 kǎ卡 kē科 kǔ苦 hā哈 hē喝 hǔ虎 guā瓜 guà挂 guō锅 kuā夸 huá滑 kuò扩 huǒ火',
+      // gā kǎ hā hē 没有读音唯一的常用字（嘎 卡 哈 喝 都多音），不给读法
+      syl: 'gā gè个 gù故 kǎ kē科 kǔ苦 hā hē hǔ虎 guā瓜 guà挂 guō锅 kuā夸 huá滑 kuò扩 huǒ火',
       pic: ['🐯 hǔ 虎', '🔥 huǒ 火', '🍳 guō 锅', '🌸 huā 花', '🍉 guā 瓜'],
       words: ['gē-ge 哥哥', 'dì-di 弟弟', 'huà-huà 画画', 'hé-huā 荷花'],
       kinds: 'initial',
@@ -188,13 +209,14 @@ export const LESSONS_S1: LessonSpec[] = [
       '谁说话「嘎嘎」？=🦆小鸭子/🐱小花猫/🐸小青蛙/🕊️小鸽子',
       '谁说话「咕咕」？=🕊️小鸽子/🐱小花猫/🐸小青蛙/🦆小鸭子',
     ],
-    mix: { 1: 'spell:3 hear:3 picpy:1 cloze:2 ask:1', 2: 'spell:2 hear:2 initial:1 pyword:1 cloze:1', 3: 'pyword:2 initial:1 pypic:1 ask:1' },
+    mix: { 1: 'spell:3 hear:3 picpy:1 cloze:2 ask:1 listen:1', 2: 'spell:2 hear:2 initial:1 pyword:1 cloze:1 pyzi:1', 3: 'pyword:2 initial:1 pypic:1 ask:1 zipy:1' },
   },
   {
     kp: 'c1s1-03-jqx',
+    zi: '打 棋 积 木',
     py: {
       letters: 'j q x',
-      syl: 'jī鸡 qì气 xī西 jiā家 qiā掐 xiá霞 jū居 qū区 xū需 qí骑 xǐ洗 jù句 qǔ取',
+      syl: 'jī鸡 qì气 xī西 jiā家 qiā掐 xiá霞 jū居 qū屈 xū需 qí骑 xǐ洗 jù句 qǔ取',
       pic: ['🐔 jī 鸡', '🏠 jiā 家', '🍉 xī-guā 西瓜', '♟️ xià-qí 下棋', '🥁 dǎ-gǔ 打鼓'],
       words: ['dǎ-gǔ 打鼓', 'xià-qí 下棋', 'dā-jī-mù 搭积木', 'zài-yì-qǐ 在一起'],
       kinds: 'initial',
@@ -205,31 +227,35 @@ export const LESSONS_S1: LessonSpec[] = [
       '刨刨土，捉捉[虫]，|鱼/米/草',
       '青草地上做[游戏]。|作业/早操/饭菜',
     ],
-    mix: { 1: 'spell:3 hear:3 picpy:2 cloze:1 kind:1', 2: 'spell:2 hear:2 pyword:1 initial:1 cloze:1', 3: 'pyword:2 pypic:1 initial:1 cloze:1' },
+    mix: { 1: 'spell:3 hear:3 picpy:2 cloze:1 kind:1 listen:1', 2: 'spell:2 hear:2 pyword:1 initial:1 cloze:1 pyzi:1', 3: 'pyword:2 pypic:1 initial:1 cloze:1 zipy:1' },
   },
   {
     kp: 'c1s1-03-zcs',
+    zi: '字 词 句 子',
     py: {
       letters: 'z c s zi ci si',
-      syl: 'zá砸 zé责 zǔ组 zuó昨 cā擦 cè册 cū粗 cuō搓 sǎ洒 sè色 sù素 suǒ锁 zǐ紫 cì刺 sī丝 zì字 cí词 sì四',
+      syl: 'zá砸 zé责 zǔ组 zuó昨 cā擦 cè册 cū粗 cuō搓 sǎ洒 sè涩 sù素 suǒ锁 zǐ紫 cì刺 sī丝 zì字 cí词 sì四',
       pic: ['🔒 suǒ 锁', '🟣 zǐ 紫', '🧵 sī 丝', '4️⃣ sì 四'],
-      words: ['zì 字', 'cí-yǔ 词语', 'jù-zi 句子'],
+      words: ['zì 字', 'cí 词', 'jù-zi 句子'],
       kinds: 'initial whole',
     },
     cloze: [
-      '数学题，[一道道]。|一本本/一个个/一条条',
+      '数学题，[一道道]，|一本本/一个个/一条条',
       '等号就像一座[桥]。|山/河/楼',
       '做对了，走过[桥]，|河/山/路',
+      '做[错]了，过不了。|对/好',
       '想一想，[算一算]，|看一看/听一听/读一读',
       '快快乐乐过了[桥]。|河/山/楼',
     ],
-    mix: { 1: 'spell:3 hear:3 kind:2 picpy:1 pyword:1', 2: 'spell:2 hear:2 initial:1 cloze:2', 3: 'cloze:2 pyword:1 initial:1 pypic:1' },
+    mix: { 1: 'spell:3 hear:3 kind:2 picpy:1 pyword:1 listen:1', 2: 'spell:2 hear:2 initial:1 cloze:2 pyzi:1', 3: 'cloze:2 pyword:1 initial:1 pypic:1 zipy:1' },
   },
   {
     kp: 'c1s1-03-zhchshr',
+    zi: '桌 纸 读 书',
     py: {
       letters: 'zh ch sh r zhi chi shi ri',
-      syl: 'zhè这 zhù住 chá茶 chē车 chū出 shé蛇 shǔ鼠 rè热 rǔ乳 zhuō桌 chuō戳 shuā刷 shuō说 ruò弱 zhí直 chī吃 shī狮 rì日 zì字 cí词 sì四 sī丝',
+      // shuā 没有读音唯一的常用字（刷 shuā / shuà），不给读法
+      syl: 'zhā渣 zhè这 zhù住 chá茶 chē车 chū出 shà霎 shé蛇 shǔ鼠 rè热 rǔ乳 zhuō桌 chuō戳 shuā shuō说 ruò弱 zhí直 chī吃 shī狮 rì日 zì字 cí词 sì四 sī丝',
       pic: ['🚗 chē 车', '🍵 chá 茶', '🐍 shé 蛇', '🐭 shǔ 鼠', '🦁 shī 狮', '☀️ rì 日'],
       words: ['cā-zhuō-zi 擦桌子', 'zhé-zhǐ 折纸', 'dú-shū 读书'],
       kinds: 'initial whole',
@@ -240,10 +266,11 @@ export const LESSONS_S1: LessonSpec[] = [
       '四十不是[十四]，|四十/四四/十十',
       '十四不是[四十]。|十四/四四/十十',
     ],
-    mix: { 1: 'spell:2 hear:2 flat:3 picpy:1 kind:1 pyword:1', 2: 'flat:2 spell:2 initial:1 cloze:2', 3: 'cloze:2 pypic:1 initial:1 hear:1' },
+    mix: { 1: 'spell:2 hear:2 flat:3 picpy:1 kind:1 pyword:1 listen:1', 2: 'flat:2 spell:2 initial:1 cloze:2 pyzi:1', 3: 'cloze:2 pypic:1 initial:1 hear:1 zipy:1' },
   },
   {
     kp: 'c1s1-03-yw',
+    zi: '鱼 鸭 乌 鸦',
     py: {
       letters: 'y w yi wu yu',
       syl: 'yá牙 wá娃 wō窝 yī衣 wǔ五 yǔ雨 yú鱼 yā鸭 wū乌 yǐ蚁',
@@ -258,19 +285,27 @@ export const LESSONS_S1: LessonSpec[] = [
       '房前花果[香]，|长/高/白',
       '要数我们的小[学堂]。|房间/花园/树林',
     ],
-    mix: { 1: 'hear:3 picpy:2 kind:2 pyword:1', 2: 'order:2 hear:1 pypic:1 cloze:1 kind:1', 3: 'order:2 cloze:2 pypic:1' },
+    mix: { 1: 'hear:3 picpy:2 kind:2 pyword:1 listen:1', 2: 'order:2 hear:1 pypic:1 cloze:1 kind:1 pyzi:1', 3: 'order:2 cloze:2 pypic:1 zipy:1' },
   },
   {
     kp: 'c1s1-03-garden',
-    zi: '鸡 鱼 河',
+    // 识字加油站（课程表）；星 文 写 会 的韵母还没学，只出听音选字
+    zi: '午 星 期 语 文 数 写 会',
+    xie: '午4撇 下3横',
+    // 字词句运用「在图里找一找」
     pic: ['🐔 鸡 鸡', '🐟 鱼 鱼', '🏞️ 河 小河'],
+    // 用拼音：z—zh、c—ch、s—sh 比一比；读一读，做动作
+    py: {
+      letters: '',
+      syl: '',
+      pic: ['🕷️ zhī-zhū 蜘蛛', '🍵 hē-chá 喝茶', '🪥 shuā-yá 刷牙', '🏇 qí-mǎ 骑马', '🍉 chī-xī-guā 吃西瓜', '💇 lǐ-fà 理发'],
+      words: ['zì-mǔ 字母', 'zhī-zhū 蜘蛛', 'cā-bō-li 擦玻璃', 'hē-chá 喝茶', 'sù-shè 宿舍', 'shū-jià 书架', 'shuā-yá 刷牙', 'qí-mǎ 骑马', 'chī-xī-guā 吃西瓜', 'tuō-dì 拖地', 'lǐ-fà 理发', 'bá-luó-bo 拔萝卜'],
+    },
     cloze: [
       '一[座]山|棵/只/朵',
       '一[棵]树|座/只/朵',
       '四[只]鸽子|座/棵/朵',
       '七[朵]花|座/棵/只',
-      '一[条]鱼|座/棵/朵',
-      '一[只]鸡|座/棵/朵',
       '一[模]一样|摸/木/毛',
       '一心一[意]|义/衣/一',
       '独一无[二]|三/两/一',
@@ -286,12 +321,13 @@ export const LESSONS_S1: LessonSpec[] = [
       '马儿怎样跑？=四脚腾空仰天叫/扇扇翅膀去又回/摇摇尾巴摆摆头',
       '鱼儿怎样游？=摇摇尾巴摆摆头/扇扇翅膀去又回/四脚腾空仰天叫',
     ],
-    mix: { 1: 'cloze:4 ask:3 pic:1', 2: 'cloze:3 ask:2 listen:1', 3: 'ask:2 cloze:2' },
+    mix: { 1: 'cloze:3 ask:3 listen:2 pyword:1 picpy:1 pic:1', 2: 'cloze:3 ask:2 listen:1 pyword:1 pypic:1 strokes:1 first:1', 3: 'ask:2 cloze:2 pyword:1 strokes:1 first:1' },
   },
 
   // ── 第四单元 汉语拼音 ──
   {
     kp: 'c1s1-04-aieiui',
+    zi: '白 菜 西 瓜 果',
     py: {
       letters: 'ai ei ui',
       syl: 'āi哀 ǎi矮 ài爱 gāi该 guāi乖 tái台 kāi开 cāi猜 huài坏 kuài快 lèi泪 bēi杯 péi陪 fēi飞 gěi给 wéi围 hēi黑 tuǐ腿 huì汇 duī堆 chuī吹 zuǐ嘴 suì岁 ruì瑞 pái排 duì对',
@@ -307,13 +343,15 @@ export const LESSONS_S1: LessonSpec[] = [
       '毛巾给我[擦擦]手。|搓搓/冲冲/拍拍',
       '小手洗得真[干净]，|好看/漂亮/快乐',
     ],
-    mix: { 1: 'spell:2 hear:3 picpy:1 final:2 kind:1 cloze:1', 2: 'hear:2 spell:1 pyword:1 final:1 cloze:2 ask:1', 3: 'pyword:2 cloze:2 pypic:1' },
+    mix: { 1: 'spell:2 hear:3 picpy:1 final:2 kind:1 cloze:1 listen:1', 2: 'hear:2 spell:1 pyword:1 final:1 cloze:2 ask:1 pyzi:1', 3: 'pyword:2 cloze:2 pypic:1 zipy:1' },
   },
   {
     kp: 'c1s1-04-aoouiu',
+    zi: '小 桥 流 柳',
     py: {
       letters: 'ao ou iu',
-      syl: 'āo凹 áo熬 ǎo袄 ào奥 tiào跳 niǎo鸟 yào药 rào绕 zǎo早 ōu欧 ǒu藕 kǒu口 ròu肉 tóu头 lóu楼 yóu油 zǒu走 shōu收 jiù旧 qiú球 diū丢 liù六 niú牛 xiū休 xiǎo小',
+      // āo 没有读音唯一的常用字（凹 āo / wā），不给读法；áo 用「翱」（熬还读 āo）
+      syl: 'āo áo翱 ǎo袄 ào奥 tiào跳 niǎo鸟 yào药 rào绕 zǎo早 ōu欧 ǒu藕 kǒu口 ròu肉 tóu头 lóu楼 yóu油 zǒu走 shōu收 jiù旧 qiú球 diū丢 liù六 niú牛 xiū休 xiǎo小',
       pic: ['🐦 niǎo 鸟', '🐄 niú 牛', '⚽ qiú 球', '🥩 ròu 肉', '6️⃣ liù 六', '🍑 táo 桃', '🏢 lóu 楼'],
       words: ['xiǎo-qiáo 小桥', 'liú-shuǐ 流水', 'chuí-liǔ 垂柳', 'táo-huā 桃花'],
       kinds: 'compound',
@@ -322,13 +360,14 @@ export const LESSONS_S1: LessonSpec[] = [
       '一只船，扬起[帆]，|伞/旗/手',
       '漂啊漂啊到[台湾]。|北京/学校/家乡',
       '接来台湾[小朋友]，|老师/爸爸/小动物',
-      '伸出双手紧紧[握]，|抱/拉/拍',
+      '伸出双手紧紧[握]，|踢/跳/拍',
       '热情的话儿说不[完]。|好/出/清',
     ],
-    mix: { 1: 'spell:2 hear:3 picpy:2 final:1 kind:1 cloze:1', 2: 'hear:2 spell:1 pyword:1 final:1 cloze:2 pypic:1', 3: 'pyword:2 cloze:2 pypic:1' },
+    mix: { 1: 'spell:2 hear:3 picpy:2 final:1 kind:1 cloze:1 listen:1', 2: 'hear:2 spell:1 pyword:1 final:1 cloze:2 pypic:1 pyzi:1', 3: 'pyword:2 cloze:2 pypic:1 zipy:1' },
   },
   {
     kp: 'c1s1-04-ieveer',
+    zi: '开 雪 夜 色 美',
     py: {
       letters: 'ie üe er ye yue',
       syl: 'dié碟 xié鞋 jiě姐 bié别 lüè略 nüè虐 jué决 quē缺 xué学 xiě写 yè叶 yuè月 ér儿 ěr耳 èr二',
@@ -342,13 +381,15 @@ export const LESSONS_S1: LessonSpec[] = [
       '大河弯弯流入[海]，|山/天/园',
       '山路弯弯到[校园]。|青山/大海/蓝天',
     ],
-    mix: { 1: 'spell:2 hear:3 picpy:2 final:1 kind:1 cloze:1', 2: 'hear:2 spell:2 pyword:1 cloze:2 kind:1', 3: 'pyword:2 cloze:2 pypic:1' },
+    mix: { 1: 'spell:2 hear:3 picpy:2 final:1 kind:1 cloze:1 listen:1', 2: 'hear:2 spell:2 pyword:1 cloze:2 kind:1 pyzi:1', 3: 'pyword:2 cloze:2 pypic:1 zipy:1' },
   },
   {
     kp: 'c1s1-04-anen',
+    zi: '蓝 云 草 原',
     py: {
       letters: 'an en in un ün yuan yin yun',
-      syl: 'guān关 kuān宽 huān欢 juān捐 quān圈 xuān宣 yuán圆 yīn音 yùn运 quán全 wān弯 yǎn眼 nán南 zhàn站 duǎn短 rǎn染 jiān尖 nèn嫩 chén晨 kěn肯 zhēn真 rén人 wèn问 mín民 pīn拼 nín您 jìn进 xīn心 qīn亲 chūn春 rùn润 tūn吞 hūn昏 zhǔn准 lún轮 jūn军 qún群 xún寻 chuán船',
+      // quān 没有读音唯一的常用字（圈 quān / juàn），不给读法
+      syl: 'guān关 kuān宽 huān欢 juān捐 quān xuān宣 yuán圆 yīn音 yùn运 quán全 wān弯 yǎn眼 nán南 zhàn站 duǎn短 rǎn染 jiān尖 nèn嫩 chén晨 kěn肯 zhēn真 rén人 wèn问 mín民 pīn拼 nín您 jìn进 xīn心 qīn亲 chūn春 rùn润 tūn吞 hūn昏 zhǔn准 lún轮 jūn军 qún群 xún寻 chuán船',
       pic: ['🚢 chuán 船', '👁️ yǎn 眼', '🧑 rén 人', '❤️ xīn 心', '☁️ yún 云', '⭕ yuán 圆'],
       words: ['lán-tiān 蓝天', 'bái-yún 白云', 'cǎo-yuán 草原', 'sēn-lín 森林'],
       kinds: 'front whole',
@@ -361,13 +402,14 @@ export const LESSONS_S1: LessonSpec[] = [
       '我们是祖国的[花朵]，|种子/小鸟/白云',
       '祖国就是我们的[家]。|花/树/河',
     ],
-    mix: { 1: 'spell:3 hear:3 picpy:1 final:1 kind:1 cloze:1', 2: 'hear:2 spell:2 pyword:1 cloze:2 final:1', 3: 'pyword:2 cloze:2 pypic:1' },
+    mix: { 1: 'spell:3 hear:3 picpy:1 final:1 kind:1 cloze:1 listen:1', 2: 'hear:2 spell:2 pyword:1 cloze:2 final:1 pyzi:1', 3: 'pyword:2 cloze:2 pypic:1 zipy:1' },
   },
   {
     kp: 'c1s1-04-angeng',
+    zi: '冰 自 行 车',
     py: {
       letters: 'ang eng ing ong ying',
-      syl: 'qiáng墙 bāng帮 huáng黄 chuāng窗 fēng风 rēng扔 héng横 dēng灯 tīng听 jǐng井 bǐng饼 qīng青 sòng送 zhōng钟 qióng穷 míng明 liàng亮 yīng鹰 chuán船 xīn心 rén人 lán蓝',
+      syl: 'qiáng墙 bāng帮 huáng黄 chuāng窗 fēng风 rēng扔 héng恒 dēng灯 tīng听 jǐng井 bǐng饼 qīng青 sòng送 zhōng钟 qióng穷 míng明 liàng亮 yīng鹰 chuán船 xīn心 rén人 lán蓝',
       pic: ['🪟 chuāng 窗', '🌬️ fēng 风', '💡 dēng 灯', '⏰ zhōng 钟', '🦅 yīng 鹰', '🐑 yáng 羊'],
       words: ['yóu-yǒng 游泳', 'huá-bīng 滑冰', 'qí-zì-xíng-chē 骑自行车', 'dǎ-pīng-pāng-qiú 打乒乓球'],
       kinds: 'back whole',
@@ -379,17 +421,32 @@ export const LESSONS_S1: LessonSpec[] = [
       '你也不肯[让]，|走/跑/看',
       '扑通掉进[河]中央。|桥/山/树',
     ],
-    mix: { 1: 'spell:2 hear:2 nasal:2 picpy:1 kind:1 cloze:1', 2: 'nasal:2 hear:1 pyword:1 order:1 cloze:1 final:1', 3: 'order:2 pyword:1 pypic:1 cloze:1' },
+    mix: { 1: 'spell:2 hear:2 nasal:2 picpy:1 kind:1 cloze:1 listen:1', 2: 'nasal:2 hear:1 pyword:1 order:1 cloze:1 final:1 pyzi:1', 3: 'order:2 pyword:1 pypic:1 cloze:1 zipy:1' },
   },
   {
     kp: 'c1s1-04-garden',
+    zi: '晚 昨 今 明 个 这 去 年',
+    xie: '个3撇 去5横',
     pic: ['🚂 火车', '🚗 汽车', '🚉 车站', '🚃 车厢'],
+    // 用拼音：读准音节；ie—ei、iu—ui 比一比；秋游的时候，你想带些什么？
+    py: {
+      letters: '',
+      // juǎn、zuān 没有读音唯一的常用字（卷 钻 都多音），不给读法
+      syl: 'yǎn眼 yuǎn远 yīn音 yīng鹰 jiǎn剪 juǎn zuān zhuān砖 chán蝉 chuán船 chuáng床',
+      pic: ['🧢 mào-zi 帽子', '🍎 píng-guǒ 苹果', '🍞 miàn-bāo 面包', '🍪 bǐng-gān 饼干', '☂️ yǔ-sǎn 雨伞', '🔭 wàng-yuǎn-jìng 望远镜'],
+      words: ['xiě-zì 写字', 'dǎ-léi 打雷', 'dié-bèi-zi 叠被子', 'chuī-qì-qiú 吹气球', 'duī-xuě-rén 堆雪人', 'diū-shǒu-juàn 丢手绢'],
+    },
     cloze: [
       '昨天　今天　[明天]|后天/前天/每天',
       '上午　[下午]　晚上|中午/早上/上午',
       '上午　下午　[晚上]|早上/中午/晚饭',
       '去年　今年　[明年]|前年/后年/新年',
       '上个月　[这个月]　下个月|下个月/上个月/每个月',
+      // 拼一拼，写一写（课本给出要写的字的拼音）
+      '!门[口]|日/目/田',
+      '!生[日]|口/目/田',
+      '!题[目]|口/日/田',
+      '![田]野|口/日/目',
       '锄禾日当[午]，|中/头/下',
       '锄禾日当午，\n汗滴禾下[土]。|地/田/水',
       '谁知盘中[餐]，|菜/饭/米',
@@ -397,14 +454,14 @@ export const LESSONS_S1: LessonSpec[] = [
     ],
     poet: ['悯农 李绅'],
     ask: ['「粒粒皆辛苦」说的是什么得来不容易？=盘中的饭菜/天上的太阳/地里的小草/树上的果子'],
-    mix: { 1: 'cloze:5 pic:2 poet:1', 2: 'cloze:3 pic:1 ask:1 poet:1', 3: 'ask:1 poet:1 cloze:2' },
+    mix: { 1: 'cloze:4 listen:2 pyzi:1 pic:1 hear:1 poet:1', 2: 'cloze:3 zipy:1 pic:1 picpy:1 pyword:1 ask:1 poet:1 strokes:1 first:1', 3: 'ask:1 poet:1 cloze:2 pypic:1 zipy:1 strokes:1 first:1' },
   },
 
   // ── 第五单元 阅读 ──
   {
     kp: 'c1s1-05-qiutian',
-    zi: '秋 气 了 树 叶 片 大 飞 会 个',
-    xie: '了2 子3 人2撇 大3横',
+    zi: '秋 气 了 树 叶 黄 片 从 来 飞',
+    xie: '了2 子3 大3横 人2撇',
     cloze: [
       '天气[凉]了，树叶黄了，|蓝/高/红',
       '天气凉了，树叶[黄]了，|蓝/高/凉',
@@ -413,7 +470,7 @@ export const LESSONS_S1: LessonSpec[] = [
       '一群[大雁]往南飞，|小鸟/蝴蝶/蜻蜓',
       '一群大雁往[南]飞，|北/东/西',
       '一会儿排成个“[人]”字，|大/入/八',
-      '一会儿排成个“[一]”字。|二/人/十',
+      '一会儿排成个“[一]”字。|二/八/十',
       '啊！[秋天]来了！|春天/夏天/冬天',
     ],
     ask: [
@@ -426,12 +483,12 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-05-jiangnan',
-    zi: '江 南 可 采 莲 鱼 东 西 北',
-    xie: '东5横 西6横 可5横',
+    zi: '江 南 可 采 莲 戏 间 东 北',
+    xie: '可5横 叶5竖 东5横 西6横',
     cloze: [
       '江南可采[莲]，|鱼/叶/花',
       '江南可采莲，\n莲叶何[田田]。|东西/青青/圆圆',
-      '鱼戏莲叶[间]。|东/边/里',
+      '鱼戏莲叶[间]。|边/里/下',
       '鱼戏莲叶东，\n鱼戏莲叶[西]，|北/南/中',
       '鱼戏莲叶西，\n鱼戏莲叶[南]，|北/东/上',
       '鱼戏莲叶南，\n鱼戏莲叶[北]。|东/西/下',
@@ -444,8 +501,8 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-05-huajia',
-    zi: '竹 牙 用 几 步 为 参 加 洞',
-    xie: '几2撇 马3 牙4横 用5撇 竹6撇',
+    zi: '的 家 鸡 竹 牙 用 几 步 没 参 加',
+    xie: '竹6撇 马3 牙4横 用5撇 几2撇',
     ask: [
       '小鸡画的是什么？=竹叶/梅花/枫叶/月牙',
       '小狗画的是什么？=梅花/竹叶/枫叶/月牙',
@@ -460,27 +517,29 @@ export const LESSONS_S1: LessonSpec[] = [
       '小画家们用什么画画？=自己的脚/颜料和笔/小树枝/自己的尾巴',
     ],
     cloze: [
-      '雪地里来了一群小[画家]。|动物/朋友/鸭子',
+      '雪地里来了一群小[画家]。|老师/医生/鸭子',
       '不用颜料不用[笔]，|手/水/纸',
-      '几步就成一幅[画]。|字/花/图',
+      '几步就成一幅[画]。|字/花/书',
     ],
     mix: { 1: 'ask:5 cloze:2 listen:2 pyzi:1', 2: 'ask:3 zipy:2 cloze:1 strokes:1 first:1', 3: 'zipy:2 strokes:1 first:1 ask:1' },
   },
   {
     kp: 'c1s1-05-siji',
-    zi: '春 青 蛙 夏 弯 就 冬 说',
-    xie: '天4横 四5竖 是9竖',
+    // 「着」这一课读 zhe（拼音表的单字是乌鸦喝水那课的 zháo）；蓝字「地 de」不进 zi
+    zi: '鸟 说 是 春 青 蛙 夏 着zhe 皮 就 冬',
+    xie: '四5竖 小3 鸟5撇 是9竖 天4横',
     ask: [
       '谁说「我是春天」？=🌱草芽/🍃荷叶/🌾谷穗/⛄雪人',
       '谁说「我是夏天」？=🍃荷叶/🌱草芽/🌾谷穗/⛄雪人',
       '谁说「我是秋天」？=🌾谷穗/🌱草芽/🍃荷叶/⛄雪人',
-      '谁说「我是冬天」？=⛄雪人/🌱草芽/🍃荷叶/🌾谷穗',
+      '谁说「我就是冬天」？=⛄雪人/🌱草芽/🍃荷叶/🌾谷穗',
       '草芽是对谁说的？=🐦小鸟/🐸青蛙/⛄雪人/🐟小鱼',
       '荷叶是对谁说的？=🐸青蛙/🐦小鸟/⛄雪人/🐟小鱼',
     ],
     cloze: [
       '草芽[尖尖]，|圆圆/弯弯/大大',
       '荷叶[圆圆]，|尖尖/弯弯/长长',
+      '荷叶圆圆，\n他对[青蛙]说：|小鸟/雪人/草芽',
       '谷穗[弯弯]，|尖尖/圆圆/高高',
       '雪人大[肚子]一挺，|鼻子/眼睛/脑袋',
       '他顽皮地说：\n“我就是[冬天]。”|春天/夏天/秋天',
@@ -489,7 +548,9 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-05-garden',
-    zi: '南 北 男 女 开 关 正 反',
+    // 识字加油站六对反义词，南 北 开 前面学过
+    zi: '男 女 关 正 反 先 后 内 外',
+    xie: '女3 开4横 关6点 先6撇',
     anto: '南北 男女 开关 正反 先后 内外',
     cloze: [
       '一年之计在于[春]，|夏/秋/冬',
@@ -504,14 +565,14 @@ export const LESSONS_S1: LessonSpec[] = [
       '小姑娘喊谁来帮忙？=小狗/小猫/老婆婆/老公公',
       '小狗喊谁来帮忙？=小猫/小姑娘/老婆婆/老公公',
     ],
-    mix: { 1: 'anto:4 cloze:2 pyzi:2', 2: 'anto:2 cloze:2 ask:2 zipy:1', 3: 'ask:3 cloze:1' },
+    mix: { 1: 'anto:4 cloze:2 listen:1 pyzi:1', 2: 'anto:2 cloze:2 ask:2 zipy:1 strokes:1 first:1', 3: 'ask:3 cloze:1 strokes:1 first:1' },
   },
 
   // ── 第六单元 识字 ──
   {
     kp: 'c1s1-06-duiyun',
-    zi: '对 云 雨 风 花 鸟 虫 山 水 柳 桃',
-    xie: '云4横 山3竖 虫6竖',
+    zi: '对 歌 雨 风 虫 清 绿 桃 红',
+    xie: '云4横 雨8横 虫6竖 山3竖 水4',
     pic: ['☁️ 云 白云', '🌧️ 雨 下雨', '❄️ 雪 雪花', '🌬️ 风 刮风', '🌸 花 花朵', '🌳 树 大树', '🐦 鸟 小鸟', '🐛 虫 小虫', '🍑 桃 桃子'],
     cloze: [
       '云对[雨]，|雪/风/花',
@@ -528,8 +589,8 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-06-riyueming',
-    zi: '明 力 男 尖 尘 从 众 双 林 森 条 心',
-    xie: '力2 木4横 林8横 土3横 心4点',
+    zi: '力 尖 尘 众 双 林 森 不 条 心 金',
+    xie: '力2 男7竖 土3横 木4横 心4点',
     compose: ['日+月=明', '田+力=男', '小+大=尖', '小+土=尘', '人+人=从', '人+人+人=众', '木+木=林', '木+木+木=森'],
     cloze: [
       '!日月[明]，田力男。|朋/阳/白',
@@ -549,8 +610,8 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-06-shubao',
-    zi: '书 包 尺 作 业 本 笔 刀 课 早 校',
-    xie: '书4 刀2 尺4 本5横 早6竖',
+    zi: '包 尺 作 业 笔 刀 宝 贝 少 课 早',
+    xie: '尺4 本5横 刀2 不4横 少4竖',
     pic: ['✏️ 铅笔', '📏 尺子', '🎒 书包', '📓 作业本', '📕 课本'],
     ask: [
       '用来量长短、画直线的是什么？=📏尺子/✏️铅笔/🎒书包/📕课本',
@@ -570,8 +631,8 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-06-guoqi',
-    zi: '升 国 旗 中 红 歌 起 美 丽 立',
-    xie: '中4竖 五4横 立5点 正5横',
+    zi: '升 国 旗 中 们 声 起 多 么 向 立',
+    xie: '中4竖 五4横 风4撇 立5点 正5横',
     cloze: [
       '五星红旗，我们的[国旗]。|国歌/中国/红花',
       '国歌声中，徐徐[升起]。|飘扬/立正/敬礼',
@@ -589,7 +650,11 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-06-garden',
-    zi: '学 校 老 师 工 厂 医 院 生',
+    // 识字加油站：学校—老师、工厂—工人、医院—医生、传达室—门卫（学 校 园地二学过）
+    zi: '老 师 工 厂 医 院 生 门 卫',
+    xie: '工3横 厂2横 门3点 卫3',
+    // 读一读，和同学交流你的发现：木字旁、草字头（「草」在「哪个字是草字头」里注了音，不收）
+    radical: ['树 木 木字旁', '林 木 木字旁', '桃 木 木字旁', '桥 木 木字旁', '花 艹 草字头', '莲 艹 草字头', '菜 艹 草字头'],
     ask: [
       '在医院给人看病的是谁？=医生/老师/工人/门卫',
       '在学校给我们上课的是谁？=老师/医生/工人/门卫',
@@ -606,18 +671,18 @@ export const LESSONS_S1: LessonSpec[] = [
       '又疑瑶台镜，\n飞在青云[端]。|里/上/中',
     ],
     poet: ['古朗月行 李白'],
-    mix: { 1: 'ask:3 cloze:3 listen:2 pyzi:1', 2: 'ask:2 cloze:2 zipy:1 poet:1', 3: 'poet:1 ask:2 zipy:1' },
+    mix: { 1: 'ask:3 cloze:3 listen:2 pyzi:1 radical:1', 2: 'ask:2 cloze:2 zipy:1 poet:1 radical:1 strokes:1 first:1', 3: 'poet:1 ask:1 radical:1 zipy:1 strokes:1 first:1' },
   },
 
   // ── 第七单元 阅读 ──
   {
     kp: 'c1s1-07-chuan',
-    zi: '船 两 头 看 见 闪 星',
-    xie: '月4撇 儿2撇 头5点 里7竖',
+    zi: '船 弯 儿 两 头 在 里 看 见 闪',
+    xie: '月4撇 儿2撇 头5点 里7竖 见4竖',
     pic: ['🌙 月 月亮', '⭐ 星 星星', '⛵ 船 小船'],
     cloze: [
-      '[弯弯]的月儿小小的船。|闪闪/蓝蓝/小小',
-      '弯弯的月儿[小小]的船。|弯弯/闪闪/蓝蓝',
+      '[弯弯]的月儿小小的船，|闪闪/蓝蓝/小小',
+      '弯弯的月儿[小小]的船，|弯弯/闪闪/蓝蓝',
       '小小的船儿两头[尖]。|弯/圆/长',
       '我在小小的船里[坐]，|站/睡/看',
       '只看见[闪闪]的星星蓝蓝的天。|弯弯/蓝蓝/小小',
@@ -631,14 +696,17 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-07-yingzi',
-    zi: '影 前 后 黑 狗 左 右 它 好 朋 友',
-    xie: '在6横 后6撇 我7撇 好6',
+    zi: '影 前 常 黑 狗 左 右 它 好 朋 友',
+    // 「右」课本 p87 印的笔顺是先写横（一 ナ オ 右 右）
+    xie: '在6横 我7撇 左5横 右5横',
+    // 干扰项不用前后左右：「影子在左」「影子在后」也是课文里的句子
     cloze: [
-      '影子在[前]，|左/上/里',
-      '影子在前，\n影子在[后]，|左/右/上',
+      '影子在[前]，|上/里/中',
+      '影子在前，\n影子在[后]，|上/里/中',
+      '影子[常常]跟着我，|弯弯/高高/闪闪',
       '影子常常跟着我，\n就像一条小[黑狗]。|白兔/花猫/黄牛',
-      '影子在[左]，|前/后/上',
-      '影子在左，\n影子在[右]，|前/后/下',
+      '影子在[左]，|上/下/里',
+      '影子在左，\n影子在[右]，|上/下/里',
       '它是我的好[朋友]。|小狗/影子/老师',
     ],
     anto: '前后 左右 上下',
@@ -647,15 +715,16 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-07-liangjianbao',
-    zi: '件 宝 双 脑 做 工 思 考 才 能',
-    xie: '工3横 才3横 手4撇 用5撇',
+    zi: '件 有 和 做 也 办 到 又 才 能',
+    xie: '和8撇 也3 又2 才3横',
+    // 干扰项放进句子要说不通（「人有两件事」「做不完」「办不了」都说得通）
     cloze: [
-      '人有两件[宝]，|手/事/工',
+      '人有两件[宝]，|手/脑/工',
       '人有两件宝，\n[双手]和大脑。|双脚/眼睛/耳朵',
       '双手会[做工]，|思考/说话/唱歌',
       '大脑会[思考]。|做工/走路/吃饭',
-      '用手不用脑，\n事情做不[好]。|到/完/了',
-      '用脑不用手，\n啥也办不[到]。|好/完/了',
+      '用手不用脑，\n事情做不[好]。|件/双/宝',
+      '用脑不用手，\n啥也办不[到]。|件/双/宝',
       '用手又用脑，\n才能有[创造]。|大脑/双手/事情',
     ],
     ask: [
@@ -667,6 +736,9 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-07-garden',
+    // 识字加油站（家人的称呼）
+    zi: '爷 奶 叔 姐 妹',
+    xie: '爸8撇 妈6',
     ask: [
       '爸爸的爸爸，我叫他什么？=爷爷/姥爷/叔叔/舅舅',
       '爸爸的妈妈，我叫她什么？=奶奶/姥姥/姑姑/姨妈',
@@ -676,6 +748,9 @@ export const LESSONS_S1: LessonSpec[] = [
       '爸爸的姐妹，我叫她什么？=姑姑/姨妈/奶奶/姐姐',
       '妈妈的兄弟，我叫他什么？=舅舅/叔叔/姥爷/哥哥',
       '妈妈的姐妹，我叫她什么？=姨妈/姑姑/姥姥/妹妹',
+      // 和大人一起读《猴子捞月亮》
+      '小猴子往井里一看，看见了什么？=🌙月亮/⭐星星/🐟小鱼/☀️太阳',
+      '老猴子一抬头，看见月亮在哪里？=天上/井里/树上/水里',
     ],
     radical: ['明 日 日字旁', '晚 日 日字旁', '昨 日 日字旁', '妈 女 女字旁', '奶 女 女字旁', '姐 女 女字旁', '妹 女 女字旁'],
     cloze: [
@@ -689,19 +764,20 @@ export const LESSONS_S1: LessonSpec[] = [
       '千里之行，始于[足下]。|手下/脚上/天下',
       '百尺竿头，更进[一步]。|一尺/一天/一米',
     ],
-    mix: { 1: 'ask:3 cloze:3 radical:1', 2: 'radical:2 cloze:2 ask:1', 3: 'radical:2 cloze:1 ask:1' },
+    mix: { 1: 'ask:3 cloze:3 radical:1 listen:1 pyzi:1', 2: 'radical:2 cloze:2 ask:1 zipy:1 strokes:1 first:1', 3: 'radical:2 cloze:1 ask:1 zipy:1 strokes:1 first:1' },
   },
 
   // ── 第八单元 阅读 ──
   {
     kp: 'c1s1-08-weiba',
-    zi: '比 尾 巴 谁 长 短 把 伞 兔 公 最',
-    xie: '比4 巴4 长4撇 把7横',
+    zi: '比 尾 巴 谁 长 短 把 伞 兔 最 公',
+    xie: '比4横 巴4 长4撇 公4撇',
+    // 干扰项避开也说得通的（松鼠、孔雀的尾巴也长，松鼠、猴子的尾巴也会弯）
     ask: [
-      '谁的尾巴长？=🐒猴子/🐰兔子/🐿️松鼠/🦚孔雀',
+      '谁的尾巴长？=🐒猴子/🐰兔子/🦆鸭子',
       '谁的尾巴短？=🐰兔子/🐒猴子/🐿️松鼠/🐓公鸡',
       '谁的尾巴好像一把伞？=🐿️松鼠/🐒猴子/🐰兔子/🦆鸭子',
-      '谁的尾巴弯？=🐓公鸡/🦆鸭子/🐰兔子/🐿️松鼠',
+      '谁的尾巴弯？=🐓公鸡/🦆鸭子/🐰兔子',
       '谁的尾巴扁？=🦆鸭子/🐓公鸡/🐒猴子/🦚孔雀',
       '谁的尾巴最好看？=🦚孔雀/🐓公鸡/🐿️松鼠/🦆鸭子',
       '猴子的尾巴怎么样？=长/短/扁/弯',
@@ -715,8 +791,9 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-08-wuya',
-    zi: '乌 鸦 处 找 办 法 许 放 进 高',
-    xie: '出5 只5竖 多6撇 见4竖 石5横',
+    // 蓝字「着 zháo」不进 zi；乌 鸦 在汉语拼音 9 学过
+    zi: '喝 只 处 找 许 石 出 法 放 进 高',
+    xie: '只5竖 多6撇 办4 石5横 出5',
     ask: [
       '乌鸦为什么喝不着水？=瓶子里水不多，瓶口又小/瓶子里没有水/乌鸦不口渴/瓶子太重了',
       '乌鸦想出了什么办法？=把小石子放进瓶子里/把瓶子推倒/去小河边喝/请朋友帮忙',
@@ -733,8 +810,9 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-08-yudian',
-    zi: '数 彩 半 空 问 到 方 没 更',
-    xie: '从4撇 你7撇 半5点 问6点 有6横',
+    // 蓝字「数 shǔ」「长 zhǎng」不进 zi
+    zi: '点 彩 半 空 问 回 答 方 久 更',
+    xie: '来7横 半5点 你7撇 有6横',
     ask: [
       '大雨点儿要去哪里？=没有花没有草的地方/有花有草的地方/云彩里/小河里',
       '小雨点儿要去哪里？=有花有草的地方/没有花没有草的地方/云彩里/大海里',
@@ -743,7 +821,7 @@ export const LESSONS_S1: LessonSpec[] = [
       '没有花没有草的地方，后来怎么样了？=开出了红的花，长出了绿的草/还是什么也没有/下起了大雪/变成了小河',
     ],
     cloze: [
-      '数不清的雨点儿，\n从[云彩]里落下来。|天空/大树/房子',
+      '数不清的雨点儿，\n从[云彩]里落下来。|小河/大树/房子',
       '半空中，\n[大雨点儿]问小雨点儿：|小雨点儿/小花/小草',
       '不久，有花有草的地方，\n花更红了，草更[绿]了。|红/黄/白',
     ],
@@ -751,6 +829,15 @@ export const LESSONS_S1: LessonSpec[] = [
   },
   {
     kp: 'c1s1-08-garden',
+    // 识字加油站：连一连（上下 / 独体 / 左右）
+    zi: '牛 羊 爪 元 拼 音',
+    xie: '牛4撇 羊6点 爪4撇 白5撇',
+    ask: [
+      '!哪个字可以分成上下两部分？=音/牛/叶/拼',
+      '!哪个字可以分成左右两部分？=拼/羊/元/音',
+      '!哪个字不能分成两部分？=羊/叶/拼/音',
+      '《风》这首诗写的是什么？=🌬️风/🌧️雨/❄️雪/☁️云',
+    ],
     cloze: [
       '果[皮]|法/回/方',
       '树[皮]|法/来/向',
@@ -759,10 +846,10 @@ export const LESSONS_S1: LessonSpec[] = [
       '[回]来|许/处/方',
       '[回]答|四/地/加',
       '[许]多|回/四/加',
-      '不[许]|回/处/方',
+      '不[许]|皮/处/方',
       '到[处]|皮/法/许',
-      '四[处]|回/方/许',
-      '方[向]|法/处/回',
+      '四[处]|皮/法/许',
+      '方[向]|许/处/回',
       '地[方]|法/回/许',
       '解落三秋[叶]，|花/草/树',
       '解落三秋叶，\n能开二月[花]。|叶/草/果',
@@ -773,8 +860,7 @@ export const LESSONS_S1: LessonSpec[] = [
       '二十六，去买[肉]。|菜/鱼/米',
       '二十九，蒸[馒头]。|包子/米饭/年糕',
     ],
-    ask: ['《风》这首诗写的是什么？=🌬️风/🌧️雨/❄️雪/☁️云'],
     poet: ['风 李峤'],
-    mix: { 1: 'cloze:6 ask:1 poet:1', 2: 'cloze:4 poet:1 ask:1', 3: 'cloze:3 poet:1' },
+    mix: { 1: 'cloze:5 ask:2 listen:1 pyzi:1 poet:1', 2: 'cloze:4 ask:2 zipy:1 poet:1 strokes:1 first:1', 3: 'cloze:3 ask:1 zipy:1 poet:1 strokes:1 first:1' },
   },
 ]

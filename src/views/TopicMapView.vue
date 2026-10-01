@@ -6,6 +6,7 @@ import { ROUND_SIZE, hasGenerator } from '@/engine'
 import { getCourse, getSubject, kpsOfUnit } from '@/engine/catalog'
 import { kpTitle, ui, unitTitle } from '@/engine/i18n'
 import { useProgressStore } from '@/stores/progress'
+import { videoUrlOf } from '@/content/videos'
 
 // 某「学科×年级」的知识点地图。无效课程回顶层。
 const route = useRoute()
@@ -103,16 +104,27 @@ function tapNode(kp: KnowledgePoint): void {
               <span class="node-icon">{{ kp.icon }}</span>
             </button>
             <span class="node-title">{{ kpTitle(kp) }}</span>
-            <button
-              v-if="statusOf(kp) === 'open'"
-              type="button"
-              class="status"
-              :class="progress.isCompleted(kp.id) ? 'done' : 'todo'"
-              :title="ui('status.toggleHint')"
-              @click="progress.toggleCompleted(kp.id)"
-            >
-              {{ ui(progress.isCompleted(kp.id) ? 'status.done' : 'status.todo') }}
-            </button>
+            <!-- 完成状态 + 这一节在国家中小学智慧教育平台的同步课视频（新窗口打开，F2） -->
+            <div v-if="statusOf(kp) === 'open'" class="status-row">
+              <button
+                type="button"
+                class="status"
+                :class="progress.isCompleted(kp.id) ? 'done' : 'todo'"
+                :title="ui('status.toggleHint')"
+                @click="progress.toggleCompleted(kp.id)"
+              >
+                {{ ui(progress.isCompleted(kp.id) ? 'status.done' : 'status.todo') }}
+              </button>
+              <a
+                v-if="videoUrlOf(kp.id)"
+                class="video"
+                :href="videoUrlOf(kp.id)"
+                target="_blank"
+                rel="noopener"
+                :title="ui('status.videoHint')"
+                :aria-label="ui('status.videoHint')"
+              >{{ ui('status.video') }}</a>
+            </div>
             <span v-else-if="statusOf(kp) === 'soon'" class="soon-tag">{{ ui('home.soon') }}</span>
             <!-- 未完成的：这一轮做到第几题（答对绿、答错红；中途退出会记住，下次接着做） -->
             <div
@@ -222,7 +234,7 @@ function tapNode(kp: KnowledgePoint): void {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 112px;
+  width: 124px;
 }
 .node {
   width: 72px;
@@ -256,11 +268,18 @@ function tapNode(kp: KnowledgePoint): void {
   font-size: 12px;
   color: var(--c-text-light);
 }
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
 .status {
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  padding: 3px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   cursor: pointer;
   transition: transform 0.08s ease, background 0.15s ease;
@@ -275,6 +294,21 @@ function tapNode(kp: KnowledgePoint): void {
 .status.todo {
   color: var(--c-text-light);
   background: var(--c-bg);
+}
+/* 同步课视频：和状态药丸一样大小，主色字，点了新窗口打开平台的课时页 */
+.video {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--c-primary-dark);
+  background: var(--c-bg);
+  text-decoration: none;
+  transition: transform 0.08s ease;
+}
+.video:active {
+  transform: scale(0.92);
 }
 .round {
   display: flex;

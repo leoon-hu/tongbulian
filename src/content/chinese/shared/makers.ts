@@ -114,7 +114,7 @@ export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>
   长: { cháng: '长短的长', zhǎng: '长大的长' },
   行: { xíng: '行走的行' },
   为: { wèi: '为什么的为', wéi: '成为的为' },
-  数: { shǔ: '数一数的数' },
+  数: { shǔ: '数一数的数', shù: '数学的数' },
   乐: { lè: '快乐的乐' },
   觉: { jiào: '睡觉的觉' },
   朝: { zhāo: '朝霞的朝' },
@@ -124,18 +124,21 @@ export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>
   藏: { cáng: '捉迷藏的藏' },
   空: { kōng: '天空的空' },
   种: { zhòng: '种花的种' },
-  教: { jiāo: '教书的教' },
-  背: { bēi: '背书包的背' },
+  教: { jiāo: '教书的教', jiào: '教室的教' },
+  背: { bēi: '背书包的背', bèi: '后背的背' },
   还: { hái: '还有的还' },
   只: { zhī: '一只的只' },
   少: { shǎo: '多少的少' },
   相: { xiāng: '互相的相' },
   着: { zhe: '看着的着', zháo: '着急的着' },
+  们: { men: '我们的们' },
+  么: { me: '什么的么' },
+  爪: { zhuǎ: '爪子的爪' },
   地: { dì: '大地的地' },
-  得: { dé: '得到的得' },
+  得: { dé: '得到的得', de: '跑得快的得' },
   了: { le: '好了的了' },
   发: { fā: '发芽的发' },
-  干: { gān: '干净的干' },
+  干: { gān: '干净的干', gàn: '干活的干' },
   华: { huá: '中华的华' },
   兴: { xìng: '高兴的兴' },
   奇: { qí: '奇怪的奇' },
@@ -164,6 +167,21 @@ export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>
   挣: { zhèng: '挣断的挣' },
   折: { zhé: '折纸的折' },
   燕: { yàn: '燕子的燕' },
+  // 一年级下册的生字
+  什: { shén: '什么的什' },
+  都: { dōu: '都是的都' },
+  结: { jié: '结网的结' },
+  斗: { dǒu: '北斗的斗' },
+  呀: { ya: '来呀的呀' },
+  呢: { ne: '你呢的呢' },
+  吗: { ma: '好吗的吗' },
+  吧: { ba: '走吧的吧' },
+  啊: { a: '好啊的啊' },
+  啦: { la: '来啦的啦' },
+  哪: { nǎ: '哪里的哪' },
+  那: { nà: '那里的那' },
+  过: { guò: '过河的过' },
+  转: { zhuǎn: '转身的转' },
   // 二年级
   柏: { bǎi: '松柏的柏' },
   系: { jì: '系鞋带的系' },
@@ -191,6 +209,32 @@ export function sayZi(c: string, py?: string): string {
   const byPy = POLY_SAY[c]
   if (!byPy) return c
   return (py === undefined ? undefined : byPy[py]) ?? Object.values(byPy)[0]!
+}
+
+/**
+ * 生字：「结 果 结jiē」→ 字的清单 + 本课读音。同一个字在识字表里不同的课读音不同（结 jié / jiē、空 kōng / kòng），
+ * 本年级拼音表的单字只有一个读音，跟它不一样的那一课在字后面写上读音（声调符号）
+ */
+export function parseZi(s: string | undefined): { chars: string[]; reading: Record<string, string> } {
+  const chars: string[] = []
+  const reading: Record<string, string> = {}
+  for (const x of split(s)) {
+    const m = /^(\p{Script=Han})([a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]*)$/u.exec(x)
+    if (!m) throw new Error(`bad zi item: ${x}`)
+    chars.push(m[1]!)
+    if (m[2]) reading[m[1]!] = m[2]
+  }
+  return { chars, reading }
+}
+
+/** 本课有自己读音的字：查拼音、读字都先看本课的读音 */
+function withReadings(ctx: Ctx, reading: Record<string, string>): Ctx {
+  if (Object.keys(reading).length === 0) return ctx
+  return {
+    ...ctx,
+    py: (t) => reading[t] ?? ctx.py(t),
+    say: (c) => (reading[c] !== undefined ? sayZi(c, reading[c]) : ctx.say(c)),
+  }
 }
 
 /** 偏旁：写法 → 名称（偏旁题的干扰项、朗读） */
@@ -746,7 +790,8 @@ const WHOLE_NEAR: Readonly<Record<string, readonly string[]>> = {
 }
 const WHOLE = new Set(Object.keys(WHOLE_NEAR))
 const SINGLE_FINALS = ['a', 'o', 'e', 'i', 'u', 'ü']
-const COMPOUND = ['ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe', 'er']
+/** 复韵母：课本不把 er 归进复韵母（「下面哪一个是复韵母」不出 er，Y4） */
+const COMPOUND = ['ai', 'ei', 'ui', 'ao', 'ou', 'iu', 'ie', 'üe']
 const FRONT = ['an', 'en', 'in', 'un', 'ün']
 const BACK = ['ang', 'eng', 'ing', 'ong']
 const says = (l: string): Opt => ({ label: l, ...(LETTER_SAY[l] ? { say: LETTER_SAY[l] } : {}) })
@@ -992,8 +1037,9 @@ function yinxuItems(ctx: Ctx, zi: string[]): Item[] {
 // ── 一课 → 各模板的条目 ────────────────────────────────────────────────
 
 /** 一课能出的全部题目条目，按模板名分组（生成器按 mix 挑模板、再挑条目；语料收集逐条出一遍） */
-export function lessonItems(spec: LessonSpec, ctx: Ctx): Record<string, Item[]> {
-  const zi = split(spec.zi)
+export function lessonItems(spec: LessonSpec, lessonCtx: Ctx): Record<string, Item[]> {
+  const { chars: zi, reading } = parseZi(spec.zi)
+  const ctx = withReadings(lessonCtx, reading)
   const pics = (spec.pic ?? []).map(parsePic)
   const xie = split(spec.xie).map(parseXie)
   const digits = split(spec.digits).map((s): [number, string] => {
@@ -1049,7 +1095,10 @@ export function lessonTexts(spec: LessonSpec, pinyinReady = true): string[] {
     const t = hanPart(s)
     if (HAN.test(t)) out.add(t)
   }
-  if (pinyinReady) for (const c of split(spec.zi)) add(c)
+  if (pinyinReady) {
+    const { chars, reading } = parseZi(spec.zi)
+    for (const c of chars) if (reading[c] === undefined) add(c)
+  }
   for (const c of split(spec.yinxu)) add(c)
   for (const s of spec.cloze ?? []) {
     const it = parseCloze(s)

@@ -224,10 +224,10 @@ export type StemPart =
   | { kind: 'clock'; hour: number; minute: number }
   /** 一组人民币 */
   | { kind: 'money'; pieces: MoneyPiece[] }
-  /** 单个图形 */
-  | { kind: 'shape'; shape: ShapeKind }
-  /** 一堆图形（分类、数图形） */
-  | { kind: 'shape-group'; shapes: ShapeKind[] }
+  /** 单个图形；平面图形可以换颜色（tone，ShapeGlyph 的色板下标）、转个角度（turn，度）、换三角形的样子（form：0 等腰、1 直角、2 一般），免得孩子靠颜色和摆法认图形 */
+  | { kind: 'shape'; shape: ShapeKind; tone?: number; turn?: number; form?: number }
+  /** 一堆图形（分类、数图形）；tones / turns / forms 与 shapes 一一对应（可不填） */
+  | { kind: 'shape-group'; shapes: ShapeKind[]; tones?: number[]; turns?: number[]; forms?: number[] }
   /** 用小正方形拼成的矩形（图形拼组：数格子 / 认拼成的图形） */
   | { kind: 'tiles'; rows: number; cols: number }
   /** 找规律序列，含 ? 空位 */

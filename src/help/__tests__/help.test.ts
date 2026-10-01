@@ -17,7 +17,7 @@ describe('帮助页内容（F17）', () => {
     const learn = helpSections('zh').find((s) => s.id === 'learn')!
     const first = learn.blocks[0]!
     expect(first.kind).toBe('p')
-    if (first.kind === 'p') expect(first.text).toContain('一年级数学 26 个知识点')
+    if (first.kind === 'p') expect(first.text).toContain('一年级数学 31 个知识点')
   })
 
   it('规则一节列出每种游戏的名字和开场规则句；常见问题至少 8 条，问答都不为空', () => {

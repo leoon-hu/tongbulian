@@ -142,16 +142,16 @@ describe('App 集成冒烟', () => {
     expect(document.title).toBe('一年级数学 · 同步练-对战版')
     map.unmount()
     const p = await mountAt(practice('s1-05-carry-add'))
-    expect(document.title).toBe('凑十法 · 一年级数学 · 同步练-对战版')
+    expect(document.title).toBe('9 加几 · 一年级数学 · 同步练-对战版')
     setLang('en')
     await flushPromises()
-    expect(document.title).toBe('Make-Ten Addition · Grade 1 Math · Chapter Practice · Battle')
+    expect(document.title).toBe('9 Plus a Number · Grade 1 Math · Chapter Practice · Battle')
     p.unmount()
   })
 
   it('知识点地图渲染出单元与知识点', async () => {
     const w = await mountAt(MAP)
-    expect(shown(w)).toContain('凑十法')
+    expect(shown(w)).toContain('9 加几')
     expect(shown(w)).toContain('上册')
     w.unmount()
   })
@@ -218,7 +218,7 @@ describe('App 集成冒烟', () => {
     w.unmount()
 
     const p = await mountAt('/s/math/g/g2/practice/m2s2-05-add')
-    expect(shown(p)).toContain('三位数加法')
+    expect(shown(p)).toContain('加法')
     expect(p.find('.vertical').exists()).toBe(true)
     expect(p.findAll('button').length).toBeGreaterThan(0)
     expect(p.findAll('.dot')).toHaveLength(8)
@@ -241,9 +241,9 @@ describe('App 集成冒烟', () => {
 
   it('上册/下册用页签切换（只显示当前册的知识点）', async () => {
     const w = await mountAt(MAP)
-    // 默认在上册：出现上册的「凑十法」，不出现下册的「破十法」
-    expect(shown(w)).toContain('凑十法')
-    expect(shown(w)).not.toContain('破十法')
+    // 默认在上册：出现上册的「9 加几」，不出现下册的「十几减 9」
+    expect(shown(w)).toContain('9 加几')
+    expect(shown(w)).not.toContain('十几减 9')
 
     // 点「下册」页签
     const tab = w.findAll('button.tab').find((b) => b.text() === '下册')
@@ -251,9 +251,9 @@ describe('App 集成冒烟', () => {
     await tab!.trigger('click')
     await flushPromises()
 
-    // 切到下册：出现「破十法」，不再出现上册的「凑十法」
-    expect(shown(w)).toContain('破十法')
-    expect(shown(w)).not.toContain('凑十法')
+    // 切到下册：出现「十几减 9」，不再出现上册的「9 加几」
+    expect(shown(w)).toContain('十几减 9')
+    expect(shown(w)).not.toContain('9 加几')
     w.unmount()
   })
 
@@ -263,14 +263,14 @@ describe('App 集成冒烟', () => {
     await tab.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.sem).toBe('2')
-    expect(shown(w)).toContain('破十法')
+    expect(shown(w)).toContain('十几减 9')
 
     const tapNode = async (title: string): Promise<void> => {
       await w.findAll('.node-wrap').find((n) => shown(n).includes(title))!.find('.node').trigger('click')
       await flushPromises()
     }
     // 点下册的知识点 → 设置页选「自己练」开始 → 练习页的返回键 → 还是下册
-    await tapNode('破十法')
+    await tapNode('十几减 9')
     await until(() => router.currentRoute.value.name === 'battle-setup')
     await w.find('.mode[data-mode="practice"]').trigger('click')
     await w.find('.start-btn').trigger('click')
@@ -279,25 +279,25 @@ describe('App 集成冒烟', () => {
     await w.find('.page-header .back').trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
     expect(router.currentRoute.value.query.sem).toBe('2')
-    expect(shown(w)).toContain('破十法')
-    expect(shown(w)).not.toContain('凑十法')
+    expect(shown(w)).toContain('十几减 9')
+    expect(shown(w)).not.toContain('9 加几')
 
     // 设置页的返回键同样
-    await tapNode('破十法')
+    await tapNode('十几减 9')
     await until(() => router.currentRoute.value.name === 'battle-setup')
     await w.find('.page-header .back').trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
     expect(router.currentRoute.value.query.sem).toBe('2')
-    expect(shown(w)).toContain('破十法')
+    expect(shown(w)).toContain('十几减 9')
 
     // 切回上册：地址不再带 sem；直接打开带 ?sem=2 的地址就是下册
     await w.findAll('button.tab').find((b) => b.text() === '上册')!.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.sem).toBeUndefined()
-    expect(shown(w)).toContain('凑十法')
+    expect(shown(w)).toContain('9 加几')
     await router.replace(`${MAP}?sem=2`)
     await flushPromises()
-    expect(shown(w)).toContain('破十法')
+    expect(shown(w)).toContain('十几减 9')
     w.unmount()
 
     // 上册的知识点回来仍是上册
@@ -305,13 +305,13 @@ describe('App 集成冒烟', () => {
     await p.find('.page-header .back').trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
     expect(router.currentRoute.value.query.sem).toBeUndefined()
-    expect(shown(p)).toContain('凑十法')
+    expect(shown(p)).toContain('9 加几')
     p.unmount()
   })
 
   it('练习页用真实题目渲染出作答按钮', async () => {
     const w = await mountAt(practice('s1-05-carry-add'))
-    expect(shown(w)).toContain('凑十法')
+    expect(shown(w)).toContain('9 加几')
     expect(w.findAll('button').length).toBeGreaterThan(0)
     w.unmount()
   })
@@ -376,6 +376,21 @@ describe('App 集成冒烟', () => {
     await w.find('button.status').trigger('click') // 再点切回未完成
     await flushPromises()
     expect(w.find('button.status').text()).toContain('未完成')
+    w.unmount()
+  })
+
+  it('完成状态旁边有这一节的同步课视频链接（国家中小学智慧教育平台，新窗口打开）', async () => {
+    const w = await mountAt(MAP)
+    const wraps = w.findAll('.node-wrap').filter((n) => n.find('button.status').exists())
+    expect(wraps.length).toBeGreaterThan(0)
+    for (const n of wraps) {
+      const a = n.find('.status-row a.video')
+      expect(a.exists()).toBe(true)
+      expect(a.attributes('href')).toMatch(/^https:\/\/basic\.smartedu\.cn\/syncClassroom\/classActivity\?activityId=/)
+      expect(a.attributes('target')).toBe('_blank')
+      expect(a.attributes('rel')).toContain('noopener')
+      expect(a.text()).toContain('视频')
+    }
     w.unmount()
   })
 
@@ -452,18 +467,18 @@ describe('App 集成冒烟', () => {
       await w.findAll('button').find((b) => shown(b) === '我知道了')!.trigger('click')
       await flushPromises()
     }
-    expect(shown(w.find('.summary .next-hint'))).toBe('下一章：凑十法')
+    expect(shown(w.find('.summary .next-hint'))).toBe('下一章：9 加几')
     expect(w.findAll('.summary .actions .big-btn').map((b) => shown(b).trim())).toEqual(['下一章 ▶', '再练一次', '不练了'])
     await w.find('.summary .next-btn').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(router.currentRoute.value.path).toBe(practice(nextKp(kpId)!))
-    expect(shown(w.find('.page-header .title'))).toContain('凑十法')
+    expect(shown(w.find('.page-header .title'))).toContain('9 加几')
     expect(w.findAll('.dot.now')).toHaveLength(1)
     w.unmount()
 
-    // 本册最后一个：没有下一章；「不练了」回这个知识点所在的地图
-    await router.replace(practice('s1-05-carry-add'))
+    // 本册最后一个（上册是「5、4、3、2 加几」）：没有下一章；「不练了」回这个知识点所在的地图
+    await router.replace(practice('s1-05-add-5432'))
     const last = mount(App, { global: { plugins: [router, pinia] } })
     await flushPromises()
     await flushPromises()
@@ -752,7 +767,9 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
   it('打机器人打完：结果页「下一章」→ 同样的人换到本册下一个知识点接着打（竞技场不重挂、地址跟着换、游戏按那一章排定）；「不玩了」回地图', async () => {
     fakeTimers()
     localStorage.setItem(BATTLE_KEY, JSON.stringify({ names: { me: '小兔', left: '', right: '' } }))
-    const FIRST = 's1-04-simple-addsub'
+    // 上册倒数第二个知识点（「8、7、6 加几」），下一章是上册最后一个「5、4、3、2 加几」
+    const FIRST = 's1-05-add-876'
+    const LAST = 's1-05-add-5432'
     const w = await mountAt(`/battle/local/${FIRST}?mode=ai`)
     await settle()
     const store = useBattleStore()
@@ -771,13 +788,13 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     expect(w.find('.result').exists()).toBe(true)
     expect(w.findAll('.result .big-btn')).toHaveLength(3) // 下一章 / 再来一局 / 不玩了，与房间里一样
     expect(shown(w.find('.result'))).not.toContain('换个游戏')
-    expect(shown(w.find('.result .next-hint'))).toContain(ui('kp.s1-05-carry-add'))
+    expect(shown(w.find('.result .next-hint'))).toContain(ui(`kp.${LAST}`))
     await w.find('.result .next-btn').trigger('click')
-    await until(pathIs('/battle/local/s1-05-carry-add'))
+    await until(pathIs(`/battle/local/${LAST}`))
     expect(router.currentRoute.value.query.mode).toBe('ai')
-    expect(store.state?.kpId).toBe('s1-05-carry-add')
+    expect(store.state?.kpId).toBe(LAST)
     expect(store.state?.phase).toBe('countdown')
-    expect(store.state?.skin).toBe(chapterSkin('s1-05-carry-add'))
+    expect(store.state?.skin).toBe(chapterSkin(LAST))
     expect(store.state?.players.map((p) => [p.name, p.kind])).toEqual([
       ['小兔', 'human'],
       ['', 'ai'],
@@ -916,7 +933,7 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
 
 describe('对战模式（§8，第 2 阶段：多设备房间）', () => {
   const BATTLE_KEY = 'tongbulian:battle'
-  /** 上册倒数第二个知识点：结果页「下一章」还有下一个（s1-05-carry-add 是上册最后一个，nextKp 给 null） */
+  /** 结果页「下一章」还有下一个的知识点（上册最后一个是 s1-05-add-5432，nextKp 给 null） */
   const KP = 's1-04-simple-addsub'
   const CODE = 'ABC234'
   let seedN = 0

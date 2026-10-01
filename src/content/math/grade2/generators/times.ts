@@ -3,7 +3,7 @@ import type { RNG } from '@/engine'
 import { defineGenerator, numberQuestion } from '@/engine'
 
 // ─────────────────────────────────────────────────────────────
-// 数量间的乘除关系（二下）：倍的认识（几倍 / 几倍是多少 / 一份是多少）、每份数 × 份数 = 总数 的三量关系
+// 数量间的乘除关系（二下）：倍的认识（几倍 / 几倍是多少 / 一份是多少）、用乘除法解决问题（倍的两步题、和差倍辨析、几个几）
 // ─────────────────────────────────────────────────────────────
 
 const ITEMS = ['🍎', '🍬', '⭐', '🎈', '🍪', '🌸', '🎁', '🧁', '🥟', '🍓']
@@ -12,7 +12,7 @@ const NAMES = ['🐰', '🐶', '🐱', '🐼', '🦊', '🐷']
 const PIC_MAX = 24
 
 function word(kpId: string, d: Difficulty, sig: string, text: LStr, value: number, rng: RNG, smart: number[], extra: StemPart[] = []): Question {
-  return numberQuestion({ kpId, type: value > 9 ? 'multiply' : 'divide', difficulty: d, sig, stem: [{ kind: 'text', text }, ...extra], value, rng, min: 1, max: 81, smart })
+  return numberQuestion({ kpId, type: value > 9 ? 'multiply' : 'divide', difficulty: d, sig, stem: [{ kind: 'text', text }, ...extra], value, rng, min: 1, max: 99, smart })
 }
 
 // ── 倍的认识 ──
@@ -38,19 +38,43 @@ defineGenerator('m2s2-03-times', (d, rng) => {
   return word(kpId, d, `base-${n}-${k}`, { k: 'q.times.base', p: { a1, a2, item, m: n * k, k } }, n, rng, [n * k - k, k, n + 1, n - 1])
 })
 
-// ── 乘除法解决问题：每份数、份数、总数 ──
+// ── 用乘除法解决问题（例 5 倍的两步题「7 × 3 = 21，21 + 7 = 28」；例 6 同样两个数问和、问差、问几倍；
+//    p24 引入复习「几个几」）。课本不讲「每份数、份数、总数」，也没有先除后乘的归一题（那是三上的） ──
+const GOODS = ['🎈', '🧁', '🍎', '🍪', '🌸', '🎁']
+
 defineGenerator('m2s2-03-mul-div-solve', (d, rng) => {
   const kpId = 'm2s2-03-mul-div-solve'
-  const item = rng.pick(ITEMS)
-  const cap = d === 1 ? 6 : 9
-  const n = rng.int(2, cap) // 每份
-  const k = rng.int(2, cap) // 份数
-  const t = n * k
   const roll = rng.next()
-  if (roll < 0.3) return word(kpId, d, `total-${n}-${k}`, { k: 'q.rel.total', p: { item, n, k } }, t, rng, [n + k, n * (k + 1), n * (k - 1)])
-  if (roll < 0.55) return word(kpId, d, `each-${t}-${k}`, { k: 'q.rel.perBox', p: { item, t, k } }, n, rng, [k, t - k, n + 1, n - 1])
-  if (roll < 0.8 || d === 1) return word(kpId, d, `boxes-${t}-${n}`, { k: 'q.rel.boxes', p: { item, t, n } }, k, rng, [n, t - n, k + 1, k - 1])
-  // 两步：k 盒一共 t 个，每盒一样多，k2 盒有几个（先求每份数）
-  const k2 = rng.int(2, Math.min(9, Math.floor(81 / n)))
-  return word(kpId, d, `two-${t}-${k}-${k2}`, { k: 'q.rel.twoStep', p: { item, k, t, k2 } }, n * k2, rng, [n, t, n * k2 + n, n * (k2 - 1)])
+  if (roll < 0.4) {
+    // 倍的两步题：买了 n 个 a，b 是 a 的 k 倍；b 和 a 一共多少个 / b 比 a 多多少个
+    const [a, b] = rng.shuffle(GOODS).slice(0, 2) as [string, string]
+    const n = rng.int(2, 9)
+    const k = rng.int(2, d === 1 ? 5 : 9)
+    const sum = rng.chance(0.6)
+    return sum
+      ? word(kpId, d, `tsum-${n}-${k}`, { k: 'q.rel.timesSum', p: { n, a, b, k } }, n * k + n, rng, [n * k, n + k, n * k + n + 1, n * k - n])
+      : word(kpId, d, `tmore-${n}-${k}`, { k: 'q.rel.timesMore', p: { n, a, b, k } }, n * k - n, rng, [n * k, n * k + n, k, n * k - n + 1])
+  }
+  if (roll < 0.8) {
+    // 同样两个数（男生 m 人、女生 f 人，f 是 m 的 k 倍），问几倍 / 多几 / 一共
+    const m = rng.int(2, 9)
+    const k = rng.int(2, d === 1 ? 5 : 9)
+    const f = m * k
+    const girlsMore = rng.chance(0.5)
+    const [x, y] = girlsMore ? (['rel.boy', 'rel.girl'] as const) : (['rel.girl', 'rel.boy'] as const)
+    const p = { x: { k: x }, y: { k: y }, m, f }
+    const ask = rng.next()
+    if (ask < 0.4) return word(kpId, d, `ptimes-${x}-${m}-${f}`, { k: 'q.rel.pairTimes', p }, k, rng, [f - m, f + m, k + 1, k - 1])
+    if (ask < 0.75) return word(kpId, d, `pmore-${x}-${m}-${f}`, { k: 'q.rel.pairMore', p }, f - m, rng, [k, f + m, f - m + 1, f - m - 1])
+    return word(kpId, d, `psum-${x}-${m}-${f}`, { k: 'q.rel.pairSum', p }, f + m, rng, [f - m, k, f + m + 1, f + m - 1])
+  }
+  // 复习「几个几」：每盒 n 个，k 盒；平均装；每盒装 n 个要几盒
+  const item = rng.pick(ITEMS)
+  const n = rng.int(2, 9)
+  const k = rng.int(2, 9)
+  const t = n * k
+  const r = rng.next()
+  if (r < 0.4) return word(kpId, d, `total-${n}-${k}`, { k: 'q.rel.total', p: { item, n, k } }, t, rng, [n + k, n * (k + 1), n * (k - 1)])
+  if (r < 0.7) return word(kpId, d, `each-${t}-${k}`, { k: 'q.rel.perBox', p: { item, t, k } }, n, rng, [k, t - k, n + 1, n - 1])
+  return word(kpId, d, `boxes-${t}-${n}`, { k: 'q.rel.boxes', p: { item, t, n } }, k, rng, [n, t - n, k + 1, k - 1])
 })

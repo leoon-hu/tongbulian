@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import '@/content/math/grade2'
 import { dictKeys, isHan, pinyinOf, rubySegments, translate } from '@/engine/i18n'
 import { PINYIN } from '../pinyin'
+import { cnChars, cnWords } from '../numword'
 
 /** 需要注音的词条前缀：孩子在练习页会看到的题干 / 选项 / 教具文案 / 知识点标题（含二年级新增的 num：数的组成部件）。 */
 const NEEDS_PINYIN = /^(q|opt|dir|side|rel|cat|shape|lineup|tf|kp|practice|summary|num|battle|boss|skin|room|mic|robot|avatar|char)\./
@@ -40,6 +41,14 @@ describe('二年级拼音表', () => {
     )
     expect(segs.map((s) => s.text).join('')).toBe('3 个百和 5 个一组成的数是几？')
     expect(segs.filter((s) => s.py).map((s) => s.py)).toEqual(['gè', 'bǎi', 'hé', 'gè', 'yī', 'zǔ', 'chéng', 'de', 'shù', 'shì', 'jǐ'])
+  })
+
+  it('汉字读数逐字注音：「一」在千、百前面标 yì，其余标 yī；英文界面也显示汉字', () => {
+    const py = (n: number): string[] => rubySegments(cnWords(cnChars(n)), 'zh').map((s) => s.py ?? s.text)
+    expect(py(1101)).toEqual(['yì', 'qiān', 'yì', 'bǎi', 'líng', 'yī'])
+    expect(py(415)).toEqual(['sì', 'bǎi', 'yī', 'shí', 'wǔ'])
+    expect(py(2080)).toEqual(['èr', 'qiān', 'líng', 'bā', 'shí'])
+    expect(translate(cnWords('三千零六十九'), 'en')).toBe('三千零六十九')
   })
 
   it('几时几分是算出来的文字，用单字兜底注音', () => {

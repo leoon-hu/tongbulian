@@ -5,8 +5,10 @@ import { labelQuestion, numberQuestion } from './common'
 
 const ANIMALS = ['🐰', '🐶', '🐱', '🐼', '🦊', '🐷', '🐸', '🐵', '🐯', '🦁']
 
-type Axis = 'lr' | 'ud' | 'fb'
-const AXES: Axis[] = ['lr', 'ud', 'fb']
+// 一上数学游戏（p6–9）只教前面 / 后面、左边 / 右边和「我左边的第 3 个同学」「我是第 4 个」；
+// 上 / 下没有专门教（只在「左上角」「第 2 层」里出现过），所以只出前后、左右两个方向。
+type Axis = 'lr' | 'fb'
+const AXES: Axis[] = ['lr', 'fb']
 
 /** 每个方位轴的词条键：起点/终点方向词、两端「最X」、邻居前/后。 */
 const AXIS_WORDS: Record<
@@ -14,12 +16,11 @@ const AXIS_WORDS: Record<
   { fromStart: string; fromEnd: string; sideStart: string; sideEnd: string; relPrev: string; relNext: string }
 > = {
   lr: { fromStart: 'dir.left', fromEnd: 'dir.right', sideStart: 'side.left', sideEnd: 'side.right', relPrev: 'rel.left', relNext: 'rel.right' },
-  ud: { fromStart: 'dir.up', fromEnd: 'dir.down', sideStart: 'side.up', sideEnd: 'side.down', relPrev: 'rel.up', relNext: 'rel.down' },
   fb: { fromStart: 'dir.front', fromEnd: 'dir.back', sideStart: 'side.front', sideEnd: 'side.back', relPrev: 'rel.front', relNext: 'rel.back' },
 }
 
 /**
- * 位置（上下前后左右 / 第几）：一排(左右/前后)或一列(上下)小动物。
+ * 前后左右（数学游戏）：一排小动物，横排标左右或前后。
  * - which：某个从起点数排第几（序数概念）
  * - from：从起点/终点数第 k 个是谁
  * - endmost：谁在最起点/最终点
@@ -29,16 +30,17 @@ const AXIS_WORDS: Record<
 const LINE_SIZE: Record<Difficulty, number> = { 1: 4, 2: 5, 3: 6 }
 
 function genPosition(d: Difficulty, rng: RNG): Question {
-  const n = LINE_SIZE[d]
+  return positionQuestion('s1-00-position', d, LINE_SIZE[d], rng.pick(['which', 'from', 'endmost', 'neighbor'] as const), rng.pick(AXES), rng)
+}
+
+function positionQuestion(kpId: string, d: Difficulty, n: number, kind: 'which' | 'from' | 'endmost' | 'neighbor', axis: Axis, rng: RNG): Question {
   const items = rng.shuffle(ANIMALS).slice(0, n)
-  const axis = rng.pick(AXES)
   const w = AXIS_WORDS[axis]
-  const kind = rng.pick(['which', 'from', 'endmost', 'neighbor'] as const)
 
   if (kind === 'which') {
     const idx = rng.int(0, n - 1)
     return numberQuestion({
-      kpId: 's1-00-position',
+      kpId,
       type: 'position',
       difficulty: d,
       sig: `which-${axis}-${items.join('')}-${idx}`,
@@ -82,7 +84,7 @@ function genPosition(d: Difficulty, rng: RNG): Question {
     { kind: 'lineup', items, highlight, axis },
   ]
   return labelQuestion({
-    kpId: 's1-00-position',
+    kpId,
     type: 'position',
     difficulty: d,
     sig,
@@ -94,6 +96,42 @@ function genPosition(d: Difficulty, rng: RNG): Question {
 }
 
 defineGenerator('s1-00-position', genPosition)
+
+/** 排队时某个的前面 / 后面有几个（一上 p19「有 5 人排队，排第 2，他前面有□人，后面有□人」）：前后一排 */
+function aheadQuestion(kpId: string, d: Difficulty, n: number, rng: RNG): Question {
+  const items = rng.shuffle(ANIMALS).slice(0, n)
+  const idx = rng.int(0, n - 1)
+  const ahead = rng.chance(0.5)
+  const value = ahead ? idx : n - 1 - idx
+  return numberQuestion({
+    kpId,
+    type: 'position',
+    difficulty: d,
+    sig: `ahead-${ahead ? 'f' : 'b'}-${items.join('')}-${idx}`,
+    stem: [
+      { kind: 'text', text: { k: ahead ? 'q.posAhead' : 'q.posBehind', p: { item: items[idx]! } } },
+      { kind: 'lineup', items, highlight: idx, axis: 'fb' },
+    ],
+    value,
+    rng,
+    min: 0,
+    max: n,
+    smart: [idx + 1, n - idx, n - 1 - value],
+  })
+}
+
+/**
+ * 第几（一上第一单元 p19）：排队排第几、他前面 / 后面有几人（前后一排）；从左边 / 右边数第几个是谁、排第几（左右一排）。
+ * 5 以内（这一单元认识的数）。
+ */
+defineGenerator('s1-01-ordinal', (d, rng) => {
+  const kpId = 's1-01-ordinal'
+  const roll = rng.next()
+  if (roll < 0.25) return positionQuestion(kpId, d, 5, 'which', 'fb', rng)
+  if (roll < 0.55) return aheadQuestion(kpId, d, 5, rng)
+  if (roll < 0.8) return positionQuestion(kpId, d, 5, 'from', 'lr', rng)
+  return positionQuestion(kpId, d, 5, 'which', 'lr', rng)
+})
 
 /**
  * 「从哪边数第几个是谁」的全部说法（语料收集用）：第几个用汉字写，不是朗读里的「数字槽」，

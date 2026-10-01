@@ -51,9 +51,10 @@ export const SHAPE_PINYIN: Record<ShapeKind, string> = {
   'right-triangle': 'zhí jiǎo sān jiǎo xíng',
 }
 
-export const SOLID_SHAPES: ShapeKind[] = ['cube', 'cuboid', 'cylinder', 'sphere']
-/** 一年级认识的平面图形 */
-export const FLAT_SHAPES: ShapeKind[] = ['square', 'rectangle', 'triangle', 'circle', 'parallelogram']
+/** 一年级认识的立体图形（课本一上 p68 的顺序：长方体、正方体、圆柱、球） */
+export const SOLID_SHAPES: ShapeKind[] = ['cuboid', 'cube', 'cylinder', 'sphere']
+/** 一年级认识的平面图形（课本一下 p1 的顺序：长方形、正方形、平行四边形、三角形、圆） */
+export const FLAT_SHAPES: ShapeKind[] = ['rectangle', 'square', 'parallelogram', 'triangle', 'circle']
 /** 二年级多边形（数角、轴对称）：都是有「角」的直边图形 */
 export const POLYGONS: ShapeKind[] = [
   'square',
@@ -124,16 +125,15 @@ export const SYMBOL_WORDS = {
 } as const
 
 /**
- * 把「分」格式化成中文金额，如 650 → 「6元5角」、500 → 「5元」、50 → 「5角」。
- * 一年级只涉及元、角，不出现分。
+ * 把「分」格式化成中文金额，如 650 → 「6元5角」、500 → 「5元」、50 → 「5角」、67 → 「6角7分」、2 → 「2分」。
+ * 一下「认识人民币」有元、角、分三个单位（课本 p78–79：「（ ）元（ ）角」「（ ）角（ ）分」）；是 0 的单位不写。
  */
 export function formatMoney(fen: number): string {
   const yuan = Math.floor(fen / 100)
   const jiao = Math.floor((fen % 100) / 10)
-  if (yuan > 0 && jiao > 0) return `${yuan}元${jiao}角`
-  if (yuan > 0) return `${yuan}元`
-  if (jiao > 0) return `${jiao}角`
-  return '0元'
+  const f = fen % 10
+  const parts = [yuan > 0 ? `${yuan}元` : '', jiao > 0 ? `${jiao}角` : '', f > 0 ? `${f}分` : ''].join('')
+  return parts || '0元'
 }
 
 /** 时刻的中文读法：整时「3时」、半时「3时半」 */

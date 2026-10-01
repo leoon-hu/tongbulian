@@ -3,7 +3,7 @@ import type { RNG } from '@/engine'
 import { defineGenerator, labelQuestion, numberQuestion } from '@/engine'
 
 // ─────────────────────────────────────────────────────────────
-// 长度单位：认识厘米和米（选单位 / 换算 / 比较）、量一量（读尺子）
+// 长度单位：认识厘米和米（选单位 / 1 米 = 100 厘米 / 剪绳子 / 比较）、量一量（读尺子）；线段在 segment.ts
 // ─────────────────────────────────────────────────────────────
 
 /** 选单位用的常见物体：厘米级 / 米级，dim 是「长」还是「高」 */
@@ -47,61 +47,74 @@ function genUnit(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
-/** 换算：n 米 = ? 厘米 / n00 厘米 = ? 米 */
+/** 换算：二上只有「1 米 = 100 厘米」（p58），不出 2 米以上的换算（三位数到二下才学） */
 function genConvert(kpId: string, d: Difficulty, rng: RNG): Question {
-  const n = rng.int(1, d === 1 ? 5 : 9)
   if (rng.chance(0.5)) {
     return numberQuestion({
       kpId,
       type: 'length',
       difficulty: d,
-      sig: `m2cm-${n}`,
-      stem: [{ kind: 'text', text: { k: 'q.len.m2cm', p: { n } } }],
-      value: n * 100,
+      sig: 'm2cm-1',
+      stem: [{ kind: 'text', text: { k: 'q.len.m2cm', p: { n: 1 } } }],
+      value: 100,
       rng,
       min: 1,
-      max: 1000,
-      smart: [n * 10, n, n * 100 + 10, n * 100 - 10],
+      max: 100,
+      smart: [10, 1, 60],
     })
   }
   return numberQuestion({
     kpId,
     type: 'length',
     difficulty: d,
-    sig: `cm2m-${n}`,
-    stem: [{ kind: 'text', text: { k: 'q.len.cm2m', p: { n: n * 100 } } }],
-    value: n,
+    sig: 'cm2m-100',
+    stem: [{ kind: 'text', text: { k: 'q.len.cm2m', p: { n: 100 } } }],
+    value: 1,
     rng,
     min: 1,
     max: 100,
-    smart: [n * 10, n + 1, n - 1, n * 100],
+    smart: [10, 100, 2],
   })
 }
 
-/** 几米几厘米 = 几厘米（1 米 30 厘米 = 130 厘米） */
-function genCompound(kpId: string, d: Difficulty, rng: RNG): Question {
-  const m = rng.int(1, 3)
-  const cm = rng.int(1, 9) * 10 + (d === 3 ? rng.int(0, 9) : 0)
+/** 一根 1 米的绳子剪去 n 厘米，还剩几厘米（p60 第 8 题） */
+function genCut(kpId: string, d: Difficulty, rng: RNG): Question {
+  const n = d === 1 ? rng.int(1, 9) * 10 : rng.int(5, 95)
   return numberQuestion({
     kpId,
     type: 'length',
     difficulty: d,
-    sig: `mcm-${m}-${cm}`,
-    stem: [{ kind: 'text', text: { k: 'q.len.compound', p: { m, cm } } }],
-    value: m * 100 + cm,
+    sig: `cut-${n}`,
+    stem: [{ kind: 'text', text: { k: 'q.len.cut', p: { n } } }],
+    value: 100 - n,
     rng,
     min: 1,
-    max: 400,
-    smart: [m + cm, m * 10 + cm, m * 100 + cm + 10, m * 100 + cm - 10],
+    max: 99,
+    smart: [n, 110 - n, 90 - n],
   })
 }
 
-/** 比较：a 米 ⬜ b 厘米（要先把米换成厘米） */
+/**
+ * 比较（p59 练一练 3「10 米○10 厘米、100 厘米○1 米、80 厘米○1 米」）：数都在 100 以内，
+ * 想「1 米 = 100 厘米」就能比，不用把几米换成几百厘米。
+ */
 function genCompare(kpId: string, d: Difficulty, rng: RNG): Question {
-  const m = rng.int(1, d === 3 ? 9 : 5)
-  // 厘米那边：一半刻意等于（m×100），其余在 ±（10~90）内
-  let cm = m * 100
-  if (!rng.chance(0.25)) cm += (rng.chance(0.5) ? 1 : -1) * rng.int(1, 9) * 10
+  const roll = rng.next()
+  let m: number
+  let cm: number
+  if (roll < 0.3) {
+    // n 米 ○ n 厘米：数一样，单位不一样
+    m = rng.int(2, 30)
+    cm = m
+  } else if (roll < 0.75) {
+    // n 厘米 ○ 1 米（n 可能正好是 100）
+    m = 1
+    cm = rng.chance(0.25) ? 100 : rng.int(d === 1 ? 2 : 5, 9) * 10 + (d === 1 ? 0 : rng.int(0, 9))
+  } else {
+    // 几米 ○ 不到 100 厘米
+    m = rng.int(2, 9)
+    cm = rng.int(10, 99)
+  }
   const mFirst = rng.chance(0.5)
   const left = mFirst ? m * 100 : cm
   const right = mFirst ? cm : m * 100
@@ -121,25 +134,26 @@ function genCompare(kpId: string, d: Difficulty, rng: RNG): Question {
   })
 }
 
+/** 认识厘米和米：选单位（例 4）、1 米 = 100 厘米、剪绳子、比较 */
 defineGenerator('m2s1-05-cm-m', (d, rng) => {
   const kpId = 'm2s1-05-cm-m'
   const roll = rng.next()
-  if (d === 1) return roll < 0.55 ? genUnit(kpId, d, rng) : genConvert(kpId, d, rng)
-  if (roll < 0.3) return genUnit(kpId, d, rng)
-  if (roll < 0.55) return genConvert(kpId, d, rng)
-  if (roll < 0.8) return genCompare(kpId, d, rng)
-  return genCompound(kpId, d, rng)
+  if (roll < 0.35) return genUnit(kpId, d, rng)
+  if (roll < 0.5) return genConvert(kpId, d, rng)
+  if (roll < 0.7) return genCut(kpId, d, rng)
+  return genCompare(kpId, d, rng)
 })
 
 /**
  * 量一量：尺子上压着一条线段，读出长度。
- * d1 线段从 0 刻度开始；d2 / d3 不从 0 开始，要用「右端 − 左端」。
+ * 例 1 从 0 刻度量起；练一练也有不从 0 起的（p60、p66「从 2 量到 8」），数一数中间有几个 1 厘米。第 1 档四分之一不从 0 起。
  */
 function genMeasure(d: Difficulty, rng: RNG): Question {
   const kpId = 'm2s1-05-measure'
   const length = d === 1 ? 8 : 10
   const len = rng.int(2, d === 1 ? 7 : 8)
-  const from = d === 1 ? 0 : rng.int(1, length - len)
+  const shifted = d === 1 ? rng.chance(0.25) : true
+  const from = shifted ? rng.int(1, length - len) : 0
   const to = from + len
   return numberQuestion({
     kpId,

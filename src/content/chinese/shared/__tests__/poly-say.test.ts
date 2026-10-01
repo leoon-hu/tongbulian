@@ -6,7 +6,7 @@ import { LESSONS as L1 } from '@/content/chinese/grade1/generators'
 import { LESSONS as L2 } from '@/content/chinese/grade2/generators'
 import { PY as PY1 } from '@/content/chinese/grade1/py'
 import { PY as PY2 } from '@/content/chinese/grade2/py'
-import { POLY_SAY, clozeAnswerPy, parseCloze } from '../makers'
+import { POLY_SAY, clozeAnswerPy, parseCloze, parseZi } from '../makers'
 
 const GRADES = [
   { name: '一年级', lessons: L1, py: PY1 },
@@ -23,8 +23,9 @@ describe('多音字读哪个词（POLY_SAY，Y6）', () => {
         return p
       }
       for (const spec of g.lessons) {
-        for (const c of (spec.zi ?? '').split(/\s+/).filter(Boolean)) {
-          const r = g.py[c]
+        const { chars, reading } = parseZi(spec.zi)
+        for (const c of chars) {
+          const r = reading[c] ?? g.py[c]
           if (POLY_SAY[c] && r !== undefined && !POLY_SAY[c]![r]) missing.push(`${g.name} ${spec.kp} 生字「${c}」读 ${r}`)
         }
         for (const s of spec.cloze ?? []) {

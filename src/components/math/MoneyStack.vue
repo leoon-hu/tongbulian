@@ -10,18 +10,26 @@ function label(fen: number): string {
   return t({ k: 'money.amount', p: { fen } })
 }
 
-// 面额 → 配色（贴近真实人民币的色系，帮助识别）
-const COLOR: Record<number, string> = {
-  10: '#c9b7e8', // 1角
-  50: '#a8d5c4', // 5角
-  100: '#8fbf7f', // 1元 绿
+// 纸币面额 → 配色（贴近 2019 版人民币的主色调，课本一下 p78）
+const NOTE_COLOR: Record<number, string> = {
+  100: '#7fae6a', // 1元 橄榄绿
   500: '#9d7bb0', // 5元 紫
-  1000: '#7ea6d8', // 10元 蓝
-  2000: '#d89b7e', // 20元 棕
-  5000: '#b0603f', // 50元 红棕
+  1000: '#5f8fcf', // 10元 蓝
+  2000: '#b9825a', // 20元 棕
+  5000: '#3f9a6b', // 50元 绿
+  10000: '#d2524c', // 100元 红
 }
-function color(fen: number): string {
-  return COLOR[fen] ?? 'var(--c-blue)'
+// 硬币：1元、1角是银白色，5角是金黄色；分币是浅灰的铝币（画小一号）
+const COIN_COLOR: Record<number, string> = {
+  100: '#8e98a5',
+  50: '#b8953e',
+  10: '#9aa3ae',
+  5: '#a9b0b9',
+  2: '#a9b0b9',
+  1: '#a9b0b9',
+}
+function color(p: MoneyPiece): string {
+  return (p.form === 'coin' ? COIN_COLOR[p.fen] : NOTE_COLOR[p.fen]) ?? 'var(--c-blue)'
 }
 </script>
 
@@ -31,8 +39,8 @@ function color(fen: number): string {
       v-for="(p, i) in pieces"
       :key="i"
       class="piece"
-      :class="p.form"
-      :style="{ background: color(p.fen) }"
+      :class="[p.form, { fen: p.form === 'coin' && p.fen < 10 }]"
+      :style="{ background: color(p) }"
     >
       {{ label(p.fen) }}
     </div>
@@ -69,5 +77,11 @@ function color(fen: number): string {
   height: 52px;
   border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.6);
+}
+/* 分币比角币、元币小一圈 */
+.piece.coin.fen {
+  width: 44px;
+  height: 44px;
+  font-size: calc(var(--fs-sm) * 0.9);
 }
 </style>

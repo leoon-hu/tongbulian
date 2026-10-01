@@ -13,20 +13,23 @@ function word(kpId: string, d: Difficulty, sig: string, text: LStr, value: numbe
   return numberQuestion({ kpId, type: 'arith', difficulty: d, sig, stem: [{ kind: 'text', text }, ...extra], value, rng, min: 0, max: 100, smart })
 }
 
-/** 两数相差几：d1 看图（两行实物一一对应），d2 / d3 文字题（谁比谁多几 / 少几） */
+/**
+ * 两数相差几（p69–70 例 1：一班 12 面、二班 9 面，多得几面 / 少得几面；做一做 25 和 32、14 和 8）：
+ * 约三分之一看图（两行实物一一对应），其余文字题（谁比谁多几 / 少几）；第 1 档的数到 30，第 2 档到 60，第 3 档到 100
+ */
 defineGenerator('s2-06-diff', (d, rng) => {
   const kpId = 's2-06-diff'
   const [a1, a2] = rng.shuffle(NAMES).slice(0, 2) as [string, string]
   const item = rng.pick(ITEMS)
-  if (d === 1) {
+  if (rng.chance(d === 1 ? 0.3 : 0.15)) {
     const [iconA, iconB] = rng.shuffle(ITEMS).slice(0, 2) as [string, string]
-    const big = rng.int(4, 10)
+    const big = rng.int(5, 12)
     const small = rng.int(1, big - 1)
     return word(kpId, d, `pic-${iconA}${big}-${iconB}${small}`, { k: 'q.diffPic', p: { a: iconA, b: iconB } }, big - small, rng, [big + small, big, small], [
       { kind: 'compare-rows', rows: [{ icon: iconA, count: big }, { icon: iconB, count: small }] },
     ])
   }
-  const cap = d === 2 ? 40 : 100
+  const cap = d === 1 ? 30 : d === 2 ? 60 : 100
   const big = rng.int(10, cap)
   const small = rng.int(1, big - 1)
   const more = rng.chance(0.5)
@@ -36,17 +39,23 @@ defineGenerator('s2-06-diff', (d, rng) => {
   return word(kpId, d, `${more ? 'more' : 'less'}-${big}-${small}`, text, big - small, rng, [big + small, big, small])
 })
 
-/** 求比一个数多几 / 少几的数；d3 含连续两问（先求一个，再合起来） */
+/**
+ * 求比一个数多几 / 少几的数（p71 例 2：三班比一班多得 3 面、四班比一班少 4 面），
+ * 约四分之一是连续两问（p73 例 3：小红比妈妈少 5 次，两人一共多少次；做一做「多 6 本」、练一练「少 7 人」），直接问一共有几个
+ */
 defineGenerator('s2-06-more-less', (d, rng) => {
   const kpId = 's2-06-more-less'
   const [a1, a2] = rng.shuffle(NAMES).slice(0, 2) as [string, string]
   const item = rng.pick(ITEMS)
-  const cap = d === 1 ? 20 : d === 2 ? 60 : 100
-  if (d === 3 && rng.chance(0.35)) {
-    // 连续两问：A 有 n 个，B 比 A 多 k 个，两人一共有几个
-    const n = rng.int(10, 40)
-    const k = rng.int(2, 15)
-    return word(kpId, d, `both-${n}-${k}`, { k: 'q.moreThanTotal', p: { a1, a2, item, n, k } }, n + n + k, rng, [n + k, n + n, n + n + k + 1, n + n + k - 1])
+  const cap = d === 1 ? 30 : d === 2 ? 60 : 100
+  if (rng.chance(0.25)) {
+    // 连续两问：A 有 n 个，B 比 A 多（少）k 个，两人一共有几个
+    const n = rng.int(10, d === 1 ? 20 : 40)
+    const more = rng.chance(0.5)
+    const k = rng.int(2, more ? 15 : n - 2)
+    const b = more ? n + k : n - k
+    const key = more ? 'q.moreThanTotal' : 'q.lessThanTotal'
+    return word(kpId, d, `both-${more ? 'm' : 'l'}-${n}-${k}`, { k: key, p: { a1, a2, item, n, k } }, n + b, rng, [b, n + n, n + b + 1, n + b - 1, more ? n + n - k : n + n + k])
   }
   if (rng.chance(0.5)) {
     const n = rng.int(3, cap - 3)

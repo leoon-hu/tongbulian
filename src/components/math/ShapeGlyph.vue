@@ -7,26 +7,67 @@ import type { ShapeKind } from '@/types/models'
  * - 每个图形都是「一个」整体，数图形时不会被拆成多个（曾用 🧱 砖块 emoji 会显示成两块，导致数错）。
  * - 正方体 / 长方体用 SVG 按教材的斜二测画法：正面是真正的正方形 / 长方形，往后的棱 45° 画一半长，三面明暗 + 描边
  *   （2026-09-20 用户说 CSS 3D 版「不太像正方体」：那版正面是歪的平行四边形、没有棱，改成这样）；
- *   圆柱有上底椭圆、球带高光，平面图形用 CSS。
+ *   圆柱有上底椭圆、球带高光。
+ * - 平面图形是 SVG 多边形（直角、没有圆角）。颜色不跟图形走（2026-10-01 按课本核对：原来正方形固定蓝、长方形固定绿，孩子能靠颜色认），
+ *   tone 选色板里的一种（不填都是第一种）；turn 转一个角度（课本一下 p1 有斜放的正方形、各种方向的三角形）；
+ *   form 换三角形的样子（0 等腰、1 直角、2 一般三角形）。
  */
-const props = withDefaults(defineProps<{ shape: ShapeKind; size?: number }>(), { size: 72 })
+const props = withDefaults(defineProps<{ shape: ShapeKind; size?: number; tone?: number; turn?: number; form?: number }>(), { size: 72 })
 
-const FLAT_COLOR: Partial<Record<ShapeKind, string>> = {
-  square: '#4aa3ff',
-  rectangle: '#3ecf8e',
-  triangle: '#ff8a3d',
-  circle: '#a78bfa',
-  parallelogram: '#ff6b6b',
-  pentagon: '#f7b731',
-  hexagon: '#26c6da',
-  trapezoid: '#8bc34a',
-  'right-triangle': '#ff7eb6',
+/** 平面图形的色板（tone 是下标）：每种图形都可能是任何一种颜色 */
+const TONES = ['#4aa3ff', '#3ecf8e', '#ff8a3d', '#a78bfa', '#ff6b6b', '#f7b731']
+
+type Pt = [number, number]
+/** 平面图形的顶点（以 size 为 1 的坐标；圆另画） */
+const FLAT_POINTS: Partial<Record<ShapeKind, Pt[]>> = {
+  square: [[0, 0], [1, 0], [1, 1], [0, 1]],
+  rectangle: [[0, 0], [1.5, 0], [1.5, 0.9], [0, 0.9]],
+  parallelogram: [[0.32, 0], [1.4, 0], [1.08, 0.75], [0, 0.75]],
+  pentagon: [[0.5, 0], [1, 0.38], [0.81, 1], [0.19, 1], [0, 0.38]],
+  hexagon: [[0.275, 0], [0.825, 0], [1.1, 0.5], [0.825, 1], [0.275, 1], [0, 0.5]],
+  trapezoid: [[0.35, 0], [1.05, 0], [1.4, 0.8], [0, 0.8]],
+  'right-triangle': [[0, 0], [0, 1], [1.2, 1]],
 }
+/** 三角形的三种样子：等腰、直角、一般 */
+const TRIANGLES: Pt[][] = [
+  [[0.55, 0], [1.1, 1], [0, 1]],
+  [[0, 0], [0, 1], [1.15, 1]],
+  [[0.25, 0], [1.3, 1], [0, 0.82]],
+]
 
 const isBox = computed(() => props.shape === 'cube' || props.shape === 'cuboid')
 const isCylinder = computed(() => props.shape === 'cylinder')
 const isSphere = computed(() => props.shape === 'sphere')
-const isFlat = computed(() => props.shape in FLAT_COLOR)
+const isCircle = computed(() => props.shape === 'circle')
+const isFlat = computed(() => isCircle.value || props.shape === 'triangle' || props.shape in FLAT_POINTS)
+const flatColor = computed(() => TONES[Math.abs(Math.trunc(props.tone ?? 0)) % TONES.length]!)
+
+/** 平面多边形：按 size 放大、绕中心转 turn 度，再按转完的外框定 SVG 大小 */
+const flat = computed(() => {
+  const s = props.size
+  const base = props.shape === 'triangle' ? TRIANGLES[Math.abs(Math.trunc(props.form ?? 0)) % TRIANGLES.length]! : (FLAT_POINTS[props.shape] ?? [])
+  const pts = base.map(([x, y]) => [x * s, y * s] as Pt)
+  const cx = pts.reduce((a, p) => a + p[0], 0) / (pts.length || 1)
+  const cy = pts.reduce((a, p) => a + p[1], 0) / (pts.length || 1)
+  const rad = ((props.turn ?? 0) * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const rot = pts.map(([x, y]) => [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos] as Pt)
+  const xs = rot.map((p) => p[0])
+  const ys = rot.map((p) => p[1])
+  const stroke = Math.max(1.5, s / 40)
+  const minX = Math.min(...xs) - stroke
+  const minY = Math.min(...ys) - stroke
+  const w = Math.max(...xs) - Math.min(...xs) + stroke * 2
+  const h = Math.max(...ys) - Math.min(...ys) + stroke * 2
+  return {
+    width: w,
+    height: h,
+    stroke,
+    viewBox: `${minX.toFixed(1)} ${minY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`,
+    points: rot.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' '),
+  }
+})
 
 /**
  * 斜二测的三个面（多边形顶点）：正面 a × h，深 d 的棱按 45°、一半长画成 r = d / 2 / √2 的水平与垂直位移。
@@ -91,13 +132,28 @@ const boxView = computed(() => {
       :style="{ width: `${size * 0.82}px`, height: `${size * 0.82}px` }"
     />
 
-    <!-- 平面图形 -->
-    <span
+    <!-- 平面图形：圆 / 多边形（颜色、角度由 tone / turn 定，与图形无关） -->
+    <svg
+      v-else-if="isCircle"
+      class="flat circle"
+      :width="size + 4"
+      :height="size + 4"
+      :viewBox="`-2 -2 ${size + 4} ${size + 4}`"
+      aria-hidden="true"
+    >
+      <circle class="fshape" :cx="size / 2" :cy="size / 2" :r="size / 2" :fill="flatColor" :stroke-width="Math.max(1.5, size / 40)" />
+    </svg>
+    <svg
       v-else-if="isFlat"
       class="flat"
       :class="shape"
-      :style="{ '--s': `${size}px`, '--col': FLAT_COLOR[shape] }"
-    />
+      :width="flat.width"
+      :height="flat.height"
+      :viewBox="flat.viewBox"
+      aria-hidden="true"
+    >
+      <polygon class="fshape" :points="flat.points" :fill="flatColor" :stroke-width="flat.stroke" />
+    </svg>
   </div>
 </template>
 
@@ -163,65 +219,13 @@ const boxView = computed(() => {
   background: radial-gradient(circle at 32% 28%, #b9f0d6, #3ecf8e 62%, #2fa877);
 }
 
-/* ── 平面图形 ── */
+/* ── 平面图形：SVG 直边、尖角（stroke-linejoin: miter），描一圈深色边 ── */
 .flat {
-  display: inline-block;
+  display: block;
+  overflow: visible;
 }
-.flat.square {
-  width: var(--s);
-  height: var(--s);
-  background: var(--col);
-  border-radius: 6px;
-}
-.flat.rectangle {
-  width: calc(var(--s) * 1.5);
-  height: var(--s);
-  background: var(--col);
-  border-radius: 6px;
-}
-.flat.circle {
-  width: var(--s);
-  height: var(--s);
-  background: var(--col);
-  border-radius: 50%;
-}
-.flat.triangle {
-  width: 0;
-  height: 0;
-  border-left: calc(var(--s) * 0.55) solid transparent;
-  border-right: calc(var(--s) * 0.55) solid transparent;
-  border-bottom: var(--s) solid var(--col);
-}
-.flat.parallelogram {
-  width: calc(var(--s) * 1.3);
-  height: calc(var(--s) * 0.72);
-  background: var(--col);
-  transform: skewX(-20deg);
-  border-radius: 4px;
-}
-/* 二年级的多边形：正五边形、正六边形、等腰梯形、直角三角形（clip-path 裁出直边） */
-.flat.pentagon {
-  width: var(--s);
-  height: var(--s);
-  background: var(--col);
-  clip-path: polygon(50% 0%, 100% 38%, 81% 100%, 19% 100%, 0% 38%);
-}
-.flat.hexagon {
-  width: calc(var(--s) * 1.1);
-  height: var(--s);
-  background: var(--col);
-  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-}
-.flat.trapezoid {
-  width: calc(var(--s) * 1.4);
-  height: calc(var(--s) * 0.8);
-  background: var(--col);
-  clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
-}
-.flat.right-triangle {
-  width: calc(var(--s) * 1.2);
-  height: var(--s);
-  background: var(--col);
-  clip-path: polygon(0% 0%, 0% 100%, 100% 100%);
+.fshape {
+  stroke: rgba(0, 0, 0, 0.28);
+  stroke-linejoin: miter;
 }
 </style>

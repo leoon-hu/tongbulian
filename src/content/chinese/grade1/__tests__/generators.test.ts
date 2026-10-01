@@ -6,7 +6,7 @@ import { answerLabel } from '@/engine/answer'
 import { rubySegments, translate } from '@/engine/i18n'
 import { PAUSE, answerSpeech, questionSpeech, tokenVoice } from '@/engine/speech'
 import { INITIALS, LETTER_SAY, addTone, splitSyllable, splitTone } from '@/content/chinese/shared/syllables'
-import { RADICALS, parseAsk, sayZi } from '@/content/chinese/shared/makers'
+import { RADICALS, parseAsk, parseZi, sayZi } from '@/content/chinese/shared/makers'
 import { KNOWLEDGE_POINTS, UNITS } from '../curriculum'
 import { LESSONS, LESSON_ITEMS } from '../generators'
 import { PY } from '../py'
@@ -102,6 +102,8 @@ describe('题目结构（G1–G3）', () => {
     const counts = new Map<string, number>()
     for (const [kp, qs] of SAMPLES) {
       const spec = LESSONS.find((l) => l.kp === kp)!
+      const own = parseZi(spec.zi).reading
+      const zr = (c: string): string | undefined => own[c] ?? PY[c]
       for (const q of qs) {
         const m = maker(q)
         counts.set(m, (counts.get(m) ?? 0) + 1)
@@ -109,15 +111,15 @@ describe('题目结构（G1–G3）', () => {
         const py = part(q, 'pinyin')?.text ?? ''
         switch (m) {
           case 'listen':
-            expect(part(q, 'listen')!.say).toBe(sayZi(label(q), PY[label(q)]))
+            expect(part(q, 'listen')!.say).toBe(sayZi(label(q), zr(label(q))))
             break
           case 'pyzi':
-            expect(py).toBe(PY[label(q)])
+            expect(py).toBe(zr(label(q)))
             // 看拼音选字：干扰字里没有同音字（不然两个都对）
             for (const c of q.choices!) if (zh(c.label) !== label(q)) expect(PY[zh(c.label)], q.id).not.toBe(py)
             break
           case 'zipy':
-            expect(label(q)).toBe(PY[hz])
+            expect(label(q)).toBe(zr(hz))
             break
           case 'digit':
             expect(label(q)).toBe(CN_DIGITS[Number(hz) - 1])

@@ -25,7 +25,7 @@ describe('自己练的结算页（F7）', () => {
     expect(btns.map((b) => shown(b).trim())).toEqual(['下一章 ▶', '再练一次', '不练了'])
     expect(btns[0]!.classes()).toContain('green')
     expect(btns[1]!.classes()).toContain('blue')
-    expect(shown(w.find('.next-hint'))).toBe('下一章：凑十法')
+    expect(shown(w.find('.next-hint'))).toBe('下一章：9 加几')
     expect(shown(w.find('.score'))).toContain('6 / 8')
     await btns[0]!.trigger('click')
     await btns[1]!.trigger('click')
@@ -35,7 +35,7 @@ describe('自己练的结算页（F7）', () => {
   })
 
   it('本册最后一个：没有下一章，写「这一册都练完啦！」，再练一次变绿、和不练了并排', () => {
-    expect(nextKp('s1-05-carry-add')).toBeNull()
+    expect(nextKp('s1-05-add-5432')).toBeNull() // 上册最后一个知识点
     const w = mount(SessionSummary, { props: { correct: 8, total: 8, next: null } })
     expect(w.find('.next-btn').exists()).toBe(false)
     expect(w.findAll('.actions .big-btn')).toHaveLength(2)

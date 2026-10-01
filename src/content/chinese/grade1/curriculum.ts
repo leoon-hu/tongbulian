@@ -27,7 +27,7 @@ export const UNITS: Unit[] = [
 const SHIZI: QuestionType[] = ['hanzi', 'writing', 'reading']
 const PINYIN: QuestionType[] = ['pinyin']
 const READING: QuestionType[] = ['reading', 'hanzi', 'writing']
-const GARDEN: QuestionType[] = ['phrase', 'reading']
+const GARDEN: QuestionType[] = ['phrase', 'reading', 'hanzi', 'writing']
 
 const kp = (id: string, unitId: string, title: string, icon: string, questionTypes: QuestionType[]): KnowledgePoint => ({ id, unitId, title, icon, questionTypes })
 

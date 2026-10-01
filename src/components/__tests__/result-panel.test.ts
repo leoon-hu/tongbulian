@@ -11,7 +11,7 @@ import type { MatchState } from '@/battle/protocol'
 import ResultPanel from '@/components/battle/ResultPanel.vue'
 import { useShareStore } from '@/stores/share'
 
-/** 上册倒数第二个知识点：「下一章」= s1-05-carry-add（上册最后一个） */
+/** 有「下一章」的知识点：下一章 = s1-05-carry-add（9 加几） */
 const KP = 's1-04-simple-addsub'
 
 function shown(w: { element: Element }): string {
@@ -79,7 +79,7 @@ describe('结果页按钮（B9）', () => {
   })
 
   it('本册最后一个知识点：没有下一章、写「这一册都打完啦」，再来一局回到绿色，仍有不玩了', () => {
-    expect(nextKp('s1-05-carry-add')).toBeNull() // 上册最后一个知识点
+    expect(nextKp('s1-05-add-5432')).toBeNull() // 上册最后一个知识点
     const w = mount(ResultPanel, { props: { state: ended(), next: null } })
     expect(w.find('.next-btn').exists()).toBe(false)
     expect(shown(w.find('.next-hint.done'))).toContain('打完啦')

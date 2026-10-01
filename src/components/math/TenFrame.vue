@@ -22,8 +22,10 @@ const props = withDefaults(
     taken?: number
     /** 挂载后自动播放动画（答错讲解用） */
     autoDemo?: boolean
+    /** 凑十时两个加数换了位置（5 + 8：格里放 8、拆 5 去凑，课本一上 p93「拆小数凑大数」），最后一句按原题的顺序说「所以 5 + 8 = 13」 */
+    swapped?: boolean
   }>(),
-  { extra: 0, mode: 'add', remove: 0, taken: 0, autoDemo: false },
+  { extra: 0, mode: 'add', remove: 0, taken: 0, autoDemo: false, swapped: false },
 )
 
 const frameCount = ref(clampFrame(props.filled))
@@ -78,7 +80,8 @@ function playAdd(): void {
     caption.value = { k: 'tf.add.split', p: { a, need, b, rest: b - need } }
   }, 700 + need * 550)
   later(() => {
-    caption.value = { k: 'tf.add.result', p: { rest: b - need, sum: a + b, a, b } }
+    const [x, y] = props.swapped ? [b, a] : [a, b]
+    caption.value = { k: 'tf.add.result', p: { rest: b - need, sum: a + b, a: x, b: y } }
   }, 2100 + need * 550)
 }
 
