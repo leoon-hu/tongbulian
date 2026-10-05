@@ -4,6 +4,7 @@ import { mathGrade2 } from '@/content/math/grade2'
 import { mathGrade3 } from '@/content/math/grade3/course'
 import { chineseGrade1 } from '@/content/chinese/grade1/course'
 import { chineseGrade2 } from '@/content/chinese/grade2/course'
+import { chineseGrade3 } from '@/content/chinese/grade3/course'
 
 // ── 课程注册表：key 为 courseId（如 math-g1）。────────────────────────────
 const COURSES = new Map<string, Course>()
@@ -30,6 +31,7 @@ registerCourse(mathGrade2)
 registerCourse(mathGrade3, () => import('@/content/math/grade3'))
 registerCourse(chineseGrade1, () => import('@/content/chinese/grade1'))
 registerCourse(chineseGrade2, () => import('@/content/chinese/grade2'))
+registerCourse(chineseGrade3, () => import('@/content/chinese/grade3'))
 
 /** 这门课的内容包加载好了没有（没有加载函数的一直是好的） */
 export function courseLoaded(courseId: string): boolean {
@@ -199,7 +201,7 @@ export const SUBJECTS: SubjectMeta[] = [
     icon: '📖',
     theme: 'chinese',
     status: 'live',
-    grades: [grade('g1', 'chinese-g1'), grade('g2', 'chinese-g2'), ...['g3', 'g4', 'g5', 'g6'].map((g) => grade(g))],
+    grades: [grade('g1', 'chinese-g1'), grade('g2', 'chinese-g2'), grade('g3', 'chinese-g3'), ...['g4', 'g5', 'g6'].map((g) => grade(g))],
   },
   {
     id: 'english',

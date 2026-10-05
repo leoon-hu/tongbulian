@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest'
 import type { Question, StemPart } from '@/types/models'
 import '@/content/chinese/grade1'
 import '@/content/chinese/grade2'
+import '@/content/chinese/grade3'
 import { KNOWLEDGE_POINTS as C1 } from '@/content/chinese/grade1/curriculum'
 import { KNOWLEDGE_POINTS as C2 } from '@/content/chinese/grade2/curriculum'
+import { KNOWLEDGE_POINTS as C3 } from '@/content/chinese/grade3/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { answerLabel } from '@/engine/answer'
 import { translate } from '@/engine/i18n'
 import { READINGS } from '../readings'
 import { readingsOf, sameSound } from '../makers'
 
-const KPS = [...C1, ...C2]
+const KPS = [...C1, ...C2, ...C3]
 const zh = (q: Question['choices'] extends (infer C)[] | undefined ? C : never): string => translate(q.label, 'zh')
 function part<K extends StemPart['kind']>(q: Question, kind: K): Extract<StemPart, { kind: K }> | undefined {
   return q.stem.find((p): p is Extract<StemPart, { kind: K }> => p.kind === kind)

@@ -98,7 +98,7 @@ describe('App 集成冒烟', () => {
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('.about .about-links a')
-    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单'])
+    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
     // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
     const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])
@@ -190,6 +190,8 @@ describe('App 集成冒烟', () => {
       'covers/chinese-g1-s2.webp',
       'covers/chinese-g2-s1.webp',
       'covers/chinese-g2-s2.webp',
+      'covers/chinese-g3-s1.webp',
+      'covers/chinese-g3-s2.webp',
     ])
     await vols[0]!.trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
@@ -391,6 +393,29 @@ describe('App 集成冒烟', () => {
       expect(a.attributes('rel')).toContain('noopener')
       expect(a.text()).toContain('视频')
     }
+    w.unmount()
+  })
+
+  it('平台上还没有这一节新教材同步课的挂替代视频：虚线框，精品课照写「视频」、旧教材的写「旧版」，提示里说明；新旧都没有的不显示', async () => {
+    const w = await mountAt('/s/chinese/g/g3')
+    await until(() => w.findAll('.status-row').length > 0)
+    const link = (title: string) => w.findAll('.node-wrap').find((n) => n.find('.node-title').text() === title)!.find('a.video')
+    const sync = link('花的学校')
+    expect(sync.attributes('data-from')).toBe('sync')
+    expect(sync.classes()).not.toContain('alt')
+    const elite = link('语文园地二')
+    expect(elite.attributes('data-from')).toBe('elite')
+    expect(elite.classes()).toContain('alt')
+    expect(elite.attributes('href')).toMatch(/^https:\/\/basic\.smartedu\.cn\/qualityCourse\?courseId=/)
+    expect(elite.text()).toContain('视频')
+    expect(elite.attributes('title')).toContain('精品课')
+    const old = link('语文园地六')
+    expect(old.attributes('data-from')).toBe('old')
+    expect(old.classes()).toContain('alt')
+    expect(old.attributes('href')).toMatch(/^https:\/\/basic\.smartedu\.cn\/syncClassroom\/classActivity\?activityId=/)
+    expect(old.text()).toContain('旧版')
+    expect(old.attributes('aria-label')).toContain('旧版教材')
+    expect(link('语文园地八').exists()).toBe(false)
     w.unmount()
   })
 

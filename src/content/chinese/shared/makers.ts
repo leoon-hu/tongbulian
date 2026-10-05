@@ -153,7 +153,6 @@ export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>
   应: { yīng: '应该的应' },
   便: { biàn: '方便的便' },
   调: { tiáo: '调皮的调' },
-  闷: { mēn: '闷热的闷' },
   扇: { shàn: '扇子的扇' },
   薄: { báo: '薄厚的薄' },
   传: { chuán: '传说的传' },
@@ -205,6 +204,32 @@ export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>
   // 「X似的似」的头一个似后面是「的」，合成脚本按「似的」换成 shì，所以 sì 用「似乎」
   似: { sì: '似乎的似', shì: '似的的似' },
   铺: { pù: '下铺的铺' },
+  // 三年级
+  挨: { ái: '挨打的挨', āi: '挨着的挨' },
+  粘: { zhān: '粘贴的粘' },
+  匙: { shi: '钥匙的匙' },
+  喇: { lǎ: '喇叭的喇' },
+  卷: { juǎn: '卷起的卷' },
+  划: { huá: '划船的划' },
+  载: { zài: '满载的载' },
+  臂: { bì: '手臂的臂' },
+  禁: { jìn: '禁止的禁', jīn: '不禁的禁' },
+  差: { chà: '差不多的差', chā: '差别的差' },
+  缝: { fèng: '门缝的缝', féng: '缝衣服的缝' },
+  旋: { xuán: '旋转的旋', xuàn: '旋风的旋' },
+  晃: { huàng: '摇晃的晃' },
+  血: { xuè: '血液的血' },
+  琢: { zuó: '琢磨的琢' },
+  裳: { shang: '衣裳的裳' },
+  恶: { è: '凶恶的恶' },
+  屏: { bǐng: '屏住的屏' },
+  脯: { pú: '胸脯的脯' },
+  卜: { bo: '萝卜的卜' },
+  隆: { lōng: '轰隆的隆' },
+  闷: { mēn: '闷热的闷', mèn: '沉闷的闷' },
+  咳: { ké: '咳嗽的咳' },
+  唠: { láo: '唠叨的唠' },
+  叨: { dāo: '唠叨的叨' },
 }
 
 /** 读一个字：多音字给个词——按这个字的读音挑，不给读音或没有这个读音的词就用第一个 */
@@ -345,12 +370,15 @@ function charWrongs(c: string, pool: string[], d: Difficulty, rng: RNG, exclude:
  */
 const inPrompt = (key: string, c: string): boolean => translate({ k: key }, 'zh').includes(c)
 
-/** 听音选字：大喇叭读一个字（多音字给个词），四个不注音的楷体字里选 */
+/** 听音选字：大喇叭读一个字（多音字给个词），四个不注音的楷体字里选；答错读「正确答案是」也读那个词 */
 function listenItems(ctx: Ctx, zi: string[]): Item[] {
   return zi.filter((c) => !inPrompt('yq.listenZi', c)).map((c) => ({
     key: `listen-${c}`,
-    build: (d, rng) =>
-      choiceQ(ctx, 'hanzi', d, `listen-${c}`, [text('yq.listenZi'), { kind: 'listen', say: ctx.say(c) }], plain(c), charWrongs(c, zi, d, rng, (x) => sameSound(x, c)).map(plain), rng, 'hanzi'),
+    build: (d, rng) => {
+      const say = ctx.say(c)
+      const right: Opt = say === c ? plain(c) : { label: c, say }
+      return choiceQ(ctx, 'hanzi', d, `listen-${c}`, [text('yq.listenZi'), { kind: 'listen', say }], right, charWrongs(c, zi, d, rng, (x) => sameSound(x, c)).map(plain), rng, 'hanzi')
+    },
   }))
 }
 

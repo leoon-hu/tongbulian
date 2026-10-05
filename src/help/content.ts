@@ -171,7 +171,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'Want a teacher to explain it first? On the topic map, next to each topic’s “To do / Done” there is “▶ Video”: it opens that section’s video lesson on the National Smart Education Platform (new tab; the platform’s pages load slowly on phones).',
+            text: 'Want a teacher to explain it first? On the topic map, next to each topic’s “To do / Done” there is “▶ Video”: it opens that section’s video lesson on the National Smart Education Platform (new tab; the platform’s pages load slowly on phones). Where the platform has no lesson for the new textbook yet, a featured lesson or the matching lesson from the previous edition is linked instead, with a dashed outline (“▶ Old ed.” for the previous edition).',
           },
           {
             kind: 'p',
@@ -206,7 +206,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
               { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the topic\'s Practice page (the one you land on after tapping a topic), together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
               { q: 'Why do some characters in Chinese questions have no pinyin?', a: 'Questions that test character recognition (pick the character from its pinyin, sound or picture; how do you read this character) would give the answer away with pinyin or by reading it aloud. Lesson texts, questions and all other options carry pinyin and are read aloud.' },
-              { q: 'Why no English / grade 2 Chinese / grade 3 yet?', a: 'Content is built grade by grade and is being added.' },
+              { q: 'Why no English or grades 4–6 yet?', a: 'Content is built grade by grade and is being added.' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
                 a: 'Free, no ads, no account, no personal data collected; progress stays in this device\'s browser. All code is open source under MIT, so anyone can inspect it or host their own copy:',
@@ -322,7 +322,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '想先听老师讲一遍：知识点地图上每个知识点的「未完成 / 已完成」旁边有「▶ 视频」，点开是国家中小学智慧教育平台上这一节的同步课（新窗口打开，平台的页面在手机上加载得慢一些）。',
+          text: '想先听老师讲一遍：知识点地图上每个知识点的「未完成 / 已完成」旁边有「▶ 视频」，点开是国家中小学智慧教育平台上这一节的同步课（新窗口打开，平台的页面在手机上加载得慢一些）。平台上还没有新教材这一节同步课的，先放新教材的精品课或旧版教材里对应的课，用虚线框标出来，旧版教材的写「▶ 旧版」。',
         },
         {
           kind: 'p',
@@ -357,7 +357,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
             { q: '想改名字？', a: '在知识点的「练习」页（点知识点就到）页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
             { q: '语文题里有的字为什么不标拼音？', a: '考认字的题（看拼音选字、听音选字、看图选字、这个字怎么读）要看孩子认不认得这个字，标了拼音、读出了字音就等于告诉了答案；课文、问题和其余选项都标拼音、都朗读。' },
-            { q: '为什么还没有英语 / 二年级语文 / 三年级？', a: '内容按年级逐个做，陆续补充。' },
+            { q: '为什么还没有英语、四年级以上？', a: '内容按年级逐个做，陆续补充。' },
             {
               q: '收费吗？有广告吗？安全吗？',
               a: '免费、无广告、不用注册、不收集个人信息，学习记录只存在这台设备的浏览器里。代码全部以 MIT 许可开源，谁都能查、也能自己部署一套：',

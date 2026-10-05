@@ -6,7 +6,7 @@ import { ROUND_SIZE, hasGenerator } from '@/engine'
 import { getCourse, getSubject, kpsOfUnit } from '@/engine/catalog'
 import { kpTitle, ui, unitTitle } from '@/engine/i18n'
 import { useProgressStore } from '@/stores/progress'
-import { videoUrlOf } from '@/content/videos'
+import { videoOf } from '@/content/videos'
 
 // 某「学科×年级」的知识点地图。无效课程回顶层。
 const route = useRoute()
@@ -61,6 +61,26 @@ function statusOf(kp: KnowledgePoint): NodeStatus {
 
 const SEGMENTS = Array.from({ length: ROUND_SIZE }, (_, i) => i)
 
+// 「▶ 视频」（F2）：新教材这一节的同步课；平台上还没有的是替代视频（新教材的精品课 / 旧教材里对应的课），虚线框标出来，
+// 旧教材的写「旧版」，提示里说是哪来的
+type VideoLink = { url: string; from: string; alt: boolean; label: string; hint: string }
+const videoLinks = computed(() => {
+  const links: Record<string, VideoLink> = {}
+  for (const kp of course.value?.knowledgePoints ?? []) {
+    const v = videoOf(kp.id)
+    if (!v) continue
+    const old = v.from === 'old' || v.from === 'old-elite'
+    links[kp.id] = {
+      url: v.url,
+      from: v.from,
+      alt: v.from !== 'sync',
+      label: old ? 'status.videoOld' : 'status.video',
+      hint: v.from === 'sync' ? 'status.videoHint' : old ? 'status.videoHintOld' : 'status.videoHintElite',
+    }
+  }
+  return links
+})
+
 // 点知识点直接进它的设置页（B26）：自己练与三种对战都在「怎么练」里选
 function tapNode(kp: KnowledgePoint): void {
   if (statusOf(kp) !== 'open') return
@@ -104,7 +124,7 @@ function tapNode(kp: KnowledgePoint): void {
               <span class="node-icon">{{ kp.icon }}</span>
             </button>
             <span class="node-title">{{ kpTitle(kp) }}</span>
-            <!-- 完成状态 + 这一节在国家中小学智慧教育平台的同步课视频（新窗口打开，F2） -->
+            <!-- 完成状态 + 这一节在国家中小学智慧教育平台的视频（新窗口打开，F2） -->
             <div v-if="statusOf(kp) === 'open'" class="status-row">
               <button
                 type="button"
@@ -116,14 +136,16 @@ function tapNode(kp: KnowledgePoint): void {
                 {{ ui(progress.isCompleted(kp.id) ? 'status.done' : 'status.todo') }}
               </button>
               <a
-                v-if="videoUrlOf(kp.id)"
+                v-if="videoLinks[kp.id]"
                 class="video"
-                :href="videoUrlOf(kp.id)"
+                :class="{ alt: videoLinks[kp.id].alt }"
+                :data-from="videoLinks[kp.id].from"
+                :href="videoLinks[kp.id].url"
                 target="_blank"
                 rel="noopener"
-                :title="ui('status.videoHint')"
-                :aria-label="ui('status.videoHint')"
-              >{{ ui('status.video') }}</a>
+                :title="ui(videoLinks[kp.id].hint)"
+                :aria-label="ui(videoLinks[kp.id].hint)"
+              >{{ ui(videoLinks[kp.id].label) }}</a>
             </div>
             <span v-else-if="statusOf(kp) === 'soon'" class="soon-tag">{{ ui('home.soon') }}</span>
             <!-- 未完成的：这一轮做到第几题（答对绿、答错红；中途退出会记住，下次接着做） -->
@@ -309,6 +331,11 @@ function tapNode(kp: KnowledgePoint): void {
 }
 .video:active {
   transform: scale(0.92);
+}
+/* 替代视频（平台上还没有这一节新教材的同步课）：虚线框，大小不变 */
+.video.alt {
+  padding: 2px 6px;
+  border: 1px dashed currentColor;
 }
 .round {
   display: flex;

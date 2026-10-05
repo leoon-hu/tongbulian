@@ -21,6 +21,11 @@ describe('内容包按需加载（N8）', () => {
     expect(courseOfKp('c2s1-01-kedou')?.course.id).toBe('chinese-g2')
     expect(translate({ k: 'kp.c2s1-01-kedou' }, 'zh')).toBe('小蝌蚪找妈妈')
     expect(hasGenerator('c2s1-01-kedou')).toBe(false)
+    expect(courseLoaded('chinese-g3')).toBe(false)
+    expect(courseOfKp('c3s1-08-simaguang')?.course.id).toBe('chinese-g3')
+    expect(translate({ k: 'kp.c3s1-08-simaguang' }, 'zh')).toBe('司马光')
+    expect(translate({ k: 'kp.c3s1-08-simaguang' }, 'en')).toBe('Sima Guang')
+    expect(hasGenerator('c3s1-08-simaguang')).toBe(false)
   })
 
   it('进语文的页面之前，路由守卫把这门课的内容包加载好（对战页按知识点反查）', async () => {
@@ -33,6 +38,10 @@ describe('内容包按需加载（N8）', () => {
     await router.push('/battle/new/c2s2-08-dayu')
     expect(courseLoaded('chinese-g2')).toBe(true)
     expect(hasGenerator('c2s2-08-dayu')).toBe(true)
+    expect(courseLoaded('chinese-g3')).toBe(false)
+    await router.push('/s/chinese/g/g3')
+    expect(courseLoaded('chinese-g3')).toBe(true)
+    expect(hasGenerator('c3s2-08-zaohe')).toBe(true)
   })
 
   it('同时几处要只加载一次；加载失败下次再试，成功了就不再调', async () => {

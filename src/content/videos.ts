@@ -1,5 +1,7 @@
-// 知识点 → 国家中小学智慧教育平台同步课的课时 id（地图上「▶ 视频」链接，需求 F2）。scripts/videos.mjs 生成的，别手改。
-// 注释是平台上的章节名。没有的知识点（平台上这一节没有同步课）地图上不显示链接。
+// 知识点 → 国家中小学智慧教育平台上的课程视频（地图上「▶ 视频」链接，需求 F2）。scripts/videos.mjs 生成的，别手改。
+// 两张表里都没有的知识点（平台上新旧教材都没有这一节的视频）地图上不显示链接。
+
+/** 新教材这一节的同步课：知识点 → 课时 id（注释是平台上的章节名） */
 export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   's1-00-count': 'a817b06d-5d49-e59f-1bff-354e28f85d6e', // 在校园里找一找
   's1-00-compare': 'f4ef48f1-2f0b-60e2-f3f8-fca9877dca02', // 在操场上玩一玩
@@ -226,7 +228,6 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c2s2-01-chuntian': '3123ab77-05a3-cb8b-cecd-1eafd29bfe24', // 2 找春天
   'c2s2-01-xiaolu': 'b305f9be-e0a5-b2fe-07ee-2345f074d9eb', // 3 开满鲜花的小路
   'c2s2-01-zhishu': '518048f0-c1f4-e79e-67e0-65d99365be54', // 4 邓小平爷爷植树
-  'c2s2-01-garden': 'e1b9abbe-71d8-3a90-7441-aa8f6f14112b', // 语文园地一
   'c2s2-02-leifeng': 'e110dbfc-3abd-6dbe-f84f-7664cc4a2f71', // 5 雷锋叔叔，你在哪里
   'c2s2-02-qianrengao': 'f32a82be-547d-8fb6-5568-b94b8552bb16', // 6 千人糕
   'c2s2-02-ruoxiao': 'fb80174d-4f37-7579-0b52-5f788fa3e9d7', // 7 我不是最弱小的
@@ -257,10 +258,95 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c2s2-08-huangdi': '0c0b4114-70a5-9a4d-f120-1098085ac671', // 23 黄帝的传说
   'c2s2-08-dayu': '34415469-dcb7-3fb5-f32f-617e038474a4', // 24 大禹治水
   'c2s2-08-garden': '8172801d-cb56-78b0-7a77-bd6d371a93a7', // 语文园地八
+  'c3s1-01-dashu': '95b463d2-2a14-e987-6437-394e53b15197', // 1 大青树下的小学
+  'c3s1-01-huaxuexiao': '41352dca-0e4f-0b06-7132-d98f33e7b913', // 2 花的学校
+  'c3s1-01-budong': 'daf6550f-a3e6-5be1-a21e-55e66e24a968', // 3* 不懂就要问
+  'c3s1-01-garden': '678fd3ee-44d4-ab3a-e43a-64b34e9258f4', // 语文园地
+  'c3s1-02-gushi': 'd2456be1-b25b-b957-97d5-54af93639ff0', // 4 古诗三首
+  'c3s1-02-shuinidao': '8ed0fe62-4b24-6103-8736-f845a9eeda5f', // 5 铺满金色巴掌的水泥道
+  'c3s1-02-qiuyu': '6f689a89-0bf9-72db-8c1c-4b33f82cbfd7', // 6 秋天的雨
+  'c3s1-02-qiusheng': '544fbe5d-8f73-79cc-3c86-fc9b6ff14870', // 7* 听听，秋的声音
+  'c3s1-03-laowu': '60cd35e7-8f48-0085-a887-caf94556c291', // 8 总也倒不了的老屋
+  'c3s1-03-jianggui': '9ac1e93e-29ff-6adc-6566-7da9eb44f72e', // 9* 犟龟
+  'c3s1-03-xiaogou': 'a3b6abd4-6483-6132-7e38-78e5954f53a9', // 10* 小狗学叫
+  'c3s1-03-garden': '5e90f262-9d63-e287-5f3c-2c3a6dd97d17', // 语文园地
+  'c3s1-04-baohulu': 'b6768b18-fc41-f753-95ca-a76c73f1810d', // 11 宝葫芦的秘密（节选）
+  'c3s1-04-niudu': 'e0b908c6-fa9e-8e1a-2eb0-6e646212b870', // 12 在牛肚子里旅行
+  'c3s1-04-nailao': '1b1a1b06-3699-7ae8-9605-5902824813ec', // 13* 一块奶酪
+  'c3s1-04-garden': '74349a26-791c-a26e-fd9f-b9e488c783b8', // 语文园地
+  'c3s1-05-dachuan': '834e6106-6bab-95bb-8884-eea65da82485', // 14 搭船的鸟
+  'c3s1-05-caodi': '5fb656f5-9a27-411c-140b-e503c0cdb7d3', // 15 金色的草地
+  'c3s1-06-xisha': 'df62121b-03bf-d934-ce54-4f5e14f8bd37', // 16 富饶的西沙群岛
+  'c3s1-06-haibin': 'dbd88f17-b432-4033-749e-492b0b377f36', // 17 海滨小城
+  'c3s1-06-xinganling': '2b260ac0-2f7e-f3a2-d7d6-a80d3acdb1c6', // 18 美丽的小兴安岭
+  'c3s1-06-xianggang': '307d9215-fd24-ee56-d767-d91d990fbca3', // 19* 香港，璀璨的明珠
+  'c3s1-07-gushi': '3caaf076-ef9b-836b-ae3d-90d43f53cb4f', // 20 古诗三首
+  'c3s1-07-shengyin': '678aa9f1-f890-d19d-7be8-0a87ac85aa6a', // 21 大自然的声音
+  'c3s1-07-dashu': '184dc912-fb49-3a22-f92d-289afb834029', // 22 读不完的大书
+  'c3s1-08-simaguang': '634be751-3fa8-8700-e179-c94734477c3f', // 23 司马光
+  'c3s1-08-zhengqi': 'e04d37e3-1680-4b15-5012-1313ea56678a', // 24 一定要争气
+  'c3s1-08-shoushutai': 'aa94b3a1-a787-e651-b20e-e80a8e9eca94', // 25 手术台就是阵地
+  'c3s1-08-ciwan': '33b7b256-446c-1f2e-3775-6de71bcb3d0a', // 26* 一个粗瓷大碗
+  'c3s2-01-gushi': 'b1200339-b030-8f7d-0ae6-8d2c327ac9be', // 1 古诗三首
+  'c3s2-01-yanzi': 'b27fb3a9-3980-ddda-69a4-81360d1b3168', // 2 燕子
+  'c3s2-01-hehua': 'c1d3d8c0-493c-e505-08f1-78fa6452a9ab', // 3 荷花
+  'c3s2-01-kunchong': '69bbad08-8cff-266a-7a94-1fb9fb93e951', // 4* 昆虫备忘录
+  'c3s2-02-shouzhu': '5dd0e819-45e4-a326-7b11-6734fe1bc8e4', // 5 守株待兔
+  'c3s2-02-lang': '6ca0046b-b28c-4740-8981-b57e00fda5d2', // 6 会摇尾巴的狼
+  'c3s2-02-lujiao': '608d6ee0-e62a-7333-b11b-629792693fec', // 7 鹿角和鹿腿
+  'c3s2-02-chizi': 'ed7f6544-9f09-604c-b22a-ecb3e53e9549', // 8* 池子与河流
+  'c3s2-02-garden': 'e5636f8d-bbd8-3456-c5b3-67bb2b91fb10', // 语文园地
+  'c3s2-03-haidi': '570694d5-441b-7449-81cd-3f15e4fb3d6c', // 9 海底世界
+  'c3s2-03-shifeng': 'fddcebd8-87fa-be7c-bcd9-aec2b8da9211', // 10 石蜂
+  'c3s2-03-xiaoxia': '270095f6-e9a8-e8a7-37f8-0e6de01c3482', // 11* 小虾
+  'c3s2-04-gushi': 'ad9a7e4e-49b9-9058-8113-24811d4d9e92', // 12 古诗三首
+  'c3s2-04-zhi': '8b4e0ae8-0eb4-0768-b75f-31469ab86baa', // 13 纸的发明
+  'c3s2-04-zhaozhou': 'a68af8a4-2923-4ac2-7201-45abfdb5b824', // 14 赵州桥
+  'c3s2-04-minghua': 'b893434f-e341-a7e1-2a60-26804584a6e9', // 15* 一幅名扬中外的画
+  'c3s2-05-huluobo': 'af153faf-901f-de63-8f91-39ad95d33e21', // 16 胡萝卜先生的长胡子
+  'c3s2-05-yikeshu': '6d1fa478-9fbe-97df-4729-a5ef35243f6e', // 17 我变成了一棵树
+  'c3s2-07-huoshaoyun': 'b253ad1f-7cfb-9c96-a9a6-0409634fdb68', // 22 火烧云
+  'c3s2-07-baofengyu': 'f8206335-b8bd-dab0-0c1d-9d5516db6c0d', // 23 暴风雨来临之前
+  'c3s2-07-shijie': 'ca324adf-9bb8-e01e-a953-99a176923d3c', // 24 我们奇妙的世界
+  'c3s2-07-garden': '07d0a7e8-09cf-03d8-0232-56155cecfdcc', // 语文园地
+  'c3s2-08-caifeng': 'b25161f4-3ccb-90b4-0ce1-7ece6d279920', // 25 慢性子裁缝和急性子顾客
+  'c3s2-08-lou': '34562a60-3e6e-1b09-d5b5-a7c7309d0954', // 26 漏
+  'c3s2-08-zaohe': 'f5fda836-2a01-04b1-f498-50f52dc2da91', // 27* 枣核
 }
 
-/** 这个知识点的同步课视频地址；没有就是 undefined */
-export function videoUrlOf(kpId: string): string | undefined {
-  const id = VIDEO_LESSONS[kpId]
-  return id ? `https://basic.smartedu.cn/syncClassroom/classActivity?activityId=${id}` : undefined
+/** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
+export type VideoFallbackFrom = 'elite' | 'old' | 'old-elite'
+
+/**
+ * 替代视频（标记）：新教材这一节平台上还没有同步课，先用这些（地图上画虚线框，旧教材的写「旧版」）。平台补上新教材的
+ * 同步课后重跑 npm run videos 自动换回同步课；要统一撤掉就清空这张表。注释是视频在平台上的位置，语文园地带上判断依据
+ * （旧教材那个单元里和新教材相同的课题）
+ */
+export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoFallbackFrom }>> = {
+  'c2s2-01-garden': { id: 'b612ee0d-a464-438c-9466-bf7ca110e59e', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地一（单元里相同的：咏柳、村居、找春天、开满鲜花的小路、邓小平爷爷植树）
+  'c2s2-02-garden': { id: 'e538e7b0-f64c-4b9f-a13a-69dea22463ec', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地二（单元里相同的：雷锋叔叔，你在哪里、千人糕、读读儿童故事）
+  'c3s1-02-garden': { id: 'f7fdf3e0-44e2-1369-c058-2db1440308ef', from: 'elite' }, // 新教材三年级上册 · 第二单元 · 语文园地（精品课）
+  'c3s1-06-garden': { id: '83334999-c74b-4985-862b-105edcabe8d1', from: 'old' }, // 旧教材三年级上册 · 第六单元 · 语文园地（单元里相同的：富饶的西沙群岛、海滨小城、美丽的小兴安岭、这儿真美）
+  'c3s1-07-garden': { id: '8e0fedac-a433-2cf3-89ee-2a2514095cd3', from: 'elite' }, // 新教材三年级上册 · 第七单元 · 语文园地（精品课）
+  'c3s2-01-garden': { id: '116c1353-da0a-40a9-b7cd-3ae5d5b8a606', from: 'old' }, // 旧教材三年级下册 · 第一单元 · 语文园地（单元里相同的：绝句、惠崇春江晚景、三衢道中、燕子、荷花、昆虫备忘录、我的植物朋友）
+  'c3s2-03-garden': { id: '8df28e2e-2d24-444f-b482-92498b1b8b90', from: 'old' }, // 旧教材三年级下册 · 第四单元 · 语文园地（单元里相同的：小虾、我做了一项小实验）
+  'c3s2-04-garden': { id: 'cc6f0c71-ac0a-44b3-bb99-a0beb3783fb4', from: 'old' }, // 旧教材三年级下册 · 第三单元 · 语文园地（单元里相同的：元日、清明、九月九日忆山东兄弟、纸的发明、赵州桥、一幅名扬中外的画、中华传统节日）
+  'c3s2-06-shuimo': { id: '0e72470a-a3e6-42f9-8fc0-dc15e9b6adec', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 18 童年的水墨画
+  'c3s2-06-feizao': { id: '3a48fe12-f9d4-4c00-8db9-35f6edb0249a', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 20 肥皂泡
+  'c3s2-06-huique': { id: '692515b8-2f5b-424e-8e40-7455ce03c6e8', from: 'old' }, // 旧教材三年级上册 · 第八单元 · 25 灰雀
+  'c3s2-06-shixin': { id: 'cacefaa5-a63a-4190-a353-ee2d128709fd', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 21* 我不能失信
+  'c3s2-06-garden': { id: '47b49160-2bb8-40cf-bfbd-cad364429f5f', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 语文园地（单元里相同的：童年的水墨画、肥皂泡、我不能失信、身边那些有特点的人）
+  'c3s2-08-garden': { id: '103330d5-ec9a-41ea-a4c7-3917848b5ead', from: 'old' }, // 旧教材三年级下册 · 第八单元 · 语文园地（单元里相同的：慢性子裁缝和急性子顾客、漏、枣核、趣味故事会、这样想象真有趣）
+}
+
+const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='
+const ELITE_URL = 'https://basic.smartedu.cn/qualityCourse?courseId='
+
+/** 这个知识点的视频：地址 + 来源（sync 是新教材的同步课，其余是替代视频）；没有就是 undefined */
+export function videoOf(kpId: string): { url: string; from: 'sync' | VideoFallbackFrom } | undefined {
+  const lesson = VIDEO_LESSONS[kpId]
+  if (lesson) return { url: SYNC_URL + lesson, from: 'sync' }
+  const alt = VIDEO_FALLBACKS[kpId]
+  if (!alt) return undefined
+  return { url: (alt.from === 'old' ? SYNC_URL : ELITE_URL) + alt.id, from: alt.from }
 }
