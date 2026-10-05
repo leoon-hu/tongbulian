@@ -104,6 +104,7 @@ export const SYMBOL_WORDS = {
     'sym.<': '小于',
     'sym.⬜': '和',
     'sym.○': '和', // 比大小的圆圈（三年级起课本写「在○里填上>、<或=」）
+    'sym.≈': '约等于', // 四年级求近似数（182068 ≈ 18万）
     'sym.(': '括号',
     'sym.)': '括号',
   },
@@ -119,6 +120,7 @@ export const SYMBOL_WORDS = {
     'sym.<': 'less than',
     'sym.⬜': 'and',
     'sym.○': 'and',
+    'sym.≈': 'is about',
     'sym.(': 'open bracket',
     'sym.)': 'close bracket',
   },

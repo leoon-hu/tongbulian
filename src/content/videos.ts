@@ -14,13 +14,13 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   's1-02-compose-10': 'f72b75e0-613b-fb2b-3742-42dc27855511', // 6、7的组成
   's1-02-addsub-10': 'c7ae2fa4-bf3c-37e5-d361-56797379f516', // 6和7的加、减法
   's1-02-mixed': 'c947da10-5804-f38f-48f6-601310ed421d', // 连加、连减 加、减混合
-  's1-03-solid-shapes': '4a0b4e6f-48d6-6653-351a-e295bb64b8fe', // 三 认识立体图形
+  's1-03-solid-shapes': '4a0b4e6f-48d6-6653-351a-e295bb64b8fe', // 认识立体图形
   's1-04-num-20': '359c7317-335c-2f30-a5bc-6f6b71e3a172', // 11～20 的认识
   's1-04-simple-addsub': 'f79b6ffa-a492-c96a-5cfa-e75d5021989e', // 简单加、减法
   's1-05-carry-add': '5eb2ceed-819e-0017-0e1c-bbb060b74c4b', // 9加几
   's1-05-add-876': 'dce4f148-d4da-cc78-ce7c-10a841a3ac80', // 8、7、6 加几
   's1-05-add-5432': '397ffa22-57f5-5c9e-f75a-69e95c2c73ce', // 5、4、3、2 加几
-  's2-01-flat-shapes': '86bdd6c7-ad71-d131-1019-173a9ac88e76', // 一、认识平面图形
+  's2-01-flat-shapes': '86bdd6c7-ad71-d131-1019-173a9ac88e76', // 认识平面图形
   's2-02-borrow-sub': '4a3fa8a5-dfa4-ead7-6f2e-a65ca29840c5', // 十几减9
   's2-02-sub-876': 'fcaa4a75-5a56-9dea-6db9-6c173b3ad168', // 十几减8、7、6
   's2-02-sub-5432': '3bdb2177-6515-2e62-a6b8-b15b8a9c6ac9', // 十几减5、4、3、2
@@ -113,6 +113,10 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm3s2-07-know': 'eb322005-a619-2aba-6805-155ae2bcb28b', // 认识小数
   'm3s2-07-compare': 'cef1ea10-9479-65d0-8532-6b89e57d2bf6', // 小数的大小比较
   'm3s2-07-addsub': '27ee170e-8a71-6180-76dd-f9127c31b9c8', // 简单的小数加、减法
+  'm4s1-01-within-yi': 'f51f1082-f9fc-e266-ddc0-a0209d3faf69', // 亿以内数的认识-读数
+  'm4s1-01-above-yi': 'a219ed82-a73e-e76b-edde-2040d3fa1cfc', // 十进制计数法
+  'm4s1-01-compare': '1484f6a2-b2d5-a314-beb9-47667f7710e4', // 数的大小比较
+  'm4s1-01-round': 'ab55074c-4ee7-55ab-d556-8baa1b26d52f', // 数的改写和求近似数
   'c1s1-01-tiandiren': '8b8984a0-3ad9-3183-8250-9dd550069836', // 1 天地人
   'c1s1-01-jinmu': 'f7ba363a-5941-06f0-3300-7972d3fee8d1', // 2 金木水火土
   'c1s1-01-kouer': '8ecbb01e-3df7-91b1-dcaf-5755dd305690', // 3 口耳目手足
@@ -323,6 +327,23 @@ export type VideoFallbackFrom = 'elite' | 'old' | 'old-elite'
  * （旧教材那个单元里和新教材相同的课题）
  */
 export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoFallbackFrom }>> = {
+  'm4s1-02-yi': { id: '46715603-149a-4410-96dc-958b787b5528', from: 'old' }, // 旧教材 · ★ 1亿有多大
+  'm4s1-03-angles': { id: 'ec912ae4-d2dc-48d2-8cc9-b7d7603ccd3a', from: 'old' }, // 旧教材 · 3 角的度量 · 角的分类
+  'm4s1-03-measure': { id: 'cb32808b-c504-44f7-8716-21b3633b1d4f', from: 'old' }, // 旧教材 · 3 角的度量 · 角的度量
+  'm4s1-03-draw': { id: '28a11882-93d7-4806-879d-ac102f885541', from: 'old' }, // 旧教材 · 3 角的度量 · 画角
+  'm4s1-04-oral': { id: 'c707d102-59fe-4d14-9298-42ff2d8082b4', from: 'old' }, // 旧教材 · 第四单元 两位数乘两位数 · 口算乘法
+  'm4s1-04-written': { id: 'ef6c2ce6-8a0d-4ad0-adaa-f5335fd63691', from: 'old' }, // 旧教材 · 4 三位数乘两位数 · 三位数乘两位数笔算
+  'm4s1-04-pattern': { id: '3562cd5d-3e98-4d41-b069-4a7c85fc1220', from: 'old' }, // 旧教材 · 4 三位数乘两位数 · 积的变化规律
+  'm4s1-05-total-part': { id: '716cc82c-b238-468a-869f-5998ba9c1030', from: 'old' }, // 旧教材 · 1 四则运算 · 加、减法的意义和各部分间的关系
+  'm4s1-05-price': { id: '6387f5b9-9b04-4f06-b522-4f883160d5f6', from: 'old' }, // 旧教材 · 4 三位数乘两位数 · 单价、数量和总价
+  'm4s1-05-speed': { id: '4d71f545-707f-4d2d-99b8-ca62f6684d53', from: 'old' }, // 旧教材 · 4 三位数乘两位数 · 速度、时间和路程
+  'm4s1-06-parallel': { id: 'f70ab85e-83bd-4cb4-b8c5-1a8023279438', from: 'old' }, // 旧教材 · 5 平行四边形和梯形 · 平行与垂直
+  'm4s1-06-distance': { id: '8ae7e49e-8388-6a24-0183-bb238d7b06a8', from: 'old-elite' }, // 旧教材 · 5 平行四边形和梯形 · 画垂线和点到直线的距离（精品课）
+  'm4s1-06-parallelogram': { id: '68da66f0-4665-42c7-92ec-cc44f42919dd', from: 'old' }, // 旧教材 · 5 平行四边形和梯形 · 平行四边形的认识
+  'm4s1-06-trapezoid': { id: '8825f82a-caf3-45ce-a957-9601ae3832e5', from: 'old' }, // 旧教材 · 5 平行四边形和梯形 · 梯形的认识
+  'm4s1-07-single': { id: 'c840264f-08aa-4b6d-8f36-ac8344781cad', from: 'old' }, // 旧教材 · 7 条形统计图
+  'm4s1-07-double': { id: '4a18a6a6-fd79-cc49-6237-19169d4d379c', from: 'old' }, // 旧教材 · 8 平均数与条形统计图 · 复式条形统计图
+  'm4s1-08-treasure': { id: '18d0da2f-f884-4e16-b107-20161b8b4104', from: 'old' }, // 旧教材 · 第一单元 位置与方向（一） · 知道东北、东南、西北、西南四个方向
   'c2s2-01-garden': { id: 'b612ee0d-a464-438c-9466-bf7ca110e59e', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地一（单元里相同的：咏柳、村居、找春天、开满鲜花的小路、邓小平爷爷植树）
   'c2s2-02-garden': { id: 'e538e7b0-f64c-4b9f-a13a-69dea22463ec', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地二（单元里相同的：雷锋叔叔，你在哪里、千人糕、读读儿童故事）
   'c3s1-02-garden': { id: 'f7fdf3e0-44e2-1369-c058-2db1440308ef', from: 'elite' }, // 新教材三年级上册 · 第二单元 · 语文园地（精品课）

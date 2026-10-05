@@ -10,7 +10,7 @@
  */
 import type { Course, GradeMeta, KnowledgePoint, Question, StemPart, SubjectMeta, Unit } from '@/types/models'
 import { createRng, getGenerator } from '@/engine'
-import { SUBJECTS, kpsOfUnit, liveCourses as catalogCourses } from '@/engine/catalog'
+import { SUBJECTS, kpsOfUnit, liveCourses as catalogCourses, semestersOf } from '@/engine/catalog'
 import { translate } from '@/engine/i18n'
 import { answerLabel } from '@/engine/answer'
 import { AUTHOR_CONTACT, REPO_URL, SISTER_SITES } from '@/engine/sites'
@@ -21,17 +21,19 @@ import { EMOJI_ZH } from '@/content/math/shared/emoji'
 import { KP_SEO as SEO_G1, type KpSeo } from '@/content/math/grade1/seo'
 import { KP_SEO as SEO_G2 } from '@/content/math/grade2/seo'
 import { KP_SEO as SEO_G3 } from '@/content/math/grade3/seo'
+import { KP_SEO as SEO_G4 } from '@/content/math/grade4/seo'
 import { KP_SEO as SEO_C1 } from '@/content/chinese/grade1/seo'
 import { KP_SEO as SEO_C2 } from '@/content/chinese/grade2/seo'
 import { KP_SEO as SEO_C3 } from '@/content/chinese/grade3/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
+import '@/content/math/grade4'
 import '@/content/chinese/grade1'
 import '@/content/chinese/grade2'
 import '@/content/chinese/grade3'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_C1, ...SEO_C2, ...SEO_C3 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_C1, ...SEO_C2, ...SEO_C3 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -71,6 +73,11 @@ function liveKps(course: Course): KnowledgePoint[] {
 }
 
 const semName = (s: 1 | 2): string => zh({ k: `sem.${s}` })
+/** 这门课有哪几册：「上下册」，或者只有一册（四年级数学的下册平台上还没有新教材）就是「上册」 */
+const volsName = (course: Course): string => {
+  const sems = semestersOf(course)
+  return sems.length > 1 ? '上下册' : semName(sems[0]!)
+}
 
 /** 各学科怎么出题、答错怎么办（课程页 / 知识点页的描述与导语）：数学有教具演示，语文考认字的字不注音（需求 Y3） */
 interface SubjectCopy {
@@ -296,6 +303,68 @@ export function stemText(part: StemPart): string {
       return `（统计表${part.title ? `：${zh(part.title)}` : ''}）\n${part.rows.map((row) => row.map((c) => (c === null ? '?' : typeof c === 'number' ? String(c) : zh(c))).join(' | ')).join('\n')}`
     case 'calendar':
       return `（${zh(part.title)}的月历：1 日是星期${'一二三四五六日'[part.first - 1]}，这个月有 ${part.days} 天${part.mark?.length ? `，圈出了 ${part.mark.join('、')} 日` : ''}）`
+    // 四年级数学 A
+    case 'big-num': {
+      // 大数卡：数照写（分级线写成「┊」，□ 照写）、读法照写；画横线的数字另外说；右边的「= ?万」写成「=（　）万」
+      let main = part.words ? zh(part.words) : (part.n ?? '')
+      if (!part.words && part.split && part.n) {
+        const s = part.n
+        const head = s.length % 4 || 4
+        main = [s.slice(0, head), ...Array.from({ length: (s.length - head) / 4 }, (_, i) => s.slice(head + i * 4, head + i * 4 + 4))].join('┊')
+      }
+      const unit = part.unit === 'wan' ? '万' : part.unit === 'yi' ? '亿' : ''
+      const rel = part.rel ? ` ${part.rel === '?' ? '□' : part.rel} ${part.rhs === '?' ? '（　）' : (part.rhs ?? '')}${unit}` : ''
+      const marks = part.marks?.length && part.n ? `（画横线的是从左数第 ${part.marks.map((i) => i + 1).join('、')} 位上的 ${part.marks.map((i) => part.n![i]).join('、')}）` : ''
+      return `${main}${rel}${marks}`
+    }
+    case 'counter': {
+      // 计数器：每根杆上几颗珠子（没有珠子的杆不说）
+      const PLACE = ['个位', '十位', '百位', '千位', '万位', '十万位', '百万位', '千万位', '亿位', '十亿位', '百亿位', '千亿位']
+      const beads = part.beads.map((b, i) => (b ? `${PLACE[part.top - i]} ${b} 颗` : '')).filter(Boolean)
+      return `（计数器：${beads.join('、')}）`
+    }
+    case 'abacus':
+      return `（算盘：从左到右各档拨出的数是 ${part.n}，最右一档是个位）`
+    case 'place-table': {
+      const PLACE = ['个位', '十位', '百位', '千位', '万位', '十万位', '百万位', '千万位', '亿位', '十亿位', '百亿位', '千亿位']
+      return `（数位顺序表：从${PLACE[part.top]}到个位${part.ask === undefined ? '' : `，从右数第 ${part.ask + 1} 列的数位和计数单位打了问号`}）`
+    }
+    // 四年级数学 B
+    case 'protractor':
+      return part.alt
+    // 四年级数学 C
+    case 'mul-vertical': {
+      // 乘数是两位数的竖式：写好的竖式（看竖式答题 / 改错题）把两次乘得的数和积都写出来，箭头指着哪一行也说一下
+      const w = part.work
+      if (!w) return `（竖式：${part.a} × ${part.b}${part.zeros ? '，末尾的 0 写在竖式外面' : ''}）`
+      const shift = w.flat ? '（和上一行对齐，没有左移）' : '（末位对齐十位）'
+      const arrow = part.mark ? `，箭头指着 ${part.mark === 1 ? w.p1 : w.p2} 那一行` : ''
+      return `（竖式：${part.a} × ${part.b}，下面依次写着 ${w.p1}、${w.p2}${shift}，积写着 ${w.sum}${arrow}）`
+    }
+    // 四年级数学 D
+    case 'bar-chart': {
+      // 条形统计图：横竖、1 格代表几（刻度没写数时只说每一条画了几格），每一条是多少；复式图每组一行
+      const head = `（${part.dir === 'h' ? '横向' : '竖向'}${part.series.length > 1 ? '复式' : ''}条形统计图${part.title ? `「${zh(part.title)}」` : ''}，${zh(part.valueAxis)}，${part.hideScale ? '刻度上的数没有写' : `1 格代表 ${part.step}`}）`
+      const val = (v: number | null): string => (v === null ? '?' : part.hideScale ? `${v / part.step} 格` : String(v))
+      const rows = part.series.map((s) => `${s.name ? `${zh(s.name)}：` : ''}${part.cats.map((c, i) => `${zh(c)} ${val(s.values[i] ?? null)}`).join('、')}`)
+      return `${head}\n${rows.join('\n')}`
+    }
+    case 'plan-map': {
+      // 平面图（上北下南）：从北到南一排一排写，宝藏写在哪个地方的哪个角 / 哪一面
+      const DIR = { n: '北', ne: '东北', e: '东', se: '东南', s: '南', sw: '西南', w: '西', nw: '西北' } as const
+      const rowName = ['北边一排', '中间一排', '南边一排']
+      const rows = part.cells.map((row, r) => `${rowName[r] ?? ''}：${row.map((c) => (c ? zh(c.label) : '空地')).join('、')}`)
+      const marks = (part.marks ?? []).map((m) => {
+        const place = part.cells[m.r]?.[m.c]
+        return `${m.n}号宝藏在${place ? zh(place.label) : ''}的${DIR[m.at]}${m.at.length === 2 ? '角' : '面'}`
+      })
+      return `（${part.title ? `${zh(part.title)}，` : ''}平面图，上北下南、左西右东）\n${rows.join('；')}${marks.length ? `\n${marks.join('；')}` : ''}`
+    }
+    case 'compass': {
+      // 指南针：打问号的那个字只说在圈上的哪个位置（说出方向就是答案）
+      const SPOT = { n: '上面', ne: '右上', e: '右边', se: '右下', s: '下面', sw: '左下', w: '左边', nw: '左上' } as const
+      return `（指南针：八个方向围成一圈，北在上面${part.ask ? `，${SPOT[part.ask]}那个方向的字换成了问号` : ''}）`
+    }
     // 语文（§9）
     case 'hanzi':
       return part.mark === undefined ? part.text : `${part.text}（红字：${Array.from(part.text)[part.mark]}）`
@@ -514,8 +583,8 @@ function coursePage(lc: LiveCourse, siteUrl: string, analytics: AnalyticsConfig 
   const { course, name } = lc
   const kps = liveKps(course)
   const units = course.units.filter((u) => kpsOfUnit(course, u.id).some((kp) => getGenerator(kp.id)))
-  const title = `${name}练习题与对战游戏｜人教版上下册 ${kps.length} 个知识点`
-  const description = `人教版${name}上下册 ${kps.length} 个知识点的在线练习题：${copyOf(course).course}；每个知识点也能打一局对战游戏。免费、无广告。`
+  const title = `${name}练习题与对战游戏｜人教版${volsName(course)} ${kps.length} 个知识点`
+  const description = `人教版${name}${volsName(course)} ${kps.length} 个知识点的在线练习题：${copyOf(course).course}；每个知识点也能打一局对战游戏。免费、无广告。`
   const sems = ([1, 2] as const).map((s) => ({ s, units: units.filter((u) => u.semester === s) })).filter((x) => x.units.length)
   const body = `
     <h1>${esc(name)} · 人教版知识点对战与练习</h1>
@@ -905,7 +974,7 @@ export function homeBody(): string {
     .map((lc) => {
       const kps = liveKps(lc.course)
       const units = lc.course.units.filter((u) => kpsOfUnit(lc.course, u.id).some((kp) => getGenerator(kp.id)))
-      return `        <h2>${esc(lc.name)}练习题（上下册 ${units.length} 个单元、${kps.length} 个知识点）</h2>
+      return `        <h2>${esc(lc.name)}练习题（${volsName(lc.course)} ${units.length} 个单元、${kps.length} 个知识点）</h2>
         <p>${kps.map((kp) => `<a href="./${kpPath(lc.course, kp)}">${esc(kp.title)}</a>`).join('，')}。</p>
         <p><a href="./${coursePath(lc.course)}">查看${esc(lc.name)}全部知识点、示例题与对战入口 →</a></p>`
     })

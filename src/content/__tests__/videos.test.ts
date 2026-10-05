@@ -4,9 +4,10 @@ import { VIDEO_FALLBACKS, VIDEO_LESSONS, videoOf } from '../videos'
 
 /**
  * 平台上新旧教材都没有这一节视频的知识点（scripts/videos.mjs 会列出来）：三上语文园地八——新教材这一节还没有课时，
- * 旧教材第八单元的园地上只挂了「第5—8单元复习活动课」。平台补上了重跑 npm run videos 再从这里删掉
+ * 旧教材第八单元的园地上只挂了「第5—8单元复习活动课」；四上「用估算解决问题」——新教材四上的同步课 2026-10-05 只上了
+ * 第一单元，旧教材没有讲这个的一节。平台补上了重跑 npm run videos 再从这里删掉
  */
-const NO_VIDEO = new Set(['c3s1-08-garden'])
+const NO_VIDEO = new Set(['c3s1-08-garden', 'm4s1-04-estimate'])
 
 const ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const SYNC = new RegExp(`^https://basic\\.smartedu\\.cn/syncClassroom/classActivity\\?activityId=${ID}$`)

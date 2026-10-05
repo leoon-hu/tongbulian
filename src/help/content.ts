@@ -206,7 +206,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
               { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the topic\'s Practice page (the one you land on after tapping a topic), together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
               { q: 'Why do some characters in Chinese questions have no pinyin?', a: 'Questions that test character recognition (pick the character from its pinyin, sound or picture; how do you read this character) would give the answer away with pinyin or by reading it aloud. Lesson texts, questions and all other options carry pinyin and are read aloud.' },
-              { q: 'Why no English or grades 4–6 yet?', a: 'Content is built grade by grade and is being added.' },
+              { q: 'Why no English, Grade 4 math Term 2 or grades 5–6 yet?', a: 'Content is built grade by grade and is being added. Grade 4 math Term 2 will come once its new-edition textbook is out on the National Smart Education Platform (only the old edition is there for now).' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
                 a: 'Free, no ads, no account, no personal data collected; progress stays in this device\'s browser. All code is open source under MIT, so anyone can inspect it or host their own copy:',
@@ -357,7 +357,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
             { q: '想改名字？', a: '在知识点的「练习」页（点知识点就到）页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
             { q: '语文题里有的字为什么不标拼音？', a: '考认字的题（看拼音选字、听音选字、看图选字、这个字怎么读）要看孩子认不认得这个字，标了拼音、读出了字音就等于告诉了答案；课文、问题和其余选项都标拼音、都朗读。' },
-            { q: '为什么还没有英语、四年级以上？', a: '内容按年级逐个做，陆续补充。' },
+            { q: '为什么还没有英语、四年级下册和五年级以上？', a: '内容按年级逐个做，陆续补充。四年级数学下册等国家中小学智慧教育平台上出了新版课本再做（平台上现在还是旧版）。' },
             {
               q: '收费吗？有广告吗？安全吗？',
               a: '免费、无广告、不用注册、不收集个人信息，学习记录只存在这台设备的浏览器里。代码全部以 MIT 许可开源，谁都能查、也能自己部署一套：',

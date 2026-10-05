@@ -54,6 +54,11 @@ export type QuestionType =
   | 'decimal' // 小数的初步认识
   | 'fraction' // 分数的初步认识
   | 'code' // 数字编码（身份证号码、邮政编码）
+  // ── 四年级起 ──
+  | 'big-number' // 万以上数的认识：计数单位、读写、比大小、改写、近似数
+  | 'quantity' // 数量关系：加法模型、乘法模型
+  | 'parallel' // 平行与垂直、平行四边形和梯形
+  | 'direction' // 方向与位置：八个方向、平面图
   // ── 语文（§9） ──
   | 'hanzi' // 识字：听音 / 看图 / 看拼音选字、看字选读音
   | 'writing' // 写字与字的结构：笔画、第一笔、偏旁、加一加减一减
@@ -129,6 +134,9 @@ export type GeoSide = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
  * line 一条线（dots = 两头画不画端点：射线、直线不画点的那头一直画到图边）；curve 经过这些点的平滑曲线；
  * dot 点 + 旁边的字母；text 一段字（badge = 橙色圆牌上的白字，标图里的 1、2、3；letter = 斜体字母）；grid 方格纸（(x, y) 起 w × h 格，cells 是涂色的格子 [列, 行]，外沿加粗；lines = false 不画空格的格线）；
  * arc 角的记号（at 顶点，a、b 是两条边上的点；right = 直角方块）
+ * 四年级加的（都是可选的，不填和三年级画得一样）：grid 的 dots = 点子图（只在格点上画小圆点，不画格线）；
+ * arc 的 ccw = 从 a 那条边起在屏幕上逆时针转到 b 那条边（可以超过 180°：平角画半圆、a、b 同向是周角画整圈），
+ * arrow = 弧的末端画箭头（射线旋转的方向），r = 弧的半径（像素，默认 16）
  */
 export type GeoItem =
   | { t: 'poly'; pts: GeoPt[]; open?: boolean; fill?: GeoTone; stroke?: GeoTone; dash?: boolean; labels?: (string | null)[]; right?: number[] }
@@ -136,8 +144,8 @@ export type GeoItem =
   | { t: 'curve'; pts: GeoPt[]; closed?: boolean; fill?: GeoTone; stroke?: GeoTone; dots?: [boolean, boolean] }
   | { t: 'dot'; at: GeoPt; label?: string; side?: GeoSide }
   | { t: 'text'; at: GeoPt; text: string; tone?: GeoTone; big?: boolean; badge?: boolean; letter?: boolean }
-  | { t: 'grid'; x: number; y: number; w: number; h: number; cells?: GeoPt[]; fill?: GeoTone; lines?: boolean }
-  | { t: 'arc'; at: GeoPt; a: GeoPt; b: GeoPt; right?: boolean }
+  | { t: 'grid'; x: number; y: number; w: number; h: number; cells?: GeoPt[]; fill?: GeoTone; lines?: boolean; dots?: boolean }
+  | { t: 'arc'; at: GeoPt; a: GeoPt; b: GeoPt; right?: boolean; ccw?: boolean; arrow?: boolean; r?: number }
 /** 一幅几何图：外框 w × h（图里的单位），px = 每单位几像素（默认 1；放不下时组件整体等比缩小） */
 export interface GeoFig {
   w: number
@@ -205,6 +213,57 @@ export interface DivLine {
   end: number
   line?: boolean
   w?: number
+}
+
+// ── 四年级数学的辅助类型 A ──
+// ── 四年级数学的辅助类型 B ──
+/**
+ * 量角器（Protractor，四上「角的度量」）上从中心出发的一条线：at = 这条线对着量角器上的哪个位置（度，从右边的 0° 刻度线起
+ * 逆时针量，0–180；也就是内圈的读数，外圈的读数是 180 − at）；画成从中心起、伸出量角器外的射线；label = 伸出去那头标的字母（射线 OA 的 A）
+ */
+export interface ProtractorRay {
+  at: number
+  label?: string
+}
+/** 量角器外沿上的一个点（画角：「应该在哪个点画点」）：at 同上，label 是点旁边的字母 */
+export interface ProtractorPoint {
+  at: number
+  label: string
+}
+// ── 四年级数学的辅助类型 C ──
+/**
+ * 写好的乘法竖式（mul-vertical 的 work，四上「多位数乘两位数」）：p1 = 用乘数个位上的数乘得的数，p2 = 用十位上的数乘得的数
+ * （照竖式里写的，末尾的 0 不写），sum = 积；照写，可以是错的（改错题）。flat = p2 没有往左移一位、和 p1 右对齐（改错题的错法）
+ */
+export interface MulWork {
+  p1: number
+  p2: number
+  sum: number
+  flat?: boolean
+}
+// ── 四年级数学的辅助类型 D ──
+/**
+ * 条形统计图（bar-chart）的一组数据：values 与类别一一对应，null = 这一条还没画（画一个虚线框「?」，按统计表补画的题）；
+ * 复式图（两三组）每组一种颜色——tone：blue 蓝、pink 粉、green 绿（不填按蓝、粉、绿的顺序；课本里颜色不固定，看图例），name 写在右上角的图例里
+ */
+export interface BarSeries {
+  name?: LStr
+  tone?: 'blue' | 'pink' | 'green'
+  values: (number | null)[]
+}
+/** 八个方向（四上「寻找宝藏」）：n 北、ne 东北、e 东、se 东南、s 南、sw 西南、w 西、nw 西北 */
+export type Dir8 = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw'
+/** 平面图（plan-map）上的一个地方：名字 + 小图（emoji，只是帮着认，不朗读） */
+export interface PlanPlace {
+  label: LStr
+  icon?: string
+}
+/** 平面图上编号的宝藏：画在第 r 行第 c 列那个地方的哪个角 / 哪一边（at：ne 东北角…，n 北面…），圆圈里写「n 号」 */
+export interface PlanMark {
+  r: number
+  c: number
+  at: Dir8
+  n: number
 }
 
 /** 结构化题干片段：文本 + 教具/图形参数，由 QuestionRenderer 分发渲染 */
@@ -278,6 +337,54 @@ export type StemPart =
   | { kind: 'stat-table'; title?: LStr; rows: (number | LStr | null)[][]; head?: 'row' | 'col' | 'both' | 'none' }
   /** 月历（MonthCalendar，三下「年、月、日的秘密」）：星期一在最前、六日红字；days 这个月几天，first 1 日是星期几（1–7，7 = 星期日），mark 圈出的日子 */
   | { kind: 'calendar'; title: LStr; days: number; first: number; mark?: number[] }
+  // ── 四年级数学 A ──
+  /**
+   * 大数卡（BigNum，四上「万以上数的认识」）：照课本连写的数、大字显示，**不朗读**——这一单元把数读出来就等于把读法、组成、近似数说了。
+   * n：数字串（可以带「□」：要填数字的那一位）；split：级与级之间画红色竖虚线（课本的分级线 25┊0000）；marks：下面画横线的那几位（从左数，0 起）；
+   * words：不写数、写课本的读法（写作题，注音）；say：朗读时读的数字串（写作题读出它的读法，按课本读法拆读）；
+   * rel / rhs / unit：右边接着写「= ?万」「≈ 9亿」「○ 27万」「< □103270000」——rhs 是「?」就是要填的空（练习页把按的数填进去），
+   * unit 是 rhs 后面的「万」「亿」（注音）；rel 是「?」时两个数中间画一个空方框（要选的符号）
+   */
+  | { kind: 'big-num'; n?: string; split?: boolean; marks?: number[]; words?: LStr; say?: string; rel?: '=' | '≈' | '○' | '>' | '<' | '?'; rhs?: string; unit?: 'wan' | 'yi' }
+  /** 计数器（CounterRods，四上 p2 / p9 / p10）：一排竖杆，从左到右是 top 位 … 个位（8 = 亿位、11 = 千亿位），杆下写数位名（图里的字，不注音）；
+   *  beads[i] = 从左数第 i 根杆上的珠子个数（0–10；10 颗时最上面一颗离开一点画：满十，课本「10 个一万是十万」的图） */
+  | { kind: 'counter'; top: number; beads: number[] }
+  /** 算盘（AbacusFrame，四上练习二 7）：13 档，梁上 2 颗上珠（一颗当 5）、梁下 5 颗下珠（一颗当 1），靠梁的才算数；n 是拨出的数（右对齐，最右一档是个位，上面写「个位」） */
+  | { kind: 'abacus'; n: string }
+  /** 数位顺序表（PlaceTable，四上 p2 / p3 / p10）：从 top 位到个位一列一位，三行：数级（亿级 / 万级 / 个级）、数位、计数单位（图里的字，不注音）；
+   *  最左一列「……」；ask = 这一位的数位和计数单位画成「?」 */
+  | { kind: 'place-table'; top: number; ask?: number }
+  // ── 四年级数学 B ──
+  /**
+   * 量角器（Protractor，四上「角的度量」，照课本第 30 页画）：半圆，外圈 0 在左、内圈 0 在右，每 10° 标数、每 5° 一根长刻度；
+   * rays 从中心起的几条线（角的边、射线 OA），arc = 在哪两条线之间画角的红弧（按 at，小的在前）；points = 外沿上标着字母的点（画角题）；
+   * center = 中心旁标的字母（O，画了字母就在中心画点；只有一条线时也画点：那是射线的端点）；tilt = 整个量角器连同角逆时针斜放几度；
+   * name = 写在角里的编号（∠1 的「1」）；alt 是静态页 / 读屏的中文说明（不显示、不朗读，不能写度数）
+   */
+  | { kind: 'protractor'; rays: ProtractorRay[]; arc?: [number, number]; points?: ProtractorPoint[]; center?: string; tilt?: number; name?: string; alt: string }
+  // ── 四年级数学 C ──
+  /**
+   * 乘数是两位数的乘法竖式（VerticalForm，四上「多位数乘两位数」）：a 写在上面、b 写在下面，两次乘得的数各占一行——
+   * 第二次的末位对齐十位、个位的 0 不写（课本），再一条横线写积。zeros = 末尾有 0 的乘法照课本做一做的写法：
+   * 0 前面的部分对齐、0 写在竖式外面（704 × 90、580 × 12）。不传 work：两次乘得的数那两行先空着（答完填上），按的数填在积那一行；
+   * work = 写好的竖式（看竖式答题、改错题，见 MulWork）；mark = 第几次乘得的数旁边画红箭头（「箭头所指这一步算的是什么」）
+   */
+  | { kind: 'mul-vertical'; a: number; b: number; zeros?: boolean; work?: MulWork; mark?: 1 | 2 }
+  // ── 四年级数学 D ──
+  /**
+   * 条形统计图（BarChart，四上「条形统计图」）：dir 竖向（v，条立着，默认）/ 横向（h，条躺着，类别从下往上排）；cats 是类别（写在类别轴上）；
+   * step = 1 格代表几、cells = 数量轴一共几格（刻度 0、step……cells × step，从 0 开始、每格都标数）；valueAxis / catAxis 是两条轴的名字
+   * （「人数」「数量/本」/「天气情况」）；grid = 满格方格纸（课本的单式图，条上不写数），否则只在数量轴上画短刻度；numbers = 条顶写数（复式图）；
+   * hideScale = 刻度上的数不写、画成空框（「每格代表几本」要自己推）；title 写在图上方；series 两三组时右上角画图例
+   */
+  | { kind: 'bar-chart'; dir?: 'v' | 'h'; title?: LStr; cats: LStr[]; series: BarSeries[]; step: number; cells: number; valueAxis: LStr; catAxis: LStr; grid?: boolean; numbers?: boolean; hideScale?: boolean }
+  /**
+   * 平面图（PlanMap，四上「寻找宝藏」的藏宝图、复习里的动物园导游图）：3 × 3 的格子，上北下南、左西右东（右上角画「北 ↑」）；
+   * cells[行][列] 是一个地方或 null（空地），第 0 行在最上面；marks 是编号的宝藏；roads = 画出路（中间到四周八处、外圈相邻的地方之间）；title 图题
+   */
+  | { kind: 'plan-map'; cells: (PlanPlace | null)[][]; marks?: PlanMark[]; roads?: boolean; title?: LStr }
+  /** 指南针（CompassRose，四上「寻找宝藏」）：八个方向的字围成一圈、红针指北；ask = 这个方向不写字、画「?」 */
+  | { kind: 'compass'; ask?: Dir8 }
   // ── 语文（§9）：这几种都是中文内容，不翻译；朗读时在英文界面下也用中文读（Y6）──
   /** 大字：每个汉字一个田字格（楷体），其它字符（＋ ＝ ？）原样放大；不注音、不朗读——考的就是认不认得（Y3） */
   /** mark：标红的那个字（多音字「这个词里红色的字怎么读」，Y9） */

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { GeoFig, GeoItem, GeoPt, GeoSide, GeoTone } from '@/types/models'
 
 /**
- * 几何图（三年级「线和角」「长方形和正方形」「图形的面积」）：点、线、多边形、方格纸……在每幅图自己的坐标里给出，
+ * 几何图（三年级「线和角」「长方形和正方形」「图形的面积」，四年级「角的度量」「平行四边形和梯形」）：点、线、多边形、方格纸……在每幅图自己的坐标里给出，
  * 这里换算成像素画 SVG——线宽、点、字的大小不随图缩放，放不下时整幅等比缩小。
  * 一组图时下面标 1、2、3……（numbered），选项就是这几个数；一组图共用一个比例，大小能直接比。
  * 图里只画数、字母、「?」和 emoji：汉字要注音、要朗读，都写在题干文字里。alt（图的中文说明）只放在读屏用的 aria-label 上，不显示。
@@ -171,7 +171,14 @@ function draw(fig: GeoFig): Drawn {
         break
       }
       case 'grid': {
-        if (it.lines !== false) {
+        if (it.dots) {
+          // 点子图（四年级）：只在格点上画小圆点
+          for (let i = 0; i <= it.w; i++)
+            for (let j = 0; j <= it.h; j++) {
+              const q = P([it.x + i, it.y + j])
+              back.push({ k: 'circle', x: f1(q[0]), y: f1(q[1]), r: 2.6, cls: 'griddot' })
+            }
+        } else if (it.lines !== false) {
           const lines: string[] = []
           for (let i = 0; i <= it.w; i++) {
             const a = P([it.x + i, it.y])
@@ -218,6 +225,27 @@ function draw(fig: GeoFig): Drawn {
         const ub = unit(b[0] - v[0], b[1] - v[1])
         if (it.right) {
           mid.push({ k: 'path', d: rightMark(v, ua, ub), cls: 'mark' })
+        } else if (it.ccw) {
+          // 四年级：从 a 那条边起逆时针（屏幕上看）转到 b 那条边，可以超过 180°；同向 = 周角，画整圈
+          const r = it.r ?? 16
+          const ta = Math.atan2(-ua[1], ua[0])
+          const tb = Math.atan2(-ub[1], ub[0])
+          let turn = (((tb - ta) * 180) / Math.PI + 720) % 360
+          if (turn < 0.5) turn = 360
+          const at = (u: [number, number], s = 1): string => `${f1(v[0] + u[0] * r * s)} ${f1(v[1] + u[1] * r * s)}`
+          const d =
+            turn > 359.5
+              ? `M ${at(ua)} A ${r} ${r} 0 0 0 ${at(ua, -1)} A ${r} ${r} 0 0 0 ${at(ua)}`
+              : `M ${at(ua)} A ${r} ${r} 0 ${turn > 180 ? 1 : 0} 0 ${at(ub)}`
+          mid.push({ k: 'path', d, cls: 'mark' })
+          if (it.arrow) {
+            // 箭头尖在弧的末端，朝着转的方向（逆时针的切线），两翼往回收
+            const e: [number, number] = [v[0] + ub[0] * r, v[1] + ub[1] * r]
+            const t: [number, number] = [ub[1], -ub[0]]
+            const w1 = [e[0] - t[0] * 7 + ub[0] * 4, e[1] - t[1] * 7 + ub[1] * 4]
+            const w2 = [e[0] - t[0] * 7 - ub[0] * 4, e[1] - t[1] * 7 - ub[1] * 4]
+            mid.push({ k: 'path', d: `M ${f1(w1[0]!)} ${f1(w1[1]!)} L ${f1(e[0])} ${f1(e[1])} L ${f1(w2[0]!)} ${f1(w2[1]!)}`, cls: 'mark' })
+          }
         } else {
           const r = 16
           const sweep = ua[0] * ub[1] - ua[1] * ub[0] > 0 ? 1 : 0
@@ -365,6 +393,9 @@ const pics = computed(() => props.figs.map(draw))
   fill: none;
   stroke: #e0d4c4;
   stroke-width: 1.2;
+}
+.griddot {
+  fill: #bfae99;
 }
 .mark {
   fill: none;

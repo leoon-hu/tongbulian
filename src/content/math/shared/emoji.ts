@@ -93,6 +93,10 @@ export const EMOJI_ZH: Record<string, string> = {
   'emoji.🛞': '车轮',
   'emoji.🛝': '滑梯',
   'emoji.🪁': '风筝',
+  // 四年级数学 A
+  // 四年级数学 B
+  // 四年级数学 C
+  // 四年级数学 D
 }
 
 export const EMOJI_EN: Record<string, string> = {
@@ -180,4 +184,8 @@ export const EMOJI_EN: Record<string, string> = {
   'emoji.🛞': 'wheel',
   'emoji.🛝': 'slide',
   'emoji.🪁': 'kite',
+  // 四年级数学 A
+  // 四年级数学 B
+  // 四年级数学 C
+  // 四年级数学 D
 }

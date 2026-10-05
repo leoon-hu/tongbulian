@@ -17,8 +17,9 @@ import { everyItemQuestion as chineseG1Items } from '@/content/chinese/grade1/ge
 import { everyItemQuestion as chineseG2Items } from '@/content/chinese/grade2/generators'
 import { everyItemQuestion as chineseG3Items } from '@/content/chinese/grade3/generators'
 import { everyPosFrom } from '@/content/math/grade1/generators/position'
-// 按需加载的数学包（三年级）：语料要跑遍所有知识点，这里直接导入（语文包由上面三行导入）
+// 按需加载的数学包（三、四年级）：语料要跑遍所有知识点，这里直接导入（语文包由上面三行导入）
 import '@/content/math/grade3'
+import '@/content/math/grade4'
 
 export const CORPUS_SEEDS = 300
 

@@ -8,7 +8,8 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
 // 选年级页：某学科下的一~六年级。上线的年级每一册单独一张卡（F1）——课本封面 + 「一年级 上册」，
-// 点哪一张就进那一册的知识点地图（下册带 ?sem=2）；soon 年级一个年级一张占位卡；无效学科回顶层。
+// 点哪一张就进那一册的知识点地图（下册带 ?sem=2）；上线的年级里还没有的那一册（四年级数学的下册：平台上还没有新教材）
+// 是一张「四年级 下册 · 敬请期待」占位卡，一行仍是一个年级的上下册；soon 年级一个年级一张占位卡；无效学科回顶层。
 const route = useRoute()
 const router = useRouter()
 
@@ -21,15 +22,16 @@ function openVolume(g: GradeMeta, sem: Semester): void {
   router.push({ path: `/s/${subjectId.value}/g/${g.id}`, query: sem === 2 ? { sem: '2' } : {} })
 }
 
-/** 这个年级的每一册：封面地址与说明（没上线 / 没有课程的年级没有） */
-function volumesOf(g: GradeMeta): { sem: Semester; src: string; alt: string }[] {
+/** 这个年级的上下两册：有内容的给封面地址与说明，还没有的 src 为空（画占位卡）；没上线 / 没有课程的年级没有 */
+function volumesOf(g: GradeMeta): { sem: Semester; src: string | null; alt: string }[] {
   const course = g.status === 'live' ? getCourse(subjectId.value, g.id) : undefined
   if (!course || !subject.value) return []
   const name = t({ k: 'course.name', p: { grade: g.title, subject: subject.value.title } })
-  return semestersOf(course).map((sem) => ({
+  const has = semestersOf(course)
+  return ([1, 2] as const).map((sem) => ({
     sem,
     // public/ 里的图片：base 是 './'，拼 BASE_URL 才能在子路径下也对
-    src: `${import.meta.env.BASE_URL}${coverOf(course.id, sem)}`,
+    src: has.includes(sem) ? `${import.meta.env.BASE_URL}${coverOf(course.id, sem)}` : null,
     alt: `${name} ${t({ k: `sem.${sem}` })}`,
   }))
 }
@@ -42,21 +44,26 @@ function volumesOf(g: GradeMeta): { sem: Semester; src: string; alt: string }[] 
     <div class="grid">
       <template v-for="g in subject.grades" :key="g.id">
         <template v-if="g.status === 'live'">
-          <button
-            v-for="v in volumesOf(g)"
-            :key="v.sem"
-            class="vol"
-            :data-grade="g.id"
-            :data-sem="v.sem"
-            :aria-label="v.alt"
-            @click="openVolume(g, v.sem)"
-          >
-            <img class="cover" :src="v.src" :alt="v.alt" width="240" height="339" loading="lazy" decoding="async" />
-            <span class="vol-title">
-              <RubyText :text="g.title" />
-              <RubyText class="vol-sem" :text="{ k: `sem.${v.sem}` }" />
-            </span>
-          </button>
+          <template v-for="v in volumesOf(g)" :key="v.sem">
+            <button
+              v-if="v.src"
+              class="vol"
+              :data-grade="g.id"
+              :data-sem="v.sem"
+              :aria-label="v.alt"
+              @click="openVolume(g, v.sem)"
+            >
+              <img class="cover" :src="v.src" :alt="v.alt" width="240" height="339" loading="lazy" decoding="async" />
+              <span class="vol-title">
+                <RubyText :text="g.title" />
+                <RubyText class="vol-sem" :text="{ k: `sem.${v.sem}` }" />
+              </span>
+            </button>
+            <button v-else class="card soon" :data-grade="g.id" :data-sem="v.sem" disabled>
+              <span class="card-title">{{ t(g.title) }} {{ t({ k: `sem.${v.sem}` }) }}</span>
+              <span class="soon-tag">{{ ui('chooser.soon') }}</span>
+            </button>
+          </template>
         </template>
         <button v-else class="card soon" :data-grade="g.id" disabled>
           <span class="card-title">{{ t(g.title) }}</span>

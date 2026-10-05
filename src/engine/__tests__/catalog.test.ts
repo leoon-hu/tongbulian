@@ -28,7 +28,8 @@ describe('课本封面（F2）', () => {
   it('每门上线课程的每一册都有封面文件（public/covers/<课程 id>-s<册>.webp）', () => {
     const missing: string[] = []
     for (const { course } of liveCourses()) {
-      expect(semestersOf(course)).toEqual([1, 2])
+      // 四年级数学只有上册（平台上四下还是旧版教材），选年级页画一张「四年级 下册 · 敬请期待」占位卡
+      expect(semestersOf(course)).toEqual(course.id === 'math-g4' ? [1] : [1, 2])
       for (const sem of semestersOf(course)) if (!existsSync(`public/${coverOf(course.id, sem)}`)) missing.push(coverOf(course.id, sem))
     }
     expect(missing).toEqual([])

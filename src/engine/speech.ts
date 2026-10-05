@@ -18,8 +18,9 @@ import { fractionWords } from './fraction'
 // 算式末尾的「= ?」合成一个片段（读「等于几」），单独一个「几」读起来生硬还容易读错声调。
 // 小括号单独一组：它紧挨着数字，但必须读出来（「括号 3 加 4 括号 乘 5」），不走「独立成项才读」的规则。
 // 分数「3/4」一整组（三年级），读「四分之三」「three fourths」，当一个槽（同 0–100 的数，能并进短语）。
+// 「≈」（四年级求近似数）同 = 一样是独立成项才读的符号，读「约等于」。
 const TOKEN =
-  /(¥\d+(?:\.\d)?)|((?<![\d./])\d{1,3}\/\d{1,3}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-=?><⬜○×÷])|([()（）])|(\p{Extended_Pictographic}\uFE0F?)/gu
+  /(¥\d+(?:\.\d)?)|((?<![\d./])\d{1,3}\/\d{1,3}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-=?><⬜○×÷≈])|([()（）])|(\p{Extended_Pictographic}\uFE0F?)/gu
 
 /** 符号只有独立成项（两边不挨着字母 / 数字 / 汉字 / emoji）才读：「9 + 5」的 + 读，「ten-frame」的 -、「🐰?」的 ? 不读 */
 const WORDISH_BEFORE = /[\p{L}\p{N}\p{Extended_Pictographic}\uFE0F]$/u
@@ -30,9 +31,13 @@ const WORDISH_AFTER = /^[\p{L}\p{N}\p{Extended_Pictographic}]/u
  * 单字量词后面跟着特定字时不是量词——「分成 / 分给 / 只有 / 组成 / 个数 / 排成」——用负向前瞻排除。
  */
 const ZH_MEASURE =
-  // 长的放前面（「分米」「分钟」要整个留在数字后面，不能只匹配到「分」）；三年级起的长度 / 质量 / 面积 / 时间单位与常用量词
-  '毫米|分米|千米|分钟|平方(?:厘米|分米|米|千米)|千克|克|吨|公斤|斤|小时|秒|周|年(?!级)|次|圈|步|站|格|段|岁|包|套|筒|件|页|场|名|粒|片|趟|节|位|' +
-  '个(?:十|百|千|万|一)?(?!数)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
+  // 长的放前面（「分米」「分钟」要整个留在数字后面，不能只匹配到「分」）；三年级起的长度 / 质量 / 面积 / 时间单位与常用量词；
+  // 四年级的「1周角 = 2平角 = 4直角」（2 读「两」，「周角」不能只匹配到表示星期的「周」）
+  '周角|平角|直角|毫米|分米|千米|分钟|平方(?:厘米|分米|米|千米)|千克|克|吨|公斤|斤|小时|秒|周|年(?!级)|次|圈|步|站|格|段|岁|包|套|筒|件|页|场|名|粒|片|趟|节|位|' +
+  // 四年级：大数的单位连同后面的量词（「18万」「1亿张」「22万步」，2 万读「两万」）、角的度数（「60度」，课本写 60°，见 spellMarks）
+  '[万亿](?:张|步|人|个|次|元|吨|千克|千米|米|台|户|粒|名|本|页|件|字|颗|棵|辆|年|天|秒)?|度(?!量)|' +
+  // 计数单位：「1个十」「4个百万」「10个一万」「3个千亿」（长的在前）
+  '个(?:一?[十百千]?[万亿]|一?[十百千]|一)?(?!数)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
 /** 中文里数字 2 后面紧跟量词时读「两」：2 个十 → 两个十、2 元 → 两元、2 排 → 两排；序数除外：第 2 个 → 第二个 */
 const LIANG_BEFORE = new RegExp(`^(?:${ZH_MEASURE})`)
 const ORDINAL_BEFORE = /第$/
@@ -87,49 +92,114 @@ interface Raw {
 }
 
 const ZH_DIGITS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+/** 中文四位一级（个级、万级、亿级、万亿级）的单位；英文三位一级 */
+const ZH_GROUP_UNITS = ['', '万', '亿', '万亿']
+const EN_GROUP_WORDS = ['', 'thousand', 'million', 'billion', 'trillion']
 
 /**
- * 数字的朗读片段。0–100（与小数）是一整个片段；更大的数按位拆成几段，不然万以内的每个数都要一条音频。
- * 中文按课本读法：3005 → 三千 / 零 / 5，315 → 三百 / 一十 / 5，1200 → 一千 / 二百，10000 → 一万；
- * 英文：3450 → 3 / thousand / 4 / hundred / 50。
+ * 数字的朗读片段。0–100（与小数）是一整个片段；更大的数按位拆成几段，不然每个大数都要一条音频。
+ * 中文按课本读法（四上「亿以内数的认识」：每级末尾的 0 都不读，其他数位上有一个 0 或连续几个 0，都只读一个「零」）：
+ * 3005 → 三千 / 零 / 5，315 → 三百 / 一十 / 5，1200 → 一千 / 二百，10000 → 一万，10005 → 一万 / 零 / 5；
+ * 万级、亿级的单位跟在这一级的最后一段上：21893095 → 二千 / 一百 / 89万 / 三千 / 零 / 95，300000500 → 三亿 / 零 / 五百，
+ * 150000 → 15万（打头的 10–19 读「十几」，TTS 读「十五万」），3 0015 0000 → 三亿 / 零 / 一十 / 五万。
+ * 英文三位一级：3450 → 3 / thousand / 4 / hundred / 50，21893095 → 21 / million / 8 / hundred / 93 / thousand / 95。
  */
 export function numberPieces(num: string, lang: Lang): string[] {
   const n = Number(num)
-  if (!Number.isInteger(n) || n <= 100 || n > 99999) return [num]
+  if (!Number.isInteger(n) || n <= 100 || n > Number.MAX_SAFE_INTEGER) return [num]
   if (lang === 'zh') {
-    if (n === 10000) return ['一万']
+    const groups: number[] = [] // 从低到高：个级、万级、亿级……
+    for (let x = n; x > 0; x = Math.floor(x / 10000)) groups.push(x % 10000)
     const out: string[] = []
-    const wan = Math.floor(n / 10000)
-    const qian = Math.floor((n % 10000) / 1000)
-    const bai = Math.floor((n % 1000) / 100)
-    const tail = n % 100
-    if (wan) out.push(`${ZH_DIGITS[wan]}万`)
-    if (qian) out.push(`${ZH_DIGITS[qian]}千`)
-    else if (wan && (bai || tail)) out.push('零')
-    if (bai) out.push(`${ZH_DIGITS[bai]}百`)
-    else if ((qian || wan) && tail) out.push('零')
-    if (tail) {
-      if (tail < 10) {
-        if (bai) out.push('零')
-        out.push(String(tail))
-      } else if (tail < 20) {
-        out.push('一十')
-        if (tail % 10) out.push(String(tail % 10))
-      } else out.push(String(tail))
+    let skipped = false // 中间有整级都是 0（三亿零五百）
+    for (let gi = groups.length - 1; gi >= 0; gi--) {
+      const g = groups[gi]!
+      if (g === 0) {
+        if (out.length) skipped = true
+        continue
+      }
+      const lead = out.length === 0
+      // 这一级前面要不要读「零」：中间隔着整级的 0，或者这一级不满千（每级末尾的 0 不读，所以上一级末尾的 0 不算）
+      let zero = !lead && (skipped || g < 1000)
+      skipped = false
+      const pieces: string[] = []
+      const say = (piece: string): void => {
+        if (zero) pieces.push('零')
+        zero = false
+        pieces.push(piece)
+      }
+      const qian = Math.floor(g / 1000)
+      const bai = Math.floor(g / 100) % 10
+      const tail = g % 100
+      if (qian) say(`${ZH_DIGITS[qian]}千`)
+      if (bai) say(`${ZH_DIGITS[bai]}百`)
+      else if (qian && tail) zero = true
+      if (tail) {
+        if (tail < 10) {
+          if (bai) zero = true
+          say(String(tail))
+        } else if (tail < 20 && (pieces.length || !lead)) {
+          // 前面读过数（三百一十五、三亿零一十五万）读「一十」；整个数打头的 10–19 读「十几」（15万）
+          say('一十')
+          if (tail % 10) say(String(tail % 10))
+        } else say(String(tail))
+      }
+      // 这一级的单位并进最后一段：一位数「五万」「三亿」（同万以内的「一万」），两位数「89万」「15万」，整百整千「一百万」「三千万」
+      if (gi) {
+        const last = pieces.pop()!
+        pieces.push(/^\d$/.test(last) ? `${ZH_DIGITS[Number(last)]}${ZH_GROUP_UNITS[gi]}` : `${last}${ZH_GROUP_UNITS[gi]}`)
+      }
+      out.push(...pieces)
     }
     return out
   }
   const out: string[] = []
-  const thousands = Math.floor(n / 1000)
-  const hundreds = Math.floor((n % 1000) / 100)
-  const tail = n % 100
-  if (thousands) out.push(String(thousands), 'thousand')
-  if (hundreds) out.push(String(hundreds), 'hundred')
-  if (tail) out.push(String(tail))
+  const groups: number[] = []
+  for (let x = n; x > 0; x = Math.floor(x / 1000)) groups.push(x % 1000)
+  for (let gi = groups.length - 1; gi >= 0; gi--) {
+    const g = groups[gi]!
+    if (!g) continue
+    const hundreds = Math.floor(g / 100)
+    const tail = g % 100
+    if (hundreds) out.push(String(hundreds), 'hundred')
+    if (tail) out.push(String(tail))
+    if (gi) out.push(EN_GROUP_WORDS[gi]!)
+  }
   return out
 }
 
-function rawTokens(text: string, lang: Lang): Raw[] {
+/**
+ * 四年级起题目里的数学记号读成字（屏幕上照课本写）：60° → 60度 / 60 degrees，∠1 → 角1 / angle 1，
+ * a // b → a平行于b / a is parallel to b，a ⊥ b → a垂直于b / a is perpendicular to b（课本读法「a 平行于 b」「a 垂直于 b」）；
+ * 复合单位中间的斜杠读「每」：80米/分 → 80米每分、12元/千克 → 12元每千克（课本读法「80米每分」），英文 km/h → km per hour。
+ * 分数「3/8」两边是数字，不受影响。
+ */
+export function spellMarks(text: string, lang: Lang): string {
+  if (!/[°∠⊥/]/.test(text)) return text
+  if (lang === 'zh')
+    return text
+      .replace(/\s*°/g, '度')
+      .replace(/∠\s*/g, '角')
+      .replace(/\s*\/\/\s*/g, '平行于')
+      .replace(/\s*⊥\s*/g, '垂直于')
+      .replace(ZH_RATE, '$1每$2')
+  return text
+    .replace(/(\d+)\s*°/g, (_, n: string) => `${n} ${n === '1' ? 'degree' : 'degrees'}`)
+    .replace(/\s*°/g, ' degrees')
+    .replace(/∠\s*/g, 'angle ')
+    .replace(/\s*\/\/\s*/g, ' is parallel to ')
+    .replace(/\s*⊥\s*/g, ' is perpendicular to ')
+    .replace(/([A-Za-z]+)\/(min|h|s|kg|g|km|m)\b/g, (_, a: string, b: string) => `${a} per ${EN_PER[b]}`)
+    .replace(/([A-Za-z]+)\/([A-Za-z]+)/g, '$1 per $2')
+}
+/** 复合单位（速度、单价）：斜杠两边都是单位才读「每」；统计图的轴名「数量/本」「金额/元」不是复合单位，不动 */
+const ZH_RATE =
+  /(元|米|千米|千克|克|吨|字|个|页|本|件|张|人|次)\/(千米|千克|小时|分钟|时|分|秒|天|周|月|年|克|吨|米|个|人|本|件|张|盒|袋|箱|瓶|份|套|支|枝|台|双|组|辆|桶)/g
+/** 「per」后面的单位读成单数的词（km/h → km per hour；斜杠前面的 km、m 合成时再换成 kilometers、meters） */
+const EN_PER: Record<string, string> = { min: 'minute', h: 'hour', s: 'second', kg: 'kilogram', g: 'gram', km: 'kilometer', m: 'meter' }
+
+function rawTokens(source: string, lang: Lang): Raw[] {
+  const text = spellMarks(source, lang)
   const out: Raw[] = []
   let last = 0
   let pending = false
@@ -401,6 +471,8 @@ export function questionSpeech(q: Question, lang: Lang): string[] {
     else if (part.kind === 'verse') parts.push(verseSpeech(part.text, part.blank, lang))
     else if (part.kind === 'listen') parts.push(chineseSpeech(part.say, lang))
     else if ((part.kind === 'pinyin' || part.kind === 'picture') && part.say) parts.push(chineseSpeech(part.say, lang))
+    // 四年级的大数卡平时不读（读出来就等于报了读法 / 组成）；写数题读 say 里的数（课本「听老师读数，写出来」）
+    else if (part.kind === 'big-num' && part.say) parts.push(tokenize(part.say, lang))
   }
   return joinSpeech(parts)
 }

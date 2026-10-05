@@ -47,7 +47,8 @@ function confirm(): void {
 <template>
   <!-- 只把 wide 当 class 挂上去：默认值 grid 若也挂上，会和下面键盘容器的 .grid 撞名，外层也变成三列网格（撞过） -->
   <div class="numpad" :class="{ wide: layout === 'wide' }">
-    <div v-if="!hideDisplay" class="display" :class="{ empty: value === '' }">
+    <!-- long：答案 8 位以上（四年级的大数，最多 9 位），56px 的字在 360 宽的手机上放不下，小一号 -->
+    <div v-if="!hideDisplay" class="display" :class="{ empty: value === '', long: maxLen >= 8 }">
       {{ value === '' ? '?' : value }}
     </div>
     <div class="grid">
@@ -80,6 +81,9 @@ function confirm(): void {
   font-weight: 800;
   text-align: center;
   color: var(--c-primary-dark);
+}
+.display.long {
+  font-size: 44px;
 }
 .display.empty {
   color: var(--c-locked);

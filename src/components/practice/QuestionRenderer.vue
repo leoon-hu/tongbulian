@@ -34,6 +34,18 @@ import FracSet from '@/components/math/FracSet.vue'
 import TallySheet from '@/components/math/TallySheet.vue'
 import StatTable from '@/components/math/StatTable.vue'
 import MonthCalendar from '@/components/math/MonthCalendar.vue'
+// 四年级数学 A
+import BigNum from '@/components/math/BigNum.vue'
+import CounterRods from '@/components/math/CounterRods.vue'
+import AbacusFrame from '@/components/math/AbacusFrame.vue'
+import PlaceTable from '@/components/math/PlaceTable.vue'
+// 四年级数学 B
+import Protractor from '@/components/math/Protractor.vue'
+// 四年级数学 C
+// 四年级数学 D
+import BarChart from '@/components/math/BarChart.vue'
+import PlanMap from '@/components/math/PlanMap.vue'
+import CompassRose from '@/components/math/CompassRose.vue'
 import HanziGrid from '@/components/chinese/HanziGrid.vue'
 import PinyinCard from '@/components/chinese/PinyinCard.vue'
 import ListenCue from '@/components/chinese/ListenCue.vue'
@@ -143,6 +155,62 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
       <TallySheet v-else-if="part.kind === 'tally'" :rows="part.rows" />
       <StatTable v-else-if="part.kind === 'stat-table'" :title="part.title" :rows="part.rows" :head="part.head" :fill="fill" />
       <MonthCalendar v-else-if="part.kind === 'calendar'" :title="part.title" :days="part.days" :first="part.first" :mark="part.mark" />
+      <!-- 四年级数学 A -->
+      <BigNum
+        v-else-if="part.kind === 'big-num'"
+        :n="part.n"
+        :split="part.split"
+        :marks="part.marks"
+        :words="part.words"
+        :rel="part.rel"
+        :rhs="part.rhs"
+        :unit="part.unit"
+        :fill="fill"
+      />
+      <CounterRods v-else-if="part.kind === 'counter'" :top="part.top" :beads="part.beads" />
+      <AbacusFrame v-else-if="part.kind === 'abacus'" :n="part.n" />
+      <PlaceTable v-else-if="part.kind === 'place-table'" :top="part.top" :ask="part.ask" />
+      <!-- 四年级数学 B -->
+      <Protractor
+        v-else-if="part.kind === 'protractor'"
+        :rays="part.rays"
+        :arc="part.arc"
+        :points="part.points"
+        :center="part.center"
+        :tilt="part.tilt"
+        :name="part.name"
+        :alt="part.alt"
+      />
+      <!-- 四年级数学 C -->
+      <VerticalForm
+        v-else-if="part.kind === 'mul-vertical'"
+        :a="part.a"
+        op="×"
+        :b="part.b"
+        :steps="true"
+        :zeros="part.zeros"
+        :work="part.work"
+        :mark="part.mark"
+        :answer="part.work ? undefined : fill?.value"
+        :done="part.work ? undefined : fill?.done"
+      />
+      <!-- 四年级数学 D -->
+      <BarChart
+        v-else-if="part.kind === 'bar-chart'"
+        :dir="part.dir"
+        :title="part.title"
+        :cats="part.cats"
+        :series="part.series"
+        :step="part.step"
+        :cells="part.cells"
+        :value-axis="part.valueAxis"
+        :cat-axis="part.catAxis"
+        :grid="part.grid"
+        :numbers="part.numbers"
+        :hide-scale="part.hideScale"
+      />
+      <PlanMap v-else-if="part.kind === 'plan-map'" :cells="part.cells" :marks="part.marks" :roads="part.roads" :title="part.title" />
+      <CompassRose v-else-if="part.kind === 'compass'" :ask="part.ask" />
       <VerticalForm
         v-else-if="part.kind === 'vertical'"
         :a="part.a"

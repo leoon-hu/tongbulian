@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest'
 import '@/content/math/grade1'
 import '@/content/math/grade2'
 import '@/content/math/grade3'
+import '@/content/math/grade4'
 import { KNOWLEDGE_POINTS as G1 } from '@/content/math/grade1/curriculum'
 import { KNOWLEDGE_POINTS as G2 } from '@/content/math/grade2/curriculum'
 import { KNOWLEDGE_POINTS as G3 } from '@/content/math/grade3/curriculum'
+import { KNOWLEDGE_POINTS as G4 } from '@/content/math/grade4/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { translate } from '@/engine/i18n'
 import type { Question } from '@/types/models'
-import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
+import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, spellMarks, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
 
-const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3]
+const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3, ...G4]
 
 describe('tokenize（中文）', () => {
   it('短语里夹着的数并进短语（一条最多一个数），逗号变成停顿标记；数字后面只留量词头，动词 / 连词跟着后一个数走', () => {
@@ -121,6 +123,53 @@ describe('tokenize（中文）', () => {
     expect(numberPieces('3005', 'en')).toEqual(['3', 'thousand', '5'])
     expect(numberPieces('10000', 'en')).toEqual(['10', 'thousand'])
     expect(numberPieces('6.5', 'zh')).toEqual(['6.5'])
+  })
+
+  it('万以上的数按级拆读：每级末尾的 0 不读，中间连续几个 0 只读一个零，万级 / 亿级的单位并进这一级最后一段', () => {
+    expect(numberPieces('10005', 'zh')).toEqual(['一万', '零', '5'])
+    expect(numberPieces('50021', 'zh')).toEqual(['五万', '零', '21'])
+    expect(numberPieces('50321', 'zh')).toEqual(['五万', '零', '三百', '21'])
+    expect(numberPieces('54321', 'zh')).toEqual(['五万', '四千', '三百', '21'])
+    expect(numberPieces('10015', 'zh')).toEqual(['一万', '零', '一十', '5'])
+    expect(numberPieces('150000', 'zh')).toEqual(['15万'])
+    expect(numberPieces('1100000', 'zh')).toEqual(['一百', '一十万'])
+    expect(numberPieces('21893095', 'zh')).toEqual(['二千', '一百', '89万', '三千', '零', '95'])
+    expect(numberPieces('40000300', 'zh')).toEqual(['四千万', '零', '三百'])
+    expect(numberPieces('30105000', 'zh')).toEqual(['三千', '零', '一十万', '五千'])
+    expect(numberPieces('300000500', 'zh')).toEqual(['三亿', '零', '五百'])
+    expect(numberPieces('100400000', 'zh')).toEqual(['一亿', '零', '40万'])
+    expect(numberPieces('300150000', 'zh')).toEqual(['三亿', '零', '一十', '五万'])
+    expect(numberPieces('1200000000', 'zh')).toEqual(['12亿'])
+    expect(numberPieces('100000000000', 'zh')).toEqual(['一千亿'])
+    expect(numberPieces('1000000000000', 'zh')).toEqual(['一万亿'])
+    expect(numberPieces('21893095', 'en')).toEqual(['21', 'million', '8', 'hundred', '93', 'thousand', '95'])
+    expect(numberPieces('300000500', 'en')).toEqual(['3', 'hundred', 'million', '5', 'hundred'])
+    expect(numberPieces('1200000000', 'en')).toEqual(['1', 'billion', '2', 'hundred', 'million'])
+    // 「万」「亿」是量词头：「18万」不拆开，2 万读「两万」
+    expect(tokenize('2万张纸有多高？', 'zh')).toEqual(['两万张纸有多高'])
+    // 万 / 亿后面的量词跟着数走；「个」后面的计数单位整个跟着数走
+    expect(tokenize('100 张纸厚 1 cm，1 亿张纸有多高？', 'zh')).toEqual(['100张', '纸厚1cm', PAUSE, '1亿张纸有多高'])
+    expect(tokenize('1 亿张纸摞起来比 8848 米高吗？', 'zh')).toEqual(['1亿张', '纸摞起来比八千', '八百', '48米高吗'])
+    expect(tokenize('10 个一万是多少？', 'zh')).toEqual(['10个一万是多少'])
+    expect(tokenize('4 个百万和 3 个十万', 'zh')).toEqual(['4个百万', '和3个十万'])
+  })
+
+  it('四年级的记号读成字：° → 度、∠ → 角、// → 平行于、⊥ → 垂直于、≈ → 约等于、复合单位的斜杠读「每」', () => {
+    expect(spellMarks('∠1 = 60°', 'zh')).toBe('角1 = 60度')
+    expect(spellMarks('∠1 = 60°', 'en')).toBe('angle 1 = 60 degrees')
+    expect(spellMarks('1° 的角', 'en')).toBe('1 degree 的角')
+    expect(spellMarks('a // b', 'zh')).toBe('a平行于b')
+    expect(spellMarks('a ⊥ b', 'en')).toBe('a is perpendicular to b')
+    expect(spellMarks('小丽的速度是 80米/分，单价 12元/千克', 'zh')).toBe('小丽的速度是 80米每分，单价 12元每千克')
+    expect(spellMarks('80 m/min', 'en')).toBe('80 m per minute')
+    expect(spellMarks('800 km/h, 12 yuan/kg', 'en')).toBe('800 km per hour, 12 yuan per kilogram')
+    expect(spellMarks('3/8 和 1/2', 'zh')).toBe('3/8 和 1/2')
+    expect(spellMarks('数量/本', 'zh')).toBe('数量/本')
+    expect(tokenize('1平角 = 2直角，对吗？', 'zh')).toEqual(['1平角', '等于两直角', PAUSE, '对吗'])
+    expect(tokenize('1周角 = 4直角', 'zh')).toEqual(['1周角', '等于4直角'])
+    expect(tokenize('∠1 = 60°，∠2 = ?', 'zh')).toEqual(['角1', '等于60度', PAUSE, '角2等于几'])
+    expect(tokenize('182068 ≈ ? 万', 'zh')).toEqual(['18万', '二千', '零', '68约等于几万'])
+    expect(tokenize('a // b', 'zh')).toEqual(['a平行于b'])
   })
 
   it('金额按数字与单位拆开', () => {

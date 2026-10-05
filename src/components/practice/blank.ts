@@ -15,7 +15,17 @@ export function hasBlank(q: Question): boolean {
         // 除法竖式里「?」的那一格（商那一行 / 最后一行的余数）
         (p.kind === 'long-division' && [p.quotient, ...(p.rows ?? [])].some((r) => r?.text === '?')) ||
         // 统计表里要填的那一格（null，三下「数据的收集与整理」）
-        (p.kind === 'stat-table' && p.rows.some((r) => r.includes(null))),
+        (p.kind === 'stat-table' && p.rows.some((r) => r.includes(null))) ||
+        // 四年级数学（各行写成「(p.kind === '…' && …) ||」插在自己的注释后面）
+        // 四年级数学 A
+        // 大数卡右边的「= ?万」「≈ ?亿」（改写、求近似数）
+        (p.kind === 'big-num' && p.rhs === '?') ||
+        // 四年级数学 B
+        // 四年级数学 C
+        // 乘数是两位数的竖式：没有 work（写好的竖式）的，按的数填在积那一行
+        (p.kind === 'mul-vertical' && !p.work) ||
+        // 四年级数学 D
+        false,
     )
   )
 }

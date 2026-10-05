@@ -4,7 +4,7 @@
 // 知识点微课）。知识点 → 章节：语文按单元里的课题自动对（语文园地也一样），数学按下面手写的 MATH 表（课本的小节名，
 // 平台的章节名大多就是它）；章节里有几个课时取第 1 课时。
 // 新教材这一节平台上还没有同步课的，找替代视频、单独记在 VIDEO_FALLBACKS（标记，地图上另画）：先找新教材这一节的
-// 精品课，再找旧教材（语文：同名的课；语文园地取课文最像的那个单元的园地）的同步课、精品课。平台补上新教材的同步课后
+// 精品课，再找旧教材（语文：同名的课；语文园地取课文最像的那个单元的园地；数学：OLD_MATH 手写的那一节）的同步课、精品课。平台补上新教材的同步课后
 // 重跑一遍就自动换回来。
 // 链接：同步课 https://basic.smartedu.cn/syncClassroom/classActivity?activityId=<课时 id>，精品课
 // https://basic.smartedu.cn/qualityCourse?courseId=<课程 id>（都只带 id 页面就能打开）。
@@ -18,6 +18,8 @@ const BOOKS = {
   'math-g1': ['ba9d9c0b-2c1c-4bba-84d7-369fb405bb13', 'b4dae36a-0d48-4149-820e-f532dad7607b'],
   'math-g2': ['f547036d-8c1a-4dca-b8ef-b148a180bac8', '397e9ca4-1930-4f30-8698-8244f870d9eb'],
   'math-g3': ['a6de91b7-4b52-475e-aa05-a508af43f4c2', '89ad4d7b-facf-4b17-93d6-00b1e32362db'],
+  // 四年级只有上册（平台上四下还是旧版教材）；新教材四上的标题是「新教材-人教版小学数学四年级上册目录」
+  'math-g4': ['ce032a22-7d96-4c36-b19c-f5cb8548a10e'],
   'chinese-g1': ['b7062df1-f929-458e-964c-d778f89ca255', '2d22a5c9-80b8-46cb-8595-564f5c368f3e'],
   'chinese-g2': ['4bf136c9-43cc-4005-8c8b-b21d21bad96f', 'ac9ba3ad-c2ab-4736-b347-dabae34c6b80'],
   'chinese-g3': ['22707f9a-a593-44a7-89ee-3f4d78905f2e', '6042ef62-a820-41aa-858d-1d6f1d6e3aa7'],
@@ -30,6 +32,32 @@ const OLD_BOOKS = {
   'chinese-g1': ['5ce96672-f52f-4c2f-9c3d-016ed1415278', '2fbcdb5d-0682-4cca-b979-076d0119e3d3'],
   'chinese-g2': ['2aa68399-4700-4030-8973-457cf32384dc', 'f863fdd1-e34d-4aa6-8c6d-7dab5afa66b9'],
   'chinese-g3': ['0eb31453-f373-4c85-8f3c-2bff5f49552e', 'ecc10b88-9661-451f-b9c1-b6dd5fd9a72d'],
+}
+/**
+ * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，
+ * 所以按知识点手写「旧教材里讲同一件事的那一节」：知识点 → [旧教材的同步课教材 id, 章节名]
+ */
+const OLD_MATH_G3S2 = '6bb0e5b1-fffa-4600-801d-e812e22a5c83' // 小学数学人教版三年级下册（旧）
+const OLD_MATH_G4S1 = '208f77e0-0d63-4ca2-8a4c-86af05dd72de' // 小学数学人教版四年级上册（旧）
+const OLD_MATH_G4S2 = 'a0bd25a0-6a56-4235-8225-eab16c04e217' // 小学数学人教版四年级下册（旧）
+const OLD_MATH = {
+  'm4s1-02-yi': [OLD_MATH_G4S1, '1亿有多大'],
+  'm4s1-03-angles': [OLD_MATH_G4S1, '角的分类'],
+  'm4s1-03-measure': [OLD_MATH_G4S1, '角的度量'],
+  'm4s1-03-draw': [OLD_MATH_G4S1, '画角'],
+  'm4s1-04-oral': [OLD_MATH_G3S2, '口算乘法'], // 旧教材的两位数乘两位数在三下
+  'm4s1-04-written': [OLD_MATH_G4S1, '三位数乘两位数笔算'],
+  'm4s1-04-pattern': [OLD_MATH_G4S1, '积的变化规律'],
+  'm4s1-05-total-part': [OLD_MATH_G4S2, '加、减法的意义和各部分间的关系'], // 和 = 加数 + 加数，加数 = 和 − 另一个加数
+  'm4s1-05-price': [OLD_MATH_G4S1, '单价、数量和总价'],
+  'm4s1-05-speed': [OLD_MATH_G4S1, '速度、时间和路程'],
+  'm4s1-06-parallel': [OLD_MATH_G4S1, '平行与垂直'],
+  'm4s1-06-distance': [OLD_MATH_G4S1, '画垂线和点到直线的距离'],
+  'm4s1-06-parallelogram': [OLD_MATH_G4S1, '平行四边形的认识'],
+  'm4s1-06-trapezoid': [OLD_MATH_G4S1, '梯形的认识'],
+  'm4s1-07-single': [OLD_MATH_G4S1, '条形统计图'],
+  'm4s1-07-double': [OLD_MATH_G4S2, '复式条形统计图'],
+  'm4s1-08-treasure': [OLD_MATH_G3S2, '知道东北、东南、西北、西南四个方向'], // 旧教材的八个方向在三下「位置与方向（一）」
 }
 const NATIONAL = 'national_lesson'
 const ELITE = 'elite_lesson'
@@ -152,6 +180,29 @@ const MATH = {
   'm3s2-07-know': '认识小数',
   'm3s2-07-compare': '小数的大小比较',
   'm3s2-07-addsub': '简单的小数加、减法',
+  // 四年级上册（平台上新教材的同步课正在陆续上：2026-10-05 只有第一单元）
+  'm4s1-01-within-yi': '亿以内数的认识-读数',
+  'm4s1-01-above-yi': '十进制计数法',
+  'm4s1-01-compare': '数的大小比较',
+  'm4s1-01-round': '数的改写和求近似数',
+  'm4s1-02-yi': '1亿张纸有多高',
+  'm4s1-03-angles': '角的再认识',
+  'm4s1-03-measure': '角的度量',
+  'm4s1-03-draw': '画角',
+  'm4s1-04-oral': '两位数（或几百几十）乘一位数的口算乘法',
+  'm4s1-04-written': '多位数乘两位数（不进位）',
+  'm4s1-04-pattern': '积的变化规律',
+  'm4s1-04-estimate': '用乘法估算解决问题',
+  'm4s1-05-total-part': '总量与分量的关系',
+  'm4s1-05-price': '单价、数量和总价的关系',
+  'm4s1-05-speed': '时间、速度、路程的关系',
+  'm4s1-06-parallel': '平行和垂直',
+  'm4s1-06-distance': '画垂线和点到直线的距离',
+  'm4s1-06-parallelogram': '认识平行四边形',
+  'm4s1-06-trapezoid': '认识梯形',
+  'm4s1-07-single': '以一当一',
+  'm4s1-07-double': '复式条形统计图',
+  'm4s1-08-treasure': '校园寻宝',
 }
 
 const CN_NUM = '一二三四五六七八九十'
@@ -241,6 +292,21 @@ async function loadBook(tm) {
 const pathOf = (node) => [...node.parents, node].map((n) => n.title.replace(/\s+/g, ' ').trim()).join(' · ')
 
 /**
+ * 数学：章节名对得上的节点，深的在前（四上新教材「二 角的度量」单元下面还有一节「角的度量」，先看下面那一节）；
+ * 开头的 ★（旧教材的「★ 1亿有多大」）不算
+ */
+const mathKey = (title) => norm(title.replace(/^\s*★\s*/, ''))
+function mathNodes(book, want) {
+  if (!want) return []
+  return book.nodes.filter((n) => mathKey(n.title) === mathKey(want)).sort((a, b) => b.parents.length - a.parents.length)
+}
+/** 其中第一个有同步课的（旧教材四上「7 条形统计图」的课挂在单元上，总复习里同名的那一节只有精品课）；都没有就是最深的那个 */
+function mathNode(book, want) {
+  const list = mathNodes(book, want)
+  return list.find((n) => book.first(n, NATIONAL)) ?? list[0]
+}
+
+/**
  * 语文：第 n 单元（课本的单元序号）里课题 / 语文园地对得上的章节。三年级起课题在单元下面多一层「阅读」，所以在整个单元里找；
  * 三年级的园地平台上只叫「语文园地」，不带序号
  */
@@ -320,6 +386,20 @@ async function fallbackOf(course, books, unit, node, kp) {
   const grade = `${CN_NUM[Number(course.gradeId.slice(1)) - 1]}年级`
   const elite = node && books[unit.semester - 1].first(node, ELITE)
   if (elite) return { id: elite, from: 'elite', note: `新教材${grade}${SEM[unit.semester - 1]} · ${pathOf(node)}（精品课）` }
+  const math = OLD_MATH[kp.id]
+  if (math) {
+    const [tm, chapter] = math
+    if (!oldCache.has(tm)) oldCache.set(tm, loadBook(tm))
+    const old = await oldCache.get(tm)
+    const hits = mathNodes(old, chapter)
+    for (const type of [NATIONAL, ELITE]) {
+      for (const hit of hits) {
+        const id = old.first(hit, type)
+        if (id) return { id, from: type === NATIONAL ? 'old' : 'old-elite', note: `旧教材 · ${pathOf(hit)}${type === ELITE ? '（精品课）' : ''}` }
+      }
+    }
+    return undefined
+  }
   const ids = OLD_BOOKS[course.id]
   if (!ids) return undefined
   if (!oldCache.has(course.id)) oldCache.set(course.id, Promise.all(ids.map(loadBook)))
@@ -351,8 +431,7 @@ try {
       const book = books[unit.semester - 1]
       let node
       if (course.subjectId === 'math') {
-        const want = MATH[kp.id]
-        node = want && book.nodes.find((n) => norm(n.title) === norm(want))
+        node = mathNode(book, MATH[kp.id])
       } else {
         node = chineseNode(book, unit.order, kp.title)
       }

@@ -28,13 +28,20 @@ const textLen = computed(() =>
     ? 0
     : Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+(?:[./]\d+)?$/.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
 )
-const wordy = computed(() => textLen.value >= 3)
+/**
+ * 纯数字选项的位数（四年级的大数：写数、计数器、算盘的答案有 10–12 位）：digits = 7 位以上、字号跟着屏宽小一点；
+ * digits10 = 10 位以上、再小一点（360 宽的手机上两列 12 位数也放得下）；8 位以上在对战紧凑版排成一列（同 wordy）
+ */
+const numLen = computed(() => Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => /^\d+$/.test(s)).map((s) => s.length)))
+const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8)
 const long = computed(() => textLen.value > 3)
 const longer = computed(() => textLen.value >= 6)
+const digits = computed(() => numLen.value >= 7)
+const digits10 = computed(() => numLen.value >= 10)
 </script>
 
 <template>
-  <div class="cards" :class="[{ wordy, long, longer }, choiceStyle ? `as-${choiceStyle}` : '']">
+  <div class="cards" :class="[{ wordy, long, longer, digits, digits10 }, choiceStyle ? `as-${choiceStyle}` : '']">
     <button
       v-for="c in choices"
       :key="c.id"
@@ -84,6 +91,14 @@ const longer = computed(() => textLen.value >= 6)
 .cards.longer .card {
   font-size: 20px;
   padding: 6px 4px;
+}
+.cards.digits .card {
+  font-size: clamp(18px, 6.4vw, 28px);
+  padding: 6px 4px;
+  white-space: nowrap;
+}
+.cards.digits10 .card {
+  font-size: clamp(15px, 5.1vw, 24px);
 }
 /* 语文（需求 Y3 / Y4）：拼音用初学者字体（单层 a / g）；考认字的字是不注音的楷体大字；图放大 */
 .cards.as-pinyin .card {

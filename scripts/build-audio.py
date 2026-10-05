@@ -178,6 +178,10 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"差(?=别|异)"), "插"),                                  # 差别、差异 chā
         (re.compile(r"(?<=硕果)累|(?<=硕果累)累"), "雷"),                     # 硕果累累 léi
         (re.compile(r"(?<=闹)哄|(?<=闹哄)哄"), "烘"),                         # 闹哄哄 hōng
+        # 四年级数学
+        (re.compile(r"分(?=量)"), "芬"),                                    # 总量与分量 fēn liàng（不是「分量很重」的 fèn）
+        (re.compile(r"为(?=一条边|顶点|端点)"), "围"),                       # 以射线 OA 为一条边 wéi
+        (re.compile(r"量(?=角|一量|得|出|哪)|(?<=量一)量"), "粮"),            # 量角器、量一量、量得 liáng（「度量」「数量」不动）
     ],
 }
 
