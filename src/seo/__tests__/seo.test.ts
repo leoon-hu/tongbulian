@@ -44,7 +44,7 @@ describe('SEO 静态页', () => {
     expect(m.summary).toBe('一年级、二年级、三年级、四年级数学和一年级、二年级、三年级语文')
     expect(m.title).toContain('同步练-对战版')
     expect(m.description).toContain('谁先答对 8 题谁赢')
-    expect(m.description).toContain('数学 132 个')
+    expect(m.description).toContain('数学 164 个')
     expect(m.description).toContain('语文 214 个')
     expect(m.description.length).toBeLessThan(160)
   })

@@ -93,6 +93,12 @@ describe('tokenize（中文）', () => {
     expect(tokenize('(3 + 4) × 5 = ?', 'zh')).toEqual(['括号3', '加4', '括号乘5等于几'])
     expect(tokenize('(3 + 4) × 5 = ?', 'zh', false)).toEqual(['括号', '3', '加', '4', '括号', '乘', '5', '等于几'])
     expect(tokenize('50 - (12 + 8) = ?', 'zh')).toEqual(['50', '减括号12', '加8括号等于几'])
+    // 中括号（四下「括号」）读「中括号」
+    expect(tokenize('96 ÷ [(12 + 4) × 2] = ?', 'zh', false)).toEqual(['96', '除以', '中括号', '括号', '12', '加', '4', '括号', '乘', '2', '中括号', '等于几'])
+    // 方框读「方框」（挨着字也读）；长减号「−」读「减」
+    expect(tokenize('在 □ 里填上适当的数：6.7 + □ = 10', 'zh', false)).toEqual(['在', '方框', '里填上适当的数', PAUSE, '6.7', '加', '方框', '等于', '10'])
+    expect(tokenize('5.7 − 0.81 = ?', 'zh', false)).toEqual(['5.7', '减', '0.81', '等于几'])
+    expect(tokenize('5.7 − 0.81 = ?', 'en', false)).toEqual(['5.7', 'minus', '0.81', 'equals what'])
     expect(tokenize('? × 4 = 24', 'zh')).toEqual(['几乘4', '等于24'])
     expect(tokenize('3 + 3 + 3 = 3 × ?', 'zh')).toEqual(['3', '加3', '加3', '等于3乘几'])
   })
@@ -160,12 +166,19 @@ describe('tokenize（中文）', () => {
     expect(spellMarks('1° 的角', 'en')).toBe('1 degree 的角')
     expect(spellMarks('a // b', 'zh')).toBe('a平行于b')
     expect(spellMarks('a ⊥ b', 'en')).toBe('a is perpendicular to b')
+    // 四下轴对称：对应点 A′ 读「A 撇」
+    expect(spellMarks('点 A′ 到对称轴有几小格？', 'zh')).toBe('点 A撇 到对称轴有几小格？')
+    expect(spellMarks('point A′', 'en')).toBe('point A prime')
     expect(spellMarks('小丽的速度是 80米/分，单价 12元/千克', 'zh')).toBe('小丽的速度是 80米每分，单价 12元每千克')
     expect(spellMarks('80 m/min', 'en')).toBe('80 m per minute')
     expect(spellMarks('800 km/h, 12 yuan/kg', 'en')).toBe('800 km per hour, 12 yuan per kilogram')
     expect(spellMarks('3/8 和 1/2', 'zh')).toBe('3/8 和 1/2')
     expect(spellMarks('数量/本', 'zh')).toBe('数量/本')
     expect(tokenize('1平角 = 2直角，对吗？', 'zh')).toEqual(['1平角', '等于两直角', PAUSE, '对吗'])
+    // 四下轴对称的「几小格」：小格是量词，2 读「两」
+    expect(tokenize('点 A 到对称轴有 2 小格', 'zh')).toEqual(['点A到对称轴有两小格'])
+    // 四下小数的计数单位：「4个十分之一」只把「4个」留在数后面
+    expect(tokenize('4个十分之一和3个百分之一', 'zh')).toEqual(['4个', '十分之一和3个百分之一'])
     expect(tokenize('1周角 = 4直角', 'zh')).toEqual(['1周角', '等于4直角'])
     expect(tokenize('∠1 = 60°，∠2 = ?', 'zh')).toEqual(['角1', '等于60度', PAUSE, '角2等于几'])
     expect(tokenize('182068 ≈ ? 万', 'zh')).toEqual(['18万', '二千', '零', '68约等于几万'])

@@ -29,11 +29,14 @@ const textLen = computed(() =>
     : Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+(?:[./]\d+)?$/.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
 )
 /**
- * 纯数字选项的位数（四年级的大数：写数、计数器、算盘的答案有 10–12 位）：digits = 7 位以上、字号跟着屏宽小一点；
- * digits10 = 10 位以上、再小一点（360 宽的手机上两列 12 位数也放得下）；8 位以上在对战紧凑版排成一列（同 wordy）
+ * 数字选项（整数和小数，四年级的大数、四下的小数）的字符数：digits = 7 个以上、字号跟着屏宽小一点；
+ * digits10 = 10 个以上、再小一点（360 宽的手机上两列 12 位数也放得下）；8 个以上在对战紧凑版排成一列（同 wordy）。
+ * num4 / num7 与 --num-len 给对战紧凑版按作答栏的宽排（PlayerRow：栏窄时 4 个、7 个以上排一列，字号按栏宽 ÷ 字符数封顶）
  */
-const numLen = computed(() => Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => /^\d+$/.test(s)).map((s) => s.length)))
+const numLen = computed(() => Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => /^\d+(?:\.\d+)?$/.test(s)).map((s) => s.length)))
 const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8)
+const num4 = computed(() => numLen.value >= 4)
+const num7 = computed(() => numLen.value >= 7)
 const long = computed(() => textLen.value > 3)
 const longer = computed(() => textLen.value >= 6)
 const digits = computed(() => numLen.value >= 7)
@@ -41,7 +44,7 @@ const digits10 = computed(() => numLen.value >= 10)
 </script>
 
 <template>
-  <div class="cards" :class="[{ wordy, long, longer, digits, digits10 }, choiceStyle ? `as-${choiceStyle}` : '']">
+  <div class="cards" :class="[{ wordy, long, longer, digits, digits10, num4, num7 }, choiceStyle ? `as-${choiceStyle}` : '']" :style="{ '--num-len': numLen }">
     <button
       v-for="c in choices"
       :key="c.id"

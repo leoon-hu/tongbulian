@@ -46,6 +46,18 @@ import Protractor from '@/components/math/Protractor.vue'
 import BarChart from '@/components/math/BarChart.vue'
 import PlanMap from '@/components/math/PlanMap.vue'
 import CompassRose from '@/components/math/CompassRose.vue'
+// 四年级数学下册 A
+import PartLine from '@/components/math/PartLine.vue'
+import CalcTree from '@/components/math/CalcTree.vue'
+// 四年级数学下册 B
+// 四年级数学下册 C
+import DecCard from '@/components/math/DecCard.vue'
+import DecScale from '@/components/math/DecScale.vue'
+// 四年级数学下册 D
+import EvenOut from '@/components/math/EvenOut.vue'
+// 四年级数学下册 E
+import CubeSolids from '@/components/math/CubeSolids.vue'
+import CubeViews from '@/components/math/CubeViews.vue'
 import HanziGrid from '@/components/chinese/HanziGrid.vue'
 import PinyinCard from '@/components/chinese/PinyinCard.vue'
 import ListenCue from '@/components/chinese/ListenCue.vue'
@@ -211,6 +223,35 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
       />
       <PlanMap v-else-if="part.kind === 'plan-map'" :cells="part.cells" :marks="part.marks" :roads="part.roads" :title="part.title" />
       <CompassRose v-else-if="part.kind === 'compass'" :ask="part.ask" />
+      <!-- 四年级数学下册 A -->
+      <PartLine v-else-if="part.kind === 'part-line'" :parts="part.parts" :total="part.total" :names="part.names" />
+      <CalcTree v-else-if="part.kind === 'calc-tree'" :a="part.a" :b="part.b" :steps="part.steps" :fill="fill" />
+      <!-- 四年级数学下册 B -->
+      <!-- 四年级数学下册 C -->
+      <DecCard v-else-if="part.kind === 'dec-card'" :n="part.n" :marks="part.marks" :frac="part.frac" />
+      <DecScale
+        v-else-if="part.kind === 'dec-scale'"
+        :labels="part.labels"
+        :per="part.per"
+        :extra="part.extra"
+        :ruler="part.ruler"
+        :broken="part.broken"
+        :arrow="part.arrow"
+      />
+      <PlaceTable v-else-if="part.kind === 'dec-table'" :top="part.top" :dec="part.dec" :ask="part.ask" />
+      <!-- 四年级数学下册 D -->
+      <VerticalForm
+        v-else-if="part.kind === 'dec-vertical'"
+        :a="0"
+        :op="part.op"
+        :b="0"
+        :lines="part.lines"
+        :result="part.result"
+      />
+      <EvenOut v-else-if="part.kind === 'even-out'" :rows="part.rows" :max="part.max" :avg="part.avg" />
+      <!-- 四年级数学下册 E -->
+      <CubeSolids v-else-if="part.kind === 'cube-solids'" :items="part.items" :numbered="part.numbered" />
+      <CubeViews v-else-if="part.kind === 'cube-views'" :items="part.items" :numbered="part.numbered" />
       <VerticalForm
         v-else-if="part.kind === 'vertical'"
         :a="part.a"

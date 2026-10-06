@@ -97,6 +97,14 @@ export const EMOJI_ZH: Record<string, string> = {
   // 四年级数学 B
   // 四年级数学 C
   // 四年级数学 D
+  // 四年级数学下册 A
+  // 四年级数学下册 B
+  'emoji.🏠': '家', // 四下「三角形」：从家到学校走哪条路最近
+  'emoji.🦴': '骨头', // 四下「平移」：小动物平移吃到食物
+  'emoji.🎋': '竹子',
+  // 四年级数学下册 C
+  // 四年级数学下册 D
+  // 四年级数学下册 E
 }
 
 export const EMOJI_EN: Record<string, string> = {
@@ -188,4 +196,12 @@ export const EMOJI_EN: Record<string, string> = {
   // 四年级数学 B
   // 四年级数学 C
   // 四年级数学 D
+  // 四年级数学下册 A
+  // 四年级数学下册 B
+  'emoji.🏠': 'home',
+  'emoji.🦴': 'bone',
+  'emoji.🎋': 'bamboo',
+  // 四年级数学下册 C
+  // 四年级数学下册 D
+  // 四年级数学下册 E
 }

@@ -18,12 +18,15 @@ const BOOKS = {
   'math-g1': ['ba9d9c0b-2c1c-4bba-84d7-369fb405bb13', 'b4dae36a-0d48-4149-820e-f532dad7607b'],
   'math-g2': ['f547036d-8c1a-4dca-b8ef-b148a180bac8', '397e9ca4-1930-4f30-8698-8244f870d9eb'],
   'math-g3': ['a6de91b7-4b52-475e-aa05-a508af43f4c2', '89ad4d7b-facf-4b17-93d6-00b1e32362db'],
-  // 四年级只有上册（平台上四下还是旧版教材）；新教材四上的标题是「新教材-人教版小学数学四年级上册目录」
-  'math-g4': ['ce032a22-7d96-4c36-b19c-f5cb8548a10e'],
+  // 新教材四上的标题是「新教材-人教版小学数学四年级上册目录」；平台上的四下电子课本还是旧版，课本照它做，同步课就是
+  // 旧版四下的那一本（「小学数学人教版四年级下册」，同 OLD_MATH_G4S2），见 OLD_VOLUMES
+  'math-g4': ['ce032a22-7d96-4c36-b19c-f5cb8548a10e', 'a0bd25a0-6a56-4235-8225-eab16c04e217'],
   'chinese-g1': ['b7062df1-f929-458e-964c-d778f89ca255', '2d22a5c9-80b8-46cb-8595-564f5c368f3e'],
   'chinese-g2': ['4bf136c9-43cc-4005-8c8b-b21d21bad96f', 'ac9ba3ad-c2ab-4736-b347-dabae34c6b80'],
   'chinese-g3': ['22707f9a-a593-44a7-89ee-3f4d78905f2e', '6042ef62-a820-41aa-858d-1d6f1d6e3aa7'],
 }
+/** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
+const OLD_VOLUMES = new Set(['math-g4:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -203,6 +206,39 @@ const MATH = {
   'm4s1-07-single': '以一当一',
   'm4s1-07-double': '复式条形统计图',
   'm4s1-08-treasure': '校园寻宝',
+  // 四年级下册（旧版课本，章节名就是旧版四下同步课的；同名的「解决问题」写成「单元>章节」）
+  'm4s2-01-addsub': '加、减法的意义和各部分间的关系',
+  'm4s2-01-muldiv': '乘、除法的意义和各部分间的关系',
+  'm4s2-01-brackets': '括号',
+  'm4s2-01-solve': '四则运算>解决问题', // 租船（平台上「四则运算」下的「解决问题」）
+  'm4s2-02-positions': '观察物体（二）',
+  'm4s2-02-objects': '观察物体（二）', // 两个知识点共用这一节课
+  'm4s2-03-add-laws': '加法运算律',
+  'm4s2-03-add-apply': '加法运算律的应用',
+  'm4s2-03-mul-laws': '乘法运算律',
+  'm4s2-03-distrib': '乘法运算律', // 交换律、结合律、分配律在同一节课里
+  'm4s2-03-mul-apply': '乘法运算律的应用', // 平台上这一章节挂的课叫「运算律整理和复习」
+  'm4s2-04-meaning': '小数的意义',
+  'm4s2-04-read-write': '小数的读法和写法',
+  'm4s2-04-property': '小数的性质',
+  'm4s2-04-compare': '小数的大小比较',
+  'm4s2-04-shift': '小数点移动引起小数大小的变化',
+  'm4s2-04-units': '小数与单位换算',
+  'm4s2-04-round': '小数的近似数',
+  'm4s2-05-traits': '三角形的特性',
+  'm4s2-05-sides': '三角形的三边关系',
+  'm4s2-05-kinds': '三角形的分类',
+  'm4s2-05-angle-sum': '三角形的内角和',
+  'm4s2-05-polygon': '三角形>解决问题', // 平台上「三角形」下的「解决问题」，课叫「四边形的内角和」
+  'm4s2-06-addsub': '小数加减法',
+  'm4s2-06-mixed': '小数加减混合运算',
+  'm4s2-06-laws': '整数加法运算律推广到小数',
+  'm4s2-07-symmetry': '轴对称',
+  'm4s2-07-translate': '平移',
+  'm4s2-08-average': '平均数',
+  'm4s2-08-double': '复式条形统计图',
+  'm4s2-09-lunch': '营养午餐',
+  'm4s2-10-chicken': '数学广角——鸡兔同笼',
 }
 
 const CN_NUM = '一二三四五六七八九十'
@@ -293,12 +329,15 @@ const pathOf = (node) => [...node.parents, node].map((n) => n.title.replace(/\s+
 
 /**
  * 数学：章节名对得上的节点，深的在前（四上新教材「二 角的度量」单元下面还有一节「角的度量」，先看下面那一节）；
- * 开头的 ★（旧教材的「★ 1亿有多大」）不算
+ * 开头的 ★（旧教材的「★ 1亿有多大」）不算；「单元>章节」只找这个单元下面的（旧版四下有三个叫「解决问题」的章节）
  */
 const mathKey = (title) => norm(title.replace(/^\s*★\s*/, ''))
 function mathNodes(book, want) {
   if (!want) return []
-  return book.nodes.filter((n) => mathKey(n.title) === mathKey(want)).sort((a, b) => b.parents.length - a.parents.length)
+  const [parent, title] = want.includes('>') ? want.split('>') : [undefined, want]
+  return book.nodes
+    .filter((n) => mathKey(n.title) === mathKey(title) && (!parent || n.parents.some((p) => mathKey(p.title) === mathKey(parent))))
+    .sort((a, b) => b.parents.length - a.parents.length)
 }
 /** 其中第一个有同步课的（旧教材四上「7 条形统计图」的课挂在单元上，总复习里同名的那一节只有精品课）；都没有就是最深的那个 */
 function mathNode(book, want) {
@@ -385,7 +424,8 @@ const oldCache = new Map()
 async function fallbackOf(course, books, unit, node, kp) {
   const grade = `${CN_NUM[Number(course.gradeId.slice(1)) - 1]}年级`
   const elite = node && books[unit.semester - 1].first(node, ELITE)
-  if (elite) return { id: elite, from: 'elite', note: `新教材${grade}${SEM[unit.semester - 1]} · ${pathOf(node)}（精品课）` }
+  const edition = OLD_VOLUMES.has(`${course.id}:${unit.semester}`) ? '' : '新教材'
+  if (elite) return { id: elite, from: 'elite', note: `${edition}${grade}${SEM[unit.semester - 1]} · ${pathOf(node)}（精品课）` }
   const math = OLD_MATH[kp.id]
   if (math) {
     const [tm, chapter] = math

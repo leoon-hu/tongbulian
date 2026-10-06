@@ -25,6 +25,13 @@ export function hasBlank(q: Question): boolean {
         // 乘数是两位数的竖式：没有 work（写好的竖式）的，按的数填在积那一行
         (p.kind === 'mul-vertical' && !p.work) ||
         // 四年级数学 D
+        // 四年级数学下册 A
+        // 树状图（「括号」练习三 2）里要填的得数框
+        (p.kind === 'calc-tree' && p.steps.some((s) => s.v === '?')) ||
+        // 四年级数学下册 B
+        // 四年级数学下册 C
+        // 四年级数学下册 D
+        // 四年级数学下册 E
         false,
     )
   )

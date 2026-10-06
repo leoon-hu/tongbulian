@@ -15,6 +15,11 @@ import type { MulWork } from '@/types/models'
  * work = 写好的竖式（看竖式答题、改错题）：两次乘得的数和积照它写（可以是错的），flat = 第二次乘得的数没有左移；
  * mark = 第几次乘得的数右边画红箭头（「箭头所指这一步算的是什么」）。
  */
+/**
+ * 四下「小数的加法和减法」加的可选项（不传和原来一样）：lines = 小数竖式的几行数（两个；连加三个），已经按列排好、一样长的字符串，
+ * 一个字符一列（数字、「.」、空格）——这时 a、b 不用；只有「.」的那一列画得窄（小数点对齐时各行的「.」在同一列，课本的写法），
+ * 运算符写在最后一行左边；result = 写好的得数（改错题照写，也按列排好）；不传就在横线下画一排空格子（得数在选项里选，不填）。
+ */
 const props = defineProps<{
   a: number
   op: '+' | '-' | '×'
@@ -25,6 +30,8 @@ const props = defineProps<{
   zeros?: boolean
   work?: MulWork
   mark?: 1 | 2
+  lines?: string[]
+  result?: string
 }>()
 
 // 位数：加法要给和留出进位后多出来的一位、乘法给积留够位；减法差不会比被减数长
@@ -84,6 +91,24 @@ const mulAnswer = computed(() => {
 })
 /** 两次乘得的数：写好的竖式照写；没答完只画出小虚线格（课本例题里的方框），答完填上 */
 const showParts = computed(() => !!props.work || !!props.done)
+
+// ── 小数竖式（四下「小数的加法和减法」）──
+
+/**
+ * 各行按字符分列（不一样长的在左边补空格）；point[j] = 第 j 列只有小数点（画窄）。没对齐的竖式（改错题）里小数点和数字落在同一列，
+ * 那一列照常宽。
+ */
+const dec = computed(() => {
+  if (!props.lines?.length) return null
+  const all = props.result === undefined ? props.lines : [...props.lines, props.result]
+  const cols = Math.max(...all.map((l) => l.length))
+  const grid = all.map((l) => l.padStart(cols, ' ').split(''))
+  const point = Array.from({ length: cols }, (_, j) => grid.some((g) => g[j] === '.') && grid.every((g) => g[j] === '.' || g[j] === ' '))
+  const rows = grid.slice(0, props.lines.length)
+  return { cols, point, rows, result: props.result === undefined ? null : grid[grid.length - 1]! }
+})
+/** 小数竖式的列宽：运算符一格、数字一格、小数点窄一些 */
+const decTemplate = computed(() => (dec.value ? `1.1em ${dec.value.point.map((p) => (p ? '0.42em' : '1.1em')).join(' ')}` : ''))
 </script>
 
 <template>
@@ -116,6 +141,21 @@ const showParts = computed(() => !!props.work || !!props.done)
       <span class="op typed">{{ mulAnswer[0] }}</span>
       <span v-for="(d, i) in mulAnswer.slice(1)" :key="`c${i}`" class="digit blank typed">{{ d }}</span>
       <span v-if="mark" class="arrow" />
+    </div>
+  </div>
+  <div v-else-if="dec" class="vertical dec" :class="{ three: dec.rows.length > 2 }" :style="{ '--tmpl': decTemplate }">
+    <div v-for="(line, r) in dec.rows" :key="`l${r}`" class="row">
+      <span class="op">{{ r === dec.rows.length - 1 ? opText : '' }}</span>
+      <span v-for="(d, i) in line" :key="i" class="digit" :class="{ pt: dec.point[i] }">{{ d }}</span>
+    </div>
+    <div class="rule" />
+    <div v-if="dec.result" class="row sum">
+      <span class="op" />
+      <span v-for="(d, i) in dec.result" :key="i" class="digit" :class="{ pt: dec.point[i] }">{{ d }}</span>
+    </div>
+    <div v-else class="row answer">
+      <span class="op" />
+      <span v-for="(p, i) in dec.point" :key="i" class="digit" :class="p ? 'pt' : 'blank'" />
     </div>
   </div>
   <div v-else class="vertical" :style="{ '--cols': width }">
@@ -200,5 +240,18 @@ const showParts = computed(() => !!props.work || !!props.done)
 .mul .arrow {
   color: #e2483d;
   text-align: center;
+}
+/* 小数竖式（四下）：列宽按列算（小数点那一列窄）；三个数连加的竖式有五行，小一号 */
+.dec .row {
+  grid-template-columns: var(--tmpl);
+}
+.dec.three .row {
+  font-size: 0.85em;
+}
+.dec .digit.pt {
+  text-align: center;
+}
+.dec .answer .digit.pt {
+  height: 1.35em;
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { LStr } from '@/types/models'
 import type { BlankFill } from '@/components/practice/blank'
 import { t } from '@/engine/i18n'
@@ -16,6 +17,8 @@ const props = withDefaults(
 )
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
+/** 列多（7 列以上：一星期的气温、鸡兔同笼按顺序列的表）时格子收窄、字小一号，360 宽的手机竖屏也放得下；列少的表样子不变 */
+const tight = computed(() => Math.max(0, ...props.rows.map((r) => r.length)) >= 7)
 const text = (cell: number | LStr): string => (typeof cell === 'number' ? String(cell) : cap(t(cell)))
 const isHead = (r: number, c: number): boolean =>
   (props.head === 'col' && c === 0) || (props.head === 'row' && r === 0) || (props.head === 'both' && (r === 0 || c === 0))
@@ -25,7 +28,7 @@ const isHead = (r: number, c: number): boolean =>
   <figure class="stat-table">
     <figcaption v-if="title">{{ cap(t(title)) }}</figcaption>
     <div class="scroll">
-      <table :class="`head-${head}`">
+      <table :class="[`head-${head}`, { tight }]">
         <tbody>
           <tr v-for="(row, r) in rows" :key="r">
             <td v-for="(cell, c) in row" :key="c" :class="{ head: isHead(r, c), ask: cell === null, num: typeof cell === 'number' }">
@@ -72,6 +75,13 @@ td {
 }
 td.num {
   font-variant-numeric: tabular-nums;
+}
+table.tight {
+  font-size: 14px;
+}
+table.tight td {
+  min-width: 1.6em;
+  padding: 4px 3px;
 }
 td.head {
   background: #e8f5ee;

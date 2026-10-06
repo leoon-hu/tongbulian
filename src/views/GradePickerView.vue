@@ -8,8 +8,8 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 
 // 选年级页：某学科下的一~六年级。上线的年级每一册单独一张卡（F1）——课本封面 + 「一年级 上册」，
-// 点哪一张就进那一册的知识点地图（下册带 ?sem=2）；上线的年级里还没有的那一册（四年级数学的下册：平台上还没有新教材）
-// 是一张「四年级 下册 · 敬请期待」占位卡，一行仍是一个年级的上下册；soon 年级一个年级一张占位卡；无效学科回顶层。
+// 点哪一张就进那一册的知识点地图（下册带 ?sem=2）；上线的年级里还没有内容的那一册（平台上还没有那一册的课本时）
+// 是一张「几年级 下册 · 敬请期待」占位卡，一行仍是一个年级的上下册；soon 年级一个年级一张占位卡；无效学科回顶层。
 const route = useRoute()
 const router = useRouter()
 

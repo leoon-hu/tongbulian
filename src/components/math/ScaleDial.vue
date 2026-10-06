@@ -48,13 +48,13 @@ const labels = computed(() => {
 const small = computed(() => Math.round(props.max / props.major) > 12)
 /** 小格很多（体重秤 100 格）时细线画细一点，挨得近也分得开 */
 const dense = computed(() => Math.round(props.max / props.major) * props.minor > 60)
-/** 小格多的秤面画大一点（手机竖屏 230 也放得下） */
+/** 小格多的秤面画大一点（手机竖屏 230 也放得下）；比这一栏宽时随栏宽等比缩小（样式里 max-width: 100%，高跟着宽走） */
 const px = computed(() => (dense.value ? Math.max(props.size, 230) : props.size))
 const needle = computed(() => at(props.value, R - 20))
 </script>
 
 <template>
-  <svg class="dial" :class="{ dense }" viewBox="0 0 200 200" :style="{ width: `${px}px`, height: `${px}px` }" role="img" :aria-label="`0–${max} ${unit}`">
+  <svg class="dial" :class="{ dense }" viewBox="0 0 200 200" :style="{ width: `${px}px` }" role="img" :aria-label="`0–${max} ${unit}`">
     <circle class="face" :cx="C" :cy="C" :r="R + 6" />
     <line v-for="(t, i) in ticks" :key="`t${i}`" class="tick" :class="{ big: t.big, mid: t.mid }" :x1="t.x1" :y1="t.y1" :x2="t.x2" :y2="t.y2" />
     <!-- 指针画在数的下面、数带一圈白边：指针正好指着一个数时，那个数也看得清 -->
@@ -70,6 +70,10 @@ const needle = computed(() => at(props.value, R - 20))
   display: block;
   margin: 0 auto;
   flex-shrink: 0;
+  /* 放得下时照 px 的大小画；栏比它窄（打怪兽手机横屏两人一栏才一百多像素）就随栏宽等比缩小，不再比这一栏宽、两边被裁 */
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
 }
 .face {
   fill: var(--c-card);

@@ -8,6 +8,8 @@ import { fracGeometry } from '@/components/math/fracGeometry'
  * 平均分的图（三年级「分数的初步认识」、小数的十等分图）：照课本画——外轮廓实线、切开的地方虚线，涂色的块填浅色。
  * 一幅或几幅并排（比大小时两幅），每幅下面可以写一个数（label，分数画成上下两层）。
  * whole：前面再画几个整个涂满的同样图形（小数 2.5 = 两个整的 + 一个涂了 5 条的）。几何在 fracGeometry.ts。
+ * 切成 50 块以上的（四下「小数的意义」平均分成 100 份的方格）切线画成细实线（课本的方格纸）：虚线在一格一格的小方格上断成一个个「十」字，数不清；
+ * 50 块以下的照旧画虚线。
  */
 const props = defineProps<{ items: FracPic[] }>()
 
@@ -26,6 +28,7 @@ const figs = computed(() =>
       offset: whole * (g.w + GAP),
       totalW: whole * (g.w + GAP) + g.w,
       tone: g.pieces.map((_, i) => (shaded.has(i) ? 'on' : alt.has(i) ? 'alt' : 'off')),
+      dense: g.pieces.length >= 50,
     }
   }),
 )
@@ -49,7 +52,7 @@ const scale = computed(() => (props.items.length > 1 ? 1 : 1.25))
         </g>
         <g :transform="`translate(${fg.offset} 0)`">
           <path v-for="(p, k) in fg.pieces" :key="k" class="piece" :class="fg.tone[k]" :d="p.d" />
-          <path v-for="(c, k) in fg.cuts" :key="`c${k}`" class="cut" :d="c" />
+          <path v-for="(c, k) in fg.cuts" :key="`c${k}`" class="cut" :class="{ dense: fg.dense }" :d="c" />
           <path class="outline" :d="fg.outline" />
         </g>
       </svg>
@@ -100,6 +103,12 @@ const scale = computed(() => (props.items.length > 1 ? 1 : 1.25))
   stroke-width: 1.6;
   stroke-dasharray: 5 4;
   stroke-opacity: 0.75;
+}
+/* 方格纸（100 格）：细实线 */
+.cut.dense {
+  stroke-width: 0.8;
+  stroke-dasharray: none;
+  stroke-opacity: 0.6;
 }
 .outline {
   fill: none;

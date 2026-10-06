@@ -548,6 +548,36 @@ onBeforeUnmount(() => {
   font-size: var(--fs-md);
   padding: 2px 8px;
 }
+/* 数字选项（整数、小数）按作答栏的宽排：栏是尺寸容器；打怪兽手机横屏两人的栏只有 124px、小屏 135–139px，两列放不下 4 个字符以上的数
+   （第二列整张卡伸出栏外被裁掉，2026-10-06 普查），排成一列；栏宽 240px 以内 7 个字符以上也排一列。排一列的数字号按「栏宽 ÷ 字符数」
+   封顶（一个数字约 0.62em，减去卡片与网格的内边距、边框），12 位数在 124px 的栏里也放得下 */
+.compact .a {
+  container-type: inline-size;
+}
+@container (max-width: 160px) {
+  .compact .a :deep(.cards.num4) {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .compact .a :deep(.cards.num4 .card) {
+    min-height: 44px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    font-size: min(var(--fs-lg), calc((100cqw - 30px) / (var(--num-len) * 0.62)));
+  }
+}
+@container (max-width: 240px) {
+  .compact .a :deep(.cards.num7) {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .compact .a :deep(.cards.num7 .card) {
+    min-height: 44px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    font-size: min(var(--fs-lg), calc((100cqw - 30px) / (var(--num-len) * 0.62)));
+  }
+}
 /* 紧凑版的观看行：表情缩小、去掉「想一想」文字（表情已经在想了）、选项卡矮一点，别把作答栏撑出去 */
 .compact .ai-mood,
 .compact .a :deep(.mood) {

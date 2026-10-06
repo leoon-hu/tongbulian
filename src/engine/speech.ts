@@ -16,11 +16,12 @@ import { fractionWords } from './fraction'
 
 // 符号组放在 emoji 组前面：⬜ 也算 Extended_Pictographic，但它是算式里的空格子。
 // 算式末尾的「= ?」合成一个片段（读「等于几」），单独一个「几」读起来生硬还容易读错声调。
-// 小括号单独一组：它紧挨着数字，但必须读出来（「括号 3 加 4 括号 乘 5」），不走「独立成项才读」的规则。
+// 小括号单独一组：它紧挨着数字，但必须读出来（「括号 3 加 4 括号 乘 5」），不走「独立成项才读」的规则；中括号（四下「括号」）同样，读「中括号」；
+// 方框「□」（四下「在 □ 里填上适当的数」「6.7 + □ = 10」）也在这一组，读「方框」。长减号「−」同「-」。
 // 分数「3/4」一整组（三年级），读「四分之三」「three fourths」，当一个槽（同 0–100 的数，能并进短语）。
 // 「≈」（四年级求近似数）同 = 一样是独立成项才读的符号，读「约等于」。
 const TOKEN =
-  /(¥\d+(?:\.\d)?)|((?<![\d./])\d{1,3}\/\d{1,3}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-=?><⬜○×÷≈])|([()（）])|(\p{Extended_Pictographic}\uFE0F?)/gu
+  /(¥\d+(?:\.\d)?)|((?<![\d./])\d{1,3}\/\d{1,3}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-−=?><⬜○×÷≈])|([()（）[\]［］□])|(\p{Extended_Pictographic}\uFE0F?)/gu
 
 /** 符号只有独立成项（两边不挨着字母 / 数字 / 汉字 / emoji）才读：「9 + 5」的 + 读，「ten-frame」的 -、「🐰?」的 ? 不读 */
 const WORDISH_BEFORE = /[\p{L}\p{N}\p{Extended_Pictographic}\uFE0F]$/u
@@ -33,11 +34,11 @@ const WORDISH_AFTER = /^[\p{L}\p{N}\p{Extended_Pictographic}]/u
 const ZH_MEASURE =
   // 长的放前面（「分米」「分钟」要整个留在数字后面，不能只匹配到「分」）；三年级起的长度 / 质量 / 面积 / 时间单位与常用量词；
   // 四年级的「1周角 = 2平角 = 4直角」（2 读「两」，「周角」不能只匹配到表示星期的「周」）
-  '周角|平角|直角|毫米|分米|千米|分钟|平方(?:厘米|分米|米|千米)|千克|克|吨|公斤|斤|小时|秒|周|年(?!级)|次|圈|步|站|格|段|岁|包|套|筒|件|页|场|名|粒|片|趟|节|位|' +
+  '小格|周角|平角|直角|毫米|分米|千米|分钟|平方(?:厘米|分米|米|千米)|千克|克|吨|公斤|斤|小时|秒|周|年(?!级)|次|圈|步|站|格|段|岁|包|套|筒|件|页|场|名|粒|片|趟|节|位|' +
   // 四年级：大数的单位连同后面的量词（「18万」「1亿张」「22万步」，2 万读「两万」）、角的度数（「60度」，课本写 60°，见 spellMarks）
   '[万亿](?:张|步|人|个|次|元|吨|千克|千米|米|台|户|粒|名|本|页|件|字|颗|棵|辆|年|天|秒)?|度(?!量)|' +
-  // 计数单位：「1个十」「4个百万」「10个一万」「3个千亿」（长的在前）
-  '个(?:一?[十百千]?[万亿]|一?[十百千]|一)?(?!数)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
+  // 计数单位：「1个十」「4个百万」「10个一万」「3个千亿」（长的在前）；四下小数的「4个十分之一」只留「4个」（别切成「4个十 · 分之一」）
+  '个(?:一?[十百千]?[万亿]|一?[十百千]|一)?(?!数)(?!分之)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
 /** 中文里数字 2 后面紧跟量词时读「两」：2 个十 → 两个十、2 元 → 两元、2 排 → 两排；序数除外：第 2 个 → 第二个 */
 const LIANG_BEFORE = new RegExp(`^(?:${ZH_MEASURE})`)
 const ORDINAL_BEFORE = /第$/
@@ -170,20 +171,22 @@ export function numberPieces(num: string, lang: Lang): string[] {
 
 /**
  * 四年级起题目里的数学记号读成字（屏幕上照课本写）：60° → 60度 / 60 degrees，∠1 → 角1 / angle 1，
- * a // b → a平行于b / a is parallel to b，a ⊥ b → a垂直于b / a is perpendicular to b（课本读法「a 平行于 b」「a 垂直于 b」）；
+ * a // b → a平行于b / a is parallel to b，a ⊥ b → a垂直于b / a is perpendicular to b（课本读法「a 平行于 b」「a 垂直于 b」），A′ → A撇 / A prime（四下轴对称）；
  * 复合单位中间的斜杠读「每」：80米/分 → 80米每分、12元/千克 → 12元每千克（课本读法「80米每分」），英文 km/h → km per hour。
  * 分数「3/8」两边是数字，不受影响。
  */
 export function spellMarks(text: string, lang: Lang): string {
-  if (!/[°∠⊥/]/.test(text)) return text
+  if (!/[°∠⊥/′]/.test(text)) return text
   if (lang === 'zh')
     return text
+      .replace(/([A-Za-z])′/g, '$1撇') // 四下「轴对称」的对应点 A′ 读「A 撇」
       .replace(/\s*°/g, '度')
       .replace(/∠\s*/g, '角')
       .replace(/\s*\/\/\s*/g, '平行于')
       .replace(/\s*⊥\s*/g, '垂直于')
       .replace(ZH_RATE, '$1每$2')
   return text
+    .replace(/([A-Za-z])′/g, '$1 prime')
     .replace(/(\d+)\s*°/g, (_, n: string) => `${n} ${n === '1' ? 'degree' : 'degrees'}`)
     .replace(/\s*°/g, ' degrees')
     .replace(/∠\s*/g, 'angle ')
@@ -263,10 +266,10 @@ function rawTokens(source: string, lang: Lang): Raw[] {
     else if (latin) push({ kind: 'phrase', text: latin.trim() })
     else if (sym) {
       if (WORDISH_BEFORE.test(text.slice(0, m.index)) || WORDISH_AFTER.test(text.slice(m.index + whole.length))) continue
-      const key = `sym.${sym.replace(/\s+/g, '')}`
+      const key = `sym.${sym.replace(/\s+/g, '').replace('−', '-')}`
       if (hasEntry(key, lang)) push({ kind: 'symbol', text: translate({ k: key }, lang) })
     } else if (paren) {
-      const key = `sym.${/[(（]/.test(paren) ? '(' : ')'}`
+      const key = `sym.${paren === '□' ? '□' : /[[［]/.test(paren) ? '[' : /[\]］]/.test(paren) ? ']' : /[(（]/.test(paren) ? '(' : ')'}`
       if (hasEntry(key, lang)) push({ kind: 'symbol', text: translate({ k: key }, lang) })
     } else if (emoji) {
       const key = hasEntry(`emoji.${emoji}`, lang) ? `emoji.${emoji}` : `emoji.${emoji.replace(/\uFE0F$/, '')}`

@@ -61,7 +61,7 @@ function statusOf(kp: KnowledgePoint): NodeStatus {
 
 const SEGMENTS = Array.from({ length: ROUND_SIZE }, (_, i) => i)
 
-// 「▶ 视频」（F2）：新教材这一节的同步课；平台上还没有的是替代视频（新教材的精品课 / 旧教材里对应的课），虚线框标出来，
+// 「▶ 视频」（F2）：这一节的同步课；平台上还没有的是替代视频（这一节的精品课 / 旧教材里对应的课），虚线框标出来，
 // 旧教材的写「旧版」，提示里说是哪来的
 type VideoLink = { url: string; from: string; alt: boolean; label: string; hint: string }
 const videoLinks = computed(() => {

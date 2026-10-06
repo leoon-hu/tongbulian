@@ -14,9 +14,22 @@ import * as models from './models'
 import * as quads from './quads'
 import * as bars from './bars'
 import * as treasure from './treasure'
+import * as ops from './ops'
+import * as laws from './laws'
+import * as observe from './observe'
+import * as triangles from './triangles'
+import * as motion from './motion'
+import * as decimals from './decimals'
+import * as decadd from './decadd'
+import * as average from './average'
+import * as lunch from './lunch'
+import * as chicken from './chicken'
 
 /** 每个单元的词条文件 */
-export const UNIT_LANGS: { ZH: Dict; EN: Dict; PY: Record<string, string> }[] = [numbers, yi, angles, multiply, models, quads, bars, treasure]
+export const UNIT_LANGS: { ZH: Dict; EN: Dict; PY: Record<string, string> }[] = [
+  numbers, yi, angles, multiply, models, quads, bars, treasure,
+  ops, laws, observe, triangles, motion, decimals, decadd, average, lunch, chicken,
+]
 
 const shapeDict = (names: Record<ShapeKind, string>): Dict =>
   Object.fromEntries((Object.keys(names) as ShapeKind[]).map((s) => [`shape.${s}`, names[s]]))

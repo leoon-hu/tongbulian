@@ -79,7 +79,8 @@ const arrowX = computed(() => (props.arrow === undefined ? null : x(props.arrow)
 <style scoped>
 .frac-line {
   display: block;
-  max-width: 100%;
+  /* content-box：内边距算在宽度外面，最宽只能是这一栏减去左右两边的内边距（以前 100% 再加 8px，窄栏里两边各溢出 4px） */
+  max-width: calc(100% - 8px);
   height: auto;
   padding: 6px 4px;
   background: var(--c-card);

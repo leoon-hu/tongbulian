@@ -107,6 +107,9 @@ export const SYMBOL_WORDS = {
     'sym.≈': '约等于', // 四年级求近似数（182068 ≈ 18万）
     'sym.(': '括号',
     'sym.)': '括号',
+    'sym.[': '中括号', // 四下「括号」：96÷[(12+4)×2]
+    'sym.]': '中括号',
+    'sym.□': '方框', // 四下「在 □ 里填上适当的数」
   },
   en: {
     'sym.+': 'plus',
@@ -123,6 +126,9 @@ export const SYMBOL_WORDS = {
     'sym.≈': 'is about',
     'sym.(': 'open bracket',
     'sym.)': 'close bracket',
+    'sym.[': 'open square bracket',
+    'sym.]': 'close square bracket',
+    'sym.□': 'box',
   },
 } as const
 

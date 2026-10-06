@@ -73,7 +73,7 @@ function liveKps(course: Course): KnowledgePoint[] {
 }
 
 const semName = (s: 1 | 2): string => zh({ k: `sem.${s}` })
-/** 这门课有哪几册：「上下册」，或者只有一册（四年级数学的下册平台上还没有新教材）就是「上册」 */
+/** 这门课有哪几册：「上下册」，或者只有一册（平台上还没有另一册的课本时）就是那一册 */
 const volsName = (course: Course): string => {
   const sems = semestersOf(course)
   return sems.length > 1 ? '上下册' : semName(sems[0]!)
@@ -364,6 +364,88 @@ export function stemText(part: StemPart): string {
       // 指南针：打问号的那个字只说在圈上的哪个位置（说出方向就是答案）
       const SPOT = { n: '上面', ne: '右上', e: '右边', se: '右下', s: '下面', sw: '左下', w: '左边', nw: '左上' } as const
       return `（指南针：八个方向围成一圈，北在上面${part.ask ? `，${SPOT[part.ask]}那个方向的字换成了问号` : ''}）`
+    }
+    // 四年级数学下册 A
+    case 'part-line': {
+      // 线段图：几个分点的名字、每段上面写的数，整条下面写的总数（「?」照写）
+      const names = part.names?.length ? `：${part.names.map((n) => zh(n)).join(' — ')}` : ''
+      const total = part.total !== undefined ? `，整条线段下面标着 ${part.total}` : ''
+      return `（线段图${names}，分成 ${part.parts.length} 段，上面依次标着 ${part.parts.map((p) => p.label).join('、')}${total}）`
+    }
+    case 'calc-tree': {
+      // 树状图：一步一步写成「128 + 147 = □」，空框写「□」，要填的写「（　）」
+      const box = (v: string): string => (v === '?' ? '（　）' : v === '' ? '□' : v)
+      let prev = ''
+      const steps = part.steps.map((s, i) => {
+        const [x, y] = i === 0 ? [part.a, part.b] : s.left ? [s.n ?? '', prev] : [prev, s.n ?? '']
+        prev = box(s.v)
+        return `${x} ${s.op} ${y} = ${prev}`
+      })
+      return `（树状图：${steps.join('；')}）`
+    }
+    // 四年级数学下册 B
+    // 四年级数学下册 C
+    case 'dec-card': {
+      // 小数卡：数照写，画横线的数字另外说；分数写成「47/1000」
+      if (part.frac) return `（卡片上的分数：${part.frac[0]}/${part.frac[1]}）`
+      const n = part.n ?? ''
+      const marks = part.marks?.length ? `（画横线的是 ${part.marks.map((i) => n[i]).join('、')}，从左数第 ${part.marks.map((i) => i + 1).join('、')} 个字）` : ''
+      return `${n}${marks}`
+    }
+    case 'dec-scale': {
+      // 米尺 / 直线：标的数从左到右写出来，每两个数之间几小格，箭头指着第几小格（指在两小格中间的写「第 3.5 小格」）
+      const what = part.ruler ? '米尺' : '直线'
+      const extra = part.extra ? `，最后一个数后面还有 ${part.extra} 小格` : ''
+      const arrow = part.arrow === undefined ? '' : `，红箭头指着从左数第 ${part.arrow} 小格`
+      return `（${what}：刻度下面依次标着 ${part.labels.join('、')}，相邻两个数之间平均分成 ${part.per} 小格${extra}${arrow}）`
+    }
+    case 'dec-table': {
+      const NAME = (p: number): string => (p >= 0 ? ['个位', '十位', '百位', '千位', '万位'][p] ?? '' : ['十分位', '百分位', '千分位', '万分位'][-p - 1] ?? '')
+      return `（小数的数位顺序表：整数部分从${NAME(part.top)}到个位，小数部分从十分位到${NAME(-part.dec)}${part.ask === undefined ? '' : '，有一位的数位和计数单位打了问号'}）`
+    }
+    // 四年级数学下册 D
+    case 'dec-vertical': {
+      // 小数竖式：从上到下的几个数（去掉排版用的空格）；小数点没上下对齐的（改错题）说一声；写好的得数照写
+      const nums = part.lines.map((l) => l.trim())
+      const width = Math.max(...part.lines.map((x) => x.length))
+      const rows = part.lines.map((l) => l.padStart(width))
+      const dots = rows.filter((l) => l.includes('.')).map((l) => l.indexOf('.'))
+      // 整数（没有小数点）的个位要挨着小数点那一列（7.16 − 3 把 3 写在百分位上就是没对齐）
+      const aligned = new Set(dots).size <= 1 && (dots.length === 0 || rows.every((l) => l.includes('.') || (l[dots[0]!] === ' ' && /\d/.test(l[dots[0]! - 1] ?? ''))))
+      const res = part.result === undefined ? '' : `，横线下面写着 ${part.result.trim().replace(/\s+/g, ' ')}`
+      return `（竖式：${nums.join(part.op === '-' ? ' − ' : ' + ')}${aligned ? '' : '，小数点没有上下对齐'}${res}）`
+    }
+    case 'even-out': {
+      // 移多补少图：每人几个瓶子；画了平均数的虚线就说在几那里
+      const rows = part.rows.map((r) => `${zh(r.name)} ${r.count} 个`).join('、')
+      return `（空水瓶图：${rows}${part.avg === undefined ? '' : `；在 ${part.avg} 那里画了一条虚线，少的用虚线补上了空瓶`}）`
+    }
+    // 四年级数学下册 E
+    case 'cube-solids': {
+      // 观察物体（二）：小正方体搭的物体说「从上面看每格摞几个」（后排在前、前排在后，从左到右）；正方体和长方体说正方体放在哪一格
+      const NUM = '①②③④⑤⑥⑦⑧'
+      const solids = part.items.map((s, i) => {
+        const no = part.numbered ? (NUM[i] ?? `${i + 1}.`) : ''
+        if ('bar' in s) return `${no}一个正方体放在横放的长方体上面（长方体有 ${s.bar} 个正方体那么长），从左数第 ${s.on + 1} 格`
+        const n = s.rows.flat().reduce((a, b) => a + b, 0)
+        const R = s.rows.length
+        if (R === 1) return `${no}${n} 个小正方体摆成一排，每摞的个数从左到右是 ${s.rows[0]!.join('、')}`
+        const names = R === 2 ? ['后排', '前排'] : R === 3 ? ['后排', '中间一排', '前排'] : s.rows.map((_, r) => `从后往前第 ${r + 1} 排`)
+        return `${no}${n} 个小正方体，从上面看每格摞几个：${s.rows.map((row, r) => `${names[r]} ${row.join(' ')}`).join('，')}`
+      })
+      return `（${solids.join('；')}）`
+    }
+    case 'cube-views': {
+      // 看到的图形：从上到下一行一行写，■ 是小正方体的正方形、▤ 是长方体（橙色）、□ 是空着的地方
+      const figs = part.items.map((f, i) => {
+        const w = Math.max(...f.blocks.map((b) => b.x + (b.w ?? 1)))
+        const h = Math.max(...f.blocks.map((b) => b.y + 1))
+        const grid = Array.from({ length: h }, () => Array.from({ length: w }, () => '□'))
+        for (const b of f.blocks) for (let k = 0; k < (b.w ?? 1); k++) grid[h - 1 - b.y]![b.x + k] = b.tone === 'bar' ? '▤' : '■'
+        const head = `${part.numbered ? `${i + 1}：` : ''}${f.caption ? `${zh(f.caption)}：` : ''}`
+        return `${head}${grid.map((row) => row.join('')).join('／')}`
+      })
+      return `（看到的图形　${figs.join('　')}）`
     }
     // 语文（§9）
     case 'hanzi':

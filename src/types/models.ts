@@ -59,6 +59,8 @@ export type QuestionType =
   | 'quantity' // 数量关系：加法模型、乘法模型
   | 'parallel' // 平行与垂直、平行四边形和梯形
   | 'direction' // 方向与位置：八个方向、平面图
+  | 'law' // 运算律（四下）
+  | 'triangle' // 三角形的特性、分类、内角和（四下）
   // ── 语文（§9） ──
   | 'hanzi' // 识字：听音 / 看图 / 看拼音选字、看字选读音
   | 'writing' // 写字与字的结构：笔画、第一笔、偏旁、加一加减一减
@@ -265,6 +267,54 @@ export interface PlanMark {
   at: Dir8
   n: number
 }
+// ── 四年级数学下册的辅助类型 A ──
+/** 线段图（part-line，四下「加、减法的意义」例 1）的一段：len 按实际的数定多长（太短的段画长一点，好写字），label 写在这一段上面的大括号上（「814 km」「?」） */
+export interface PartSeg {
+  len: number
+  label: string
+}
+/**
+ * 树状图（calc-tree，四下「括号」练习三 2）的一步：op 这一步的运算；n 是这一步新加进来的数（第一步用 a、b，不填 n），
+ * left = n 写在上一步得数框的左边（它在算式里排前面：被减数、被除数……），不填写在右边；
+ * v = 这一步的得数框里写什么：数、''（空框）或 '?'（要填的那一格，练习页把按的数填进去）
+ */
+export interface TreeStep {
+  op: '+' | '-' | '×' | '÷'
+  n?: string
+  left?: boolean
+  v: string
+}
+// ── 四年级数学下册的辅助类型 B ──
+// ── 四年级数学下册的辅助类型 C ──
+// ── 四年级数学下册的辅助类型 D ──
+/** 移多补少图（even-out，四下「平均数」例 1 的空水瓶）的一行：谁（图里的名字，不注音不朗读）、有几个 */
+export interface EvenRow {
+  name: LStr
+  count: number
+}
+// ── 四年级数学下册的辅助类型 E ──
+/**
+ * 观察物体（二）里摆好的一个物体（CubeSolids 画，斜二测：正面是正方形，往后的棱向右上斜）：
+ * rows = 小正方体搭的物体的高度图（从上面往下看）：第一行是最后面（离看的人最远）、最后一行是最前面，列从左到右，
+ * 每格是这一摞有几个小正方体（0 = 空）；bar = 练习四 2 的「正方体和长方体」：长方体横放，有 bar 个正方体那么长（橙色），
+ * 正方体（和小正方体同色）放在它上面从左数第 on 格（0 起）
+ */
+export type CubeSolid = { rows: number[][] } | { bar: number; on: number }
+/**
+ * 看到的图形（CubeViews 画，照课本：同色的正方形连在一起、深色边线，不画方格纸）里的一块：从左数第 x 格、从下数第 y 格（0 起），
+ * 宽 w 格（默认 1）；tone 默认和小正方体同色，bar = 长方体的橙色（一整条，中间不画线）
+ */
+export interface ViewBlock {
+  x: number
+  y: number
+  w?: number
+  tone?: 'bar'
+}
+/** 一幅看到的图形：几块拼起来；caption = 图下面写的字（「从前面看」，注音、不朗读） */
+export interface CubeViewFig {
+  blocks: ViewBlock[]
+  caption?: LStr
+}
 
 /** 结构化题干片段：文本 + 教具/图形参数，由 QuestionRenderer 分发渲染 */
 export type StemPart =
@@ -385,6 +435,58 @@ export type StemPart =
   | { kind: 'plan-map'; cells: (PlanPlace | null)[][]; marks?: PlanMark[]; roads?: boolean; title?: LStr }
   /** 指南针（CompassRose，四上「寻找宝藏」）：八个方向的字围成一圈、红针指北；ask = 这个方向不写字、画「?」 */
   | { kind: 'compass'; ask?: Dir8 }
+  // ── 四年级数学下册 A ──
+  /**
+   * 线段图（PartLine，四下「加、减法的意义和各部分间的关系」例 1：西宁—格尔木—拉萨）：一条线分成几段（PartSeg），每段上面一个大括号写 label；
+   * total = 整条线下面一个大括号写的（总数或「?」），不填就不画；names = 各个分点下面写的名字（parts.length + 1 个，图里的字，不注音、不朗读）
+   */
+  | { kind: 'part-line'; parts: PartSeg[]; total?: string; names?: LStr[] }
+  /**
+   * 树状图（CalcTree，四下「括号」练习三 2）：最上面两个数 a、b 各在一个框里，两条斜线往下汇到第一步的得数框，运算符号写在两条斜线中间；
+   * 第二步起每步新加一个数 n（TreeStep），和上一步的得数框在同一层、写在它的左边或右边，再往下汇成这一步的得数框
+   */
+  | { kind: 'calc-tree'; a: string; b: string; steps: TreeStep[] }
+  // ── 四年级数学下册 B ──
+  // ── 四年级数学下册 C ──
+  /**
+   * 小数卡（DecCard，四下「小数的意义和性质」）：照课本写的一个小数（n），大字显示，**不朗读**——读法题把数读出来就等于报了答案；
+   * marks = 下面画横线的那几位（按 n 的字符下标，从左数，0 起，小数点也占一个下标）；
+   * frac = 不写小数、画一个上下两层的分数 [分子, 分母]（分母是 1000、10000 的分数在文字里画不成两层、也读不对，放在卡上）
+   */
+  | { kind: 'dec-card'; n?: string; marks?: number[]; frac?: [number, number] }
+  /**
+   * 米尺和数线（DecScale，四下「小数的意义」例 1 的米尺、练习九 7 / 练习十 6 的直线）：labels 是长刻度下面写的字（「0」「1」……「1 m」「0.1」），
+   * 相邻两个长刻度之间平均分成 per 小格（per 是双数时正中间那一格画中长刻度）；extra = 最后一个长刻度后面再画几小格；
+   * ruler = 画成浅蓝的尺身（刻度从上沿往下、字在刻度下面、红箭头从下面指上去），broken = 右端画成折断线（放大的一段）；
+   * 否则画成向右带箭头的直线（红箭头从上面指下来）；arrow = 红箭头指着从左数第几小格（0 起，可以是 .5：指在两小格中间）
+   */
+  | { kind: 'dec-scale'; labels: string[]; per: number; extra?: number; ruler?: boolean; broken?: boolean; arrow?: number }
+  /**
+   * 小数的数位顺序表（PlaceTable 的小数版，四下 p34）：第一行「整数部分 | 小数点 | 小数部分」，下面「数位」「计数单位」两行；
+   * 整数部分从 top 位到个位（前面一列「……」），小数部分从十分位到第 dec 位（4 = 万分位，后面一列「……」），计数单位的个位写「一（个）」；
+   * ask = 打问号的那一位（0 个位、1 十位……，负数是小数部分：-1 十分位、-2 百分位……）
+   */
+  | { kind: 'dec-table'; top: number; dec: number; ask?: number }
+  // ── 四年级数学下册 D ──
+  /**
+   * 小数竖式（VerticalForm 的小数模式，四下「小数的加法和减法」）：lines 是参加运算的几个数（两个；连加时三个），已经按列排好、一样长的字符串——
+   * 一个字符一列（数字、「.」、空格）；按小数点对齐时各行的「.」在同一列（只有「.」的那一列画得窄），位数少的数右边空着、不补 0；
+   * op 写在最后一行的左边；result = 写好的得数（改错题照写：可以是错的、没对齐的，也按列排好）；不传就在横线下画一排空格子（得数在选项里选）
+   */
+  | { kind: 'dec-vertical'; lines: string[]; op: '+' | '-'; result?: string }
+  /**
+   * 移多补少图（EvenOut，四下「平均数」例 1）：一行一个人（左边写名字），每行画 count 个空水瓶，下面一条数轴 0…max（一个瓶子一格）；
+   * avg = 在平均数那里画一条竖虚线，比它少的行用虚线画出补上的空瓶（课本的移多补少）；不传就不画（平均数要自己求）
+   */
+  | { kind: 'even-out'; rows: EvenRow[]; max: number; avg?: number }
+  // ── 四年级数学下册 E ──
+  /**
+   * 观察物体（二）摆好的物体（CubeSolids）：一个或几个并排（共用一个格子大小），见 CubeSolid；
+   * numbered = 下面标 1、2、3……（选项就是这几个数）。读屏只说「小正方体搭的物体」，不说怎么搭的
+   */
+  | { kind: 'cube-solids'; items: CubeSolid[]; numbered?: boolean }
+  /** 从某个位置看到的图形（CubeViews）：一幅或几幅并排、格子一样大，见 CubeViewFig；numbered = 下面标 1、2、3…… */
+  | { kind: 'cube-views'; items: CubeViewFig[]; numbered?: boolean }
   // ── 语文（§9）：这几种都是中文内容，不翻译；朗读时在英文界面下也用中文读（Y6）──
   /** 大字：每个汉字一个田字格（楷体），其它字符（＋ ＝ ？）原样放大；不注音、不朗读——考的就是认不认得（Y3） */
   /** mark：标红的那个字（多音字「这个词里红色的字怎么读」，Y9） */

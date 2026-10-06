@@ -1,10 +1,11 @@
 import type { KnowledgePoint, Unit } from '@/types/models'
 
 /**
- * 人教版四年级数学知识点树（单一事实源），按 2022 版课标教材（四上 2026 秋起用；目录以国家中小学智慧教育平台上人教社的
- * 电子课本为准）。平台上四下还是旧版教材，新版出来之前只有上册。单元 id：m4s<册>u<目录位置>；知识点 id：
- * m4s<册>-<目录位置两位>-<语义名>（位置含 ☆ 的综合与实践，所以不一定等于教材的单元编号）。带 ☆ 的是教材里没编号的
- * 综合与实践（numbered: false）；「复习与关联」不设知识点。课本第四单元没有小节标题，知识点名照平台同步课的章节名。
+ * 人教版四年级数学知识点树（单一事实源），目录以国家中小学智慧教育平台上人教社的电子课本为准：四上是 2022 版课标新教材
+ * （2026 秋起用）；平台上的四下还是旧版结构（在 2014 年版基础上修订、2022 年审核通过），照平台当前这一本做，平台换了新版
+ * 再照新版重做下册。单元 id：m4s<册>u<目录位置>；知识点 id：m4s<册>-<目录位置两位>-<语义名>（位置含 ☆ 的综合与实践，
+ * 所以不一定等于教材的单元编号）。带 ☆ 的是教材里没编号的综合与实践（numbered: false）；「复习与关联」「总复习」不设知识点。
+ * 课本没有小节标题的地方（上册第四单元、下册第一单元的租船、观察物体（二）），知识点名照平台同步课的章节名或例题内容起。
  */
 export const UNITS: Unit[] = [
   { id: 'm4s1u1', semester: 1, order: 1, title: '万以上数的认识' },
@@ -15,6 +16,16 @@ export const UNITS: Unit[] = [
   { id: 'm4s1u6', semester: 1, order: 5, title: '平行四边形和梯形' },
   { id: 'm4s1u7', semester: 1, order: 6, title: '条形统计图' },
   { id: 'm4s1u8', semester: 1, order: 0, title: '寻找宝藏', numbered: false },
+  { id: 'm4s2u1', semester: 2, order: 1, title: '四则运算' },
+  { id: 'm4s2u2', semester: 2, order: 2, title: '观察物体（二）' },
+  { id: 'm4s2u3', semester: 2, order: 3, title: '运算律' },
+  { id: 'm4s2u4', semester: 2, order: 4, title: '小数的意义和性质' },
+  { id: 'm4s2u5', semester: 2, order: 5, title: '三角形' },
+  { id: 'm4s2u6', semester: 2, order: 6, title: '小数的加法和减法' },
+  { id: 'm4s2u7', semester: 2, order: 7, title: '图形的运动（二）' },
+  { id: 'm4s2u8', semester: 2, order: 8, title: '平均数与条形统计图' },
+  { id: 'm4s2u9', semester: 2, order: 0, title: '营养午餐', numbered: false },
+  { id: 'm4s2u10', semester: 2, order: 9, title: '数学广角——鸡兔同笼' },
 ]
 
 export const KNOWLEDGE_POINTS: KnowledgePoint[] = [
@@ -41,4 +52,37 @@ export const KNOWLEDGE_POINTS: KnowledgePoint[] = [
   { id: 'm4s1-07-single', unitId: 'm4s1u7', title: '单式条形统计图', icon: '📊', questionTypes: ['stat'] },
   { id: 'm4s1-07-double', unitId: 'm4s1u7', title: '复式条形统计图', icon: '📶', questionTypes: ['stat'] },
   { id: 'm4s1-08-treasure', unitId: 'm4s1u8', title: '校园寻宝', icon: '🧭', questionTypes: ['direction'] },
+  // ── 下册 ──（标题里的 \u200b 是零宽的断行点：练习页页头的标题只在空格 / 标点处换行，太长的标题要给它一个词与词之间的断点）
+  { id: 'm4s2-01-addsub', unitId: 'm4s2u1', title: '加、减法的意义和\u200b各部分间的关系', icon: '➕', questionTypes: ['arith'] },
+  { id: 'm4s2-01-muldiv', unitId: 'm4s2u1', title: '乘、除法的意义和\u200b各部分间的关系', icon: '➗', questionTypes: ['arith'] },
+  { id: 'm4s2-01-brackets', unitId: 'm4s2u1', title: '括号', icon: '🧮', questionTypes: ['mixed-ops'] },
+  { id: 'm4s2-01-solve', unitId: 'm4s2u1', title: '解决问题', icon: '🚣', questionTypes: ['mixed-ops'] },
+  { id: 'm4s2-02-positions', unitId: 'm4s2u2', title: '从不同位置观察物体', icon: '🧊', questionTypes: ['view'] },
+  { id: 'm4s2-02-objects', unitId: 'm4s2u2', title: '观察不同的物体', icon: '🧱', questionTypes: ['view'] },
+  { id: 'm4s2-03-add-laws', unitId: 'm4s2u3', title: '加法交换律和结合律', icon: '🔁', questionTypes: ['law'] },
+  { id: 'm4s2-03-add-apply', unitId: 'm4s2u3', title: '加法运算律的应用', icon: '⚡', questionTypes: ['law'] },
+  { id: 'm4s2-03-mul-laws', unitId: 'm4s2u3', title: '乘法交换律和结合律', icon: '🔀', questionTypes: ['law'] },
+  { id: 'm4s2-03-distrib', unitId: 'm4s2u3', title: '乘法分配律', icon: '📦', questionTypes: ['law'] },
+  { id: 'm4s2-03-mul-apply', unitId: 'm4s2u3', title: '乘法运算律的应用', icon: '🚀', questionTypes: ['law'] },
+  { id: 'm4s2-04-meaning', unitId: 'm4s2u4', title: '小数的意义', icon: '📏', questionTypes: ['decimal'] },
+  { id: 'm4s2-04-read-write', unitId: 'm4s2u4', title: '小数的读法和写法', icon: '📖', questionTypes: ['decimal'] },
+  { id: 'm4s2-04-property', unitId: 'm4s2u4', title: '小数的性质', icon: '🪄', questionTypes: ['decimal'] },
+  { id: 'm4s2-04-compare', unitId: 'm4s2u4', title: '小数的大小比较', icon: '⚖️', questionTypes: ['decimal', 'compare'] },
+  { id: 'm4s2-04-shift', unitId: 'm4s2u4', title: '小数点移动引起\u200b小数大小的变化', icon: '↔️', questionTypes: ['decimal'] },
+  { id: 'm4s2-04-units', unitId: 'm4s2u4', title: '小数与单位换算', icon: '🔄', questionTypes: ['decimal', 'compare'] },
+  { id: 'm4s2-04-round', unitId: 'm4s2u4', title: '小数的近似数', icon: '🎯', questionTypes: ['decimal'] },
+  { id: 'm4s2-05-traits', unitId: 'm4s2u5', title: '三角形的特性', icon: '🔺', questionTypes: ['triangle'] },
+  { id: 'm4s2-05-sides', unitId: 'm4s2u5', title: '三角形的三边关系', icon: '🥢', questionTypes: ['triangle'] },
+  { id: 'm4s2-05-kinds', unitId: 'm4s2u5', title: '三角形的分类', icon: '🗂️', questionTypes: ['triangle'] },
+  { id: 'm4s2-05-angle-sum', unitId: 'm4s2u5', title: '三角形的内角和', icon: '📐', questionTypes: ['triangle'] },
+  { id: 'm4s2-05-polygon', unitId: 'm4s2u5', title: '多边形的内角和', icon: '🔶', questionTypes: ['triangle'] },
+  { id: 'm4s2-06-addsub', unitId: 'm4s2u6', title: '小数加减法', icon: '🧾', questionTypes: ['decimal'] },
+  { id: 'm4s2-06-mixed', unitId: 'm4s2u6', title: '小数加减混合运算', icon: '🏷️', questionTypes: ['decimal'] },
+  { id: 'm4s2-06-laws', unitId: 'm4s2u6', title: '整数加法运算律\u200b推广到小数', icon: '♻️', questionTypes: ['decimal', 'law'] },
+  { id: 'm4s2-07-symmetry', unitId: 'm4s2u7', title: '轴对称', icon: '🪞', questionTypes: ['symmetry'] },
+  { id: 'm4s2-07-translate', unitId: 'm4s2u7', title: '平移', icon: '➡️', questionTypes: ['motion'] },
+  { id: 'm4s2-08-average', unitId: 'm4s2u8', title: '平均数', icon: '🥤', questionTypes: ['stat'] },
+  { id: 'm4s2-08-double', unitId: 'm4s2u8', title: '复式条形统计图', icon: '📊', questionTypes: ['stat'] },
+  { id: 'm4s2-09-lunch', unitId: 'm4s2u9', title: '营养午餐', icon: '🍱', questionTypes: ['stat'] },
+  { id: 'm4s2-10-chicken', unitId: 'm4s2u10', title: '鸡兔同笼', icon: '🐔', questionTypes: ['logic'] },
 ]

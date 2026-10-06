@@ -9,5 +9,18 @@ import { KP_SEO as models } from './seo/models'
 import { KP_SEO as quads } from './seo/quads'
 import { KP_SEO as bars } from './seo/bars'
 import { KP_SEO as treasure } from './seo/treasure'
+import { KP_SEO as ops } from './seo/ops'
+import { KP_SEO as laws } from './seo/laws'
+import { KP_SEO as observe } from './seo/observe'
+import { KP_SEO as triangles } from './seo/triangles'
+import { KP_SEO as motion } from './seo/motion'
+import { KP_SEO as decimals } from './seo/decimals'
+import { KP_SEO as decadd } from './seo/decadd'
+import { KP_SEO as average } from './seo/average'
+import { KP_SEO as lunch } from './seo/lunch'
+import { KP_SEO as chicken } from './seo/chicken'
 
-export const KP_SEO: Record<string, KpSeo> = { ...numbers, ...yi, ...angles, ...multiply, ...models, ...quads, ...bars, ...treasure }
+export const KP_SEO: Record<string, KpSeo> = {
+  ...numbers, ...yi, ...angles, ...multiply, ...models, ...quads, ...bars, ...treasure,
+  ...ops, ...laws, ...observe, ...triangles, ...motion, ...decimals, ...decadd, ...average, ...lunch, ...chicken,
+}

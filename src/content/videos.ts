@@ -117,6 +117,34 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm4s1-01-above-yi': 'a219ed82-a73e-e76b-edde-2040d3fa1cfc', // 十进制计数法
   'm4s1-01-compare': '1484f6a2-b2d5-a314-beb9-47667f7710e4', // 数的大小比较
   'm4s1-01-round': 'ab55074c-4ee7-55ab-d556-8baa1b26d52f', // 数的改写和求近似数
+  'm4s2-01-addsub': '716cc82c-b238-468a-869f-5998ba9c1030', // 加、减法的意义和各部分间的关系
+  'm4s2-01-muldiv': '41622daa-0154-4ea9-ab5d-59b1d4178a7a', // 乘、除法的意义和各部分间的关系
+  'm4s2-01-brackets': 'd3e82597-e2a1-4c1f-96e1-507594a17ccd', // 括号
+  'm4s2-01-solve': '2fa15574-bae4-4e18-a2ff-c752ddb94d83', // 解决问题
+  'm4s2-02-positions': 'fd85a03a-8e5b-4383-90c8-0484bc8a65d9', // 2 观察物体（二）
+  'm4s2-02-objects': 'fd85a03a-8e5b-4383-90c8-0484bc8a65d9', // 2 观察物体（二）
+  'm4s2-03-add-laws': '156bf091-609f-4f06-9831-1f8b90bdd0ca', // 加法运算律
+  'm4s2-03-mul-laws': '95c3ccf4-2a27-4892-996a-390f69058843', // 乘法运算律
+  'm4s2-03-distrib': '95c3ccf4-2a27-4892-996a-390f69058843', // 乘法运算律
+  'm4s2-03-mul-apply': '6e29d87d-b45e-4fdd-8d5b-a160c7e69deb', // 乘法运算律的应用
+  'm4s2-04-meaning': 'b8032fec-f4a6-480f-b3a0-c07c0c5a9867', // 小数的意义
+  'm4s2-04-property': 'f6edf193-fc4b-46c9-9b37-dca85c4e4ea2', // 小数的性质
+  'm4s2-04-shift': '45f91496-f7d5-4d2f-9035-568db6fc13de', // 小数点移动引起小数大小的变化
+  'm4s2-04-units': '51c28082-dbf4-4188-a9c6-d8eaaf48a958', // 小数与单位换算
+  'm4s2-04-round': '28244acb-d4fb-4aad-bcdb-295604a5d71a', // 小数的近似数
+  'm4s2-05-traits': '8ede089c-82bb-fc42-ccab-e7dd3999e361', // 三角形的特性
+  'm4s2-05-kinds': '37b746c7-10d1-c82f-6ef1-bee45a13e963', // 三角形的分类
+  'm4s2-05-angle-sum': '209012c4-6307-ffa7-2f8f-1f1edbd6fa0c', // 三角形的内角和
+  'm4s2-05-polygon': 'e5449118-be6c-7cc7-28ab-9b993eb576cb', // 解决问题
+  'm4s2-06-addsub': '55aefab3-c803-c7c7-cabe-aabd5d8f54e2', // 小数加减法
+  'm4s2-06-mixed': 'd68e3ba7-6326-74d9-9423-45c3d4c17350', // 小数加减混合运算
+  'm4s2-06-laws': '188584ae-acc8-85ca-91d7-2e535e585e56', // 整数加法运算律推广到小数
+  'm4s2-07-symmetry': '982fe55c-b608-6847-68e4-4f8da249fbd4', // 轴对称
+  'm4s2-07-translate': '2429fbae-9ada-65c0-a5e1-9c9473067b56', // 平移
+  'm4s2-08-average': '10a9f19e-c356-d712-70d7-2b0914119bc2', // 平均数
+  'm4s2-08-double': '4a18a6a6-fd79-cc49-6237-19169d4d379c', // 复式条形统计图
+  'm4s2-09-lunch': '35888d07-6d05-04d5-5a50-4b9722a71fca', // ★ 营养午餐
+  'm4s2-10-chicken': '09b4bb1d-1f33-e677-dbd2-701fc9cc7ec5', // 9 数学广角——鸡兔同笼
   'c1s1-01-tiandiren': '8b8984a0-3ad9-3183-8250-9dd550069836', // 1 天地人
   'c1s1-01-jinmu': 'f7ba363a-5941-06f0-3300-7972d3fee8d1', // 2 金木水火土
   'c1s1-01-kouer': '8ecbb01e-3df7-91b1-dcaf-5755dd305690', // 3 口耳目手足
@@ -344,6 +372,10 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'm4s1-07-single': { id: 'c840264f-08aa-4b6d-8f36-ac8344781cad', from: 'old' }, // 旧教材 · 7 条形统计图
   'm4s1-07-double': { id: '4a18a6a6-fd79-cc49-6237-19169d4d379c', from: 'old' }, // 旧教材 · 8 平均数与条形统计图 · 复式条形统计图
   'm4s1-08-treasure': { id: '18d0da2f-f884-4e16-b107-20161b8b4104', from: 'old' }, // 旧教材 · 第一单元 位置与方向（一） · 知道东北、东南、西北、西南四个方向
+  'm4s2-03-add-apply': { id: '8ae7e4b0-83f9-d18c-0183-fa95ccec0142', from: 'elite' }, // 四年级下册 · 3 运算律 · 加法运算律的应用（精品课）
+  'm4s2-04-read-write': { id: '50d53460-8170-02af-a0e1-e1020a793609', from: 'elite' }, // 四年级下册 · 4 小数的意义和性质 · 小数的读法和写法（精品课）
+  'm4s2-04-compare': { id: '5b1b6852-a56b-70df-92b1-51f09f64ff78', from: 'elite' }, // 四年级下册 · 4 小数的意义和性质 · 小数的大小比较（精品课）
+  'm4s2-05-sides': { id: '678965f4-cf19-1977-4dd9-5d0c731e8a77', from: 'elite' }, // 四年级下册 · 5 三角形 · 三角形的三边关系（精品课）
   'c2s2-01-garden': { id: 'b612ee0d-a464-438c-9466-bf7ca110e59e', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地一（单元里相同的：咏柳、村居、找春天、开满鲜花的小路、邓小平爷爷植树）
   'c2s2-02-garden': { id: 'e538e7b0-f64c-4b9f-a13a-69dea22463ec', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地二（单元里相同的：雷锋叔叔，你在哪里、千人糕、读读儿童故事）
   'c3s1-02-garden': { id: 'f7fdf3e0-44e2-1369-c058-2db1440308ef', from: 'elite' }, // 新教材三年级上册 · 第二单元 · 语文园地（精品课）
