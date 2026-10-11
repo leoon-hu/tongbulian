@@ -32,6 +32,19 @@ export function hasBlank(q: Question): boolean {
         // 四年级数学下册 C
         // 四年级数学下册 D
         // 四年级数学下册 E
+        // 五年级数学 A
+        // 五年级数学 B
+        // 五年级数学 C
+        // 小数除法竖式里「?」的那一格（除数是小数、商是整数的竖式：按的数写进商那一行）
+        (p.kind === 'dec-division' && [p.quotient, ...(p.rows ?? [])].some((r) => r?.text === '?')) ||
+        // 五年级数学 D
+        // 五年级数学 E
+        // 五年级数学 F
+        // 五年级数学 G
+        // 五年级数学 H
+        // 分数链里要填的「?」（分子、分母、带分数的整数部分、箭头上的「×?」）
+        (p.kind === 'frac-chain' && (p.terms.some((t) => ('t' in t ? t.t : `${t.w ?? ''}${t.n}${t.d}`).includes('?')) || (p.arcs ?? []).some((a) => `${a.top ?? ''}${a.bottom ?? ''}`.includes('?')))) ||
+        // 五年级数学 I
         false,
     )
   )

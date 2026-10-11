@@ -105,6 +105,7 @@ export const SYMBOL_WORDS = {
     'sym.⬜': '和',
     'sym.○': '和', // 比大小的圆圈（三年级起课本写「在○里填上>、<或=」）
     'sym.≈': '约等于', // 四年级求近似数（182068 ≈ 18万）
+    'sym.≠': '不等于', // 五年级
     'sym.(': '括号',
     'sym.)': '括号',
     'sym.[': '中括号', // 四下「括号」：96÷[(12+4)×2]
@@ -124,6 +125,7 @@ export const SYMBOL_WORDS = {
     'sym.⬜': 'and',
     'sym.○': 'and',
     'sym.≈': 'is about',
+    'sym.≠': 'is not equal to',
     'sym.(': 'open bracket',
     'sym.)': 'close bracket',
     'sym.[': 'open square bracket',

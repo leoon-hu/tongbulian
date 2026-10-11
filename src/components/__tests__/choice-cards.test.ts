@@ -7,8 +7,8 @@ import ChoiceCards from '@/components/ui/ChoiceCards.vue'
 import type { Choice } from '@/types/models'
 
 const cards = (labels: string[]): Choice[] => labels.map((label, i) => ({ id: `c${i}`, label }))
-const classesOf = (labels: string[]): { cls: string[]; numLen: string } => {
-  const w = mount(ChoiceCards, { props: { choices: cards(labels) } })
+const classesOf = (labels: string[], choiceStyle?: 'pinyin'): { cls: string[]; numLen: string } => {
+  const w = mount(ChoiceCards, { props: { choices: cards(labels), choiceStyle } })
   const el = w.find('.cards')
   const out = { cls: el.classes(), numLen: (el.element as HTMLElement).style.getPropertyValue('--num-len') }
   w.unmount()
@@ -35,6 +35,14 @@ describe('选项卡的长短档', () => {
     expect(text.numLen).toBe('0')
   })
 
+  it('拼音选项最长 5 个字母以上 py5（对战紧凑版栏窄时排一列，2026-10-11 普查：zhàng 在 135px 的栏里被裁掉最后一个字母）', () => {
+    expect(classesOf(['zhǎng', 'zhàng'], 'pinyin').cls).toEqual(expect.arrayContaining(['py5', 'as-pinyin']))
+    expect(classesOf(['chuǎng', 'shǎng', 'shuǎng', 'shuāng'], 'pinyin').cls).toContain('py5')
+    expect(classesOf(['bā', 'pō', 'mō', 'fó'], 'pinyin').cls).not.toContain('py5')
+    // 文字选项不算拼音
+    expect(classesOf(['大大的', '小小的', '高高的', '长长的']).cls).not.toContain('py5')
+  })
+
   it('对战紧凑版的作答栏是尺寸容器：栏窄时数字选项排一列、字号按栏宽 ÷ 字符数封顶（2026-10-06 普查：第二列整张卡伸出栏外被裁）', () => {
     const src = readFileSync('src/components/battle/PlayerRow.vue', 'utf8')
     expect(src).toMatch(/\.compact \.a \{\s*container-type: inline-size;/)
@@ -43,5 +51,6 @@ describe('选项卡的长短档', () => {
     expect(src).toContain('@container (max-width: 240px)')
     expect(src).toContain(':deep(.cards.num7)')
     expect(src).toContain('var(--num-len)')
+    expect(src).toContain(':deep(.cards.py5)')
   })
 })

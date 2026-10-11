@@ -21,12 +21,16 @@ const BOOKS = {
   // 新教材四上的标题是「新教材-人教版小学数学四年级上册目录」；平台上的四下电子课本还是旧版，课本照它做，同步课就是
   // 旧版四下的那一本（「小学数学人教版四年级下册」，同 OLD_MATH_G4S2），见 OLD_VOLUMES
   'math-g4': ['ce032a22-7d96-4c36-b19c-f5cb8548a10e', 'a0bd25a0-6a56-4235-8225-eab16c04e217'],
+  // 五上「新教材-人教版小学数学五年级上册目录」；五下的电子课本平台上还是旧版，同步课就是旧版五下那一本（「小学数学人教版五年级下册」）
+  'math-g5': ['513c534a-9f5d-4880-8a6b-2bbb069040fe', 'f4184328-83db-4a43-8dab-bb9df75597a6'],
   'chinese-g1': ['b7062df1-f929-458e-964c-d778f89ca255', '2d22a5c9-80b8-46cb-8595-564f5c368f3e'],
   'chinese-g2': ['4bf136c9-43cc-4005-8c8b-b21d21bad96f', 'ac9ba3ad-c2ab-4736-b347-dabae34c6b80'],
   'chinese-g3': ['22707f9a-a593-44a7-89ee-3f4d78905f2e', '6042ef62-a820-41aa-858d-1d6f1d6e3aa7'],
+  // 四上「新教材-小学语文统编版四年级上册」；四下的电子课本平台上还是旧版，同步课就是旧版四下那一本（「小学语文统编版四年级下册」）
+  'chinese-g4': ['1cea417b-ba9c-44b7-b7c1-db53a962f2d4', 'fafb7ff0-f6bb-4fe4-bc6c-362380b28735'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'chinese-g4:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -35,6 +39,7 @@ const OLD_BOOKS = {
   'chinese-g1': ['5ce96672-f52f-4c2f-9c3d-016ed1415278', '2fbcdb5d-0682-4cca-b979-076d0119e3d3'],
   'chinese-g2': ['2aa68399-4700-4030-8973-457cf32384dc', 'f863fdd1-e34d-4aa6-8c6d-7dab5afa66b9'],
   'chinese-g3': ['0eb31453-f373-4c85-8f3c-2bff5f49552e', 'ecc10b88-9661-451f-b9c1-b6dd5fd9a72d'],
+  'chinese-g4': ['c86543a9-4b6a-4d79-8353-c805af23273c', 'fafb7ff0-f6bb-4fe4-bc6c-362380b28735'],
 }
 /**
  * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，
@@ -43,6 +48,21 @@ const OLD_BOOKS = {
 const OLD_MATH_G3S2 = '6bb0e5b1-fffa-4600-801d-e812e22a5c83' // 小学数学人教版三年级下册（旧）
 const OLD_MATH_G4S1 = '208f77e0-0d63-4ca2-8a4c-86af05dd72de' // 小学数学人教版四年级上册（旧）
 const OLD_MATH_G4S2 = 'a0bd25a0-6a56-4235-8225-eab16c04e217' // 小学数学人教版四年级下册（旧）
+const OLD_MATH_G5S1 = '39d25324-a03d-4c79-94ca-1d45f3282f65' // 小学数学人教版五年级上册（旧）
+const OLD_MATH_G5S2 = 'f4184328-83db-4a43-8dab-bb9df75597a6' // 小学数学人教版五年级下册（旧，也是五下 BOOKS 里那一本）
+/**
+ * 语文按课题自动找不到的旧教材对应课（旧教材里同名的课不止一课，或者在别的年级）：知识点 → [同步课教材 id, 章节名, 哪本书]，
+ * 章节名可以写「单元>课题」
+ */
+const OLD_CN_G3S2 = 'ecc10b88-9661-451f-b9c1-b6dd5fd9a72d' // 小学语文统编版三年级下册（旧）
+const OLD_CN_G4S1 = 'c86543a9-4b6a-4d79-8353-c805af23273c' // 小学语文统编版四年级上册（旧）
+const OLD_CN_G5S2 = '117306e1-40c4-4106-bebb-b01a34927951' // 小学语文统编版五年级下册（平台上还是旧版）
+const OLD_CHINESE = {
+  'c4s1-02-maozi': [OLD_CN_G3S2, '方帽子店', '旧教材三年级下册'],
+  'c4s1-02-saima': [OLD_CN_G5S2, '田忌赛马', '旧教材五年级下册'],
+  'c4s1-03-gushi': [OLD_CN_G4S1, '第三单元>古诗三首', '旧教材四年级上册'], // 暮江吟、题西林壁、雪梅（旧教材四上有两组「古诗三首」）
+  'c4s1-08-gushi': [OLD_CN_G4S1, '第七单元>古诗三首', '旧教材四年级上册'], // 出塞、凉州词、夏日绝句
+}
 const OLD_MATH = {
   'm4s1-02-yi': [OLD_MATH_G4S1, '1亿有多大'],
   'm4s1-03-angles': [OLD_MATH_G4S1, '角的分类'],
@@ -61,6 +81,36 @@ const OLD_MATH = {
   'm4s1-07-single': [OLD_MATH_G4S1, '条形统计图'],
   'm4s1-07-double': [OLD_MATH_G4S2, '复式条形统计图'],
   'm4s1-08-treasure': [OLD_MATH_G3S2, '知道东北、东南、西北、西南四个方向'], // 旧教材的八个方向在三下「位置与方向（一）」
+  // 五年级上册（新教材的同步课 2026-10-11 只上了第一单元）
+  'm5s1-02-dec-int': [OLD_MATH_G5S1, '小数乘整数'],
+  'm5s1-02-dec-dec': [OLD_MATH_G5S1, '小数乘小数'],
+  'm5s1-02-approx': [OLD_MATH_G5S1, '积的近似数'],
+  'm5s1-02-times': [OLD_MATH_G5S1, '小数乘小数'], // 旧教材没有单列「小数倍」，例题在小数乘小数里
+  'm5s1-02-laws': [OLD_MATH_G5S1, '整数乘法运算定律推广到小数'],
+  'm5s1-02-estimate': [OLD_MATH_G5S1, '解决问题（估算）'],
+  'm5s1-02-tiered': [OLD_MATH_G5S1, '解决问题（分段计费）'],
+  'm5s1-03-int-divisor': [OLD_MATH_G5S1, '除数是整数的小数除法'],
+  'm5s1-03-repeating': [OLD_MATH_G5S1, '循环小数'],
+  'm5s1-03-dec-divisor': [OLD_MATH_G5S1, '一个数除以小数'],
+  'm5s1-03-approx': [OLD_MATH_G5S1, '商的近似数'],
+  'm5s1-04-symmetry': [OLD_MATH_G4S2, '轴对称'], // 旧教材的轴对称、平移在四下「图形的运动（二）」
+  'm5s1-04-translate': [OLD_MATH_G4S2, '平移'],
+  'm5s1-04-rotate': [OLD_MATH_G5S2, '旋转'], // 旧教材的旋转在五下「图形的运动（三）」
+  'm5s1-05-addsub': [OLD_MATH_G5S1, '用字母表示数'], // 旧教材「简易方程」里的「用字母表示数」，取第一课时
+  'm5s1-05-muldiv': [OLD_MATH_G5S1, '用字母表示数'],
+  'm5s1-05-laws': [OLD_MATH_G5S1, '用字母表示数'],
+  'm5s1-05-equality': [OLD_MATH_G5S1, '等式的性质'],
+  'm5s1-05-axb': [OLD_MATH_G5S1, '用字母表示数'],
+  'm5s1-05-axbx': [OLD_MATH_G5S1, '用字母表示数'],
+  'm5s1-06-parallelogram': [OLD_MATH_G5S1, '平行四边形的面积'],
+  'm5s1-06-hectare': [OLD_MATH_G4S1, '公顷和平方千米'], // 旧教材在四上
+  'm5s1-06-triangle': [OLD_MATH_G5S1, '三角形的面积'],
+  'm5s1-06-trapezoid': [OLD_MATH_G5S1, '梯形的面积'],
+  'm5s1-06-composite': [OLD_MATH_G5S1, '组合图形的面积'],
+  'm5s1-06-irregular': [OLD_MATH_G5S1, '解决问题（不规则图形的面积）'],
+  'm5s1-08-certain': [OLD_MATH_G5S1, '可能性'],
+  'm5s1-08-likely': [OLD_MATH_G5S1, '可能性'],
+  'm5s1-08-infer': [OLD_MATH_G5S1, '可能性'],
 }
 const NATIONAL = 'national_lesson'
 const ELITE = 'elite_lesson'
@@ -239,12 +289,82 @@ const MATH = {
   'm4s2-08-double': '复式条形统计图',
   'm4s2-09-lunch': '营养午餐',
   'm4s2-10-chicken': '数学广角——鸡兔同笼',
+  // 五年级上册（新教材的章节名；同步课 2026-10-11 只有第一单元，其余在 OLD_MATH 找旧教材的课）
+  'm5s1-01-observe': '观察简单组合体',
+  'm5s1-01-restore': '还原简单组合体',
+  'm5s1-02-dec-int': '小数乘整数',
+  'm5s1-02-dec-dec': '小数乘小数',
+  'm5s1-02-approx': '小数乘小数的法则及特殊情形', // 新教材的积的近似数在例 4 的做一做里
+  'm5s1-02-times': '小数倍',
+  'm5s1-02-laws': '整数乘法运算律推广到小数',
+  'm5s1-02-estimate': '估算',
+  'm5s1-02-tiered': '分段计费',
+  'm5s1-03-int-divisor': '除数是整数的除法',
+  'm5s1-03-repeating': '循环小数',
+  'm5s1-03-dec-divisor': '一个数除以小数',
+  'm5s1-03-approx': '取近似数的应用',
+  'm5s1-04-symmetry': '轴对称的特征及画法',
+  'm5s1-04-translate': '平移的特征及画法',
+  'm5s1-04-rotate': '旋转的特征及画法',
+  'm5s1-05-addsub': '用字母表示加减关系',
+  'm5s1-05-muldiv': '用字母表示乘除关系',
+  'm5s1-05-laws': '用字母表示运算律、公式、数量关系等',
+  'm5s1-05-equality': '用字母表示运算律、公式、数量关系等', // 等式的基本性质是例 3 (4)，和运算律、公式同一节
+  'm5s1-05-axb': '用字母表示ax+b的数量关系',
+  'm5s1-05-axbx': '用字母表示ax+bx的数量关系',
+  'm5s1-06-parallelogram': '平行四边形的面积（认识底和高）',
+  'm5s1-06-hectare': '公顷和平方千米的认识',
+  'm5s1-06-triangle': '三角形的面积',
+  'm5s1-06-trapezoid': '梯形的面积',
+  'm5s1-06-composite': '组合图形的面积',
+  'm5s1-06-irregular': '不规则图形的面积',
+  'm5s1-07-tiling': '密铺',
+  'm5s1-08-certain': '认识可能性',
+  'm5s1-08-likely': '实验体会可能性的大小',
+  'm5s1-08-infer': '可能性的逆向实验',
+  // 五年级下册（旧版课本，章节名就是旧版五下同步课的）
+  'm5s2-01-arrange': '观察物体（三）',
+  'm5s2-01-restore': '观察物体（三）', // 两个知识点共用这一节课
+  'm5s2-02-meaning': '因数和倍数的认识',
+  'm5s2-02-find': '因数和倍数的认识', // 找因数、找倍数在同一节课里
+  'm5s2-02-two-five': '2、5的倍数的特征',
+  'm5s2-02-three': '3的倍数的特征',
+  'm5s2-02-prime': '质数和合数',
+  'm5s2-02-parity': '解决问题（探索和的奇偶性）',
+  'm5s2-03-know': '长方体和正方体的认识',
+  'm5s2-03-net': '长方体和正方体的表面积', // 展开图是表面积这一节的开头
+  'm5s2-03-surface': '长方体和正方体的表面积',
+  'm5s2-03-volume-unit': '体积和体积单位',
+  'm5s2-03-volume': '长方体和正方体的体积!', // 这一节自己挂的就是体积公式那节课（下面的三个小节另有课）
+  'm5s2-03-rate': '体积单位间的进率',
+  'm5s2-03-capacity': '容积和容积单位',
+  'm5s2-03-irregular': '解决问题（不规则物体的体积）',
+  'm5s2-04-explore': '探索图形',
+  'm5s2-05-meaning': '分数的产生、意义',
+  'm5s2-05-division': '分数与除法',
+  'm5s2-05-proper': '真分数和假分数',
+  'm5s2-05-mixed': '真分数和假分数', // 假分数化成整数或带分数在同一节课里
+  'm5s2-05-property': '分数的基本性质',
+  'm5s2-05-gcf': '最大公因数',
+  'm5s2-05-reduce': '约分',
+  'm5s2-05-lcm': '最小公倍数',
+  'm5s2-05-common': '通分',
+  'm5s2-05-decimal': '分数和小数互化',
+  'm5s2-06-rotate': '旋转',
+  'm5s2-07-same': '同分母分数加、减法',
+  'm5s2-07-diff': '异分母分数加、减法',
+  'm5s2-07-mixed': '分数加减混合运算',
+  'm5s2-07-laws': '分数加减混合运算', // 运算律推广到分数是混合运算这一节的例 2
+  'm5s2-08-notify': '怎样通知最快',
+  'm5s2-09-single': '单式折线统计图',
+  'm5s2-09-double': '复式折线统计图',
+  'm5s2-10-defective': '数学广角——找次品',
 }
 
 const CN_NUM = '一二三四五六七八九十'
 /**
  * 章节名比较用：去空格、去开头的编号（「1 天地人」「一、认识平面图形」「10 古诗二首」「3* 不懂就要问」）、去引号（“贝”与「贝」）、
- * 去结尾的「（节选）」，～ 与 ~ 不分，ɑ 当 a
+ * 去结尾的「（节选）」与多打的点（新教材四上「6 方帽子店.」「语文园地 .」），～ 与 ~ 不分，ɑ 当 a
  */
 const norm = (s) =>
   s
@@ -254,6 +374,7 @@ const norm = (s) =>
     .replace(/～/g, '~')
     .replace(/ɑ/g, 'a')
     .replace(/[“”"「」]/g, '')
+    .replace(/[.．]+$/, '')
     .replace(/（节选）$/, '')
 /** 比较单元内容用：再去掉旧教材的栏目前缀（「习作：我做了一项小实验」，新教材是「习作」下面一层「我做了一项小实验」） */
 const bare = (s) =>
@@ -316,7 +437,8 @@ async function loadBook(tm) {
    */
   const first = (node, type) => {
     const garden = isGarden(node)
-    const ids = [node.id, ...nodes.filter((x) => x.parents.some((p) => p.id === node.id)).map((x) => x.id)]
+    // own：只看这一节自己挂的课（MATH 里末尾带「!」的，见 mathNode）
+    const ids = node.own ? [node.id] : [node.id, ...nodes.filter((x) => x.parents.some((p) => p.id === node.id)).map((x) => x.id)]
     const all = ids.flatMap((id) => byChapter.get(id) ?? []).filter((v) => v.type === type && (!garden || v.name.includes('园地')))
     all.sort((a, b) => a.hour - b.hour || a.time.localeCompare(b.time))
     return all[0]?.id
@@ -334,14 +456,19 @@ const pathOf = (node) => [...node.parents, node].map((n) => n.title.replace(/\s+
 const mathKey = (title) => norm(title.replace(/^\s*★\s*/, ''))
 function mathNodes(book, want) {
   if (!want) return []
-  const [parent, title] = want.includes('>') ? want.split('>') : [undefined, want]
+  const [parent, title] = (want.includes('>') ? want.split('>') : [undefined, want]).map((s) => s?.replace(/!$/, ''))
   return book.nodes
     .filter((n) => mathKey(n.title) === mathKey(title) && (!parent || n.parents.some((p) => mathKey(p.title) === mathKey(parent))))
     .sort((a, b) => b.parents.length - a.parents.length)
 }
-/** 其中第一个有同步课的（旧教材四上「7 条形统计图」的课挂在单元上，总复习里同名的那一节只有精品课）；都没有就是最深的那个 */
+/**
+ * 其中第一个有同步课的（旧教材四上「7 条形统计图」的课挂在单元上，总复习里同名的那一节只有精品课）；都没有就是最深的那个。
+ * 末尾带「!」的只看这一节自己挂的课、不看下面的小节（旧版五下「长方体和正方体的体积」自己挂着体积公式那节课，下面还有
+ * 「体积和体积单位」等三个小节）
+ */
 function mathNode(book, want) {
-  const list = mathNodes(book, want)
+  const own = !!want?.endsWith('!')
+  const list = mathNodes(book, want).map((n) => (own ? { ...n, own } : n))
   return list.find((n) => book.first(n, NATIONAL)) ?? list[0]
 }
 
@@ -404,7 +531,7 @@ function oldNode(newBooks, newNode, oldBooks, title) {
     const t = bare(n.title)
     return !STRUCTURE.test(t) && newCount.get(t) === 1 && oldCount.get(t) === 1
   })
-  const shown = (n) => n.title.replace(/\s+/g, '').replace(/^[0-9]+\*?/, '')
+  const shown = (n) => n.title.replace(/\s+/g, '').replace(/^[0-9]+\*?/, '').replace(/[.．]+$/, '')
   const ranked = oldBooks
     .flatMap((b, i) =>
       [...gardenSegments(b)].map(([id, list]) => {
@@ -426,16 +553,16 @@ async function fallbackOf(course, books, unit, node, kp) {
   const elite = node && books[unit.semester - 1].first(node, ELITE)
   const edition = OLD_VOLUMES.has(`${course.id}:${unit.semester}`) ? '' : '新教材'
   if (elite) return { id: elite, from: 'elite', note: `${edition}${grade}${SEM[unit.semester - 1]} · ${pathOf(node)}（精品课）` }
-  const math = OLD_MATH[kp.id]
-  if (math) {
-    const [tm, chapter] = math
+  const manual = OLD_MATH[kp.id] ?? OLD_CHINESE[kp.id]
+  if (manual) {
+    const [tm, chapter, book = '旧教材'] = manual
     if (!oldCache.has(tm)) oldCache.set(tm, loadBook(tm))
     const old = await oldCache.get(tm)
     const hits = mathNodes(old, chapter)
     for (const type of [NATIONAL, ELITE]) {
       for (const hit of hits) {
         const id = old.first(hit, type)
-        if (id) return { id, from: type === NATIONAL ? 'old' : 'old-elite', note: `旧教材 · ${pathOf(hit)}${type === ELITE ? '（精品课）' : ''}` }
+        if (id) return { id, from: type === NATIONAL ? 'old' : 'old-elite', note: `${book} · ${pathOf(hit)}${type === ELITE ? '（精品课）' : ''}` }
       }
     }
     return undefined

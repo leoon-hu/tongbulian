@@ -12,8 +12,10 @@ import RubyText from '@/components/ui/RubyText.vue'
  * 格子宽按放得下的宽算（外面包一层容器，用 cqw；18 位的身份证号码在 360px 宽的手机、对战里半栏宽的题干里都放得下一行），
  * 最大 34px；不支持容器单位的浏览器按屏宽算。fit：按几位来算格子宽（上下两个号码比长短时都按长的那个算，格子一样大）。
  * 数字、名字、「第几位」的字号跟着格子宽走。
+ * cards（五下「3的倍数的特征」做一做、练习三：用数字卡片摆数，可选、不填和原来一样）：每个数字画成一张单独的卡片（浅绿底，之间留缝），
+ *        不分段、不画括号；「?」那张是要填数字的空卡（橙色虚线框）。卡片最大 44px。
  */
-const props = defineProps<{ digits: string; segs?: number[]; names?: LStr[]; mark?: number; cell?: number; fit?: number }>()
+const props = defineProps<{ digits: string; segs?: number[]; names?: LStr[]; mark?: number; cell?: number; fit?: number; cards?: boolean }>()
 
 /** 段与段之间的缝（px） */
 const GAP = 6
@@ -71,17 +73,19 @@ const nameRows = computed<Slot[][]>(() => {
 const vars = computed(() => {
   const n = Math.max(1, props.fit ?? 0, chars.value.length)
   const segCount = segments.value.length
+  // 数字卡片：每张卡之间 6px 的缝、每张自己的边框
+  if (props.cards) return { '--n': String(n), '--inner': `${14 + (n - 1) * 6 + n * 3}px`, '--gap': `${GAP}px`, '--cmax': '44px' }
   return { '--n': String(n), '--inner': `${14 + (segCount - 1) * GAP + segCount * 3}px`, '--gap': `${GAP}px` }
 })
 </script>
 
 <template>
   <div class="code-wrap">
-    <div class="code-strip" :class="{ 'has-cell': cell !== undefined }" :style="vars" role="img" :aria-label="digits">
+    <div class="code-strip" :class="{ 'has-cell': cell !== undefined, cards }" :style="vars" role="img" :aria-label="digits">
       <div class="segs">
         <div v-for="s in segments" :key="s.k" class="seg" :class="segClass(s.k)">
           <div class="cells">
-            <span v-for="(ch, i) in s.chars" :key="i" class="cell" :class="{ hot: s.start + i === cell }"
+            <span v-for="(ch, i) in s.chars" :key="i" class="cell" :class="{ hot: s.start + i === cell, ask: cards && ch === '?' }"
               >{{ ch }}<i v-if="s.start + i === cell" class="pos">{{ cell + 1 }}</i></span
             >
           </div>
@@ -107,7 +111,7 @@ const vars = computed(() => {
 }
 .code-strip {
   /* 不支持容器单位时按屏宽算：再减去页面两边各 16px */
-  --cw: min(34px, calc((100vw - 32px - var(--inner)) / var(--n)));
+  --cw: min(var(--cmax, 34px), calc((100vw - 32px - var(--inner)) / var(--n)));
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
@@ -120,7 +124,7 @@ const vars = computed(() => {
     container-type: inline-size;
   }
   .code-strip {
-    --cw: min(34px, calc((100cqw - var(--inner)) / var(--n)));
+    --cw: min(var(--cmax, 34px), calc((100cqw - var(--inner)) / var(--n)));
   }
 }
 .code-strip.has-cell {
@@ -247,5 +251,27 @@ const vars = computed(() => {
   font-size: clamp(13px, calc(var(--cw) * 0.6), 20px);
   font-weight: 700;
   color: var(--segdark);
+}
+/* 数字卡片（cards）：一张一张分开的浅绿卡片，要填的那张是橙色虚线空卡 */
+.code-strip.cards {
+  background: none;
+  padding: 4px 0;
+}
+.cards .cells {
+  gap: 6px;
+  border: none;
+  background: none;
+}
+.cards .cell,
+.cards .cell + .cell {
+  border: 1.5px solid #7fbf9a;
+  border-radius: 6px;
+  background: #eaf7ef;
+  line-height: 1.5;
+}
+.cards .cell.ask {
+  border: 2px dashed var(--c-primary);
+  background: #fff6ec;
+  color: var(--c-primary-dark);
 }
 </style>

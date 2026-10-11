@@ -89,6 +89,46 @@ function rightMark(v: [number, number], ua: [number, number], ub: [number, numbe
   return `M ${f1(p1[0]!)} ${f1(p1[1]!)} L ${f1(p2[0]!)} ${f1(p2[1]!)} L ${f1(p3[0]!)} ${f1(p3[1]!)}`
 }
 
+/**
+ * 尺寸线（五年级，课本练习里「|←— 18 —→|」那种）：画在离 a—b 线段 off 像素的地方（正数在从 a 走向 b 的左手边），
+ * 两头是向外的箭头；off 不为 0 时从 a、b 各引一条细线过去，为 0 时两头画短竖线。字写在中间、白底压住线；
+ * 线太短放不下字时，字挪到尺寸线外侧。
+ */
+function dimLine(a: [number, number], b: [number, number], text: string, off: number, t: GeoTone, mid: Op[], top: Op[]): void {
+  const u = unit(b[0] - a[0], b[1] - a[1])
+  const n: [number, number] = [u[1], -u[0]]
+  const side = off < 0 ? -1 : 1
+  const A: [number, number] = [a[0] + n[0] * off, a[1] + n[1] * off]
+  const B: [number, number] = [b[0] + n[0] * off, b[1] + n[1] * off]
+  const seg = (p: number[], q: number[]): string => `M ${f1(p[0]!)} ${f1(p[1]!)} L ${f1(q[0]!)} ${f1(q[1]!)}`
+  const parts: string[] = [seg(A, B)]
+  for (const [p, P0] of [
+    [a, A],
+    [b, B],
+  ] as const) {
+    if (Math.abs(off) > 0.5) parts.push(seg([p[0] + n[0] * side * 3, p[1] + n[1] * side * 3], [P0[0] + n[0] * side * 6, P0[1] + n[1] * side * 6]))
+    else parts.push(seg([P0[0] - n[0] * 6, P0[1] - n[1] * 6], [P0[0] + n[0] * 6, P0[1] + n[1] * 6]))
+  }
+  // 箭头：尖在两头，朝外
+  for (const [P0, s] of [
+    [A, 1],
+    [B, -1],
+  ] as const) {
+    const w1 = [P0[0] + u[0] * s * 9 + n[0] * 4, P0[1] + u[1] * s * 9 + n[1] * 4]
+    const w2 = [P0[0] + u[0] * s * 9 - n[0] * 4, P0[1] + u[1] * s * 9 - n[1] * 4]
+    parts.push(`M ${f1(w1[0]!)} ${f1(w1[1]!)} L ${f1(P0[0])} ${f1(P0[1])} L ${f1(w2[0]!)} ${f1(w2[1]!)}`)
+  }
+  mid.push({ k: 'path', d: parts.join(' '), cls: `stroke thin dimline s-${t}` })
+  const len = Math.hypot(B[0] - A[0], B[1] - A[1])
+  const tw = text.length * 9.5
+  const m: [number, number] = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]
+  if (len >= tw + 26) top.push({ k: 'text', x: f1(m[0]), y: f1(m[1]), text, cls: 'lbl dimtxt' })
+  else {
+    const o = 12 + Math.abs(n[0]) * tw * 0.5
+    top.push({ k: 'text', x: f1(m[0] + n[0] * side * o), y: f1(m[1] + n[1] * side * o), text, cls: 'lbl' })
+  }
+}
+
 function draw(fig: GeoFig): Drawn {
   const p = pad.value
   const k = (fig.px ?? 1) * scale.value
@@ -135,6 +175,10 @@ function draw(fig: GeoFig): Drawn {
       case 'line': {
         const a = P(it.a)
         const b = P(it.b)
+        if (it.dim !== undefined) {
+          dimLine(a, b, it.dim, it.off ?? 0, tone(it.stroke, 'ink'), mid, top)
+          break
+        }
         mid.push({ k: 'path', d: `M ${f1(a[0])} ${f1(a[1])} L ${f1(b[0])} ${f1(b[1])}`, cls: `stroke s-${tone(it.stroke, 'ink')}${it.dash ? ' dash' : ''}${it.thin ? ' thin' : ''}` })
         if (it.dots?.[0]) dot(a)
         if (it.dots?.[1]) dot(b)
@@ -151,10 +195,16 @@ function draw(fig: GeoFig): Drawn {
       }
       case 'dot': {
         const q = P(it.at)
-        dot(q)
+        // 五年级：给了 r 就画成圆（半径按图里的单位），不画黑点
+        const rr = it.r !== undefined ? it.r * k : 0
+        if (it.r !== undefined) {
+          if (it.fill) back.push({ k: 'circle', x: f1(q[0]), y: f1(q[1]), r: f1(rr), cls: `fill f-${it.fill}` })
+          mid.push({ k: 'circle', x: f1(q[0]), y: f1(q[1]), r: f1(rr), cls: `stroke s-${tone(it.stroke, 'ink')}${it.dash ? ' dash' : ''}${it.thin ? ' thin' : ''}` })
+        } else dot(q)
         if (it.label) {
           const [sx, sy] = SIDE[it.side ?? 's']
-          top.push({ k: 'text', x: f1(q[0] + sx * 15), y: f1(q[1] + sy * 15), text: it.label, cls: 'letter' })
+          const off = rr + 15
+          top.push({ k: 'text', x: f1(q[0] + sx * off), y: f1(q[1] + sy * off), text: it.label, cls: 'letter' })
         }
         break
       }
@@ -166,7 +216,7 @@ function draw(fig: GeoFig): Drawn {
         } else if (it.letter) {
           top.push({ k: 'text', x: f1(q[0]), y: f1(q[1]), text: it.text, cls: 'letter' })
         } else {
-          top.push({ k: 'text', x: f1(q[0]), y: f1(q[1]), text: it.text, cls: `txt t-${tone(it.tone, 'ink')}${it.big ? ' big' : ''}` })
+          top.push({ k: 'text', x: f1(q[0]), y: f1(q[1]), text: it.text, cls: `txt t-${tone(it.tone, 'ink')}${it.big ? ' big' : ''}${it.halo ? ' halo' : ''}` })
         }
         break
       }
@@ -417,6 +467,17 @@ text {
 .lbl.q {
   font-size: 22px;
   fill: var(--c-primary-dark);
+}
+/* 尺寸线（五年级）：细线 + 箭头；中间的字描一圈底色，把线压住 */
+.stroke.dimline {
+  stroke-width: 1.6;
+}
+.lbl.dimtxt,
+.txt.halo {
+  paint-order: stroke;
+  stroke: var(--c-bg);
+  stroke-width: 7px;
+  stroke-linejoin: round;
 }
 .letter {
   font-family: 'Times New Roman', Times, serif;

@@ -145,6 +145,39 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm4s2-08-double': '4a18a6a6-fd79-cc49-6237-19169d4d379c', // 复式条形统计图
   'm4s2-09-lunch': '35888d07-6d05-04d5-5a50-4b9722a71fca', // ★ 营养午餐
   'm4s2-10-chicken': '09b4bb1d-1f33-e677-dbd2-701fc9cc7ec5', // 9 数学广角——鸡兔同笼
+  'm5s1-01-observe': 'dad5f7ac-a512-94ff-e2cd-ec130833827f', // 观察简单组合体
+  'm5s1-01-restore': '3bf899e6-3ba1-f9b2-be2e-bb09651bd965', // 还原简单组合体
+  'm5s2-01-arrange': '3e7ca3cb-0411-4dfe-aeb8-200ac1fedb84', // 1 观察物体（三）
+  'm5s2-01-restore': '3e7ca3cb-0411-4dfe-aeb8-200ac1fedb84', // 1 观察物体（三）
+  'm5s2-02-meaning': '7800fe71-aad8-48df-9899-1f74cf0945ef', // 因数和倍数的认识
+  'm5s2-02-find': '7800fe71-aad8-48df-9899-1f74cf0945ef', // 因数和倍数的认识
+  'm5s2-02-two-five': 'fe029057-f1a9-4e7f-a94d-1c54ff797111', // 2、5的倍数的特征
+  'm5s2-02-prime': '8be922ec-2a4e-46a5-ac6d-3ce44a7cf697', // 质数和合数
+  'm5s2-02-parity': '197940b8-b5f2-477f-a387-94bf063c0808', // 解决问题（探索和的奇偶性）
+  'm5s2-03-know': '086d9874-a2b0-476a-b718-31ce9818f4e6', // 长方体和正方体的认识
+  'm5s2-03-net': 'ec390e40-1445-4024-be13-dc0522c2d838', // 长方体和正方体的表面积
+  'm5s2-03-surface': 'ec390e40-1445-4024-be13-dc0522c2d838', // 长方体和正方体的表面积
+  'm5s2-03-volume-unit': '883acb72-9faa-437a-8c9d-5128a85d98aa', // 体积和体积单位
+  'm5s2-03-volume': 'bc764338-7db4-be08-f075-98dd3298e905', // 长方体和正方体的体积
+  'm5s2-03-rate': '6fcd374a-4147-4873-83af-9c571dd51dec', // 体积单位间的进率
+  'm5s2-03-capacity': '13b76c31-8885-4e3e-9842-727ae51cb6d6', // 容积和容积单位
+  'm5s2-03-irregular': '6430a195-6310-1300-0a95-b48a4d2d29b6', // 解决问题（不规则物体的体积）
+  'm5s2-04-explore': '9d03adb0-e927-43bc-b993-e188bd062f3c', // ★ 探索图形
+  'm5s2-05-meaning': '332f7681-4f98-4ea9-ac3c-2f2849df2cdc', // 分数的产生、意义
+  'm5s2-05-division': 'fc44df16-651a-405f-806c-76d8f2716e77', // 分数与除法
+  'm5s2-05-proper': '66221857-3606-424e-aaef-b6910e89b9cf', // 真分数和假分数
+  'm5s2-05-mixed': '66221857-3606-424e-aaef-b6910e89b9cf', // 真分数和假分数
+  'm5s2-05-property': '9158d483-13f0-49b7-89ea-1aeddfb25f65', // 分数的基本性质
+  'm5s2-05-gcf': '942424a3-d6b5-4669-8b47-1f6ba62f6b8e', // 最大公因数
+  'm5s2-05-reduce': '5ab3c75b-dc15-d3b4-b141-978b821bf9a8', // 约分
+  'm5s2-05-lcm': '3ab99bd2-2060-4e86-88a4-04f8e5cd0557', // 最小公倍数
+  'm5s2-05-common': '52bd3752-5604-4ee8-9105-6250c023d28d', // 通分
+  'm5s2-05-decimal': '935998d3-1dab-d8c9-2538-6be1973d8ccd', // 分数和小数互化
+  'm5s2-06-rotate': '9c30f720-eb79-ae6d-c354-682c294634f6', // 旋转
+  'm5s2-07-same': '054c7c3f-afbf-7d5b-de91-f990d2787d4f', // 同分母分数加、减法
+  'm5s2-08-notify': 'c14bec7b-0cf6-05aa-1c6a-2b274727d879', // ★ 怎样通知最快
+  'm5s2-09-double': '1eb0f934-7016-d6ca-68de-1db853e7af31', // 复式折线统计图
+  'm5s2-10-defective': 'f609d22e-6036-46b0-8f20-3d87cd27da72', // 8 数学广角——找次品
   'c1s1-01-tiandiren': '8b8984a0-3ad9-3183-8250-9dd550069836', // 1 天地人
   'c1s1-01-jinmu': 'f7ba363a-5941-06f0-3300-7972d3fee8d1', // 2 金木水火土
   'c1s1-01-kouer': '8ecbb01e-3df7-91b1-dcaf-5755dd305690', // 3 口耳目手足
@@ -337,6 +370,10 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c3s2-04-minghua': 'b893434f-e341-a7e1-2a60-26804584a6e9', // 15* 一幅名扬中外的画
   'c3s2-05-huluobo': 'af153faf-901f-de63-8f91-39ad95d33e21', // 16 胡萝卜先生的长胡子
   'c3s2-05-yikeshu': '6d1fa478-9fbe-97df-4729-a5ef35243f6e', // 17 我变成了一棵树
+  'c3s2-06-shuimo': '6a988bf8-e08a-d785-bca1-7ebd166a285f', // 18 童年的水墨画
+  'c3s2-06-feizao': 'd0ee5110-bdd7-2949-299a-99883addd70d', // 19 肥皂泡
+  'c3s2-06-huique': '21ec8fc7-ee05-9cb9-9c26-eaed58c8614d', // 20 灰雀
+  'c3s2-06-shixin': 'b86f6059-8b56-d0ed-903e-2008a15b156c', // 21* 我不能失信
   'c3s2-07-huoshaoyun': 'b253ad1f-7cfb-9c96-a9a6-0409634fdb68', // 22 火烧云
   'c3s2-07-baofengyu': 'f8206335-b8bd-dab0-0c1d-9d5516db6c0d', // 23 暴风雨来临之前
   'c3s2-07-shijie': 'ca324adf-9bb8-e01e-a953-99a176923d3c', // 24 我们奇妙的世界
@@ -344,6 +381,44 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c3s2-08-caifeng': 'b25161f4-3ccb-90b4-0ce1-7ece6d279920', // 25 慢性子裁缝和急性子顾客
   'c3s2-08-lou': '34562a60-3e6e-1b09-d5b5-a7c7309d0954', // 26 漏
   'c3s2-08-zaohe': 'f5fda836-2a01-04b1-f498-50f52dc2da91', // 27* 枣核
+  'c4s1-01-guanchao': '06197810-967b-fa4f-1983-a1fe003449b0', // 1 观潮
+  'c4s1-01-fanxing': 'd80c864f-b758-c862-32ea-d6fe0a655a60', // 2 繁星
+  'c4s1-01-xiandaishi': 'e4b10e36-f09e-60d6-b5b6-c2dc0f32e62f', // 3* 现代诗二首
+  'c4s2-01-gushici': 'f4bac759-da1c-4ff4-8bc4-e7d128719e66', // 1 古诗词三首
+  'c4s2-01-xiangxia': 'd76cb763-97c2-4a96-bf10-75b52e34987b', // 2 乡下人家
+  'c4s2-01-tianchuang': '545b0a0f-7ac3-43cd-8ac6-0d92e51396ee', // 3 天窗
+  'c4s2-01-taohuashui': '9036566b-b34b-47f5-92d2-3e8997429ba5', // 4* 三月桃花水
+  'c4s2-01-garden': '8033a85c-52c5-4066-a695-c8ea350c72eb', // 语文园地
+  'c4s2-02-hupo': 'e25d35e0-5cc2-4202-b402-469dce3e2c99', // 5 琥珀
+  'c4s2-02-konglong': '2367d36b-8c93-44c1-a983-a678bc5f4790', // 6 飞向蓝天的恐龙
+  'c4s2-02-nami': 'ce7e698c-d7e8-45db-aa8d-b34ef9d4527f', // 7 纳米技术就在我们身边
+  'c4s2-02-mengyuan': '5ad190eb-56a0-4bf4-a418-912cc942b3f4', // 8*千年梦圆在今朝
+  'c4s2-02-garden': 'a4785df4-eb86-4487-9665-d7f0aab1d662', // 语文园地
+  'c4s2-03-duanshi': '27c180d3-41a8-43e4-ad14-da19758c9f2b', // 9 短诗三首
+  'c4s2-03-lv': 'e199f54b-50ba-41f2-bfa3-4b7b5cc78808', // 10 绿
+  'c4s2-03-baihua': 'f28e9c51-ab2e-4c5e-9920-bd157fcc0291', // 11 白桦
+  'c4s2-03-tianqing': '55afd451-90f3-4456-86d5-698f141b1b06', // 12*在天晴了的时候
+  'c4s2-03-garden': '5cf509b4-2b60-49d6-9797-043e036e5ca1', // 语文园地
+  'c4s2-04-mao': '947c4d9c-7635-47f4-9db6-a1948906d76d', // 13 猫
+  'c4s2-04-muji': '06ddfa86-3701-4a75-b84d-abfae6f87731', // 14 母鸡
+  'c4s2-04-baie': '6ae86b4e-659b-43ac-977b-5a9b41c40852', // 15 白鹅
+  'c4s2-04-garden': 'db139bc4-8a5e-42ec-8743-3c8fb714a6ac', // 语文园地
+  'c4s2-05-richu': '05af45a9-a042-4d17-9b88-71d5347d046e', // 16 海上日出
+  'c4s2-05-shuanglong': 'b0e29389-9572-4a80-a761-9ee075b9252c', // 17 记金华的双龙洞
+  'c4s2-06-wenyan': '476cb2a1-30a2-4880-ab8f-abd95bebdfa2', // 18 文言文二则
+  'c4s2-06-yulai': '8ac85081-a8c3-4fab-9881-fe5d0cea9071', // 19 小英雄雨来（节选）
+  'c4s2-06-nanzihan': 'f271ed38-a547-49ae-9aa9-e32d8f488e43', // 20*我们家的男子汉
+  'c4s2-06-luhuaxie': 'f8dcf59c-5c82-467f-ac0a-f4de23829bb3', // 21*芦花鞋
+  'c4s2-06-garden': 'a939c0a4-4df3-4fae-975c-ab21e877d93a', // 语文园地
+  'c4s2-07-gushi': '114fd2ce-4ad5-47fb-adb1-45ab656bd91f', // 22 古诗三首
+  'c4s2-07-huangjiguang': 'c6326a87-4314-4ba0-8431-7a659170e356', // 23 黄继光
+  'c4s2-07-nuomandi': '4bcd3cd7-fc27-4acb-b858-473b228660f0', // 24 “诺曼底号”遇难记
+  'c4s2-07-tiaoshangong': '66ce4871-9777-11ec-92ef-246e9675e50c', // 25* 挑山工
+  'c4s2-07-garden': '78f0dfee-7737-4aed-ae69-bc987216755e', // 语文园地
+  'c4s2-08-baohulu': '021aa8d0-e544-40ba-a6bf-5a9e99126f46', // 26 宝葫芦的秘密（节选）
+  'c4s2-08-juren': 'cb78e443-d546-40d5-a0a8-3150976bb73c', // 27 巨人的花园
+  'c4s2-08-nver': '35bcd698-5fe9-4653-a71e-9c074e3d302a', // 28* 海的女儿
+  'c4s2-08-garden': '23189250-a778-4aab-9e01-523d0d82b5f6', // 语文园地
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -376,6 +451,40 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'm4s2-04-read-write': { id: '50d53460-8170-02af-a0e1-e1020a793609', from: 'elite' }, // 四年级下册 · 4 小数的意义和性质 · 小数的读法和写法（精品课）
   'm4s2-04-compare': { id: '5b1b6852-a56b-70df-92b1-51f09f64ff78', from: 'elite' }, // 四年级下册 · 4 小数的意义和性质 · 小数的大小比较（精品课）
   'm4s2-05-sides': { id: '678965f4-cf19-1977-4dd9-5d0c731e8a77', from: 'elite' }, // 四年级下册 · 5 三角形 · 三角形的三边关系（精品课）
+  'm5s1-02-dec-int': { id: '12b3206d-c2a5-42ab-b572-3b763886b477', from: 'old' }, // 旧教材 · 1 小数乘法 · 小数乘整数
+  'm5s1-02-dec-dec': { id: '6bdcfbb5-1e77-4e05-83e5-955ba7d47e6f', from: 'old' }, // 旧教材 · 1 小数乘法 · 小数乘小数
+  'm5s1-02-approx': { id: '4b1c2cdf-3312-44aa-9698-a6df671d64cb', from: 'old' }, // 旧教材 · 1 小数乘法 · 积的近似数
+  'm5s1-02-times': { id: '6bdcfbb5-1e77-4e05-83e5-955ba7d47e6f', from: 'old' }, // 旧教材 · 1 小数乘法 · 小数乘小数
+  'm5s1-02-laws': { id: '8814c7dc-3b5f-44c4-9db0-52a6903dbb1c', from: 'old' }, // 旧教材 · 1 小数乘法 · 整数乘法运算定律推广到小数
+  'm5s1-02-estimate': { id: '2ccc01d3-ed81-47f6-b9e6-d20be4f0f793', from: 'old' }, // 旧教材 · 1 小数乘法 · 解决问题 · 解决问题（估算）
+  'm5s1-02-tiered': { id: 'af3c5bb1-2b80-6f76-4828-bef4484adf1e', from: 'old-elite' }, // 旧教材 · 1 小数乘法 · 解决问题 · 解决问题（分段计费）（精品课）
+  'm5s1-03-int-divisor': { id: '9a77ffb0-9b1a-451e-b1b8-01cf8e5f0ac6', from: 'old' }, // 旧教材 · 3 小数除法 · 除数是整数的小数除法
+  'm5s1-03-repeating': { id: 'b5085877-b9e9-426a-adab-f89e3434daeb', from: 'old' }, // 旧教材 · 3 小数除法 · 循环小数
+  'm5s1-03-dec-divisor': { id: '3a30b504-9a79-4ae7-824d-6e307f573983', from: 'old' }, // 旧教材 · 3 小数除法 · 一个数除以小数
+  'm5s1-03-approx': { id: '85961024-0398-4289-b946-128cb006ad71', from: 'old' }, // 旧教材 · 3 小数除法 · 商的近似数
+  'm5s1-04-symmetry': { id: '982fe55c-b608-6847-68e4-4f8da249fbd4', from: 'old' }, // 旧教材 · 7 图形的运动（二） · 轴对称
+  'm5s1-04-translate': { id: '2429fbae-9ada-65c0-a5e1-9c9473067b56', from: 'old' }, // 旧教材 · 7 图形的运动（二） · 平移
+  'm5s1-04-rotate': { id: '9c30f720-eb79-ae6d-c354-682c294634f6', from: 'old' }, // 旧教材 · 5 图形的运动（三） · 旋转
+  'm5s1-05-addsub': { id: '7dc26415-5563-40a8-b749-f0f1e20710ee', from: 'old' }, // 旧教材 · 5 简易方程 · 用字母表示数
+  'm5s1-05-muldiv': { id: '7dc26415-5563-40a8-b749-f0f1e20710ee', from: 'old' }, // 旧教材 · 5 简易方程 · 用字母表示数
+  'm5s1-05-laws': { id: '7dc26415-5563-40a8-b749-f0f1e20710ee', from: 'old' }, // 旧教材 · 5 简易方程 · 用字母表示数
+  'm5s1-05-equality': { id: '4b4574af-3bff-466f-b8a1-113691217a50', from: 'old' }, // 旧教材 · 5 简易方程 · 等式的性质
+  'm5s1-05-axb': { id: '7dc26415-5563-40a8-b749-f0f1e20710ee', from: 'old' }, // 旧教材 · 5 简易方程 · 用字母表示数
+  'm5s1-05-axbx': { id: '7dc26415-5563-40a8-b749-f0f1e20710ee', from: 'old' }, // 旧教材 · 5 简易方程 · 用字母表示数
+  'm5s1-06-parallelogram': { id: '7c46fa69-80ef-4aee-a43d-efe01366a73b', from: 'old' }, // 旧教材 · 6 多边形的面积 · 平行四边形的面积
+  'm5s1-06-hectare': { id: '7a58ed90-9fc0-48ce-bc6f-0f3817c24037', from: 'old' }, // 旧教材 · 2 公顷和平方千米
+  'm5s1-06-triangle': { id: '11262e08-b436-42ad-8c94-fd983c847cf0', from: 'old' }, // 旧教材 · 6 多边形的面积 · 三角形的面积
+  'm5s1-06-trapezoid': { id: 'f5615639-226d-42f7-b1ca-a16cce9fcfcb', from: 'old' }, // 旧教材 · 6 多边形的面积 · 梯形的面积
+  'm5s1-06-composite': { id: 'ec242cde-e975-4b7d-85ab-3f926ca5c4bf', from: 'old' }, // 旧教材 · 6 多边形的面积 · 组合图形的面积
+  'm5s1-06-irregular': { id: '8ab21204-a58f-44b1-862f-c62b5011cefa', from: 'old' }, // 旧教材 · 6 多边形的面积 · 解决问题（不规则图形的面积）
+  'm5s1-08-certain': { id: 'c6d03265-9867-4040-a190-4cb66892bdde', from: 'old' }, // 旧教材 · 4 可能性
+  'm5s1-08-likely': { id: 'c6d03265-9867-4040-a190-4cb66892bdde', from: 'old' }, // 旧教材 · 4 可能性
+  'm5s1-08-infer': { id: 'c6d03265-9867-4040-a190-4cb66892bdde', from: 'old' }, // 旧教材 · 4 可能性
+  'm5s2-02-three': { id: '573330a5-68ee-9672-bff2-fd2858dc1099', from: 'elite' }, // 五年级下册 · 2 因数与倍数 · 2、5、3的倍数的特征 · 3的倍数的特征（精品课）
+  'm5s2-07-diff': { id: '9c576712-4d29-460e-85ad-617d55b71266', from: 'elite' }, // 五年级下册 · 6 分数的加法和减法 · 异分母分数加、减法（精品课）
+  'm5s2-07-mixed': { id: '56cadff1-3ee9-e487-b8e1-ecc1da0acb3a', from: 'elite' }, // 五年级下册 · 6 分数的加法和减法 · 分数加减混合运算（精品课）
+  'm5s2-07-laws': { id: '56cadff1-3ee9-e487-b8e1-ecc1da0acb3a', from: 'elite' }, // 五年级下册 · 6 分数的加法和减法 · 分数加减混合运算（精品课）
+  'm5s2-09-single': { id: '763181ee-9db3-ea6d-c080-e8934f402abd', from: 'elite' }, // 五年级下册 · 7 折线统计图 · 单式折线统计图（精品课）
   'c2s2-01-garden': { id: 'b612ee0d-a464-438c-9466-bf7ca110e59e', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地一（单元里相同的：咏柳、村居、找春天、开满鲜花的小路、邓小平爷爷植树）
   'c2s2-02-garden': { id: 'e538e7b0-f64c-4b9f-a13a-69dea22463ec', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地二（单元里相同的：雷锋叔叔，你在哪里、千人糕、读读儿童故事）
   'c3s1-02-garden': { id: 'f7fdf3e0-44e2-1369-c058-2db1440308ef', from: 'elite' }, // 新教材三年级上册 · 第二单元 · 语文园地（精品课）
@@ -384,12 +493,35 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'c3s2-01-garden': { id: '116c1353-da0a-40a9-b7cd-3ae5d5b8a606', from: 'old' }, // 旧教材三年级下册 · 第一单元 · 语文园地（单元里相同的：绝句、惠崇春江晚景、三衢道中、燕子、荷花、昆虫备忘录、我的植物朋友）
   'c3s2-03-garden': { id: '8df28e2e-2d24-444f-b482-92498b1b8b90', from: 'old' }, // 旧教材三年级下册 · 第四单元 · 语文园地（单元里相同的：小虾、我做了一项小实验）
   'c3s2-04-garden': { id: 'cc6f0c71-ac0a-44b3-bb99-a0beb3783fb4', from: 'old' }, // 旧教材三年级下册 · 第三单元 · 语文园地（单元里相同的：元日、清明、九月九日忆山东兄弟、纸的发明、赵州桥、一幅名扬中外的画、中华传统节日）
-  'c3s2-06-shuimo': { id: '0e72470a-a3e6-42f9-8fc0-dc15e9b6adec', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 18 童年的水墨画
-  'c3s2-06-feizao': { id: '3a48fe12-f9d4-4c00-8db9-35f6edb0249a', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 20 肥皂泡
-  'c3s2-06-huique': { id: '692515b8-2f5b-424e-8e40-7455ce03c6e8', from: 'old' }, // 旧教材三年级上册 · 第八单元 · 25 灰雀
-  'c3s2-06-shixin': { id: 'cacefaa5-a63a-4190-a353-ee2d128709fd', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 21* 我不能失信
   'c3s2-06-garden': { id: '47b49160-2bb8-40cf-bfbd-cad364429f5f', from: 'old' }, // 旧教材三年级下册 · 第六单元 · 语文园地（单元里相同的：童年的水墨画、肥皂泡、我不能失信、身边那些有特点的人）
   'c3s2-08-garden': { id: '103330d5-ec9a-41ea-a4c7-3917848b5ead', from: 'old' }, // 旧教材三年级下册 · 第八单元 · 语文园地（单元里相同的：慢性子裁缝和急性子顾客、漏、枣核、趣味故事会、这样想象真有趣）
+  'c4s1-01-garden': { id: 'f05f88e9-761f-4546-974c-3c9b480f4cac', from: 'old' }, // 旧教材四年级上册 · 第一单元 · 语文园地（单元里相同的：观潮、繁星、现代诗二首、我们与环境、推荐一个好地方）
+  'c4s1-02-doujia': { id: 'ab3a465b-0513-4153-bb97-0fbb63d97368', from: 'old' }, // 旧教材四年级上册 · 第二单元 · 5 一个豆荚里的五粒豆
+  'c4s1-02-yejian': { id: 'd979ec6b-0440-4f26-8bd4-e6a150bfff72', from: 'old' }, // 旧教材四年级上册 · 第二单元 · 6 夜间飞行的秘密
+  'c4s1-02-maozi': { id: 'e6ec32bf-3b2a-4d4e-aad9-766886217540', from: 'old' }, // 旧教材三年级下册 · 第八单元 · 26 *方帽子店
+  'c4s1-02-saima': { id: 'a50e39f6-c720-4f34-b616-834835ca42c4', from: 'old' }, // 旧教材五年级下册 · 第六单元 · 16 田忌赛马
+  'c4s1-02-garden': { id: 'fddb4787-c818-44f0-bb26-b42e11492148', from: 'old' }, // 旧教材四年级上册 · 第二单元 · 语文园地（单元里相同的：一个豆荚里的五粒豆、夜间飞行的秘密、我的家人）
+  'c4s1-03-gushi': { id: 'a0110265-4955-4d80-aca2-a5d1272d444d', from: 'old' }, // 旧教材四年级上册 · 第三单元 · 9 古诗三首
+  'c4s1-03-pashanhu': { id: '62ae9eba-c8b5-42d7-8197-2ed39dfdef2b', from: 'old' }, // 旧教材四年级上册 · 第三单元 · 10 爬山虎的脚
+  'c4s1-03-xishuai': { id: '0e1dfe4e-7803-4777-9c0d-bb78488772c1', from: 'old' }, // 旧教材四年级上册 · 第三单元 · 11 蟋蟀的住宅
+  'c4s1-03-garden': { id: '179bd995-9c9f-4da8-99d3-f98005a93c97', from: 'old' }, // 旧教材四年级上册 · 第三单元 · 语文园地（单元里相同的：爬山虎的脚、蟋蟀的住宅、爱护眼睛，保护视力、写观察日记）
+  'c4s1-04-pangu': { id: '8b79827f-e5c5-4cfb-beee-43903170646f', from: 'old' }, // 旧教材四年级上册 · 第四单元 · 12 盘古开天地
+  'c4s1-04-jingwei': { id: 'f4622eca-8b8f-4caa-b0c4-166abdf356f6', from: 'old' }, // 旧教材四年级上册 · 第四单元 · 13 精卫填海
+  'c4s1-04-puluomi': { id: '184368fb-c940-4905-97f3-b4a16c18b557', from: 'old' }, // 旧教材四年级上册 · 第四单元 · 14 普罗米修斯
+  'c4s1-04-nvwa': { id: '100dbbc3-5c15-4e81-9db8-70195d98988e', from: 'old' }, // 旧教材四年级上册 · 第四单元 · 15*女娲补天
+  'c4s1-04-garden': { id: '52154b25-eccf-4aab-9286-2d92cac7fb79', from: 'old' }, // 旧教材四年级上册 · 第四单元 · 语文园地（单元里相同的：盘古开天地、精卫填海、普罗米修斯、女娲补天、我和____过一天、很久很久以前）
+  'c4s1-05-maque': { id: '8528061d-2af0-4b2d-8212-19f9b9638863', from: 'old' }, // 旧教材四年级上册 · 第五单元 · 16 麻雀
+  'c4s1-05-tiandu': { id: 'fe05b15b-f9f1-4c7d-ba14-d916706895db', from: 'old' }, // 旧教材四年级上册 · 第五单元 · 17 爬天都峰
+  'c4s1-06-yiheyuan': { id: '24223de1-889c-fedb-476d-589152fcd4b5', from: 'old-elite' }, // 旧教材四年级下册 · 第五单元 · 习作例文： · 颐和园（精品课）
+  'c4s1-07-niue': { id: 'f5ddb757-8ab9-4308-852e-8641eafa3a9a', from: 'old' }, // 旧教材四年级上册 · 第六单元 · 18 牛和鹅
+  'c4s1-07-laohu': { id: '3b5e9201-1b05-419c-ae3e-e436c33d1bc5', from: 'old' }, // 旧教材四年级上册 · 第六单元 · 19 一只窝囊的大老虎
+  'c4s1-07-tuoluo': { id: 'f7a293db-4e9f-4bd8-8ecd-ea1450370487', from: 'old' }, // 旧教材四年级上册 · 第六单元 · 20 陀螺
+  'c4s1-07-wangrong': { id: 'd1e5af47-2d64-49b8-8603-85765b7ac2d8', from: 'old' }, // 旧教材四年级上册 · 第八单元 · 25 王戎不取道旁李
+  'c4s1-07-garden': { id: '936e06c7-b031-4bca-889c-f99e0871caa2', from: 'old' }, // 旧教材四年级上册 · 第六单元 · 语文园地（单元里相同的：牛和鹅、一只窝囊的大老虎、陀螺、安慰）
+  'c4s1-08-jueqi': { id: '2e19902c-8a4c-4393-a521-eb23767322a5', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 22 为中华之崛起而读书
+  'c4s1-08-yanan': { id: '04809709-8587-474a-931c-a7c0fa2916b8', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 24* 延安，我把你追寻
+  'c4s1-08-gushi': { id: '278aaa3d-bc23-4305-a88b-ea8ac9abf4f6', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 21 古诗三首
+  'c4s1-08-garden': { id: 'b96cb450-7a4e-4564-b132-59222b576c1e', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 语文园地（单元里相同的：为中华之崛起而读书、延安，我把你追寻、写信）
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

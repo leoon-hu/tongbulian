@@ -61,6 +61,12 @@ export type QuestionType =
   | 'direction' // 方向与位置：八个方向、平面图
   | 'law' // 运算律（四下）
   | 'triangle' // 三角形的特性、分类、内角和（四下）
+  // ── 五年级起 ──
+  | 'dec-calc' // 小数乘法、小数除法（五上）
+  | 'algebra' // 用字母表示数和数量关系（五上）
+  | 'chance' // 可能性（五上）
+  | 'factor' // 因数和倍数、最大公因数、最小公倍数（五下）
+  | 'solid' // 长方体和正方体：认识、展开图、表面积、体积、容积（五下）
   // ── 语文（§9） ──
   | 'hanzi' // 识字：听音 / 看图 / 看拼音选字、看字选读音
   | 'writing' // 写字与字的结构：笔画、第一笔、偏旁、加一加减一减
@@ -139,13 +145,18 @@ export type GeoSide = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
  * 四年级加的（都是可选的，不填和三年级画得一样）：grid 的 dots = 点子图（只在格点上画小圆点，不画格线）；
  * arc 的 ccw = 从 a 那条边起在屏幕上逆时针转到 b 那条边（可以超过 180°：平角画半圆、a、b 同向是周角画整圈），
  * arrow = 弧的末端画箭头（射线旋转的方向），r = 弧的半径（像素，默认 16）
+ * 五年级加的（也都是可选的）：dot 的 r = 画成圆心在 at、半径 r（图里的单位）的圆，不画黑点——fill 涂色、stroke 边的颜色
+ * （默认 ink）、dash 虚线边、thin 细边，label 照样标在圆外；line 的 dim = 尺寸线：a、b 两头画箭头，中间写 dim 这段字（数），
+ * off = 尺寸线离开 a—b 多少像素（正数画在从 a 走向 b 的左手边：a→b 朝右时在上面、朝下时在右边），off 不为 0 时
+ * 两头画到 a、b 的引线；text 的 halo = 字描一圈底色（压在线上也看得清，比如写在高的虚线中间）。
+ * 没有另加新的 t（三、四年级的 mapItem 是穷尽的 switch，加新种类会让它们类型检查报错）。
  */
 export type GeoItem =
   | { t: 'poly'; pts: GeoPt[]; open?: boolean; fill?: GeoTone; stroke?: GeoTone; dash?: boolean; labels?: (string | null)[]; right?: number[] }
-  | { t: 'line'; a: GeoPt; b: GeoPt; dots?: [boolean, boolean]; stroke?: GeoTone; dash?: boolean; thin?: boolean }
+  | { t: 'line'; a: GeoPt; b: GeoPt; dots?: [boolean, boolean]; stroke?: GeoTone; dash?: boolean; thin?: boolean; dim?: string; off?: number }
   | { t: 'curve'; pts: GeoPt[]; closed?: boolean; fill?: GeoTone; stroke?: GeoTone; dots?: [boolean, boolean] }
-  | { t: 'dot'; at: GeoPt; label?: string; side?: GeoSide }
-  | { t: 'text'; at: GeoPt; text: string; tone?: GeoTone; big?: boolean; badge?: boolean; letter?: boolean }
+  | { t: 'dot'; at: GeoPt; label?: string; side?: GeoSide; r?: number; fill?: GeoTone; stroke?: GeoTone; dash?: boolean; thin?: boolean }
+  | { t: 'text'; at: GeoPt; text: string; tone?: GeoTone; big?: boolean; badge?: boolean; letter?: boolean; halo?: boolean }
   | { t: 'grid'; x: number; y: number; w: number; h: number; cells?: GeoPt[]; fill?: GeoTone; lines?: boolean; dots?: boolean }
   | { t: 'arc'; at: GeoPt; a: GeoPt; b: GeoPt; right?: boolean; ccw?: boolean; arrow?: boolean; r?: number }
 /** 一幅几何图：外框 w × h（图里的单位），px = 每单位几像素（默认 1；放不下时组件整体等比缩小） */
@@ -314,6 +325,119 @@ export interface ViewBlock {
 export interface CubeViewFig {
   blocks: ViewBlock[]
   caption?: LStr
+}
+// ── 五年级数学的辅助类型 A ──
+/** 标数的俯视图（cube-top，五上「观察简单组合体」练习一 9）里的一格：从左数第 x 格、从下数第 y 格（y = 0 是最前排），写着这个位置摞了 n 个小正方体 */
+export interface TopCell {
+  x: number
+  y: number
+  n: number
+}
+/**
+ * 三下的运动小图（MotionItem）在五年级加的可选字段（同名接口合并，原来的用法不变）：
+ * swing = 钟面（fig: 'clock'）下面挂一根钟摆，从竖直的位置（虚线）摆到左边 / 右边（实线），下面画弧形箭头（五上「旋转」练习九 1）；
+ * spin = 风车（fig: 'pinwheel'）只转叶片、杆子不动，叶片顺时针转了几度（90 的倍数，五上「旋转」练习十 3）
+ */
+export interface MotionItem {
+  swing?: 'left' | 'right'
+  spin?: number
+}
+// ── 五年级数学的辅助类型 B ──
+/**
+ * 小数倍的线段图（RatioLines，五上「小数乘法」例 5）的一行：name 写在左边（「一班」，图里的字，不注音、不朗读）；
+ * len = 这条线有几小段长（第一行是「1 倍」那条，长 per 小段）；top = 上面大括号写的（「0.8 倍」），bottom = 下面大括号写的（「3.9 kg」「? kg」）
+ */
+export interface RatioRow {
+  name: LStr
+  len: number
+  top: LStr
+  bottom: string
+}
+// ── 五年级数学的辅助类型 C ──
+/** 摸球盒、转盘里的颜色（五上「可能性」：课本用红、黄、蓝、绿、白） */
+export type ChanceColor = 'red' | 'yellow' | 'blue' | 'green' | 'white'
+/** 摸球盒里的一种颜色有几个 */
+export interface ChanceBalls {
+  color: ChanceColor
+  n: number
+}
+/**
+ * 小数除法竖式里绿底标出的一段（LongDivision 的小数模式，五上「小数除法」例 3 的余数 25）：row = rows 的下标，n = 从这一行左边数几个字
+ * （「250」只标「25」：课本标的是余数，落下来的 0 不标）
+ */
+export type DivMark = [number, number]
+// ── 五年级数学的辅助类型 D ──
+/**
+ * 找规律的图（PatternDots，五上「用字母表示 ax+b 的数量关系」）里的一幅，照课本画：
+ * tables = n 张长方形桌子一张接一张拼成一排，每张桌子上下两边各坐 side 人、整排两头各坐 1 人（圆圈是座位；例 4 是 side 1，练习十三 6 是 side 2）；
+ * rows = 一排一排摆的圆片，counts 从上往下是每排几个，每排居中（练习十二 1：2、4、6、8）；
+ * stones = r 行 r + 1 列的棋子，从上往下第 i 行（从 1 数）前 i 个是黑棋、其余是白棋（练习十二 5）
+ */
+export type PatternFig = { t: 'tables'; n: number; side: 1 | 2 } | { t: 'rows'; counts: number[] } | { t: 'stones'; r: number }
+// ── 五年级数学的辅助类型 E ──
+// ── 五年级数学的辅助类型 F ──
+// ── 五年级数学的辅助类型 G ──
+/**
+ * 带标注的长方体 / 正方体（BoxFigure，五下「长方体和正方体」）：照课本的斜二测画——正面是真正的长方形，往后的棱向右上斜、画一半长。
+ * l 长（正面的底边）、w 宽（往后的棱）、h 高（竖着的棱）按比例画（悬殊太大时把短的放长一点，免得扁成一条线）；
+ * labels：交于右前下顶点的三条棱旁写的字（数、字母、「?」，不放汉字；单位写在题目文字里）——l 写在正面底边下面、
+ * w 写在右下那条斜棱的右下方、h 写在右面的右边；wire = 线框图（面不涂色，看不见的 3 条棱画虚线，课本 p19、p25、p33）；
+ * mark = 画成红色的一条棱（交于右前下顶点的三条之一）；face = 涂成橙色的一个面；grid = 看得见的三个面按 1 格画小格（l、w、h 是整数）；
+ * open = 没有盖（顶面画成开口）；water = 透明容器里的水深（与 h 同一单位），depth = 右边竖的尺寸线旁写的字；stone = 水底沉着一块石头
+ */
+export interface BoxSpec {
+  l: number
+  w: number
+  h: number
+  labels?: { l?: string; w?: string; h?: string }
+  wire?: boolean
+  mark?: 'l' | 'w' | 'h'
+  face?: 'front' | 'top' | 'right'
+  grid?: boolean
+  open?: boolean
+  water?: number
+  depth?: string
+  stone?: boolean
+}
+/** 烧杯里的一幅（Beaker，五下例 6 排水法）：水面到 water 毫升；thing = 水底沉着的东西（土豆、石块、鸡蛋），不填就只有水 */
+export interface BeakerItem {
+  water: number
+  thing?: 'potato' | 'stone' | 'egg'
+}
+// ── 五年级数学的辅助类型 H ──
+/**
+ * 分数链（frac-chain，五下「分数的基本性质」「约分」「通分」）的一项：分数（n 分子、d 分母，是任意短串：数、「2×4」、要填的「?」；
+ * w = 带分数的整数部分）或写在两个分数中间的字（t：「=」「○」、整数）
+ */
+export type ChainTerm = { n: string; d: string; w?: string } | { t: string }
+/** 分数链的弧形箭头：从第 from 项到第 to 项（都是分数），top 写在分子上方的弧上、bottom 写在分母下方的弧上（「×2」「÷?」） */
+export interface ChainArc {
+  from: number
+  to: number
+  top?: string
+  bottom?: string
+}
+// ── 五年级数学的辅助类型 I ──
+/**
+ * 折线统计图（LineChart，五下「折线统计图」）的一条折线：name = 图例上的名字（复式图才画图例）、tone = 颜色（课本：人口、出生蓝，
+ * 高铁、空气优良、甲地绿，GDP、死亡、重污染、乙地橙）；values = 每个类别（年份 / 月份 / 年龄）的数，null = 这一处不画点；
+ * digits = 点旁边写的数保留几位小数（GDP 写「538580.0」：digits = 1），不填按数本身写
+ */
+export interface LineSeries {
+  name?: LStr
+  tone?: 'blue' | 'orange' | 'green'
+  values: (number | null)[]
+  digits?: number
+}
+/**
+ * 线段图上的一个括号（FracLine 的 braces，五下「同分母分数加、减法」做一做 1）：括住从左数第 from 到第 to 个刻度之间的那几小段
+ * （0 是左端），top = 画在线段上面、bottom = 下面；label 写在括号的尖上：分数「2/5」画成上下两层，「?」原样写
+ */
+export interface SegBrace {
+  from: number
+  to: number
+  side: 'top' | 'bottom'
+  label: string
 }
 
 /** 结构化题干片段：文本 + 教具/图形参数，由 QuestionRenderer 分发渲染 */
@@ -487,6 +611,112 @@ export type StemPart =
   | { kind: 'cube-solids'; items: CubeSolid[]; numbered?: boolean }
   /** 从某个位置看到的图形（CubeViews）：一幅或几幅并排、格子一样大，见 CubeViewFig；numbered = 下面标 1、2、3…… */
   | { kind: 'cube-views'; items: CubeViewFig[]; numbered?: boolean }
+  // ── 五年级数学 A ──
+  /** 标数的俯视图（五上「观察简单组合体」练习一 9、五下「观察物体（三）」练习一 6）：从上面看到的图形，每格写着这个位置摞了几个小正方体（CubeViews 画，不朗读） */
+  | { kind: 'cube-top'; cells: TopCell[] }
+  /**
+   * 表盘上的一根指针（五上「旋转」例 6、五下「图形的运动（三）」例 1）：指着 to（1–12）；from = 原来指着几（画成虚线指针，
+   * 再画一条从 from 到 to 的顺时针红色弧形箭头）；中心标 O（ClockFace 画，不朗读）
+   */
+  | { kind: 'dial'; to: number; from?: number }
+  // ── 五年级数学 B ──
+  /**
+   * 小数乘法竖式（VerticalForm 的小数乘法模式，五上「小数乘法」）：a 写在上面、b 写在下面（照课本写的小数 / 整数，'0.72'、'60'），
+   * 两个乘数按「去掉小数点的整数」**末尾对齐**（不按小数点对齐），小数点画在两格之间、不占一列；
+   * zeros = 整数乘数末尾的 0 写在竖式外面（0.72 × 60：6 对着 2、0 伸出去一格），积的末尾跟着这几个 0；
+   * product = 横线下写好的积（照写：只有数字不点小数点的「1380」是「给积点上小数点」，「0.0224」是补了 0 的积），不传就画一排空格子
+   * （得数在选项里选）；steps = 写好积的竖式里，乘数有两位数字时画出两次乘得的数（照整数写、第二次左移一位、不点小数点）
+   */
+  | { kind: 'dec-mul'; a: string; b: string; zeros?: boolean; product?: string; steps?: boolean }
+  /** 小数倍的线段图（RatioLines，五上「小数乘法」例 5）：几行线段一行一个（见 RatioRow），第一行平均分成 per 小段画刻度，别的行按 len 画长短、竖虚线对齐 */
+  | { kind: 'ratio-lines'; per: number; rows: RatioRow[] }
+  /**
+   * 分段计费的线段图（PartLine 加的 ticks / tail，五上「小数乘法」例 8：出租车 0–7 km）：parts / total / names 同 part-line，
+   * 段长按比例画（不拉长短段）；ticks = 每隔几（len 的单位）画一个小刻度（1 = 每 1 km）；label 是空串的段上面不画大括号；tail = 右端接一段虚线
+   */
+  | { kind: 'fare-line'; parts: PartSeg[]; total?: string; names?: LStr[]; ticks: number; tail?: boolean }
+  // ── 五年级数学 C ──
+  /**
+   * 小数除法竖式（LongDivision 的小数模式，五上「小数除法」，照课本的厂字形）：divisor / dividend 照课本写成字符串（'0.85'、'22.4'、
+   * '3.0'、'12.60'——添上 / 补上的 0 也写上），小数点画在两列之间、不占一格；quotient / rows 见 DivLine（位置按被除数的第几位数，
+   * 被除数右边添 0 继续除的列接着往右数），quotient 的 text 可以带「.」：小数点画在它前面那一位的右边、和被除数的小数点上下对齐；
+   * cols = 一共几列（≥ 被除数的位数：添 0 继续除时商和下面几行往右多出来的列，上面那条横线跟着延长；课本的 22 ÷ 4、400 ÷ 75 被除数上不写 .0）；
+   * moved = 除数是小数的划法：除数前面没用的 0 用红斜线划掉、除数的小数点和被除数原来的小数点用红短斜线划掉，
+   * 被除数的小数点移到「整数部分有 moved 位」的地方——还有小数部分就在那里点上新的小数点（4.48 → 44.8），没有就不点；
+   * pad = 被除数末尾几个 0 是添上 / 补上的（标颜色）；hl = 绿底标出的几段（DivMark）；boxed = 商的第几个数字画红框（0 起，不算小数点）
+   */
+  | { kind: 'dec-division'; divisor: string; dividend: string; quotient?: DivLine; rows?: DivLine[]; cols?: number; moved?: number; pad?: number; hl?: DivMark[]; boxed?: number }
+  /**
+   * 摸球盒（DrawBox，五上「可能性」）：一个或几个盒子并排（numbered = 下面标 1、2、3……，选项就是这几个数），
+   * 每个盒子里几种颜色各几个（ChanceBalls）；piece = 'pawn' 画成棋子（例 1、例 2），默认画球；bag = 画成纸袋（练习十九 4）。
+   * 图里不写字，颜色和个数题目文字里会说（需要数的时候）；读屏只说「盒子里有几个球」
+   */
+  | { kind: 'draw-box'; boxes: ChanceBalls[][]; piece?: 'ball' | 'pawn'; bag?: boolean; numbered?: boolean }
+  /**
+   * 转盘（Spinner，五上「可能性」练习十九 2、练习二十 1）：items 一个转盘一个数组（一个或几个并排，numbered = 下面标 1、2、3……），
+   * 转盘平均分成数组长度那么多份、从正上方起顺时针一份一个颜色，中心一根指向右边的指针
+   */
+  | { kind: 'spinner'; items: ChanceColor[][]; numbered?: boolean }
+  // ── 五年级数学 D ──
+  /**
+   * 找规律的图（PatternDots，五上「用字母表示 ax+b 的数量关系」）：几幅并排（拼桌子、圆片、棋子，见 PatternFig），底边对齐；
+   * more = 最后画「……」（照这样拼 / 摆下去），numbered = 每幅下面标 1、2、3（课本的 ①②③）。图里没有字，不注音、不朗读
+   */
+  | { kind: 'pattern-dots'; figs: PatternFig[]; more?: boolean; numbered?: boolean }
+  // ── 五年级数学 E ──
+  // ── 五年级数学 F ──
+  /**
+   * 百数表（HundredChart，五下「因数和倍数」：2、5 和 3 的倍数的特征是 0–99，找质数的表是 1–100，练习三 11 是 1–50）：
+   * 从 start 起 count 个连续的数，每行 cols 个（默认 10）；circled = 画红圈的数（课本「圈起来」），boxed = 画蓝框的数（「框起来」），
+   * crossed = 画一条斜线、变淡的数（找质数时去掉的数）。表里的数不朗读，题目要问的写在题干文字里
+   */
+  | { kind: 'hundred-chart'; start: number; count: number; cols?: number; circled?: number[]; boxed?: number[]; crossed?: number[] }
+  /** 数字卡片（CodeStrip 的卡片样式，五下「3的倍数的特征」做一做、练习三 2 / 5 / 10）：一排卡片，每张一个数字；「?」是要填数字的那张（虚线空卡） */
+  | { kind: 'digit-cards'; digits: string }
+  /** 用小方块摆奇数、偶数（PairTiles，五下「和的奇偶性」例 2）：一堆或几堆（中间写「+」），每堆两个一列竖着排成两排，单出来的一个（黄色）在右下角 */
+  | { kind: 'pair-tiles'; groups: number[] }
+  /**
+   * 天平（BalanceScale，五下「找次品」，照课本的记录图：三角形支点上一根横杆）：left / right 是两边放的东西上写的号码（一样一个，空串只画形状），
+   * aside = 没放上去的（排在右边）；tilt：level 平衡、left 左边低（左边重）、right 右边低；shape：box 方块（钙片，例 1）/ ball 圆圈（零件，例 2）
+   */
+  | { kind: 'balance'; left: string[]; right: string[]; aside?: string[]; tilt?: 'level' | 'left' | 'right'; shape?: 'box' | 'ball' }
+  /**
+   * 通知示意图（NotifyTree，五下「☆ 怎样通知最快」）：group = 分组通知（蓝方块是老师，下面 groups 个橙色圆圈是每组先接到通知的同学，
+   * 每个下面 per 个浅蓝圆圈）；double = 接到通知的人都继续通知别人（课本第 103 页的图，圈里的数是第几分钟接到通知），画到第 minutes 分钟（1–4）
+   */
+  | { kind: 'notify-tree'; mode: 'group' | 'double'; groups?: number; per?: number; minutes?: number }
+  // ── 五年级数学 G ──
+  /** 带标注的长方体 / 正方体（BoxFigure）：一个或两个并排（共用一个比例），arrow = 两个中间画箭头（取出石头前后），见 BoxSpec */
+  | { kind: 'box'; items: BoxSpec[]; arrow?: boolean }
+  /** 长方体的展开图（NetGrid 的不等宽格子）：cells 同 net，colW / rowH 是每列宽、每行高（相对大小，1 = 一格） */
+  | { kind: 'box-net'; cells: { r: number; c: number; label?: LStr }[]; colW: number[]; rowH: number[] }
+  /** 几个正方体展开图并排（NetSet），下面标 1、2、3……（选项就是这几个数） */
+  | { kind: 'nets'; items: { r: number; c: number }[][] }
+  /** 烧杯（Beaker）：刻度 0…max 毫升（每 max/10 一小格、每 max/5 标数），一幅或两幅（arrow = 中间画箭头），见 BeakerItem */
+  | { kind: 'beaker'; max: number; items: BeakerItem[]; arrow?: boolean }
+  // ── 五年级数学 H ──
+  /**
+   * 分数链（FracChain，五下「分数的基本性质」例 1 的箭头图、例 2「2/3 = ?/12」，约分、通分、假分数化成带分数）：一排上下两层的分数，
+   * 中间写「=」等字；arcs = 分子上方 / 分母下方的红色弧形箭头（写「×2」「÷?」）。分子、分母、整数部分、箭头上的字里的「?」
+   * 是要填的数（练习页把按的数填进去，几个「?」填同一个数）。**不朗读**（题干文字把要问的说全）
+   */
+  | { kind: 'frac-chain'; terms: ChainTerm[]; arcs?: ChainArc[] }
+  /**
+   * 集合图（VennSets，五下「最大公因数」「最小公倍数」例 1）：两个相交的椭圆，left / right 是上面写的名字（「8 的因数」），
+   * only1 / both / only2 是左边那一块、中间那一块、右边那一块里的数（可以以「…」结尾）；ask = 这一块不写数、画「?」；
+   * caption = 中间那一块下面红箭头指着的字（「8 和 12 的公因数」）。图里的字不注音、不朗读
+   */
+  | { kind: 'venn'; left: LStr; right: LStr; only1: string[]; both: string[]; only2: string[]; ask?: 'only1' | 'both' | 'only2'; caption?: LStr }
+  // ── 五年级数学 I ──
+  /**
+   * 折线统计图（LineChart，五下「折线统计图」）：cats = 横轴上的类别（年份、月份、年龄），series 一条（单式）或两条（复式，右上角画图例）；
+   * 纵轴每格代表 step、一共 cells 格，刻度从 0 起每格都标数；from = 纵轴 0 上面画折断号、第一格的刻度从 from 起（课本的人口、身高图）；
+   * numbers = 每个点旁边写数（课本高铁、空气质量、GDP、气温几幅图的写法）；grid = 画方格（课本让学生自己画的空图）。
+   * 图里的字（图题、轴名、类别、图例）不注音、不朗读，题目要问的都写在题干文字里
+   */
+  | { kind: 'line-chart'; title?: LStr; cats: LStr[]; series: LineSeries[]; step: number; cells: number; from?: number; valueAxis: LStr; catAxis: LStr; numbers?: boolean; grid?: boolean }
+  /** 带括号的线段图（FracLine 的 braces，五下「同分母分数加、减法」做一做 1）：一条线段（整条是 1）平均分成 parts 小段，线上下画几个括号，见 SegBrace */
+  | { kind: 'seg-braces'; parts: number; braces: SegBrace[] }
   // ── 语文（§9）：这几种都是中文内容，不翻译；朗读时在英文界面下也用中文读（Y6）──
   /** 大字：每个汉字一个田字格（楷体），其它字符（＋ ＝ ？）原样放大；不注音、不朗读——考的就是认不认得（Y3） */
   /** mark：标红的那个字（多音字「这个词里红色的字怎么读」，Y9） */

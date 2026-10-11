@@ -58,6 +58,29 @@ import EvenOut from '@/components/math/EvenOut.vue'
 // 四年级数学下册 E
 import CubeSolids from '@/components/math/CubeSolids.vue'
 import CubeViews from '@/components/math/CubeViews.vue'
+// 五年级数学 A
+// 五年级数学 B
+import RatioLines from '@/components/math/RatioLines.vue'
+// 五年级数学 C
+import DrawBox from '@/components/math/DrawBox.vue'
+import Spinner from '@/components/math/Spinner.vue'
+// 五年级数学 D
+import PatternDots from '@/components/math/PatternDots.vue'
+// 五年级数学 E
+// 五年级数学 F
+import HundredChart from '@/components/math/HundredChart.vue'
+import PairTiles from '@/components/math/PairTiles.vue'
+import BalanceScale from '@/components/math/BalanceScale.vue'
+import NotifyTree from '@/components/math/NotifyTree.vue'
+// 五年级数学 G
+import BoxFigure from '@/components/math/BoxFigure.vue'
+import NetSet from '@/components/math/NetSet.vue'
+import Beaker from '@/components/math/Beaker.vue'
+// 五年级数学 H
+import FracChain from '@/components/math/FracChain.vue'
+import VennSets from '@/components/math/VennSets.vue'
+// 五年级数学 I
+import LineChart from '@/components/math/LineChart.vue'
 import HanziGrid from '@/components/chinese/HanziGrid.vue'
 import PinyinCard from '@/components/chinese/PinyinCard.vue'
 import ListenCue from '@/components/chinese/ListenCue.vue'
@@ -252,6 +275,103 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
       <!-- 四年级数学下册 E -->
       <CubeSolids v-else-if="part.kind === 'cube-solids'" :items="part.items" :numbered="part.numbered" />
       <CubeViews v-else-if="part.kind === 'cube-views'" :items="part.items" :numbered="part.numbered" />
+      <!-- 五年级数学 A -->
+      <CubeViews v-else-if="part.kind === 'cube-top'" :items="[{ blocks: part.cells }]" :nums="[part.cells.map((c) => c.n)]" />
+      <ClockFace v-else-if="part.kind === 'dial'" :hour="0" :minute="0" :hand="part.to" :from="part.from" center="O" />
+      <!-- 五年级数学 B -->
+      <VerticalForm
+        v-else-if="part.kind === 'dec-mul'"
+        :a="0"
+        op="×"
+        :b="0"
+        :dec-factors="[part.a, part.b]"
+        :zeros="part.zeros"
+        :product="part.product"
+        :steps="part.steps"
+      />
+      <RatioLines v-else-if="part.kind === 'ratio-lines'" :per="part.per" :rows="part.rows" />
+      <PartLine
+        v-else-if="part.kind === 'fare-line'"
+        :parts="part.parts"
+        :total="part.total"
+        :names="part.names"
+        :ticks="part.ticks"
+        :tail="part.tail"
+        :aria="{ k: 'm5.dmul.fl.aria' }"
+      />
+      <!-- 五年级数学 C -->
+      <LongDivision
+        v-else-if="part.kind === 'dec-division'"
+        :divisor="part.divisor"
+        :dividend="part.dividend"
+        :quotient="part.quotient"
+        :rows="part.rows"
+        :cols="part.cols"
+        :moved="part.moved"
+        :pad="part.pad"
+        :hl="part.hl"
+        :boxed="part.boxed"
+        :answer="fill?.value"
+        :done="fill?.done"
+      />
+      <DrawBox v-else-if="part.kind === 'draw-box'" :boxes="part.boxes" :piece="part.piece" :bag="part.bag" :numbered="part.numbered" />
+      <Spinner v-else-if="part.kind === 'spinner'" :items="part.items" :numbered="part.numbered" />
+      <!-- 五年级数学 D -->
+      <PatternDots v-else-if="part.kind === 'pattern-dots'" :figs="part.figs" :more="part.more" :numbered="part.numbered" />
+      <!-- 五年级数学 E -->
+      <!-- 五年级数学 F -->
+      <HundredChart
+        v-else-if="part.kind === 'hundred-chart'"
+        :start="part.start"
+        :count="part.count"
+        :cols="part.cols"
+        :circled="part.circled"
+        :boxed="part.boxed"
+        :crossed="part.crossed"
+      />
+      <CodeStrip v-else-if="part.kind === 'digit-cards'" :digits="part.digits" :cards="true" />
+      <PairTiles v-else-if="part.kind === 'pair-tiles'" :groups="part.groups" />
+      <BalanceScale
+        v-else-if="part.kind === 'balance'"
+        :left="part.left"
+        :right="part.right"
+        :aside="part.aside"
+        :tilt="part.tilt"
+        :shape="part.shape"
+      />
+      <NotifyTree v-else-if="part.kind === 'notify-tree'" :mode="part.mode" :groups="part.groups" :per="part.per" :minutes="part.minutes" />
+      <!-- 五年级数学 G -->
+      <BoxFigure v-else-if="part.kind === 'box'" :items="part.items" :arrow="part.arrow" />
+      <NetGrid v-else-if="part.kind === 'box-net'" :cells="part.cells" :col-w="part.colW" :row-h="part.rowH" />
+      <NetSet v-else-if="part.kind === 'nets'" :items="part.items" />
+      <Beaker v-else-if="part.kind === 'beaker'" :max="part.max" :items="part.items" :arrow="part.arrow" />
+      <!-- 五年级数学 H -->
+      <FracChain v-else-if="part.kind === 'frac-chain'" :terms="part.terms" :arcs="part.arcs" :fill="fill" />
+      <VennSets
+        v-else-if="part.kind === 'venn'"
+        :left="part.left"
+        :right="part.right"
+        :only1="part.only1"
+        :both="part.both"
+        :only2="part.only2"
+        :ask="part.ask"
+        :caption="part.caption"
+      />
+      <!-- 五年级数学 I -->
+      <LineChart
+        v-else-if="part.kind === 'line-chart'"
+        :title="part.title"
+        :cats="part.cats"
+        :series="part.series"
+        :step="part.step"
+        :cells="part.cells"
+        :from="part.from"
+        :value-axis="part.valueAxis"
+        :cat-axis="part.catAxis"
+        :numbers="part.numbers"
+        :grid="part.grid"
+      />
+      <FracLine v-else-if="part.kind === 'seg-braces'" :units="1" :per="part.parts" :labels="false" :braces="part.braces" />
       <VerticalForm
         v-else-if="part.kind === 'vertical'"
         :a="part.a"

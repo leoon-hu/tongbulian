@@ -20,6 +20,12 @@ import type { MulWork } from '@/types/models'
  * 一个字符一列（数字、「.」、空格）——这时 a、b 不用；只有「.」的那一列画得窄（小数点对齐时各行的「.」在同一列，课本的写法），
  * 运算符写在最后一行左边；result = 写好的得数（改错题照写，也按列排好）；不传就在横线下画一排空格子（得数在选项里选，不填）。
  */
+/**
+ * 五上「小数乘法」加的可选项（不传和原来一样）：decFactors = 两个乘数（照课本写的小数 / 整数字符串，这时 a、b 不用），
+ * 按「去掉小数点的整数」末尾对齐（课本：1.92 × 0.9 的 9 对着 2，不按小数点对齐），小数点画在这一位的右下角、不占一列；
+ * zeros = 整数乘数末尾的 0 写在竖式外面（0.72 × 60、0.46 × 300）；product = 横线下写好的积（照写，可以只有数字不点小数点，
+ * 也可以是补了 0 的「0.0224」），不传就在横线下画一条虚线（不按位画格子，免得透露积有几位）；steps = 写了积、乘数有两位数字时画出两次乘得的数（照整数写、第二次左移一位）。
+ */
 const props = defineProps<{
   a: number
   op: '+' | '-' | '×'
@@ -32,6 +38,8 @@ const props = defineProps<{
   mark?: 1 | 2
   lines?: string[]
   result?: string
+  decFactors?: [string, string]
+  product?: string
 }>()
 
 // 位数：加法要给和留出进位后多出来的一位、乘法给积留够位；减法差不会比被减数长
@@ -59,7 +67,7 @@ function trailingZeros(n: number): number {
  * 第一次乘得的数末位对齐 R，第二次的对齐 R 左边一格（flat 时也对齐 R）；积写满到最右边（末尾补上两个乘数末尾的 0）。
  */
 const mul = computed(() => {
-  if (props.op !== '×' || !(props.steps || props.zeros || props.work)) return null
+  if (props.decFactors || props.op !== '×' || !(props.steps || props.zeros || props.work)) return null
   const w = props.work
   const za = props.zeros && !w ? trailingZeros(props.a) : 0
   const zb = props.zeros && !w ? trailingZeros(props.b) : 0
@@ -109,10 +117,88 @@ const dec = computed(() => {
 })
 /** 小数竖式的列宽：运算符一格、数字一格、小数点窄一些 */
 const decTemplate = computed(() => (dec.value ? `1.1em ${dec.value.point.map((p) => (p ? '0.42em' : '1.1em')).join(' ')}` : ''))
+
+// ── 小数乘法竖式（五上「小数乘法」）──
+
+/** 一格：数字（'' = 空着）与这一位后面有没有小数点 */
+interface DmCell {
+  ch: string
+  dot: boolean
+}
+/** 一个数拆成「去掉小数点的数字串」和小数点在第几个数字后面（-1 = 没有小数点）：'0.72' → '072'、0 */
+function splitDec(s: string): { digits: string; dotAfter: number } {
+  const at = s.indexOf('.')
+  return at < 0 ? { digits: s, dotAfter: -1 } : { digits: s.slice(0, at) + s.slice(at + 1), dotAfter: at - 1 }
+}
+/** 整数（没有小数点）末尾有几个 0 写在外面：至少留一位在里面 */
+function outsideZeros(s: string): number {
+  if (s.includes('.')) return 0
+  return Math.min(s.length - s.replace(/0+$/, '').length, s.length - 1)
+}
+
+/**
+ * 各行按「右边空几格」排（同四上的乘法竖式）：两个乘数去掉外面的 0 以后末位对齐在同一列，外面的 0 写在右边；
+ * 两次乘得的数（steps）末位分别对齐这一列和它左边一格；积写满到最右边。
+ */
+const dm = computed(() => {
+  if (!props.decFactors) return null
+  const [sa, sb] = props.decFactors
+  const za = props.zeros ? outsideZeros(sa) : 0
+  const zb = props.zeros ? outsideZeros(sb) : 0
+  const z = za + zb
+  const A = splitDec(sa)
+  const B = splitDec(sb)
+  const coreA = Number(A.digits.slice(0, A.digits.length - za))
+  const coreB = Number(B.digits.slice(0, B.digits.length - zb))
+  const P = props.product === undefined ? null : splitDec(props.product)
+  const lines: { digits: string; dotAfter: number; off: number }[] = [
+    { ...A, off: z - za },
+    { ...B, off: z - zb },
+  ]
+  const two = !!props.steps && P !== null && coreB >= 10 && coreB <= 99 && coreB % 10 !== 0
+  if (two) {
+    lines.push({ digits: String(coreA * (coreB % 10)), dotAfter: -1, off: z })
+    lines.push({ digits: String(coreA * Math.floor(coreB / 10)), dotAfter: -1, off: z + 1 })
+  }
+  if (P) lines.push({ ...P, off: 0 })
+  // 没写积时，横线下的虚线按整数乘法的积留够宽（乘数里有 □ 时按两个乘数里宽的那个多留一位）
+  const prod = coreA * coreB
+  const blankWidth = Number.isFinite(prod) ? String(prod).length + z : Math.max(A.digits.length, B.digits.length) + 1
+  const cols = Math.max(...lines.map((l) => l.digits.length + l.off), P ? 0 : blankWidth)
+  const rows = lines.map((l) => {
+    const out: DmCell[] = Array.from({ length: cols }, () => ({ ch: '', dot: false }))
+    const start = cols - l.off - l.digits.length
+    l.digits.split('').forEach((ch, i) => (out[start + i] = { ch, dot: i === l.dotAfter }))
+    return out
+  })
+  return { cols, two, rows, parts: two ? [rows[2]!, rows[3]!] : [], sum: P ? rows[rows.length - 1]! : null }
+})
 </script>
 
 <template>
-  <div v-if="mul" class="vertical mul" :class="{ marked: !!mark }" :style="{ '--cols': mul.cols }">
+  <div v-if="dm" class="vertical dmul" :class="{ tall: dm.two }" :style="{ '--cols': dm.cols }">
+    <div v-for="(line, r) in dm.rows.slice(0, 2)" :key="`f${r}`" class="row factor">
+      <span class="op">{{ r === 1 ? '×' : '' }}</span>
+      <span v-for="(c, i) in line" :key="i" class="digit">{{ c.ch }}<i v-if="c.dot" class="pt" /></span>
+    </div>
+    <div class="rule" />
+    <template v-if="dm.two">
+      <div v-for="(part, k) in dm.parts" :key="`p${k}`" class="row part" :class="`p${k + 1}`">
+        <span class="op" />
+        <span v-for="(c, i) in part" :key="i" class="digit">{{ c.ch }}</span>
+      </div>
+      <div class="rule" />
+    </template>
+    <div v-if="dm.sum" class="row sum">
+      <span class="op" />
+      <span v-for="(c, i) in dm.sum" :key="i" class="digit">{{ c.ch }}<i v-if="c.dot" class="pt" /></span>
+    </div>
+    <div v-else class="row answer">
+      <span class="op" />
+      <span class="blank-line" />
+    </div>
+  </div>
+  <div v-else-if="mul" class="vertical mul" :class="{ marked: !!mark }" :style="{ '--cols': mul.cols }">
     <div class="row">
       <span class="op" />
       <span v-for="(d, i) in mul.rows[0]" :key="`a${i}`" class="digit">{{ d }}</span>
@@ -253,5 +339,28 @@ const decTemplate = computed(() => (dec.value ? `1.1em ${dec.value.point.map((p)
 }
 .dec .answer .digit.pt {
   height: 1.35em;
+}
+/* 小数乘法竖式（五上）：小数点画在这一位的右下角（不占一列，课本的写法）；有两次乘得的数的竖式五行，小一号 */
+.dmul .digit {
+  position: relative;
+}
+.dmul .pt {
+  position: absolute;
+  right: -0.09em;
+  bottom: 0.3em;
+  width: 0.18em;
+  height: 0.18em;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dmul.tall .row {
+  font-size: 0.78em;
+}
+/* 没写积：横线下一条虚线（不按位画格子——格子数会透露积有几位，0.0224 和 0.224 就差在这里） */
+.dmul .blank-line {
+  grid-column: 2 / -1;
+  height: 1.35em;
+  border-bottom: 3px dashed var(--c-locked);
+  margin: 0 3px;
 }
 </style>

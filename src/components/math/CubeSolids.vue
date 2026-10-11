@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CubeSolid } from '@/types/models'
-import { t } from '@/engine/i18n'
+import { hasEntry, lang, t } from '@/engine/i18n'
 
 /**
  * 观察物体（二）（四下第二单元）：小正方体搭的物体、正方体和长方体摆在一起（练习四 2），照课本的斜二测画——
@@ -88,7 +88,15 @@ const pics = computed(() =>
   }),
 )
 
-const label = computed(() => t({ k: props.items.some((s) => 'bar' in s) ? 'm4.obs.ariaBar' : 'm4.obs.ariaSolid' }))
+/** 读屏的字：四年级的词条在就用它；只加载了别的年级时（按需加载，没有 m4.* 词条，五年级也用这个教具）用这里的 */
+const ARIA = {
+  bar: { k: 'm4.obs.ariaBar', zh: '正方体和长方体', en: 'a cube and a cuboid' },
+  solid: { k: 'm4.obs.ariaSolid', zh: '小正方体搭的物体', en: 'object made of small cubes' },
+}
+const label = computed(() => {
+  const a = ARIA[props.items.some((s) => 'bar' in s) ? 'bar' : 'solid']
+  return hasEntry(a.k) ? t({ k: a.k }) : lang.value === 'zh' ? a.zh : a.en
+})
 </script>
 
 <template>

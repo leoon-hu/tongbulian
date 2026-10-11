@@ -105,6 +105,17 @@ export const EMOJI_ZH: Record<string, string> = {
   // 四年级数学下册 C
   // 四年级数学下册 D
   // 四年级数学下册 E
+  // 五年级数学 A
+  'emoji.🐿️': '松鼠', // 五上「平移」做一做：小动物卡片平移吃到食物
+  'emoji.🌰': '栗子',
+  // 五年级数学 B
+  // 五年级数学 C
+  // 五年级数学 D
+  // 五年级数学 E
+  // 五年级数学 F
+  // 五年级数学 G
+  // 五年级数学 H
+  // 五年级数学 I
 }
 
 export const EMOJI_EN: Record<string, string> = {
@@ -204,4 +215,15 @@ export const EMOJI_EN: Record<string, string> = {
   // 四年级数学下册 C
   // 四年级数学下册 D
   // 四年级数学下册 E
+  // 五年级数学 A
+  'emoji.🐿️': 'squirrel',
+  'emoji.🌰': 'chestnut',
+  // 五年级数学 B
+  // 五年级数学 C
+  // 五年级数学 D
+  // 五年级数学 E
+  // 五年级数学 F
+  // 五年级数学 G
+  // 五年级数学 H
+  // 五年级数学 I
 }

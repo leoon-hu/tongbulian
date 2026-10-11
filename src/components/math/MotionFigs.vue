@@ -7,11 +7,13 @@ import type { MotionFig, MotionItem } from '@/types/models'
  * 同一小图转了 / 翻了（能不能通过平移重合）、旋转的规律（直角三角形、四等分的圆、钟面的时针）、带弧形箭头的风车 / 螺旋桨 / 钟面
  * （顺时针还是逆时针），以及「虚线是原来的位置、实线是现在的」运动示意。每个图画在 100 × 100 的格子里（SVG），
  * 对称的图形都以竖着的中线 x = 50 为对称轴；图里不放汉字。一排图时下面标 1、2、3……（label），选项就是这几个数。
+ * 五年级加的（都可选）：钟面 swing = 下面挂一根钟摆，从竖直的位置（虚线）摆到左边 / 右边（实线），下面画弧形箭头；
+ * 风车 spin = 只转叶片（杆子不动），叶片顺时针转几度（turn 是整个图连杆子一起转）。
  */
 const props = withDefaults(defineProps<{ items: MotionItem[]; arrows?: boolean }>(), { arrows: false })
 
 type Cls =
-  'body' | 'leaf' | 'wood' | 'roof' | 'accent' | 'dark' | 'glass' | 'light' | 'shade' | 'face' | 'ink' | 'tick' | 'min' | 'hour' | 'b1' | 'b2' | 'b3' | 'b4'
+  'body' | 'leaf' | 'wood' | 'roof' | 'accent' | 'dark' | 'glass' | 'light' | 'shade' | 'face' | 'ink' | 'tick' | 'min' | 'hour' | 'b1' | 'b2' | 'b3' | 'b4' | 'rod'
 type Prim =
   | { t: 'path'; d: string; c: Cls; rot?: number }
   | { t: 'circle'; cx: number; cy: number; r: number; c: Cls }
@@ -34,7 +36,7 @@ function ring(cx: number, cy: number, radii: number[], count: number): [number, 
 }
 
 /** 每种图画在 100 × 100 里的几笔（不含转动 / 翻转） */
-function prims(fig: MotionFig, hour: number | undefined, noHourHand: boolean): Prim[] {
+function prims(fig: MotionFig, hour: number | undefined, noHourHand: boolean, spin = 0): Prim[] {
   switch (fig) {
     case 'rect':
       return [{ t: 'rect', x: 15, y: 30, w: 70, h: 40, c: 'body' }]
@@ -254,7 +256,7 @@ function prims(fig: MotionFig, hour: number | undefined, noHourHand: boolean): P
     case 'pinwheel': {
       const out: Prim[] = [{ t: 'rect', x: 48, y: 50, w: 4, h: 48, c: 'wood' }]
       const cls: Cls[] = ['b1', 'b2', 'b3', 'b4']
-      for (let k = 0; k < 4; k++) out.push({ t: 'path', d: 'M 50 50 L 50 10 L 75 27 Z', c: cls[k]!, rot: k * 90 })
+      for (let k = 0; k < 4; k++) out.push({ t: 'path', d: 'M 50 50 L 50 10 L 75 27 Z', c: cls[k]!, rot: k * 90 + spin })
       out.push({ t: 'circle', cx: 50, cy: 50, r: 4, c: 'dark' })
       return out
     }
@@ -317,8 +319,8 @@ function axisSeg(fig: MotionFig, axis: NonNullable<MotionItem['axis']>): Seg {
  * 弧形箭头（圆心 50, 50，半径 R；角度从正上方起顺时针量）：默认画在右上方，cw 箭头在下端、ccw 箭头在上端——
  * 两个方向的弧在同一个地方，只看箭头在哪一头。返回弧的 path + 箭头三角形
  */
-function arcArrow(dir: 'cw' | 'ccw', R = 49, a0 = dir === 'cw' ? 8 : 78, a1 = dir === 'cw' ? 78 : 8): { arc: string; head: string } {
-  const at = (deg: number): [number, number] => [50 + R * Math.sin((deg * Math.PI) / 180), 50 - R * Math.cos((deg * Math.PI) / 180)]
+function arcArrow(dir: 'cw' | 'ccw', R = 49, a0 = dir === 'cw' ? 8 : 78, a1 = dir === 'cw' ? 78 : 8, cx = 50, cy = 50): { arc: string; head: string } {
+  const at = (deg: number): [number, number] => [cx + R * Math.sin((deg * Math.PI) / 180), cy - R * Math.cos((deg * Math.PI) / 180)]
   const [x0, y0] = at(a0)
   const [x1, y1] = at(a1)
   const rad = (a1 * Math.PI) / 180
@@ -383,9 +385,50 @@ function straightArrow(from: [number, number], to: [number, number]): { d: strin
   }
 }
 
+/**
+ * 摆钟（五年级「旋转」练习九 1）：上面一个小钟面（圆心 50, 30），钟摆从中心垂下来；竖直的位置画虚线（原来的），
+ * 摆到左边 / 右边的画实线，下面一段弧形箭头指着摆的方向（往左摆 = 顺时针、往右摆 = 逆时针）
+ */
+function pendulumView(item: MotionItem, swing: 'left' | 'right'): View {
+  const cx = 50
+  const cy = 30
+  const L = 62
+  const face: Prim[] = [{ t: 'circle', cx, cy, r: 24, c: 'face' }]
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6
+    const r0 = i % 3 === 0 ? 17 : 20
+    face.push({ t: 'line', x1: cx + r0 * Math.sin(a), y1: cy - r0 * Math.cos(a), x2: cx + 23 * Math.sin(a), y2: cy - 23 * Math.cos(a), c: 'tick' })
+  }
+  const ang = ((swing === 'left' ? -13 : 13) * Math.PI) / 180
+  const bob: [number, number] = [cx + L * Math.sin(ang), cy + L * Math.cos(ang)]
+  const h = (((item.hour ?? 3) % 12) * Math.PI) / 6
+  const solid: Prim[] = [
+    ...face,
+    { t: 'line', x1: cx, y1: cy, x2: bob[0], y2: bob[1], c: 'rod' },
+    { t: 'circle', cx: bob[0], cy: bob[1], r: 5.5, c: 'dark' },
+    { t: 'line', x1: cx, y1: cy, x2: cx, y2: cy - 16, c: 'min' },
+    { t: 'line', x1: cx, y1: cy, x2: cx + 10 * Math.sin(h), y2: cy - 10 * Math.cos(h), c: 'hour' },
+    { t: 'circle', cx, cy, r: 2.5, c: 'dark' },
+  ]
+  const rest: Prim[] = [
+    { t: 'line', x1: cx, y1: cy, x2: cx, y2: cy + L, c: 'rod' },
+    { t: 'circle', cx, cy: cy + L, r: 5.5, c: 'dark' },
+  ]
+  const id = orient()
+  return {
+    item,
+    copies: [
+      { transform: id, prims: solid },
+      { transform: id, prims: rest, ghost: true },
+    ],
+    arc: swing === 'left' ? arcArrow('cw', 72, 182, 197, cx, cy) : arcArrow('ccw', 72, 178, 163, cx, cy),
+  }
+}
+
 function viewOf(item: MotionItem): View {
+  if (item.fig === 'clock' && item.swing) return pendulumView(item, item.swing)
   if (item.blank && item.fig !== 'clock') return { item, copies: [], question: true }
-  const base = prims(item.fig, item.hour, !!item.blank)
+  const base = prims(item.fig, item.hour, !!item.blank, item.spin ?? 0)
   if (item.move === 'turn') {
     // 绕着中心的红点转 90°：原来在红点正上方（虚线），转过去到了右边（顺时针）或左边（逆时针）
     const dir = item.arrow ?? 'cw'
@@ -427,7 +470,8 @@ const views = computed(() => props.items.map(viewOf))
 const size = computed(() => {
   const n = props.items.length
   if (n === 1) return props.items[0]!.move ? 180 : 140
-  if (props.arrows) return n <= 3 ? 76 : 58
+  // 五年级的风车（只转叶片）两个一排：画大一点，叶片的颜色看得清
+  if (props.arrows) return n <= 2 && props.items.some((it) => it.spin !== undefined) ? 112 : n <= 3 ? 76 : 58
   return n === 2 ? 108 : n === 3 ? 90 : n === 4 ? 68 : 56
 })
 
@@ -507,6 +551,11 @@ const clipId = (i: number): string => `${uid}-${i}`
 .motion-figs.seq {
   gap: 2px;
   flex-wrap: nowrap;
+}
+/* 一排不换行的几幅（「图 → 图」）在对战窄栏里随栏缩小，不横向溢出（2026-10-11 普查：风车那题多出 7–19px） */
+.motion-figs.seq .fig {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .step {
   font-size: 18px;
@@ -612,6 +661,11 @@ const clipId = (i: number): string => `${uid}-${i}`
 .hour {
   stroke: #3d2c1e;
   stroke-width: 5.5;
+  stroke-linecap: round;
+}
+.rod {
+  stroke: #3d2c1e;
+  stroke-width: 2.2;
   stroke-linecap: round;
 }
 .b1,

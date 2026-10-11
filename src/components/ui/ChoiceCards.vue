@@ -17,8 +17,12 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ select: [id: string] }>()
 
+/** 选项文字去掉循环小数的点（U+0307，画在数字上面、不占宽度） */
+const plain = (s: string): string => s.replace(/\u0307/g, '')
+/** 数的写法：整数、小数、分数 3/8、带分数「2 1/5」（细空格连着，五下） */
+const NUMERIC = /^\d+(?:[./]\d+)?$|^\d+\u2009\d+\/\d+$/
 /**
- * 文字选项的长度（纯数字的选项不算，770、分数 3/8、小数 0.5 这种两列放得下）：
+ * 文字选项的长度（纯数字的选项不算，770、分数 3/8、带分数、小数 0.5、循环小数这种两列放得下）：
  * wordy = 有 3 个字以上的文字（一样多、长方体、12元…，对战手机紧凑版排成一列，窄卡片里不折行）；
  * long = 有 4 个字以上的（平行四边形、11元5角…，字号小一档）；
  * longer = 6 个字以上（九千零三十六这种汉字读法、语文的短句），再小一点、两边留白收窄，手机上两列不在词中间折行
@@ -26,17 +30,19 @@ const emit = defineEmits<{ select: [id: string] }>()
 const textLen = computed(() =>
   props.choiceStyle === 'pinyin' || props.choiceStyle === 'emoji'
     ? 0
-    : Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => !/^\d+(?:[./]\d+)?$/.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
+    : Math.max(0, ...props.choices.map((c) => plain(t(c.label))).filter((s) => !NUMERIC.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
 )
 /**
  * 数字选项（整数和小数，四年级的大数、四下的小数）的字符数：digits = 7 个以上、字号跟着屏宽小一点；
  * digits10 = 10 个以上、再小一点（360 宽的手机上两列 12 位数也放得下）；8 个以上在对战紧凑版排成一列（同 wordy）。
  * num4 / num7 与 --num-len 给对战紧凑版按作答栏的宽排（PlayerRow：栏窄时 4 个、7 个以上排一列，字号按栏宽 ÷ 字符数封顶）
  */
-const numLen = computed(() => Math.max(0, ...props.choices.map((c) => t(c.label)).filter((s) => /^\d+(?:\.\d+)?$/.test(s)).map((s) => s.length)))
+const numLen = computed(() => Math.max(0, ...props.choices.map((c) => plain(t(c.label))).filter((s) => /^\d+(?:\.\d+)?$/.test(s)).map((s) => s.length)))
 const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8)
 const num4 = computed(() => numLen.value >= 4)
 const num7 = computed(() => numLen.value >= 7)
+/** 拼音选项（看字选读音、多音字）最长的有 5 个字母以上（zhàng、chuǎng）：对战紧凑版栏窄时排一列（PlayerRow，同 num4） */
+const py5 = computed(() => props.choiceStyle === 'pinyin' && Math.max(0, ...props.choices.map((c) => t(c.label).length)) >= 5)
 const long = computed(() => textLen.value > 3)
 const longer = computed(() => textLen.value >= 6)
 const digits = computed(() => numLen.value >= 7)
@@ -44,7 +50,7 @@ const digits10 = computed(() => numLen.value >= 10)
 </script>
 
 <template>
-  <div class="cards" :class="[{ wordy, long, longer, digits, digits10, num4, num7 }, choiceStyle ? `as-${choiceStyle}` : '']" :style="{ '--num-len': numLen }">
+  <div class="cards" :class="[{ wordy, long, longer, digits, digits10, num4, num7, py5 }, choiceStyle ? `as-${choiceStyle}` : '']" :style="{ '--num-len': numLen }">
     <button
       v-for="c in choices"
       :key="c.id"

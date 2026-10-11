@@ -12,16 +12,17 @@
 import type { Lang, LStr, Question } from '@/types/models'
 import { hasEntry, translate } from './i18n'
 import { answerLabel } from './answer'
-import { fractionWords } from './fraction'
+import { DOT_ABOVE, fractionWords, REPEATING, repeatingParts } from './fraction'
 
 // 符号组放在 emoji 组前面：⬜ 也算 Extended_Pictographic，但它是算式里的空格子。
 // 算式末尾的「= ?」合成一个片段（读「等于几」），单独一个「几」读起来生硬还容易读错声调。
 // 小括号单独一组：它紧挨着数字，但必须读出来（「括号 3 加 4 括号 乘 5」），不走「独立成项才读」的规则；中括号（四下「括号」）同样，读「中括号」；
 // 方框「□」（四下「在 □ 里填上适当的数」「6.7 + □ = 10」）也在这一组，读「方框」。长减号「−」同「-」。
-// 分数「3/4」一整组（三年级），读「四分之三」「three fourths」，当一个槽（同 0–100 的数，能并进短语）。
+// 分数「3/4」一整组（三年级），读「四分之三」「three fourths」，当一个槽（同 0–100 的数，能并进短语）；
+// 带分数「2 1/5」（整数和分数之间是细空格，五下）也是一整组，读「二又五分之一」「two and one fifth」。
 // 「≈」（四年级求近似数）同 = 一样是独立成项才读的符号，读「约等于」。
 const TOKEN =
-  /(¥\d+(?:\.\d)?)|((?<![\d./])\d{1,3}\/\d{1,3}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-−=?><⬜○×÷≈])|([()（）[\]［］□])|(\p{Extended_Pictographic}\uFE0F?)/gu
+  /(¥\d+(?:\.\d)?)|((?<![\d./])(?:\d{1,3}\u2009)?\d{1,4}\/\d{1,4}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-−=?><⬜○×÷≈≠])|([()（）[\]［］□])|(\p{Extended_Pictographic}\uFE0F?)/gu
 
 /** 符号只有独立成项（两边不挨着字母 / 数字 / 汉字 / emoji）才读：「9 + 5」的 + 读，「ten-frame」的 -、「🐰?」的 ? 不读 */
 const WORDISH_BEFORE = /[\p{L}\p{N}\p{Extended_Pictographic}\uFE0F]$/u
@@ -35,6 +36,9 @@ const ZH_MEASURE =
   // 长的放前面（「分米」「分钟」要整个留在数字后面，不能只匹配到「分」）；三年级起的长度 / 质量 / 面积 / 时间单位与常用量词；
   // 四年级的「1周角 = 2平角 = 4直角」（2 读「两」，「周角」不能只匹配到表示星期的「周」）
   '小格|周角|平角|直角|毫米|分米|千米|分钟|平方(?:厘米|分米|米|千米)|千克|克|吨|公斤|斤|小时|秒|周|年(?!级)|次|圈|步|站|格|段|岁|包|套|筒|件|页|场|名|粒|片|趟|节|位|' +
+  // 五年级：体积 / 容积单位（立方厘米、升、毫升）、更大的面积单位公顷，摄氏度（℃ 在 spellMarks 里换成字），土石方的「方」
+  // （「1 方就是 1 立方米」「750 方」；后面跟着别的汉字的不算——方框、方法、方向）
+  '立方(?:厘米|分米|米)|公顷|毫升|升|摄氏度|方(?=就|的土|土|[^\\u4e00-\\u9fff]|$)|' +
   // 四年级：大数的单位连同后面的量词（「18万」「1亿张」「22万步」，2 万读「两万」）、角的度数（「60度」，课本写 60°，见 spellMarks）
   '[万亿](?:张|步|人|个|次|元|吨|千克|千米|米|台|户|粒|名|本|页|件|字|颗|棵|辆|年|天|秒)?|度(?!量)|' +
   // 计数单位：「1个十」「4个百万」「10个一万」「3个千亿」（长的在前）；四下小数的「4个十分之一」只留「4个」（别切成「4个十 · 分之一」）
@@ -176,6 +180,8 @@ export function numberPieces(num: string, lang: Lang): string[] {
  * 分数「3/8」两边是数字，不受影响。
  */
 export function spellMarks(text: string, lang: Lang): string {
+  if (text.includes(DOT_ABOVE)) text = spellRepeating(text, lang)
+  if (/[℃℉²³·]|°\s*[CF]\b/.test(text)) text = spellAlgebra(text, lang)
   if (!/[°∠⊥/′]/.test(text)) return text
   if (lang === 'zh')
     return text
@@ -195,9 +201,42 @@ export function spellMarks(text: string, lang: Lang): string {
     .replace(/([A-Za-z]+)\/(min|h|s|kg|g|km|m)\b/g, (_, a: string, b: string) => `${a} per ${EN_PER[b]}`)
     .replace(/([A-Za-z]+)\/([A-Za-z]+)/g, '$1 per $2')
 }
+/**
+ * 五年级的记号（屏幕上照课本写）：温度 30 ℃ / 30 °C → 30摄氏度 / 30 degrees Celsius，86 ℉ → 86华氏度；
+ * 字母的平方 a² → a的平方 / a squared（五上「用字母表示数」）、立方 a³ → a的立方（五下「长方体和正方体」）；字母、数之间当乘号的「·」（a·b·4）→ 乘 / times——
+ * 只认两边是字母、数字或括号的，「卜算子·咏梅」这种书名里的间隔号不动
+ */
+function spellAlgebra(text: string, lang: Lang): string {
+  const zh = lang === 'zh'
+  return text
+    .replace(/\s*(?:℃|°\s*C\b)/g, zh ? '摄氏度' : ' degrees Celsius')
+    .replace(/\s*(?:℉|°\s*F\b)/g, zh ? '华氏度' : ' degrees Fahrenheit')
+    // 面积单位 cm²、km² 读「平方厘米」「square km」，体积单位 cm³ 读「立方厘米」「cubic cm」（英文的单位合成时再换成单词）；
+    // 别的字母、数读「a 的平方」「4 的立方」（五下 V = a³、4³）
+    .replace(/\b(mm|cm|dm|km|m)²/g, (_, u: string) => (zh ? `平方${ZH_UNIT[u]}` : `square ${u}`))
+    .replace(/\b(mm|cm|dm|m)³/g, (_, u: string) => (zh ? `立方${ZH_UNIT[u]}` : `cubic ${u}`))
+    .replace(/([A-Za-z0-9])²/g, zh ? '$1的平方' : '$1 squared')
+    .replace(/([A-Za-z0-9])³/g, zh ? '$1的立方' : '$1 cubed')
+    .replace(/(?<=[A-Za-z0-9)）])\s*·\s*(?=[A-Za-z0-9(（])/g, zh ? '乘' : ' times ')
+}
+
+const ZH_UNIT: Record<string, string> = { mm: '毫米', cm: '厘米', dm: '分米', km: '千米', m: '米' }
+
+/**
+ * 循环小数（五上「小数除法」，fraction.ts 的 repeating）读成「七点一四五，四五循环」「7.145, 4 5 repeating」：
+ * 先读去掉点的有限部分（写到循环节末位），再一位一位读循环节
+ */
+function spellRepeating(text: string, lang: Lang): string {
+  return text.replace(REPEATING, (...m: string[]) => {
+    const { int, pre, rep } = repeatingParts(m as unknown as RegExpMatchArray)
+    const digits = [...rep].map((c) => (lang === 'zh' ? ZH_DIGITS[Number(c)] : c))
+    return lang === 'zh' ? `${int}.${pre}${rep}，${digits.join('')}循环` : `${int}.${pre}${rep}, ${digits.join(' ')} repeating`
+  })
+}
+
 /** 复合单位（速度、单价）：斜杠两边都是单位才读「每」；统计图的轴名「数量/本」「金额/元」不是复合单位，不动 */
 const ZH_RATE =
-  /(元|米|千米|千克|克|吨|字|个|页|本|件|张|人|次)\/(千米|千克|小时|分钟|时|分|秒|天|周|月|年|克|吨|米|个|人|本|件|张|盒|袋|箱|瓶|份|套|支|枝|台|双|组|辆|桶)/g
+  /(元|米|千米|千克|克|吨|字|个|页|本|件|张|人|次)\/(千米|千克|小时|分钟|时|分|秒|天|周|月|年|克|吨|米|个|人|本|件|张|盒|袋|箱|瓶|份|套|支|枝|台|双|组|辆|桶|条)/g
 /** 「per」后面的单位读成单数的词（km/h → km per hour；斜杠前面的 km、m 合成时再换成 kilometers、meters） */
 const EN_PER: Record<string, string> = { min: 'minute', h: 'hour', s: 'second', kg: 'kilogram', g: 'gram', km: 'kilometer', m: 'meter' }
 
@@ -236,8 +275,9 @@ function rawTokens(source: string, lang: Lang): Raw[] {
         push({ kind: 'phrase', text: 'jiao' })
       }
     } else if (fraction) {
-      const [n, d] = fraction.split('/').map(Number)
-      push({ kind: 'number', text: fractionWords(n!, d!, lang) })
+      const [w, f] = fraction.includes('\u2009') ? fraction.split('\u2009') : [undefined, fraction]
+      const [n, d] = f!.split('/').map(Number)
+      push({ kind: 'number', text: fractionWords(n!, d!, lang, w === undefined ? undefined : Number(w)) })
     } else if (num) {
       if (timeColon && lang === 'en' && /^0\d$/.test(num)) {
         // 英文时刻 1:02 读「1 oh 2」
@@ -304,12 +344,14 @@ function isSlot(r: Raw): boolean {
  */
 // 日期的「月 / 日 / 号」也留在数后面（「3月 · 5日」，不是「3 · 月5日」），但它们前面的 2 照读「二」（二月、二日），所以不进量词表
 const ZH_MEASURE_HEAD = new RegExp(`^(?:${ZH_MEASURE}|月|日|号)`)
+const ZH_LETTERS_HEAD = /^[A-Za-z]{1,3}(?![A-Za-z])/
 const EN_FUNCTION_WORDS = ['and', 'or', 'to', 'than', 'of', 'into', 'from', 'at', 'by', 'with', 'for', 'in', 'on', 'per', 'as']
 const EN_FORWARD_WORDS = new Set([...EN_FUNCTION_WORDS, 'oh', 'each', 'gives', 'give', 'pay', 'pays', 'costs', 'cost', 'have', 'has', 'is', 'are', 'make', 'makes', 'hold', 'holds', 'remainder'])
 const EN_FUNCTION_SET = new Set(EN_FUNCTION_WORDS)
 function splitAfterNumber(text: string, lang: Lang, forward: Set<string> = EN_FORWARD_WORDS): [string, string] {
   if (lang === 'zh') {
-    const m = ZH_MEASURE_HEAD.exec(text)
+    // 量词头留在数后面；五年级「用字母表示数」数和字母连写的（6m、8x、320a）字母也留下，「6m」不切成「6 · m……」
+    const m = ZH_MEASURE_HEAD.exec(text) ?? ZH_LETTERS_HEAD.exec(text)
     return m ? [m[0], text.slice(m[0].length)] : ['', text]
   }
   const words = text.split(' ')

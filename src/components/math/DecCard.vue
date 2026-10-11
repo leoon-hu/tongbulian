@@ -13,7 +13,23 @@ const props = withDefaults(defineProps<{ n?: string; marks?: number[]; frac?: [n
   frac: undefined,
 })
 
-const chars = computed(() => Array.from(props.n ?? '').map((ch, i) => ({ ch, i, point: ch === '.', mark: props.marks.includes(i) })))
+/** 带上点的是第几个字（去掉上点以后数） */
+const dotted = computed(() => {
+  const out = new Set<number>()
+  let i = -1
+  for (const ch of Array.from(props.n ?? '')) {
+    if (ch === '\u0307') out.add(i)
+    else i += 1
+  }
+  return out
+})
+/**
+ * 五上「小数除法」的循环小数（fraction.ts 的 repeating：循环节首末位后面跟一个 U+0307）：那一位上面画圆点（照课本），
+ * 上点本身不占一个字；marks 的下标照旧按去掉上点以后的字符数（没有上点的数和原来一样）
+ */
+const chars = computed(() =>
+  Array.from((props.n ?? '').replace(/\u0307/g, '')).map((ch, i) => ({ ch, i, point: ch === '.', mark: props.marks.includes(i), dot: dotted.value.has(i) })),
+)
 /** 字号封顶：按一行有几个字符算（一位数字约 0.62em，小数点约 0.3em；卡左右留白 28px），最大 46px、最小 18px */
 const fit = computed(() => {
   const width = props.frac ? Math.max(String(props.frac[0]).length, String(props.frac[1]).length) * 0.62 : chars.value.reduce((s, c) => s + (c.point ? 0.3 : 0.62), 0)
@@ -28,7 +44,7 @@ const fit = computed(() => {
       <span class="den">{{ frac[1] }}</span>
     </span>
     <span v-else class="dec">
-      <span v-for="c in chars" :key="c.i" :class="c.point ? 'pt' : ['d', { mark: c.mark }]">{{ c.ch }}</span>
+      <span v-for="c in chars" :key="c.i" :class="c.point ? 'pt' : ['d', { mark: c.mark, rep: c.dot }]">{{ c.ch }}</span>
     </span>
   </div>
 </template>
@@ -64,6 +80,21 @@ const fit = computed(() => {
   display: inline-block;
   width: 0.3em;
   text-align: center;
+}
+/* 循环小数的点：圆点在这一位数字的正上方（五上） */
+.d.rep {
+  position: relative;
+}
+.d.rep::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.02em;
+  width: 0.16em;
+  height: 0.16em;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateX(-50%);
 }
 /* 画横线的数字 */
 .d.mark {

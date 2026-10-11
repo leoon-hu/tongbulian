@@ -77,8 +77,16 @@ function fitAnswer(body: HTMLElement): void {
     return
   }
   const panel = body.querySelector<HTMLElement>(':scope > .a > *')
-  // 面板本身被栏高压住（max-height），原始高度看它的 scrollHeight（元素自己坐标系里的尺寸，不受 zoom 影响）
-  const natural = panel ? Math.max(panel.scrollHeight, panel.offsetHeight) : 0
+  // 面板本身被栏高压住（max-height），原始高度看它的 scrollHeight（元素自己坐标系里的尺寸）。先把缩放放回 1 再量（同题干）：
+  // 缩小后面板在自己坐标系里变宽，长选项少折一行、量出来就矮了——按当前缩放量，缩了觉得放得下、放回 1 又放不下，来回跳，
+  // 最后停在哪边看量了几次（2026-10-11 普查：四年级语文的长选项换题后第四个被截掉一截）
+  let natural = 0
+  if (panel) {
+    const inline = panel.style.zoom
+    panel.style.zoom = '1'
+    natural = Math.max(panel.scrollHeight, panel.offsetHeight)
+    panel.style.zoom = inline
+  }
   const avail = body.clientHeight
   const next = natural > 0 && avail > 0 ? Math.max(MIN_AZOOM, Math.min(1, quantize(avail / natural))) : 1
   if (next !== aZoom.value) aZoom.value = next
@@ -543,6 +551,11 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr;
   gap: 6px;
 }
+/* 拼音选项（看字选读音）两列：六个字母的音节（chuǎng、shuāng）加上左右各 10px 的内边距，把手机横屏 182px 的作答栏撑出去几像素、
+   右边一列被裁一条边（2026-10-11 普查），内边距收一点 */
+.compact .a :deep(.cards.as-pinyin .card) {
+  padding-inline: 6px;
+}
 .compact .a :deep(.cards.wordy .card) {
   min-height: 44px;
   font-size: var(--fs-md);
@@ -564,6 +577,15 @@ onBeforeUnmount(() => {
     padding: 2px 6px;
     white-space: nowrap;
     font-size: min(var(--fs-lg), calc((100cqw - 30px) / (var(--num-len) * 0.62)));
+  }
+  /* 五个字母以上的拼音（zhàng、chuǎng）两列也放不下：小手机横屏 135px 的栏里第二张卡伸出去、最后一个字母被裁（2026-10-11 普查），排一列 */
+  .compact .a :deep(.cards.py5) {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .compact .a :deep(.cards.py5 .card) {
+    min-height: 44px;
+    padding: 2px 6px;
   }
 }
 @container (max-width: 240px) {

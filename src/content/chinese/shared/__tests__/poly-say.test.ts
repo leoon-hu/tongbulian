@@ -3,18 +3,22 @@ import { describe, expect, it } from 'vitest'
 import '@/content/chinese/grade1'
 import '@/content/chinese/grade2'
 import '@/content/chinese/grade3'
+import '@/content/chinese/grade4'
 import { LESSONS as L1 } from '@/content/chinese/grade1/generators'
 import { LESSONS as L2 } from '@/content/chinese/grade2/generators'
 import { LESSONS as L3 } from '@/content/chinese/grade3/generators'
+import { LESSONS as L4 } from '@/content/chinese/grade4/generators'
 import { PY as PY1 } from '@/content/chinese/grade1/py'
 import { PY as PY2 } from '@/content/chinese/grade2/py'
 import { PY as PY3 } from '@/content/chinese/grade3/py'
+import { PY as PY4 } from '@/content/chinese/grade4/py'
 import { POLY_SAY, clozeAnswerPy, parseCloze, parseZi } from '../makers'
 
 const GRADES = [
   { name: '一年级', lessons: L1, py: PY1 },
   { name: '二年级', lessons: L2, py: PY2 },
   { name: '三年级', lessons: L3, py: PY3 },
+  { name: '四年级', lessons: L4, py: PY4 },
 ]
 
 describe('多音字读哪个词（POLY_SAY，Y6）', () => {

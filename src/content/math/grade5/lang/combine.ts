@@ -1,0 +1,100 @@
+// 五上「一 观察简单组合体」的词条（五年级数学 A）。
+// 课本用词：组合体、小正方体、摆、从前面看 / 从上面看 / 从左面看（没有右面、后面，也不说主视图）、从什么方向看到的、
+// 看到的图形相同 / 不相同。图下面的「从前面看」注音、不朗读。「这 3 个组合体」照课本写阿拉伯数字。
+// 「数一数」的「数」读 shǔ、单独的「数」容易读错，题目里说「数字」「几个」；「摞」luò。
+// 拼音：「一个」yí gè、「哪一个」nǎ yí gè、「这一摞」zhè yí luò、「几个」「这 3 个」的个读 gè，「哪个」「这个」的个读轻声 ge；「一共」yí gòng。
+import type { Dict } from '@/engine/i18n'
+
+export const ZH: Dict = {
+  // ── 三个方向（选项、句子开头、图下面的字）──
+  'm5.comb.side.front': '从前面看',
+  'm5.comb.side.top': '从上面看',
+  'm5.comb.side.left': '从左面看',
+  // ── 选项 ──
+  'm5.comb.same': '相同',
+  'm5.comb.diff': '不相同',
+  'm5.comb.pair': '{a} 和 {b}',
+  'm5.comb.yes': '对',
+  'm5.comb.no': '不对',
+  // ── 观察简单组合体 ──
+  'm5.comb.pick': '{side}，看到的是哪个图形？',
+  'm5.comb.which': '下面的图形是从哪个方向看到的？',
+  'm5.comb.sameSide': '这 {n} 个组合体，从哪个方向看到的图形都相同？',
+  'm5.comb.diffSide': '这 {n} 个组合体，从哪个方向看到的图形不同？',
+  'm5.comb.allDiff': '这 {n} 个组合体，从哪个方向看到的图形都不相同？',
+  'm5.comb.isSame': '{side}，这 {n} 个组合体看到的图形相同吗？',
+  'm5.comb.allSee': '{side}，这 {n} 个组合体看到的图形相同，是下面哪一个？',
+  'm5.comb.who': '{side}，哪个组合体看到的是这个图形？',
+  'm5.comb.pairSame': '{side}，哪两个组合体看到的图形相同？',
+  'm5.comb.howMany': '{side}，看到的图形是这样的有几个？',
+  'm5.comb.maybe': '从同一个方向观察不同的组合体，看到的图形可能相同，对吗？',
+  'm5.comb.must': '从同一个方向看到的图形相同，组合体就一定相同，对吗？',
+  'm5.comb.topPick': '从上面看，格子里的数字是这一摞有几个小正方体。{side}，看到的是哪个图形？',
+  // ── 还原简单组合体 ──
+  'm5.comb.fitN': '用 {n} 个小正方体摆组合体，{side}是这个图形，下面哪种摆法对？',
+  'm5.comb.count': '照这三个方向看到的图形摆组合体，要用几个小正方体？',
+  'm5.comb.build': '照这三个方向看到的图形摆组合体，是下面哪一个？',
+  'm5.comb.least': '{side}是这个图形，摆这样的组合体最少要用几个小正方体？',
+  'm5.comb.leftFrom': '用 {n} 个小正方体摆组合体，从前面和上面看是这样的。从左面看，是哪个图形？',
+  'm5.comb.topCount': '从上面看，格子里的数字是这一摞有几个小正方体。一共用了几个小正方体？',
+}
+
+export const EN: Dict = {
+  'm5.comb.side.front': 'From the front',
+  'm5.comb.side.top': 'From the top',
+  'm5.comb.side.left': 'From the left',
+  'm5.comb.same': 'Same',
+  'm5.comb.diff': 'Different',
+  'm5.comb.pair': '{a} and {b}',
+  'm5.comb.yes': 'Right',
+  'm5.comb.no': 'Wrong',
+  'm5.comb.pick': '{side}, which shape do you see?',
+  'm5.comb.which': 'From which direction do you see the shape below?',
+  'm5.comb.sameSide': 'From which direction do these {n} solids all look the same?',
+  'm5.comb.diffSide': 'From which direction do these {n} solids look different?',
+  'm5.comb.allDiff': 'From which direction do these {n} solids all look different?',
+  'm5.comb.isSame': '{side}, do these {n} solids look the same?',
+  'm5.comb.allSee': '{side}, these {n} solids look the same. Which shape below is it?',
+  'm5.comb.who': '{side}, which solid looks like this shape?',
+  'm5.comb.pairSame': '{side}, which two solids look the same?',
+  'm5.comb.howMany': '{side}, how many solids look like this shape?',
+  'm5.comb.maybe': 'Seen from the same direction, different solids may look the same. Right?',
+  'm5.comb.must': 'If two solids look the same from one direction, they must be the same solid. Right?',
+  'm5.comb.topPick': 'Seen from the top, each number tells how many cubes are stacked there. {side}, which shape do you see?',
+  'm5.comb.fitN': 'Build a solid with {n} small cubes. {side} it looks like this shape. Which way of building is right?',
+  'm5.comb.count': 'Build a solid that looks like these shapes from the three directions. How many small cubes do you need?',
+  'm5.comb.build': 'Build a solid that looks like these shapes from the three directions. Which one below is it?',
+  'm5.comb.least': '{side} the solid looks like this shape. At least how many small cubes are needed?',
+  'm5.comb.leftFrom': 'A solid built with {n} small cubes looks like this from the front and from the top. Which shape do you see from the left?',
+  'm5.comb.topCount': 'Seen from the top, each number tells how many cubes are stacked there. How many small cubes are used in all?',
+}
+
+export const PY: Record<string, string> = {
+  'm5.comb.side.front': 'cóng qián miàn kàn',
+  'm5.comb.side.top': 'cóng shàng miàn kàn',
+  'm5.comb.side.left': 'cóng zuǒ miàn kàn',
+  'm5.comb.same': 'xiāng tóng',
+  'm5.comb.diff': 'bù xiāng tóng',
+  'm5.comb.pair': 'hé',
+  'm5.comb.yes': 'duì',
+  'm5.comb.no': 'bú duì',
+  'm5.comb.pick': 'kàn dào de shì nǎ ge tú xíng',
+  'm5.comb.which': 'xià miàn de tú xíng shì cóng nǎ ge fāng xiàng kàn dào de',
+  'm5.comb.sameSide': 'zhè gè zǔ hé tǐ cóng nǎ ge fāng xiàng kàn dào de tú xíng dōu xiāng tóng',
+  'm5.comb.diffSide': 'zhè gè zǔ hé tǐ cóng nǎ ge fāng xiàng kàn dào de tú xíng bù tóng',
+  'm5.comb.allDiff': 'zhè gè zǔ hé tǐ cóng nǎ ge fāng xiàng kàn dào de tú xíng dōu bù xiāng tóng',
+  'm5.comb.isSame': 'zhè gè zǔ hé tǐ kàn dào de tú xíng xiāng tóng ma',
+  'm5.comb.allSee': 'zhè gè zǔ hé tǐ kàn dào de tú xíng xiāng tóng shì xià miàn nǎ yí gè',
+  'm5.comb.who': 'nǎ ge zǔ hé tǐ kàn dào de shì zhè ge tú xíng',
+  'm5.comb.pairSame': 'nǎ liǎng gè zǔ hé tǐ kàn dào de tú xíng xiāng tóng',
+  'm5.comb.howMany': 'kàn dào de tú xíng shì zhè yàng de yǒu jǐ gè',
+  'm5.comb.maybe': 'cóng tóng yí gè fāng xiàng guān chá bù tóng de zǔ hé tǐ kàn dào de tú xíng kě néng xiāng tóng duì ma',
+  'm5.comb.must': 'cóng tóng yí gè fāng xiàng kàn dào de tú xíng xiāng tóng zǔ hé tǐ jiù yí dìng xiāng tóng duì ma',
+  'm5.comb.topPick': 'cóng shàng miàn kàn gé zi lǐ de shù zì shì zhè yí luò yǒu jǐ gè xiǎo zhèng fāng tǐ kàn dào de shì nǎ ge tú xíng',
+  'm5.comb.fitN': 'yòng gè xiǎo zhèng fāng tǐ bǎi zǔ hé tǐ shì zhè ge tú xíng xià miàn nǎ zhǒng bǎi fǎ duì',
+  'm5.comb.count': 'zhào zhè sān gè fāng xiàng kàn dào de tú xíng bǎi zǔ hé tǐ yào yòng jǐ gè xiǎo zhèng fāng tǐ',
+  'm5.comb.build': 'zhào zhè sān gè fāng xiàng kàn dào de tú xíng bǎi zǔ hé tǐ shì xià miàn nǎ yí gè',
+  'm5.comb.least': 'shì zhè ge tú xíng bǎi zhè yàng de zǔ hé tǐ zuì shǎo yào yòng jǐ gè xiǎo zhèng fāng tǐ',
+  'm5.comb.leftFrom': 'yòng gè xiǎo zhèng fāng tǐ bǎi zǔ hé tǐ cóng qián miàn hé shàng miàn kàn shì zhè yàng de cóng zuǒ miàn kàn shì nǎ ge tú xíng',
+  'm5.comb.topCount': 'cóng shàng miàn kàn gé zi lǐ de shù zì shì zhè yí luò yǒu jǐ gè xiǎo zhèng fāng tǐ yí gòng yòng le jǐ gè xiǎo zhèng fāng tǐ',
+}

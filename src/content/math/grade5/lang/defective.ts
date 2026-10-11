@@ -1,0 +1,100 @@
+// 五下「8 数学广角——找次品」的词条（五年级数学 F）。
+// 课本用词：次品（正品）、用天平称、平衡 / 不平衡、轻的 / 重的是次品、「至少称几次能保证找出次品」、分成的份数、每份的数量、至少要称的次数、
+// 质量相同、略重一些、少了几块。单位写「克」（课本「500 g」）。
+// 题目一律写明次品是轻还是重（「少了几块」也补一句「轻一些」）。表里的字、天平上的号码不朗读；题目文字里不写「（2，2，2，2）」这种括号。
+// 朗读：「称」（chēng）、「重一些」（zhòng）、「重还是轻」请合成后核听。
+import type { Dict } from '@/engine/i18n'
+
+export const ZH: Dict = {
+  'm5.defect.calcium': '有 {n} 瓶钙片，其中 1 瓶少了 3 片，轻一些。',
+  'm5.defect.ask.calcium': '用天平称，至少称几次能保证找出这瓶钙片？',
+  'm5.defect.part.heavy': '{n} 个零件里有 1 个是次品，次品重一些。',
+  'm5.defect.part.light': '{n} 个零件里有 1 个是次品，次品轻一些。',
+  'm5.defect.ask.part': '用天平称，至少称几次能保证找出次品？',
+  'm5.defect.salt': '有 {n} 瓶水，其中 {m} 瓶质量相同，另有 1 瓶是盐水，比其他的水略重一些。',
+  'm5.defect.ask.salt': '用天平称，至少称几次能保证找出这瓶盐水？',
+  'm5.defect.biscuit': '有 {n} 盒饼干，其中 {m} 盒质量相同，另有 1 盒少了几块，轻一些。',
+  'm5.defect.ask.biscuit': '用天平称，至少称几次能保证找出这盒饼干？',
+  'm5.defect.candy': '1 箱糖果有 {n} 袋，其中 {m} 袋质量相同，另有 1 袋质量轻一些。',
+  'm5.defect.ask.candy': '用天平称，至少称几次能保证找出这袋糖果？',
+  'm5.defect.read.box': '3 瓶钙片里有 1 瓶次品，次品轻一些。把 {a} 号和 {b} 号放在天平上，结果如图。',
+  'm5.defect.read.ball': '3 个零件里有 1 个次品，次品重一些。把 {a} 号和 {b} 号放在天平上，结果如图。',
+  'm5.defect.read.which': '次品是几号？',
+  'm5.defect.group.data': '8 个零件里有 1 个次品，次品重一些。第一次称的结果如图。',
+  'm5.defect.group.which': '次品在哪几个零件里？',
+  'm5.defect.nos': '{list} 号',
+  'm5.defect.th.parts': '分成的份数',
+  'm5.defect.th.each': '每份的数量',
+  'm5.defect.th.times': '至少要称的次数',
+  'm5.defect.split.data': '8 个零件里有 1 个次品，次品重一些。把零件分成几份来称，结果填在下面的表里。',
+  'm5.defect.table.q': '表里的问号处应该填几？',
+  'm5.defect.best.q': '表中哪种分法需要称的次数最少？',
+  'm5.defect.parts': '分成 {k} 份',
+  'm5.defect.five.data': '5 瓶钙片里有 1 瓶次品，次品轻一些。先称 1 号和 2 号，天平平衡；再称 3 号和 4 号，结果如图。',
+  'm5.defect.third.q': '{n} 袋糖果中有 1 袋轻一些。把它们平均分成 3 份，先把其中两份放在天平上称。如果天平平衡，次品在剩下的几袋里？',
+  'm5.defect.sugar.q':
+    '有 3 袋白糖，其中 2 袋每袋 500 克，另 1 袋不是 500 克，但不知道它比 500 克重还是轻。用天平称，至少称几次能保证找出这袋白糖？',
+}
+
+export const EN: Dict = {
+  'm5.defect.calcium': 'There are {n} bottles of calcium tablets. One bottle is short of 3 tablets, so it is lighter.',
+  'm5.defect.ask.calcium': 'Using a balance, at least how many weighings make sure you find that bottle?',
+  'm5.defect.part.heavy': 'Among {n} parts, 1 is defective and a little heavier.',
+  'm5.defect.part.light': 'Among {n} parts, 1 is defective and a little lighter.',
+  'm5.defect.ask.part': 'Using a balance, at least how many weighings make sure you find the defective one?',
+  'm5.defect.salt': 'There are {n} bottles of water. {m} of them weigh the same, and 1 bottle is salt water, a little heavier than the others.',
+  'm5.defect.ask.salt': 'Using a balance, at least how many weighings make sure you find the bottle of salt water?',
+  'm5.defect.biscuit': 'There are {n} boxes of biscuits. {m} of them weigh the same, and 1 box is short of a few biscuits, so it is lighter.',
+  'm5.defect.ask.biscuit': 'Using a balance, at least how many weighings make sure you find that box?',
+  'm5.defect.candy': 'A case holds {n} bags of sweets. {m} bags weigh the same, and 1 bag is a little lighter.',
+  'm5.defect.ask.candy': 'Using a balance, at least how many weighings make sure you find that bag?',
+  'm5.defect.read.box': 'Of 3 bottles of calcium tablets, 1 is defective and lighter. Bottles {a} and {b} are put on the balance, as shown.',
+  'm5.defect.read.ball': 'Of 3 parts, 1 is defective and heavier. Parts {a} and {b} are put on the balance, as shown.',
+  'm5.defect.read.which': 'Which number is the defective one?',
+  'm5.defect.group.data': 'Of 8 parts, 1 is defective and heavier. The first weighing is shown.',
+  'm5.defect.group.which': 'Which parts is the defective one among?',
+  'm5.defect.nos': 'No. {list}',
+  'm5.defect.th.parts': 'groups',
+  'm5.defect.th.each': 'in each group',
+  'm5.defect.th.times': 'weighings needed',
+  'm5.defect.split.data': 'Of 8 parts, 1 is defective and heavier. Split the parts into groups to weigh them; the results are in the table.',
+  'm5.defect.table.q': 'What goes where the question mark is in the table?',
+  'm5.defect.best.q': 'Which way of splitting in the table needs the fewest weighings?',
+  'm5.defect.parts': '{k} groups',
+  'm5.defect.five.data': 'Of 5 bottles of calcium tablets, 1 is defective and lighter. No. 1 and No. 2 balance; then No. 3 is weighed against No. 4, as shown.',
+  'm5.defect.third.q': 'Of {n} bags of sweets, 1 is lighter. Split them evenly into 3 groups and weigh two of the groups first. If the balance is level, how many bags is the defective one among?',
+  'm5.defect.sugar.q':
+    'Of 3 bags of sugar, 2 weigh 500 g each. The other one is not 500 g, but nobody knows if it is heavier or lighter. Using a balance, at least how many weighings make sure you find that bag?',
+}
+
+export const PY: Record<string, string> = {
+  'm5.defect.calcium': 'yǒu píng gài piàn qí zhōng píng shǎo le piàn qīng yì xiē',
+  'm5.defect.ask.calcium': 'yòng tiān píng chēng zhì shǎo chēng jǐ cì néng bǎo zhèng zhǎo chū zhè píng gài piàn',
+  'm5.defect.part.heavy': 'gè líng jiàn lǐ yǒu gè shì cì pǐn cì pǐn zhòng yì xiē',
+  'm5.defect.part.light': 'gè líng jiàn lǐ yǒu gè shì cì pǐn cì pǐn qīng yì xiē',
+  'm5.defect.ask.part': 'yòng tiān píng chēng zhì shǎo chēng jǐ cì néng bǎo zhèng zhǎo chū cì pǐn',
+  'm5.defect.salt': 'yǒu píng shuǐ qí zhōng píng zhì liàng xiāng tóng lìng yǒu píng shì yán shuǐ bǐ qí tā de shuǐ lüè zhòng yì xiē',
+  'm5.defect.ask.salt': 'yòng tiān píng chēng zhì shǎo chēng jǐ cì néng bǎo zhèng zhǎo chū zhè píng yán shuǐ',
+  'm5.defect.biscuit': 'yǒu hé bǐng gān qí zhōng hé zhì liàng xiāng tóng lìng yǒu hé shǎo le jǐ kuài qīng yì xiē',
+  'm5.defect.ask.biscuit': 'yòng tiān píng chēng zhì shǎo chēng jǐ cì néng bǎo zhèng zhǎo chū zhè hé bǐng gān',
+  'm5.defect.candy': 'xiāng táng guǒ yǒu dài qí zhōng dài zhì liàng xiāng tóng lìng yǒu dài zhì liàng qīng yì xiē',
+  'm5.defect.ask.candy': 'yòng tiān píng chēng zhì shǎo chēng jǐ cì néng bǎo zhèng zhǎo chū zhè dài táng guǒ',
+  'm5.defect.read.box': 'píng gài piàn lǐ yǒu píng cì pǐn cì pǐn qīng yì xiē bǎ hào hé hào fàng zài tiān píng shàng jié guǒ rú tú',
+  'm5.defect.read.ball': 'gè líng jiàn lǐ yǒu gè cì pǐn cì pǐn zhòng yì xiē bǎ hào hé hào fàng zài tiān píng shàng jié guǒ rú tú',
+  'm5.defect.read.which': 'cì pǐn shì jǐ hào',
+  'm5.defect.group.data': 'gè líng jiàn lǐ yǒu gè cì pǐn cì pǐn zhòng yì xiē dì yī cì chēng de jié guǒ rú tú',
+  'm5.defect.group.which': 'cì pǐn zài nǎ jǐ gè líng jiàn lǐ',
+  'm5.defect.nos': 'hào',
+  'm5.defect.th.parts': 'fēn chéng de fèn shù',
+  'm5.defect.th.each': 'měi fèn de shù liàng',
+  'm5.defect.th.times': 'zhì shǎo yào chēng de cì shù',
+  'm5.defect.split.data': 'gè líng jiàn lǐ yǒu gè cì pǐn cì pǐn zhòng yì xiē bǎ líng jiàn fēn chéng jǐ fèn lái chēng jié guǒ tián zài xià miàn de biǎo lǐ',
+  'm5.defect.table.q': 'biǎo lǐ de wèn hào chù yīng gāi tián jǐ',
+  'm5.defect.best.q': 'biǎo zhōng nǎ zhǒng fēn fǎ xū yào chēng de cì shù zuì shǎo',
+  'm5.defect.parts': 'fēn chéng fèn',
+  'm5.defect.five.data': 'píng gài piàn lǐ yǒu píng cì pǐn cì pǐn qīng yì xiē xiān chēng hào hé hào tiān píng píng héng zài chēng hào hé hào jié guǒ rú tú',
+  'm5.defect.third.q':
+    'dài táng guǒ zhōng yǒu dài qīng yì xiē bǎ tā men píng jūn fēn chéng fèn xiān bǎ qí zhōng liǎng fèn fàng zài tiān píng shàng chēng rú guǒ tiān píng píng héng cì pǐn zài shèng xià de jǐ dài lǐ',
+  'm5.defect.sugar.q':
+    'yǒu dài bái táng qí zhōng dài měi dài kè lìng dài bú shì kè dàn bù zhī dào tā bǐ kè zhòng hái shì qīng yòng tiān píng chēng zhì shǎo chēng jǐ cì néng bǎo zhèng zhǎo chū zhè dài bái táng',
+}

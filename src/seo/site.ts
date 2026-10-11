@@ -22,18 +22,22 @@ import { KP_SEO as SEO_G1, type KpSeo } from '@/content/math/grade1/seo'
 import { KP_SEO as SEO_G2 } from '@/content/math/grade2/seo'
 import { KP_SEO as SEO_G3 } from '@/content/math/grade3/seo'
 import { KP_SEO as SEO_G4 } from '@/content/math/grade4/seo'
+import { KP_SEO as SEO_G5 } from '@/content/math/grade5/seo'
 import { KP_SEO as SEO_C1 } from '@/content/chinese/grade1/seo'
 import { KP_SEO as SEO_C2 } from '@/content/chinese/grade2/seo'
 import { KP_SEO as SEO_C3 } from '@/content/chinese/grade3/seo'
+import { KP_SEO as SEO_C4 } from '@/content/chinese/grade4/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
+import '@/content/math/grade5'
 import '@/content/chinese/grade1'
 import '@/content/chinese/grade2'
 import '@/content/chinese/grade3'
+import '@/content/chinese/grade4'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_C1, ...SEO_C2, ...SEO_C3 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -104,14 +108,23 @@ const SUBJECT_COPY: Record<string, SubjectCopy> = {
 }
 const copyOf = (c: Course): SubjectCopy => SUBJECT_COPY[c.subjectId] ?? SUBJECT_COPY.math!
 
-/** 上线的课程按学科归在一起说：「一年级、二年级数学和一年级语文」 */
+/** 上线的课程按学科归在一起说：「一年级、二年级数学和一年级语文」；几门学科上线的年级一样就并成「一年级、二年级数学和语文」 */
 function coursesSummary(lcs: LiveCourse[]): string {
   const bySubject = new Map<string, string[]>()
   for (const lc of lcs) {
     const subject = zh(lc.subject.title)
     bySubject.set(subject, [...(bySubject.get(subject) ?? []), zh(lc.grade.title)])
   }
-  return [...bySubject].map(([subject, grades]) => `${grades.join('、')}${subject}`).join('和')
+  const byGrades = new Map<string, string[]>()
+  for (const [subject, grades] of bySubject) byGrades.set(gradeSpan(grades), [...(byGrades.get(gradeSpan(grades)) ?? []), subject])
+  return [...byGrades].map(([grades, subjects]) => `${grades}${subjects.join('和')}`).join('和')
+}
+/** 年级列表：连着的三个以上缩成「一至五年级」，别的用顿号连（「一年级、二年级」） */
+function gradeSpan(grades: string[]): string {
+  const ORDER = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级']
+  const idx = grades.map((g) => ORDER.indexOf(g))
+  const consecutive = idx.every((v, i) => v >= 0 && (i === 0 || v === idx[i - 1]! + 1))
+  return consecutive && grades.length >= 3 ? `${grades[0]!.slice(0, 1)}至${grades[grades.length - 1]}` : grades.join('、')
 }
 /** 列表标题里的单元编号：「第 3 单元」；没编号的综合与实践 / 数学游戏是「☆」 */
 const unitNo = (u: Unit): string => (u.numbered === false ? '☆' : `第 ${u.order} 单元`)
@@ -446,6 +459,173 @@ export function stemText(part: StemPart): string {
         return `${head}${grid.map((row) => row.join('')).join('／')}`
       })
       return `（看到的图形　${figs.join('　')}）`
+    }
+    // 五年级数学 A
+    case 'cube-top': {
+      // 标数的俯视图：一行一行写（后排在上），每格写摞了几个，空着的写「空」
+      const w = Math.max(...part.cells.map((c) => c.x + 1))
+      const h = Math.max(...part.cells.map((c) => c.y + 1))
+      const rows = Array.from({ length: h }, (_, r) =>
+        Array.from({ length: w }, (_, x) => part.cells.find((c) => c.x === x && c.y === h - 1 - r)?.n ?? '空').join(' '),
+      )
+      return `（从上面看到的图形，每格写着这个位置摞了几个小正方体：${rows.join('／')}）`
+    }
+    case 'dial':
+      return `（钟面，中心是点 O：${part.from === undefined ? '' : `指针原来指着 ${part.from}，`}现在指着 ${part.to}）`
+    // 五年级数学 B
+    case 'dec-mul': {
+      // 小数乘法竖式：上下两个乘数（末尾对齐），横线下写好的积照写，没写就说空着
+      const zeros = part.zeros ? '，整数乘数末尾的 0 写在竖式外面' : ''
+      const res = part.product === undefined ? '，横线下面空着' : `，横线下面写着 ${part.product}`
+      return `（竖式：${part.a} × ${part.b}，两个乘数末尾对齐${zeros}${res}）`
+    }
+    case 'ratio-lines': {
+      // 小数倍的线段图：每行的名字、上面和下面标的字
+      const rows = part.rows.map((r) => `${zh(r.name)}的线段上面标着 ${zh(r.top)}，下面标着 ${r.bottom}`).join('；')
+      return `（线段图，第一条线段平均分成 ${part.per} 小段：${rows}）`
+    }
+    case 'fare-line': {
+      // 分段计费的线段图：分点的名字、括出的几段和整条下面的字
+      const names = (part.names ?? []).map((n) => zh(n)).filter(Boolean).join('、')
+      const segs = part.parts.filter((x) => x.label !== '').map((x) => x.label).join('、')
+      const total = part.total !== undefined ? `，整条线段下面标着 ${part.total}` : ''
+      return `（线段图：标着 ${names}，上面括出的几段依次标着 ${segs}${total}）`
+    }
+    // 五年级数学 C
+    case 'dec-division': {
+      // 小数除法竖式：照课本写的除数、被除数，移小数点的说一声，商和下面每一步写了什么（「?」是要填的空）
+      const moved = part.moved === undefined ? '' : '，除数和被除数的小数点向右移动了'
+      const q = part.quotient ? `，商写的是 ${part.quotient.text === '?' ? '（　）' : part.quotient.text}` : ''
+      const rows = part.rows?.length ? `，下面依次写着 ${part.rows.map((r) => r.text).join('、')}` : ''
+      return `（除法竖式：${part.dividend} ÷ ${part.divisor}${moved}${q}${rows}）`
+    }
+    case 'draw-box': {
+      // 摸球盒：每个盒子里几种颜色各几个（编号的写上编号）
+      const CN: Record<string, string> = { red: '红', yellow: '黄', blue: '蓝', green: '绿', white: '白' }
+      const what = part.piece === 'pawn' ? '棋子' : '球'
+      const boxes = part.boxes.map((b, i) => `${part.numbered ? `${i + 1} 号` : ''}${part.bag ? '袋子' : '盒子'}里：${b.map((x) => `${CN[x.color]}${what} ${x.n} 个`).join('、')}`)
+      return `（${boxes.join('；')}）`
+    }
+    case 'spinner': {
+      // 转盘：平均分成几份、每种颜色几份
+      const CN: Record<string, string> = { red: '红色', yellow: '黄色', blue: '蓝色', green: '绿色', white: '白色' }
+      const wheels = part.items.map((w, i) => {
+        const count = new Map<string, number>()
+        for (const c of w) count.set(c, (count.get(c) ?? 0) + 1)
+        return `${part.numbered ? `${i + 1} 号` : ''}转盘平均分成 ${w.length} 份：${[...count].map(([c, k]) => `${CN[c]} ${k} 份`).join('、')}`
+      })
+      return `（${wheels.join('；')}）`
+    }
+    // 五年级数学 D
+    case 'pattern-dots': {
+      // 找规律的图：拼桌子、圆片、棋子，一幅一句
+      const figs = part.figs.map((f, i) => {
+        const no = part.numbered ? `${i + 1}：` : ''
+        if (f.t === 'tables') return `${no}${f.n} 张桌子拼成一排，每张桌子上下两边各坐 ${f.side} 人，两头各坐 1 人`
+        if (f.t === 'rows') return `${no}圆片从上往下每排 ${f.counts.join('、')} 个`
+        return `${no}${f.r} 行 ${f.r + 1} 列的棋子，从上往下第几行就有几个黑棋`
+      })
+      return `（${figs.join('；')}${part.more ? '……' : ''}）`
+    }
+    // 五年级数学 E
+    // 五年级数学 F
+    case 'hundred-chart': {
+      // 百数表：从几到几、每行几个；画圈、画框、去掉的数照列出来
+      const marks = [
+        part.circled?.length ? `画圈的数：${part.circled.join('、')}` : '',
+        part.boxed?.length ? `画框的数：${part.boxed.join('、')}` : '',
+        part.crossed?.length ? `画斜线去掉的数：${part.crossed.join('、')}` : '',
+      ].filter(Boolean)
+      return `（${part.start} 到 ${part.start + part.count - 1} 的数表，每行 ${part.cols ?? 10} 个${marks.length ? `；${marks.join('；')}` : ''}）`
+    }
+    case 'digit-cards':
+      return `（数字卡片：${Array.from(part.digits).map((c) => (c === '?' ? '□' : c)).join(' ')}）`
+    case 'pair-tiles':
+      return `（小方块每两个一列摆成两排：${part.groups.map((n) => `${n} 个`).join(' + ')}）`
+    case 'balance': {
+      // 天平：两边各放了几号、哪边低；没放上去的也说
+      const names = (xs: string[]): string => (xs.every((x) => !x) ? `${xs.length} 个` : xs.map((x) => `${x} 号`).join('、'))
+      const state = part.tilt === 'left' ? '左边低、右边高' : part.tilt === 'right' ? '右边低、左边高' : '平衡'
+      const aside = part.aside?.length ? `，旁边还有 ${names(part.aside)}` : ''
+      return `（天平：左边放 ${names(part.left)}，右边放 ${names(part.right)}，天平${state}${aside}）`
+    }
+    case 'notify-tree':
+      return part.mode === 'group'
+        ? `（分组通知图：老师先通知 ${part.groups ?? 3} 名同学，他们每人再通知本组的 ${part.per ?? 4} 名同学）`
+        : `（通知图：接到通知的人都继续通知别人，画到第 ${part.minutes ?? 3} 分钟，圈里的数是第几分钟接到的通知）`
+    // 五年级数学 G
+    case 'box': {
+      // 长方体 / 正方体：标的数按位置说（不说是长、宽还是高：有的题问的就是这个）；红棱、涂色的面、装水的容器另外说
+      const EDGE = { l: '正面的底边', w: '右下往后斜的那条棱', h: '右前竖着的那条棱' } as const
+      const FACE = { front: '前面', top: '上面', right: '右面' } as const
+      const one = (b: (typeof part.items)[number]): string => {
+        const name = b.water !== undefined ? '透明的长方体容器' : b.l === b.w && b.w === b.h ? '正方体' : '长方体'
+        const lab = b.labels ?? {}
+        const marks = (['l', 'w', 'h'] as const).filter((k) => lab[k]).map((k) => `${EDGE[k]}标着 ${lab[k]}`)
+        const extra = [
+          b.wire ? '看不见的棱画成虚线' : '',
+          b.mark ? `${EDGE[b.mark]}画成红色` : '',
+          b.face ? `${FACE[b.face]}涂了颜色` : '',
+          b.open ? '没有盖' : '',
+          b.grid ? '面上画着一格一格的小正方体' : '',
+          b.water !== undefined ? `装着水${b.depth ? `，水深标着 ${b.depth}` : ''}${b.stone ? '，水底有一块石头' : ''}` : '',
+        ].filter(Boolean)
+        return `${name}${marks.length ? `：${marks.join('，')}` : ''}${extra.length ? `；${extra.join('，')}` : ''}`
+      }
+      return `（${part.items.map(one).join(part.arrow ? ' → ' : '；')}）`
+    }
+    case 'box-net':
+    case 'nets': {
+      // 展开图：一行一行写，■ 是一个面（写了字的写那个字）、□ 是空着的地方；几个编号的写成 ①…… ②……
+      const rowsOf = (cells: { r: number; c: number; label?: Parameters<typeof zh>[0] }[]): string => {
+        const rows = Math.max(...cells.map((c) => c.r)) + 1
+        const cols = Math.max(...cells.map((c) => c.c)) + 1
+        return Array.from({ length: rows }, (_, r) =>
+          Array.from({ length: cols }, (_, c) => {
+            const cell = cells.find((x) => x.r === r && x.c === c)
+            return cell ? (cell.label !== undefined ? zh(cell.label) : '■') : '□'
+          }).join(''),
+        ).join('／')
+      }
+      if (part.kind === 'box-net') return `（长方体的展开图，格子大小不一样：${rowsOf(part.cells)}）`
+      const NUM = '①②③④⑤⑥'
+      return `（正方体的展开图　${part.items.map((cells, i) => `${NUM[i] ?? `${i + 1}.`}${rowsOf(cells)}`).join('　')}）`
+    }
+    case 'beaker': {
+      const THING = { potato: '土豆', stone: '石块', egg: '鸡蛋' } as const
+      const one = (b: (typeof part.items)[number]): string => `水面在 ${b.water} 毫升${b.thing ? `，水底有一个${THING[b.thing]}` : ''}`
+      return `（${part.max} 毫升的烧杯：${part.items.map(one).join(part.arrow ? ' → ' : '；')}）`
+    }
+    // 五年级数学 H
+    case 'frac-chain': {
+      // 分数链：分数写成「2/3」、带分数「2又1/3」，要填的写「（　）」；弧形箭头写成「（从 1/2 到 2/4：分子 ×2，分母 ×2）」
+      const side = (s: string): string => s.replace(/\?/g, '（　）')
+      const terms = part.terms.map((x) => ('t' in x ? side(x.t) : `${x.w !== undefined ? `${side(x.w)}又` : ''}${side(x.n)}/${side(x.d)}`))
+      const arcs = (part.arcs ?? []).map((a) => {
+        const ways = [a.top ? `分子 ${side(a.top)}` : '', a.bottom ? `分母 ${side(a.bottom)}` : ''].filter(Boolean).join('，')
+        return `（从 ${terms[a.from] ?? ''} 到 ${terms[a.to] ?? ''}：${ways}）`
+      })
+      return `${terms.join(' ')}${arcs.join('')}`
+    }
+    case 'venn': {
+      // 集合图：两个圈的名字、三块里的数（问号那一块写「？」）、中间那块是什么
+      const show = (key: 'only1' | 'both' | 'only2'): string => (part.ask === key ? '？' : part[key].join('，') || '（空）')
+      const cap = part.caption ? `；中间相交的部分是${zh(part.caption)}` : ''
+      return `（集合图：左边的圈是${zh(part.left)}，右边的圈是${zh(part.right)}；只在左边圈里的是 ${show('only1')}，中间相交的部分是 ${show('both')}，只在右边圈里的是 ${show('only2')}${cap}）`
+    }
+    // 五年级数学 I
+    case 'line-chart': {
+      // 折线统计图：单式 / 复式、纵轴每格代表几（折断号后从几起）、每条折线各个类别的数
+      const scale = part.from === undefined ? `每格代表 ${part.step}` : `0 上面画了折断号，从 ${part.from} 起每格代表 ${part.step}`
+      const head = `（${part.series.length > 1 ? '复式' : '单式'}折线统计图${part.title ? `「${zh(part.title)}」` : ''}，纵轴：${zh(part.valueAxis)}，${scale}；横轴：${zh(part.catAxis)}${part.numbers ? '；点旁边写着数' : ''}）`
+      const rows = part.series.map((s) => `${s.name ? `${zh(s.name)}：` : ''}${part.cats.map((c, i) => `${zh(c)} ${s.values[i] ?? '—'}`).join('、')}`)
+      return `${head}\n${rows.join('\n')}`
+    }
+    case 'seg-braces': {
+      // 线段图：整条线段平均分成几段，上下的括号括出第几段到第几段、写着什么
+      const where = (b: { from: number; to: number; side: 'top' | 'bottom'; label: string }): string =>
+        `${b.side === 'top' ? '上面' : '下面'}的括号括出第 ${Math.min(b.from, b.to) + 1} 到第 ${Math.max(b.from, b.to)} 段，写着 ${b.label}`
+      return `（一条线段平均分成 ${part.parts} 段；${part.braces.map(where).join('；')}）`
     }
     // 语文（§9）
     case 'hanzi':
@@ -983,7 +1163,7 @@ export function homeMeta(): {
 } {
   const lcs = liveCourses()
   const kpCount = lcs.reduce((n, lc) => n + liveKps(lc.course).length, 0)
-  const grades = [...new Set(lcs.map((lc) => zh(lc.grade.title)))].join('、')
+  const grades = gradeSpan([...new Set(lcs.map((lc) => zh(lc.grade.title)))])
   const subjectIds = [...new Set(lcs.map((lc) => lc.subject.id))]
   const subjects = [...new Set(lcs.map((lc) => zh(lc.subject.title)))].join('、')
   // 知识点数按学科合计（逐门课列的话，三年级数学加进来描述就超过 160 字了）

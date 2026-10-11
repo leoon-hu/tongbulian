@@ -88,3 +88,58 @@ describe('紧凑版的显示框', () => {
     expect(w.find('.typed').text()).toBe('3')
   })
 })
+
+describe('紧凑版作答栏的缩放', () => {
+  // happy-dom 不排版：给作答面板一个随缩放变的原始高度——缩小后面板在自己坐标系里变宽、长选项少折一行（254 → 206），栏高 209
+  const shDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollHeight')!
+  const chDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')!
+  let observers: (() => void)[] = []
+  beforeEach(() => {
+    observers = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          observers.push(cb)
+        }
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+    Object.defineProperty(Element.prototype, 'scrollHeight', {
+      configurable: true,
+      get(this: HTMLElement) {
+        if (this.classList.contains('panel')) return this.style.zoom && this.style.zoom !== '1' ? 206 : 254
+        return shDesc.get!.call(this)
+      },
+    })
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      get(this: HTMLElement) {
+        if (this.classList.contains('row-body')) return 209
+        return chDesc.get!.call(this)
+      },
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    Object.defineProperty(Element.prototype, 'scrollHeight', shDesc)
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', chDesc)
+  })
+
+  it('先把缩放放回 1 再量：缩小后量着放得下也不放回 1，量几次都一样（2026-10-11 普查：长选项换题后第四个被截掉一截）', async () => {
+    const { w } = setup()
+    await nextTick()
+    await nextTick()
+    const zoom = (): string => (w.find('.panel').element as HTMLElement).style.zoom
+    expect(zoom()).toBe('0.8')
+    // 题干栏的 ResizeObserver 再报几次（换题、邻居重排）：每次都重量，结果不变
+    for (let i = 0; i < 3; i++) {
+      for (const cb of observers) cb()
+      await new Promise((r) => setTimeout(r, 30))
+      await nextTick()
+      expect(zoom()).toBe('0.8')
+    }
+  })
+})

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { LStr } from '@/types/models'
 import type { BlankFill } from '@/components/practice/blank'
 import { t } from '@/engine/i18n'
+import MathText from '@/components/ui/MathText.vue'
 
 /**
  * 统计表（三年级「数据的收集与整理」，也画作息时间表 / 营业时间）：rows 一行一个数组，格子是数、词条或 null——
@@ -10,6 +11,8 @@ import { t } from '@/engine/i18n'
  * row = 第一行（竖排的表）、both、none（一串数据，没有表头）。title 是表题，写在表的上方。
  * 表里的字不注音、不朗读（课本的表也不注音），所以表头用孩子认得的简单词；英文名字在词条里是小写，这里首字母大写。
  * fill：练习页把按的数字填进那一格（blank.ts，同算式里的「?」）；不传（对战）就画「?」。
+ * 五下起格子里可以写分数（词条或字面量「2/15」、带分数「2 1/5」）：格子文字过 MathText，分数画成上下两层，
+ * 整数 / 文字格画出来和原来一样；答完填进「?」格的正确答案（选择题的分数）也一样画。
  */
 const props = withDefaults(
   defineProps<{ title?: LStr; rows: (number | LStr | null)[][]; head?: 'row' | 'col' | 'both' | 'none'; fill?: BlankFill | null }>(),
@@ -32,8 +35,8 @@ const isHead = (r: number, c: number): boolean =>
         <tbody>
           <tr v-for="(row, r) in rows" :key="r">
             <td v-for="(cell, c) in row" :key="c" :class="{ head: isHead(r, c), ask: cell === null, num: typeof cell === 'number' }">
-              <span v-if="cell === null" class="q" :class="{ empty: !fill || fill.value === '', done: !!fill?.done }">{{ fill?.value || '?' }}</span>
-              <template v-else>{{ text(cell) }}</template>
+              <span v-if="cell === null" class="q" :class="{ empty: !fill || fill.value === '', done: !!fill?.done }"><MathText :text="fill?.value || '?'" /></span>
+              <MathText v-else :text="text(cell)" />
             </td>
           </tr>
         </tbody>
@@ -75,6 +78,10 @@ td {
 }
 td.num {
   font-variant-numeric: tabular-nums;
+}
+/* 格子里的分数（五下）：比算式里的分数（0.78em）大一点，表的字本来就小 */
+td :deep(.frac) {
+  font-size: 0.86em;
 }
 table.tight {
   font-size: 14px;

@@ -66,6 +66,15 @@ BITRATE = "48k"
 
 # 合成时的读法：片段文本不变，只改送给 edge-tts 的文字——多音字在某些上下文里读错，就换成读音唯一的同音字。
 # 文件名跟着换过的文字走（clip_name），所以改了这里下次运行会重做受影响的片段、删掉旧文件。
+def _letters_zh(m: "re.Match[str]") -> str:
+    """五年级「用字母表示数」：单个或两三个连写的小写字母（a、ab、abc、ah）一个一个按字母名读（换成大写、字母之间隔开）。
+    一年级汉语拼音字母表的顺序题（整条就是一个字母、「正确答案是 x」）、四上「直线 a 平行于 b」照原样。"""
+    s = m.string
+    if re.fullmatch(r"(?:正确答案是)?[a-z]", s) or "直线" in s:
+        return m.group(0)
+    return " ".join(m.group(0).upper())
+
+
 SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
     "zh": [
         # 动词「数」shǔ：「从前数第 3 个」「狮子从上数排第几个」常读成 shù（「从前」被当成「以前」、「上数」被当成名词），
@@ -96,7 +105,7 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"朝(?=他飞来)"), "潮"),                                # 朝他飞来 cháo
         (re.compile(r"系(?=在门前)"), "计"),                                # 系在门前树上 jì
         (re.compile(r"(?<=上)结(?=一个|着一个)|(?<=都)结(?=果了)"), "街"),   # 烟囱上结一个苹果、都结果了 jiē
-        (re.compile(r"背(?=着)"), "杯"),                                    # 背着 bēi
+        (re.compile(r"背(?=着)(?!着手|着人民|着伯父)"), "杯"),               # 背着 bēi（「背着手」「不背着人民」是 bèi，四年级的规则换）
         (re.compile(r"待(?=不住|在)"), "呆"),                               # 待在 dāi
         (re.compile(r"炸(?=酱面)"), "闸"),                                  # 炸酱面 zhá
         (re.compile(r"扎(?=了一只|好的)"), "匝"),                           # 扎了一只风筝 zā
@@ -117,7 +126,7 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"(?<=树)干"), "赣"),                                   # 树干 gàn
         (re.compile(r"(?<=葡萄)干"), "甘"),                                 # 葡萄干 gān
         (re.compile(r"教(?=室|师|训|诲)"), "叫"),                           # 教室 jiào
-        (re.compile(r"当(?=成|作)"), "荡"),                                 # 当作、当成 dàng
+        (re.compile(r"(?<!生)当(?=成|作)"), "荡"),                          # 当作、当成 dàng（「生当作人杰」是 dāng，四年级的规则换）
         (re.compile(r"(?<!喧)哗"), "花"),                                   # 哗哗、哗啦 huā（象声词）
         (re.compile(r"斗(?=笠)|(?<=北)斗"), "抖"),                          # 斗笠、北斗 dǒu
         (re.compile(r"(?<=羊)圈"), "倦"),                                   # 羊圈 juàn
@@ -188,8 +197,65 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"(?<=最后)得(?=多少)"), "德"),                          # 最后得多少 dé（不是 děi）
         (re.compile(r"钉(?=成)"), "定"),                                    # 用小棒钉成框架 dìng
         (re.compile(r"(?<=每组)种|种(?=树|几?\d*棵)"), "众"),                  # 每组种 5 棵树、挖坑种树、要种几棵树 zhòng（「3 种品牌」「几种三角形」不动）
+        # 四年级语文：课文、古诗、问答里的多音字（拼音表按课本 / 词典注的音；有读音唯一的同音字的直接换，读对的换了也一样；
+        # 一溜烟 liù、劫难 nàn、触着 zháo 找不到读音唯一的同音字，没换）
+        (re.compile(r"(?<=清平)乐"), "月"),                                  # 清平乐 yuè（词牌）
+        (re.compile(r"亡(?=赖)"), "无"),                                     # 最喜小儿亡赖 wú
+        (re.compile(r"剥(?=莲蓬|落)"), "波"),                                # 溪头卧剥莲蓬 bō（识字表）
+        (re.compile(r"(?<=杂|随)兴"), "杏"),                                 # 四时田园杂兴、随兴而写 xìng
+        (re.compile(r"塞(?=下曲)|(?<=出|边)塞"), "赛"),                       # 塞下曲、出塞、边塞 sài
+        (re.compile(r"(?<=未肯)降"), "祥"),                                  # 梅雪争春未肯降 xiáng
+        (re.compile(r"(?<=风)号(?=浪)"), "毫"),                              # 风号浪吼 háo
+        (re.compile(r"(?<=囊)盛"), "成"),                                    # 练囊盛数十萤火 chéng
+        (re.compile(r"还(?=卒业|乡河)|(?<=未|归)还"), "环"),                  # 还卒业、人未还、归还 huán
+        (re.compile(r"(?<=飞|名)将"), "酱"),                                 # 龙城飞将、汉朝名将 jiàng
+        (re.compile(r"(?<=生)当(?=作人杰)"), "裆"),                          # 生当作人杰 dāng
+        (re.compile(r"(?<=亦|故|成|变|称|名|径)为|为(?=径)"), "围"),          # 死亦为鬼雄、故为精卫、成为、变为、称为、命名为、直径为、勤为径 wéi
+        (re.compile(r"(?<=骚人)阁"), "哥"),                                  # 骚人阁笔 gē（课本注：同「搁」）
+        (re.compile(r"斗(?=量)"), "抖"),                                     # 海水不可斗量 dǒu
+        (re.compile(r"(?<=貌|吃|之)相"), "象"),                              # 人不可貌相、吃相、局促不安之相 xiàng
+        (re.compile(r"旋(?=床)"), "炫"),                                     # 旋床 xuàn
+        (re.compile(r"(?<=刀)挑(?=破)"), "朓"),                              # 给刺刀挑破了 tiǎo
+        (re.compile(r"差(?=之毫厘)"), "插"),                                 # 差之毫厘 chā
+        (re.compile(r"应(?=悔)"), "英"),                                     # 嫦娥应悔偷灵药 yīng
+        (re.compile(r"应和"), "硬贺"),                                       # 水声应和着 yìng hè
+        (re.compile(r"晕(?=皱)"), "运"),                                     # 溪水在温风中晕皱 yùn（识字表）
+        (re.compile(r"(?<=[一几十])场(?=秋雨|春雨|大雨|寒|暖|热|晴)"), "常"),  # 一场秋雨一场寒、几场春雨 cháng（比赛的「三场」不动）
+        (re.compile(r"(?<=重)荷"), "贺"),                                    # 太阳好像负着重荷 hè
+        (re.compile(r"倒(?=垂|也|没说)"), "到"),                              # 倒垂的杨柳、倒也不容易、她倒没说什么 dào
+        (re.compile(r"系(?=上了围巾)"), "记"),                               # 系上了围巾 jì
+        (re.compile(r"冲(?=着他)"), "铳"),                                   # 冲着他摇尾巴 chòng
+        (re.compile(r"载(?=人航天)"), "在"),                                 # 载人航天 zài
+        (re.compile(r"(?<=正不)阿"), "婀"),                                  # 刚正不阿 ē
+        (re.compile(r"少(?=林寺)"), "哨"),                                   # 少林寺 shào
+        (re.compile(r"(?<=叫)嚣"), "消"),                                    # 叫嚣 xiāo
+        (re.compile(r"(?<=引)吭"), "航"),                                    # 引吭大叫 háng
+        (re.compile(r"涨(?=得大大)"), "帐"),                                 # 落进水沟涨得大大的 zhàng
+        (re.compile(r"(?<=身)着(?=短甲)"), "浊"),                            # 骑兵俑上身着短甲 zhuó（课本注）
+        (re.compile(r"撒(?=到水中)"), "洒"),                                 # 把芦苇烧成灰撒到水中 sǎ
+        (re.compile(r"教(?=夜课|鸡雏)"), "交"),                              # 教夜课、教鸡雏 jiāo
+        (re.compile(r"供(?=养)"), "工"),                                     # 似乎责备人们供养不周 gōng
+        (re.compile(r"舍(?=己)"), "捨"),                                     # 舍己救人 shě
+        (re.compile(r"撮(?=儿毛)"), "左"),                                   # 一撮儿毛 zuǒ（课本注）
+        (re.compile(r"单(?=于)"), "蝉"),                                     # 单于 chán
+        (re.compile(r"长(?=羽毛|叶柄|胖|出来|着绒毛)"), "掌"),                # 长羽毛、茎上长叶柄、长胖、长出来、长着绒毛 zhǎng
+        (re.compile(r"种(?=在院子|向日葵|了一株|地的)"), "众"),              # 种在院子里、种向日葵、种了一株、种地的 zhòng
+        (re.compile(r"(?<=不常)得|(?<=采)得|得(?=来的)"), "德"),             # 家贫不常得油、采得百花、宝葫芦是怎么得来的 dé
+        (re.compile(r"(?<=躯)干"), "赣"),                                    # 四肢和躯干 gàn
+        (re.compile(r"数(?=不清)"), "鼠"),                                   # 数不清 shǔ
+        (re.compile(r"铺(?=水中|得那么)"), "扑"),                            # 一道残阳铺水中、铺得那么均匀 pū
+        (re.compile(r"哄(?=堂)"), "烘"),                                     # 哄堂大笑 hōng
+        (re.compile(r"转(?=得慢|不动)|(?<=停下来不)转"), "赚"),               # 陀螺转得慢、转不动、停下来不转 zhuàn
+        (re.compile(r"背(?=着手|着人民|着伯父)"), "备"),                     # 背着手、不背着人民 bèi
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
+        # 五年级数学
+        (re.compile(r"(?<=正方体是)长(?=$|、)|长(?=、宽|乘高)"), "常"),         # 正方体是长、宽、高都相等的长方体，长乘高 cháng
+        (re.compile(r"(?<=[先再来上])称(?!轴)"), "撑"),                       # 先称 1 号、放在天平上称、分成几份来称 chēng（对称轴不动）
+        # 五年级数学：字母表示数。数和字母连写（6m、320a）中间隔开，免得「6m」读成「六米」；再把小写字母换成大写按字母名读
+        # （「ah」不读成「啊」，「ab」一个一个读），见 _letters_zh
+        (re.compile(r"(?<=\d)(?=[a-z])"), " "),
+        (re.compile(r"(?<![A-Za-z])[a-z]{1,3}(?![A-Za-z])"), _letters_zh),  # type: ignore[list-item]
     ],
 }
 
@@ -198,12 +264,44 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
 _UNIT_EN = {"mm": "millimeter", "cm": "centimeter", "dm": "decimeter", "km": "kilometer", "m": "meter", "kg": "kilogram", "g": "gram"}
 
 
+# 五年级「用字母表示数」的字母 m、a 在英文里会被当成单位 / 冠词：单独的 m、g 只有前面是数、数的单位词（hundred、cubic、
+# square、分数读法 two ninths……）、how many / what / per / in / of，或者在片段开头（数在前一个片段里）而后面不是运算词时才是
+# 单位；「The answer is m」整句是单位的答案。别处的 m 是字母（换成大写按字母名读）。挨着运算词的 a 也换成大写（不读成冠词）。
+_UNIT_PRE_EN = re.compile(r"(?:\d|cubic|square|many|what|per|in|of|hundred|thousand|million|billion|\w+(?<!wi)(?<!bo)ths?|thirds?|half|halves)\s*$")
+_MATH_AFTER_EN = re.compile(r"\s+(?:divided|equals|plus|minus|times|stands?|squared|cubed|is not|close bracket)\b")
+
+
+def _unit_letter_en(m: "re.Match[str]") -> bool:
+    pre, post = m.string[:m.start()], m.string[m.end():]
+    if _UNIT_PRE_EN.search(pre):
+        return True
+    if re.search(r"\bis\s*$", pre):
+        return post.strip() == ""
+    if not pre.strip():
+        return not _MATH_AFTER_EN.match(post)
+    return False
+
+
 def _unit_en(m: "re.Match[str]") -> str:
-    word = _UNIT_EN[m.group(2)]
+    unit = m.group(2)
+    if unit in ("m", "g") and not m.group(1) and not _unit_letter_en(m):
+        return unit.upper()
+    word = _UNIT_EN[unit]
     return f"1 {word}" if m.group(1) else f"{word}s"
 
 
-SAY_AS["en"] = [(re.compile(r"(?:(?<![\d.])(1) )?(?<![\w'’.])(mm|cm|dm|km|kg|m|g)\b"), _unit_en)]  # type: ignore[list-item]
+def _letter_a_en(m: "re.Match[str]") -> str:
+    pre, post = m.string[:m.start()], m.string[m.end():]
+    ends = not post.strip() or _MATH_AFTER_EN.match(post) or re.match(r"[,.?)]", post)
+    if _MATH_AFTER_EN.match(post) or (ends and re.search(r"(?:\d|plus|minus|times|by|equals|bracket)\s*$", pre)):
+        return "A"
+    return m.group(0)
+
+
+SAY_AS["en"] = [
+    (re.compile(r"(?:(?<![\d.])(1) )?(?<![\w'’.])(mm|cm|dm|km|kg|m|g)\b"), _unit_en),  # type: ignore[list-item]
+    (re.compile(r"(?<![\w'’])a(?![\w'’])"), _letter_a_en),  # type: ignore[list-item]
+]
 
 # 读一个多音字给的词（语文出题骨架 makers.ts 的 POLY_SAY，「高兴的兴」）：末尾单独那个字合成语音常按它最常见的读音读
 # （兴读成 xīng、重读成 zhòng、倒读成 dǎo），换成读音唯一的同音字再合成。逐条用基频比过（YIN + DTW），读得对的不列；
@@ -259,6 +357,24 @@ POLY_TAIL: Dict[str, str] = {
     "沉闷的闷": "焖",
     "唠叨的唠": "劳",
     "唠叨的叨": "刀",
+    # 四年级（嚷 rāng、瘩 da、撇 piě、囊 náng 找不到读音唯一的常用同音字，不换）
+    "率领的率": "帅",
+    "吁哩哩的吁": "迂",
+    "哄堂大笑的哄": "烘",
+    "边塞的塞": "赛",
+    "剥落的剥": "波",
+    "红晕的晕": "运",
+    "叫嚣的嚣": "消",
+    "引吭的吭": "航",
+    "倔强的倔": "决",
+    "朴素的朴": "普",
+    "溺水的溺": "逆",
+    "刹那的刹": "岔",
+    "碾轧的轧": "亚",
+    "乾坤的乾": "钱",
+    "扒开的扒": "八",
+    "交叉的叉": "插",
+    "窥伺的伺": "四",
 }
 # 放在最前面：先按整个词换末尾，再按上下文换词里的字（倒映的倒 → 倒映的到 → 到映的到）
 SAY_AS["zh"] = [(re.compile(f"^{re.escape(w)}$"), w[:-1] + h) for w, h in POLY_TAIL.items()] + SAY_AS["zh"]

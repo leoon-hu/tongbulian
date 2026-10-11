@@ -3,16 +3,18 @@ import '@/content/math/grade1'
 import '@/content/math/grade2'
 import '@/content/math/grade3'
 import '@/content/math/grade4'
+import '@/content/math/grade5'
 import { KNOWLEDGE_POINTS as G1 } from '@/content/math/grade1/curriculum'
 import { KNOWLEDGE_POINTS as G2 } from '@/content/math/grade2/curriculum'
 import { KNOWLEDGE_POINTS as G3 } from '@/content/math/grade3/curriculum'
 import { KNOWLEDGE_POINTS as G4 } from '@/content/math/grade4/curriculum'
+import { KNOWLEDGE_POINTS as G5 } from '@/content/math/grade5/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { translate } from '@/engine/i18n'
 import type { Question } from '@/types/models'
 import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, spellMarks, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
 
-const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3, ...G4]
+const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3, ...G4, ...G5]
 
 describe('tokenize（中文）', () => {
   it('短语里夹着的数并进短语（一条最多一个数），逗号变成停顿标记；数字后面只留量词头，动词 / 连词跟着后一个数走', () => {
@@ -263,7 +265,8 @@ describe('questionSpeech / answerSpeech', () => {
         }
       }
     }
-  })
+    // 一到五年级数学 230 多个知识点 × 60 种子 × 三档 × 中英：单独跑约 4 秒，全量并行时会超过默认的 5 秒
+  }, 30_000)
 
   it('题干的文字与算式之间停顿一下；停顿不在开头、不在结尾、不连着', () => {
     let seen = 0
@@ -388,5 +391,36 @@ describe('三年级：年份、日期、时刻', () => {
     expect(tokenize('14:30', 'zh')).toEqual(['14点', '30'])
     expect(tokenize('14:05 和 14:00', 'zh')).toEqual(['14点', '零5', '和14点'])
     expect(tokenize('2 点半', 'zh')).toEqual(['两点半'])
+  })
+})
+
+describe('五年级的记号与单位', () => {
+  it('温度、字母的平方、当乘号的「·」读成字；书名里的间隔号不动', () => {
+    expect(spellMarks('早晨气温 a ℃，中午 30 °C', 'zh')).toBe('早晨气温 a摄氏度，中午 30摄氏度')
+    expect(spellMarks('86 ℉', 'en')).toBe('86 degrees Fahrenheit')
+    expect(spellMarks('a² 表示 a×a', 'zh')).toBe('a的平方 表示 a×a')
+    expect(spellMarks('x²', 'en')).toBe('x squared')
+    expect(spellMarks('12.52 km² is how many hectares', 'en')).toBe('12.52 square km is how many hectares')
+    expect(spellMarks('5 cm²', 'zh')).toBe('5 平方厘米')
+    expect(spellMarks('V = a³，4³ = 64，8² = 64，2 m³', 'zh')).toBe('V = a的立方，4的立方 = 64，8的平方 = 64，2 立方米')
+    expect(spellMarks('5 cm³', 'en')).toBe('5 cubic cm')
+    expect(spellMarks('a·b·4 = a·(b·4)', 'zh')).toBe('a乘b乘4 = a乘(b乘4)')
+    expect(spellMarks('卜算子·咏梅', 'zh')).toBe('卜算子·咏梅')
+  })
+
+  it('≠ 读「不等于」；立方厘米、升、公顷、摄氏度是量词（2 读「两」）', () => {
+    expect(tokenize('a ≠ b', 'zh')).toEqual(['a不等于b'])
+    expect(tokenize('2 立方米和 2 升', 'zh')).toEqual(['两立方米', '和两升'])
+    expect(tokenize('7 公顷 = 70000 平方米', 'zh')).toEqual(['7公顷', '等于七万平方米'])
+    expect(tokenize('中午气温 30 ℃', 'zh')).toEqual(['中午气温30摄氏度'])
+    expect(tokenize('每条 12元/条', 'zh')).toEqual(['每条12元每条'])
+  })
+})
+
+describe('土石方的「方」', () => {
+  it('数后面的「方」是量词，方框、方法不算', () => {
+    expect(tokenize('1 方就是 1 立方米', 'zh')).toEqual(['1方', '就是1立方米'])
+    expect(tokenize('一共挖了 75 方', 'zh')).toEqual(['一共挖了75方'])
+    expect(tokenize('9.86 □ 9.68', 'zh')).toEqual(['9.86', '方框9.68'])
   })
 })
