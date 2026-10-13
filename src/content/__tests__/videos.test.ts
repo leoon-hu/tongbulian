@@ -9,7 +9,7 @@ import { VIDEO_FALLBACKS, VIDEO_LESSONS, videoOf } from '../videos'
  * 2026-10-11 也只上了第一单元，这几课是新教材才有的（旧教材里没有，园地六的单元也没有对得上的旧单元）。平台补上了重跑
  * npm run videos 再从这里删掉
  */
-const NO_VIDEO = new Set(['c3s1-08-garden', 'm4s1-04-estimate', 'm5s1-07-tiling', 'c4s1-06-changcheng', 'c4s1-06-bingmayong', 'c4s1-06-garden', 'c4s1-08-wuwo'])
+const NO_VIDEO = new Set(['c3s1-08-garden', 'm4s1-04-estimate', 'm5s1-07-tiling', 'c4s1-06-changcheng', 'c4s1-06-bingmayong', 'c4s1-06-garden', 'c4s1-08-wuwo', 'c5s1-01-garden', 'c5s1-06-hangtianyuan', 'c5s1-07-diyichangxue', 'c5s1-07-garden', 'c5s1-08-shuweilv'])
 
 const ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const SYNC = new RegExp(`^https://basic\\.smartedu\\.cn/syncClassroom/classActivity\\?activityId=${ID}$`)

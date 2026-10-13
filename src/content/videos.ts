@@ -419,6 +419,38 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c4s2-08-juren': 'cb78e443-d546-40d5-a0a8-3150976bb73c', // 27 巨人的花园
   'c4s2-08-nver': '35bcd698-5fe9-4653-a71e-9c074e3d302a', // 28* 海的女儿
   'c4s2-08-garden': '23189250-a778-4aab-9e01-523d0d82b5f6', // 语文园地
+  'c5s1-01-guihuayu': 'b23ab933-5113-1af8-0c82-71692956fce0', // 1 桂花雨
+  'c5s1-01-luohuasheng': 'fd8aee4e-cb2d-598a-2605-b4a60b285d79', // 2 落花生
+  'c5s1-01-zhenzhuniao': '38892478-a913-6af7-eb22-de4583910632', // 3* 珍珠鸟
+  'c5s2-01-gushi': 'e4e41e34-77b8-4bcf-978c-e3db9cceacc2', // 1 古诗三首
+  'c5s2-01-zufu': '5eabbbc0-a3f4-49e4-a1cb-0c2cbb666145', // 2 祖父的园子
+  'c5s2-01-yueshi': 'ea16e8e7-21ec-4c5e-a73e-f67ec1bce895', // 3*月是故乡明
+  'c5s2-01-meihuahun': '1a29d7a8-83fd-4bed-8930-2ead62fec0e5', // 4*梅花魂
+  'c5s2-01-garden': '8438b3a7-b8c7-4a30-a2c4-623ac64131e7', // 语文园地
+  'c5s2-02-caochuan': 'acd9ffd1-36ed-4a5c-9003-02d271bf3f27', // 5 草船借箭
+  'c5s2-02-jingyanggang': '002feaa6-fe6e-428d-b1f3-098555ab013f', // 6 景阳冈
+  'c5s2-02-houwang': 'b657adb9-467d-4163-9f6f-0cc60da09494', // 7*猴王出世
+  'c5s2-02-honglou': '701c7f29-03c4-4c73-b38c-6307dfc50964', // 8*红楼春趣
+  'c5s2-02-garden': 'd70c5795-fa2e-4f9c-b968-02548589c6b1', // 语文园地
+  'c5s2-04-gushi': '1aa5ffc5-2a1a-4e53-84cf-573c4ed8f36b', // 9 古诗三首
+  'c5s2-04-qingshan': 'bdc20091-b968-4da4-a63e-4006371e3d75', // 10 青山处处埋忠骨
+  'c5s2-04-junshen': 'c463dcf8-138d-4471-a6e5-0159f48f92f7', // 11 军神
+  'c5s2-04-qingpin': 'e991e012-2d52-440a-8f0e-c01c9f46c7c0', // 12*清贫
+  'c5s2-04-garden': '63de1064-a698-4322-82d4-e0dfcb3eab76', // 语文园地
+  'c5s2-05-renwu': '6243f322-f2eb-4876-87f5-25a50e12f09b', // 13 人物描写一组
+  'c5s2-05-shuazili': '917d95c2-8de9-4279-8b40-5d5a2a829f6e', // 14 刷子李
+  'c5s2-06-maodun': '75abf198-bf9a-4073-bbab-c26d60cf45bb', // 15 自相矛盾
+  'c5s2-06-saima': 'a50e39f6-c720-4f34-b616-834835ca42c4', // 16 田忌赛马
+  'c5s2-06-tiaoshui': 'eb22d259-cd0c-4ce3-bf01-bea3bc41a240', // 17 跳水
+  'c5s2-06-garden': 'f9621e6a-41aa-4ba7-ae6f-29548a8bb4c4', // 语文园地
+  'c5s2-07-xiaoting': '5e938888-1c8a-4b9e-91ac-682d97555735', // 18 威尼斯的小艇
+  'c5s2-07-muchang': '24742c5a-48d6-4b64-8c42-c2074a0e8069', // 19 牧场之国
+  'c5s2-07-jinzita': '23740ddb-e9e7-4b4c-9207-ad01733e2657', // 20*金字塔
+  'c5s2-07-garden': 'b6287813-b119-4bc6-9324-31aff7d82c0f', // 语文园地
+  'c5s2-08-yangshi': 'ff7ff8a1-5ee3-4e70-a014-2ae2c94796c7', // 21 杨氏之子
+  'c5s2-08-shouzhi': 'e6424192-c40c-45f7-b11f-173177bc332f', // 22 手指
+  'c5s2-08-tongnian': 'd0ceed64-57d6-47d9-8363-95f13f24a5f6', // 23*童年的发现
+  'c5s2-08-garden': 'd592f3c4-8f7d-47c3-91a6-a9676e6eeec2', // 语文园地
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -522,6 +554,30 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'c4s1-08-yanan': { id: '04809709-8587-474a-931c-a7c0fa2916b8', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 24* 延安，我把你追寻
   'c4s1-08-gushi': { id: '278aaa3d-bc23-4305-a88b-ea8ac9abf4f6', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 21 古诗三首
   'c4s1-08-garden': { id: 'b96cb450-7a4e-4564-b132-59222b576c1e', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 语文园地（单元里相同的：为中华之崛起而读书、延安，我把你追寻、写信）
+  'c5s1-02-didaozhan': { id: '0a58f2e7-b8c6-4b8d-897e-1e17755eb9d8', from: 'old' }, // 旧教材五年级上册 · 第二单元 · 8 冀中的地道战
+  'c5s1-02-jiangxianghe': { id: '847fe96f-38e4-47a7-a52d-463c21a3f2cb', from: 'old' }, // 旧教材五年级上册 · 第二单元 · 6 将相和
+  'c5s1-02-liebao': { id: '3d88679c-33d8-4ada-a9b3-c5ee63f3c1ea', from: 'old' }, // 旧教材五年级上册 · 第二单元 · 7 什么比猎豹的速度更快
+  'c5s1-02-nuomandi': { id: '4bcd3cd7-fc27-4acb-b858-473b228660f0', from: 'old' }, // 旧教材四年级下册 · 第七单元 · 24 “诺曼底号”遇难记
+  'c5s1-02-garden': { id: '09ffea2f-1d63-4956-961d-b15022ab9e7b', from: 'old' }, // 旧教材五年级上册 · 第二单元 · 语文园地（单元里相同的：冀中的地道战、将相和、什么比猎豹的速度更快、“漫画”老师）
+  'c5s1-03-hailibu': { id: '6e53a491-dacf-4926-9596-f92f41fa21a6', from: 'old' }, // 旧教材五年级上册 · 第三单元 · 9 猎人海力布
+  'c5s1-03-niulang1': { id: '8ae7e4ab-7c85-a84a-017c-884bc5c2031d', from: 'old-elite' }, // 旧教材五年级上册 · 第三单元 · 10 牛郎织女（一）（精品课）
+  'c5s1-03-niulang2': { id: '63ccd227-6a2e-4699-99cc-b97391077158', from: 'old' }, // 旧教材五年级上册 · 第三单元 · 11* 牛郎织女（二）
+  'c5s1-03-garden': { id: '8ae7e4b3-83f9-d174-0184-0525c2ce1428', from: 'old-elite' }, // 旧教材五年级上册 · 第三单元 · 语文园地（精品课）（单元里相同的：猎人海力布、牛郎织女（一）、牛郎织女（二）、讲民间故事、从前有座山）
+  'c5s1-04-gushi': { id: '5194e3c1-36ba-4a06-96cf-4a39a98e43bf', from: 'old' }, // 旧教材五年级上册 · 第四单元 · 12 古诗三首
+  'c5s1-04-shaonian': { id: 'fad266fc-94f2-4ce4-af15-6541fe6f7ace', from: 'old' }, // 旧教材五年级上册 · 第四单元 · 13 少年中国说（节选）
+  'c5s1-04-yuanmingyuan': { id: '83b16c61-e252-4abd-9c9b-464ef6f237df', from: 'old' }, // 旧教材五年级上册 · 第四单元 · 14 圆明园的毁灭
+  'c5s1-04-meilanfang': { id: '7bd966b0-757d-470a-84cb-fe78446e5ec4', from: 'old' }, // 旧教材四年级上册 · 第七单元 · 23* 梅兰芳蓄须
+  'c5s1-04-garden': { id: 'c0a712b6-2e58-4d72-a1e2-85033c497876', from: 'old' }, // 旧教材五年级上册 · 第四单元 · 语文园地（单元里相同的：少年中国说（节选）、圆明园的毁灭）
+  'c5s1-05-taiyang': { id: '57eb9b76-b619-45fa-8cb3-77dfbab2b74b', from: 'old' }, // 旧教材五年级上册 · 第五单元 · 16 太阳
+  'c5s1-05-jinzita': { id: '23740ddb-e9e7-4b4c-9207-ad01733e2657', from: 'old' }, // 旧教材五年级下册 · 第七单元 · 20*金字塔
+  'c5s1-06-cimu': { id: '60fb2e7d-85f9-4d9a-863e-a72ac7e81882', from: 'old' }, // 旧教材五年级上册 · 第六单元 · 18 慈母情深
+  'c5s1-06-fuai': { id: 'f6ecb9a9-1203-4550-af48-f51581cef4f0', from: 'old' }, // 旧教材五年级上册 · 第六单元 · 19 父爱之舟
+  'c5s1-06-garden': { id: '608bc456-6ee5-4f26-ae07-4f29a9915a58', from: 'old' }, // 旧教材五年级上册 · 第六单元 · 语文园地（单元里相同的：慈母情深、父爱之舟、父母之爱、我想对您说）
+  'c5s1-07-gushi': { id: '840ac221-cda9-4c8d-817b-c41923c3fad3', from: 'old' }, // 旧教材五年级上册 · 第七单元 · 21 古诗词三首
+  'c5s1-07-bailu': { id: 'b1a405c2-b607-44eb-9b71-7ba9952344b0', from: 'old' }, // 旧教材五年级上册 · 第一单元 · 1 白鹭
+  'c5s1-08-guren': { id: '430ec659-6529-4e50-99b5-9a3b5726bcb1', from: 'old' }, // 旧教材五年级上册 · 第八单元 · 25 古人谈读书
+  'c5s1-08-yidushu': { id: 'b2ffdd44-c01d-44a0-b420-03c5340d600e', from: 'old' }, // 旧教材五年级上册 · 第八单元 · 26 忆读书
+  'c5s1-08-garden': { id: 'bd1c84d3-4d85-451f-b343-e08a935f1173', from: 'old' }, // 旧教材五年级上册 · 第八单元 · 语文园地（单元里相同的：古人谈读书、忆读书、推荐一本书）
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

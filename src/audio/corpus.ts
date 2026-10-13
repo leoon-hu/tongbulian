@@ -17,6 +17,7 @@ import { everyItemQuestion as chineseG1Items } from '@/content/chinese/grade1/ge
 import { everyItemQuestion as chineseG2Items } from '@/content/chinese/grade2/generators'
 import { everyItemQuestion as chineseG3Items } from '@/content/chinese/grade3/generators'
 import { everyItemQuestion as chineseG4Items } from '@/content/chinese/grade4/generators'
+import { everyItemQuestion as chineseG5Items } from '@/content/chinese/grade5/generators'
 import { everyPosFrom } from '@/content/math/grade1/generators/position'
 // 按需加载的数学包（三至五年级）：语料要跑遍所有知识点，这里直接导入（语文包由上面四行导入）
 import '@/content/math/grade3'
@@ -134,7 +135,7 @@ export function collectCorpus(): Record<Lang, string[]> {
   }
   sets.zh.add('两')
   // 语文的题目条目有限，逐条出一遍（随机抽样可能漏掉某一句课文、某个听音的字）
-  for (const q of [...chineseG1Items(), ...chineseG2Items(), ...chineseG3Items(), ...chineseG4Items()]) {
+  for (const q of [...chineseG1Items(), ...chineseG2Items(), ...chineseG3Items(), ...chineseG4Items(), ...chineseG5Items()]) {
     for (const lang of langs) {
       add(lang, questionSpeech(q, lang))
       add(lang, answerSpeech(q, lang))

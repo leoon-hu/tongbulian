@@ -247,6 +247,51 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"哄(?=堂)"), "烘"),                                     # 哄堂大笑 hōng
         (re.compile(r"转(?=得慢|不动)|(?<=停下来不)转"), "赚"),               # 陀螺转得慢、转不动、停下来不转 zhuàn
         (re.compile(r"背(?=着手|着人民|着伯父)"), "备"),                     # 背着手、不背着人民 bèi
+        # 五年级语文：课文、古诗、问答里的多音字（拼音表按课本 / 词典注的音；有读音唯一的同音字的直接换）。
+        # 了 liǎo（才了蚕桑）、吓唬的唬 hǔ、呼噜的噜 lū 找不到合适的同音字，没换
+        (re.compile(r"嚓(?=嚓)|(?<=嚓)嚓"), "擦"),                            # 嚓嚓的响声 cā（识字表）
+        (re.compile(r"(?<=西)塞(?=山)"), "赛"),                              # 西塞山 sài
+        (re.compile(r"(?<=终不|裹尸)还|还(?=乡)"), "环"),            # 不破楼兰终不还、马革裹尸还、青春作伴好还乡 huán
+        (re.compile(r"(?<=满衣)裳"), "常"),                                  # 初闻涕泪满衣裳 cháng（识字表）
+        (re.compile(r"(?<=漫)卷(?=诗书)"), "捲"),                            # 漫卷诗书 juǎn
+        (re.compile(r"监(?=生)"), "剑"),                                     # 严监生 jiàn（课本注）
+        (re.compile(r"(?<=天公)重"), "虫"),                                  # 我劝天公重抖擞 chóng
+        (re.compile(r"(?<=一)朝(?=天气)|朝(?=游)"), "招"),                   # 一朝天气炎热、朝游峰洞之中 zhāo
+        (re.compile(r"夫(?=不可陷)"), "扶"),                                 # 夫不可陷之盾 fú（课本注）
+        (re.compile(r"(?<=默而)识"), "志"),                                  # 默而识之 zhì
+        (re.compile(r"(?<=是)知(?=也)"), "智"),                              # 不知为不知，是知也 zhì
+        (re.compile(r"(?<=知之)为(?=知之)|(?<=有所不)为|(?<=书)为(?=侣)|(?<=称之)为|为(?=题)"), "围"),  # 知之为知之、有所不为、书为侣、称之为、以……为题 wéi
+        (re.compile(r"落(?=在了后边)"), "辣"),                               # 落在了后边 là（识字表蓝字）
+        (re.compile(r"倒(?=不在乎|有芝兰|退|酒|挂|着立)"), "到"),            # 倒不在乎、左右倒有、倒退、倒酒、倒挂、倒着立 dào
+        (re.compile(r"场(?=雪)|(?<=哭一)场|(?<=哭了一)场"), "常"),                   # 第一场雪、大哭一场 cháng
+        (re.compile(r"长(?=叶|身体|得更好)|(?<=未)长(?=大)"), "掌"),          # 长叶、长身体、庄稼长得更好、牛犊还未长大 zhǎng
+        (re.compile(r"种(?=庄稼|瓜|花生|小白菜|一棵)|(?<=杨家|他们)种"), "众"),  # 种庄稼、学种瓜、种花生、种小白菜、种一棵大树 zhòng
+        (re.compile(r"背(?=在脊梁|着我)"), "杯"),                            # 把毡笠儿背在脊梁上、背着我上学 bēi
+        (re.compile(r"干(?=完活|哪一|他的公事)|(?<=老)干(?=虬)"), "赣"),  # 干完活、专干哪一行、干他的公事、老干虬枝 gàn
+        (re.compile(r"系(?=住)"), "记"),                                     # 鸡肠子带儿系住 jì
+        (re.compile(r"数(?=天上|猎豹|刀数|落)|(?<=要)数"), "鼠"),             # 数天上的星星、要数猎豹了、还数刀数、数落 shǔ
+        (re.compile(r"涨(?=得通红)"), "帐"),                                 # 一下子涨得通红 zhàng
+        (re.compile(r"华(?=山)"), "画"),                                     # 华山 huà
+        (re.compile(r"(?<=蔺)相(?=如)"), "象"),                              # 蔺相如 xiàng
+        (re.compile(r"(?<=皇)都"), "督"),                                    # 绝胜烟柳满皇都 dū
+        (re.compile(r"(?<=背后一)划|划(?=出了一条)|(?<=刀)划"), "滑"),        # 往背后一划、划出了一条天河、被刀划的 huá
+        (re.compile(r"缝(?=衣服|不好|得结实|补|上底)|(?<=密密)缝"), "逢"),   # 临行密密缝、缝衣服、缝补棉被、缝上底 féng
+        (re.compile(r"(?<=黏)着(?=物)"), "浊"),                              # 黏着物 zhuó
+        (re.compile(r"绰(?=了梢棒)"), "超"),                                 # 绰了梢棒 chāo（识字表蓝字）
+        (re.compile(r"(?<=钱)勾(?=么)"), "够"),                              # 酒肉钱勾么 gòu
+        (re.compile(r"燕(?=园)"), "烟"),                                     # 燕园 yān（识字表蓝字）
+        (re.compile(r"结(?=一个瓜)"), "接"),                                 # 结一个瓜 jiē
+        (re.compile(r"(?<=敏而)好|好(?=古)"), "耗"),                          # 敏而好学、好古敏以求之 hào
+        (re.compile(r"圈(?=里的牛)"), "倦"),                                 # 圈里的牛 juàn
+        (re.compile(r"供(?=自己)"), "工"),                                   # 供自己娱乐 gōng
+        (re.compile(r"(?<=水浒)传"), "撰"),                                  # 水浒传 zhuàn
+        (re.compile(r"(?<=小)嘎(?=子)|(?<=张)嘎"), "尕"),                    # 小嘎子、小兵张嘎 gǎ（识字表）
+        (re.compile(r"(?<=发)怔"), "证"),                                    # 发怔 zhèng（识字表）
+        (re.compile(r"(?<=鳞)爪"), "找"),                                    # 鳞爪飞扬 zhǎo
+        (re.compile(r"琢(?=磨)"), "昨"),                                     # 反复琢磨 zuó
+        (re.compile(r"鳜"), "桂"),                                           # 鳜鱼 guì
+        (re.compile(r"(?<=水满)陂"), "杯"),                                  # 草满池塘水满陂 bēi
+        (re.compile(r"(?<=才)了(?=蚕桑)"), "瞭"),                            # 才了蚕桑又插田 liǎo
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
         # 五年级数学
@@ -375,6 +420,22 @@ POLY_TAIL: Dict[str, str] = {
     "扒开的扒": "八",
     "交叉的叉": "插",
     "窥伺的伺": "四",
+    # 五年级
+    "嚓嚓的嚓": "擦",
+    "呛水的呛": "枪",
+    "撩乱的撩": "辽",
+    "擂鼓的擂": "雷",
+    "是耶非耶的耶": "爷",
+    "豁然的豁": "获",
+    "发怔的怔": "证",
+    "咯吱的咯": "哥",
+    "咯吱的吱": "支",
+    "地煞的煞": "霎",
+    "贾宝玉的贾": "甲",
+    "一趟的趟": "烫",
+    "安娜的娜": "纳",
+    "嘿嘿的嘿": "黑",
+    "岗位的岗": "港",
 }
 # 放在最前面：先按整个词换末尾，再按上下文换词里的字（倒映的倒 → 倒映的到 → 到映的到）
 SAY_AS["zh"] = [(re.compile(f"^{re.escape(w)}$"), w[:-1] + h) for w, h in POLY_TAIL.items()] + SAY_AS["zh"]
@@ -646,12 +707,24 @@ def cache_path(cache: Path, lang: str, text: str) -> Path:
     return cache / f"tts-{lang}-{digest}.mp3"
 
 
+# 跑 edge-tts 的命令行（同 python -m edge_tts）。2026-10 起 speech.platform.bing.com 的合成 WebSocket 一律回 403，
+# Edge 改走 api.msedgeservices.com（同一个令牌作 Ocp-Apim-Subscription-Key，见 edge-tts 的 issue #490）；
+# edge-tts 还连旧地址时就先换过去，出了修好的版本这段自动不起作用。
+EDGE_TTS_MAIN = """
+import edge_tts.communicate as c, edge_tts.constants as k
+if "speech.platform.bing.com" in c.WSS_URL:
+    c.WSS_URL = k.WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=" + k.TRUSTED_CLIENT_TOKEN
+from edge_tts.util import main
+main()
+"""
+
+
 def synth_one(lang: str, text: str, dst: Path) -> str:
     """edge-tts 合成到 dst，失败重试 3 次；返回错误信息（空串 = 成功）。"""
     last = ""
     for attempt in range(1, 4):
         tmp = dst.with_suffix(".part.mp3")
-        cmd = [sys.executable, "-m", "edge_tts", "--voice", VOICES[lang], f"--rate={TTS_RATE}",
+        cmd = [sys.executable, "-c", EDGE_TTS_MAIN, "--voice", VOICES[lang], f"--rate={TTS_RATE}",
                "--text", text, "--write-media", str(tmp)]
         try:
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60, check=False)

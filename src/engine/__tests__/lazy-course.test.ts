@@ -31,6 +31,11 @@ describe('内容包按需加载（N8）', () => {
     expect(translate({ k: 'kp.c4s1-04-jingwei' }, 'zh')).toBe('精卫填海')
     expect(translate({ k: 'kp.c4s1-04-jingwei' }, 'en')).toBe('Jingwei Fills the Sea')
     expect(hasGenerator('c4s1-04-jingwei')).toBe(false)
+    expect(courseLoaded('chinese-g5')).toBe(false)
+    expect(courseOfKp('c5s2-06-maodun')?.course.id).toBe('chinese-g5')
+    expect(translate({ k: 'kp.c5s2-06-maodun' }, 'zh')).toBe('自相矛盾')
+    expect(translate({ k: 'kp.c5s2-06-maodun' }, 'en')).toBe('The Spear and the Shield')
+    expect(hasGenerator('c5s2-06-maodun')).toBe(false)
   })
 
   it('进语文的页面之前，路由守卫把这门课的内容包加载好（对战页按知识点反查）', async () => {
@@ -51,6 +56,10 @@ describe('内容包按需加载（N8）', () => {
     await router.push('/s/chinese/g/g4?sem=2')
     expect(courseLoaded('chinese-g4')).toBe(true)
     expect(hasGenerator('c4s2-08-nver')).toBe(true)
+    expect(courseLoaded('chinese-g5')).toBe(false)
+    await router.push('/s/chinese/g/g5?sem=2')
+    expect(courseLoaded('chinese-g5')).toBe(true)
+    expect(hasGenerator('c5s2-08-tongnian')).toBe(true)
   })
 
   it('同时几处要只加载一次；加载失败下次再试，成功了就不再调', async () => {
