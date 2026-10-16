@@ -39,20 +39,20 @@ describe('SEO 静态页', () => {
     const m = homeMeta()
     const total = liveCourses().reduce((n, lc) => n + lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).length, 0)
     expect(m.kpCount).toBe(total)
-    expect(m.grades).toBe('一至五年级')
+    expect(m.grades).toBe('一至六年级')
     expect(m.subjects).toBe('数学、语文')
-    expect(m.summary).toBe('一至五年级数学和语文')
+    expect(m.summary).toBe('一至六年级数学和语文')
     expect(m.title).toContain('同步练-对战版')
     expect(m.description).toContain('谁先答对 8 题谁赢')
-    expect(m.description).toContain('数学 232 个')
-    expect(m.description).toContain('语文 344 个')
+    expect(m.description).toContain('数学 292 个')
+    expect(m.description).toContain('语文 408 个')
     expect(m.description.length).toBeLessThan(160)
   })
 
   it('每个上线课程一张目录页、每个有生成器的知识点一张页；上线课程与目录一致', () => {
     const courses = liveCourses()
     expect(courses.map((lc) => lc.course.id)).toEqual(catalogCourses().map((lc) => lc.course.id))
-    expect(courses.map((lc) => lc.name)).toEqual(['一年级数学', '二年级数学', '三年级数学', '四年级数学', '五年级数学', '一年级语文', '二年级语文', '三年级语文', '四年级语文', '五年级语文'])
+    expect(courses.map((lc) => lc.name)).toEqual(['一年级数学', '二年级数学', '三年级数学', '四年级数学', '五年级数学', '六年级数学', '一年级语文', '二年级语文', '三年级语文', '四年级语文', '五年级语文', '六年级语文'])
     const expected = courses.flatMap((lc) => [
       coursePath(lc.course),
       ...lc.course.knowledgePoints.filter((kp) => getGenerator(kp.id)).map((kp) => kpPath(lc.course, kp)),

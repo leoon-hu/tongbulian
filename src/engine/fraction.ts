@@ -82,6 +82,18 @@ export function fractionWords(n: number, d: number, lang: Lang, whole?: number):
   return `${whole === undefined ? '' : `${enNumberWord(whole)} and `}${enNumberWord(n)} ${plural}`
 }
 
+/** 中文读小数（整数部分 0–9999）：12.5 → 十二点五，0.75 → 零点七五，100 → 一百 */
+export function zhDecimalWord(s: string): string {
+  const [i, f] = s.split('.')
+  const int = zhNumberWord(Number(i))
+  return f ? `${int}点${[...f].map((c) => ZH_DIGITS[Number(c)]).join('')}` : int
+}
+
+/** 百分数的读法（六上「百分数」）：35% → 百分之三十五 / 35 percent，12.5% → 百分之十二点五，120% → 百分之一百二十 */
+export function percentWords(num: string, lang: Lang): string {
+  return lang === 'zh' ? `百分之${zhDecimalWord(num)}` : `${num} percent`
+}
+
 /** 分数，前面可以带带分数的整数部分（「2 1/5」，细空格连着） */
 const FRACTION_OR_MIXED = /(?<![\d./])(?:(\d{1,3})\u2009)?(\d{1,4})\/(\d{1,4})(?![\d/]|\.\d)/g
 

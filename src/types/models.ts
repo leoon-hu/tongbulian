@@ -66,7 +66,13 @@ export type QuestionType =
   | 'algebra' // 用字母表示数和数量关系（五上）
   | 'chance' // 可能性（五上）
   | 'factor' // 因数和倍数、最大公因数、最小公倍数（五下）
-  | 'solid' // 长方体和正方体：认识、展开图、表面积、体积、容积（五下）
+  | 'solid' // 长方体和正方体：认识、展开图、表面积、体积、容积（五下）；圆柱与圆锥（六下）
+  // ── 六年级起 ──
+  | 'frac-calc' // 分数乘法、分数除法、倒数（六上）
+  | 'percent' // 百分数（六上）、百分数（二）（六下）
+  | 'negative' // 负数（六上「生活中的负数」、六下「负数」）
+  | 'circle' // 圆、扇形、圆环（六上）
+  | 'ratio' // 比例、正比例和反比例、比例尺（六下）
   // ── 语文（§9） ──
   | 'hanzi' // 识字：听音 / 看图 / 看拼音选字、看字选读音
   | 'writing' // 写字与字的结构：笔画、第一笔、偏旁、加一加减一减
@@ -441,6 +447,168 @@ export interface SegBrace {
 }
 
 /** 结构化题干片段：文本 + 教具/图形参数，由 QuestionRenderer 分发渲染 */
+// ── 六年级数学的辅助类型 A ──
+/** 四个正方向（六上「确定位置」）：n 北、e 东、s 南、w 西 */
+export type Dir4 = 'n' | 'e' | 's' | 'w'
+/** 方向：从 base 那个方向起、向 side 那边偏 deg 度（北偏东 30° = { base: 'n', side: 'e', deg: 30 }）；不填 side = 正北 / 正东…… */
+export interface Bearing {
+  base: Dir4
+  side?: Dir4
+  deg?: number
+}
+/**
+ * 方向和距离图（BearingMap）上从参照点出去的一条射线：dir 方向，segs = 画几小段（离参照点的距离 ÷ 每一小段表示的距离，可以不是整数）；
+ * name 写在端点外侧（图里的字，不注音、不朗读），tag = 只写一个大写字母或编号（选项就是它），ask = 名字换成「?」；
+ * arc = 画角的弧并写度数：'base' 量在 base 那条线和射线之间（北偏东 30° 写 30°），'other' 量在另一条线上（写 60°）；
+ * ticks = false 不画刻度，dot = false 端点不画圆点（编号的射线）
+ */
+export interface BearingPlace {
+  dir: Bearing
+  segs: number
+  name?: LStr
+  tag?: string
+  ask?: boolean
+  arc?: 'base' | 'other'
+  ticks?: boolean
+  dot?: boolean
+}
+/**
+ * 路线图（RouteMap，六上例 5）的一段：从上一个地方出发，向 dir 走 segs 小段到 to（不填 = 没有名字的拐点）；dist = 段旁写的距离（「200 m」），
+ * arc = 在这一段的起点画方向角，back = 在这一段的终点画回来时的方向角（课本例 5 两头都画）
+ */
+export interface RouteLeg {
+  dir: Bearing
+  segs: number
+  to?: LStr
+  dist?: string
+  arc?: boolean
+  back?: boolean
+}
+/** 一幅路线图：start 出发的地方，per = 比例尺一小段写的字（不填不画比例尺） */
+export interface RouteFig {
+  start: LStr
+  legs: RouteLeg[]
+  per?: string
+}
+/**
+ * 有序数对方格图（PairGrid）上的一样东西：cells 模式在第 x 列、第 y 行的格子里（都从 1 起，第 1 行在最下面），points 模式在格点 (x, y)（从 0 起）；
+ * tag = 大写字母（点旁 / 格子里），name = 地名或人名（小字，不注音、不朗读），icon = emoji，fill = 格子涂色（cells），ask = 画「?」
+ */
+export interface PairItem {
+  x: number
+  y: number
+  tag?: string
+  name?: LStr
+  icon?: string
+  fill?: 'red' | 'blue'
+  ask?: boolean
+}
+/** PairGrid 上的连线：依次连起 pts（格点），closed = 首尾连上（封闭图形），dash = 虚线（平移前的图形） */
+export interface PairShape {
+  pts: [number, number][]
+  closed?: boolean
+  dash?: boolean
+}
+/** 分拣机器人图（练习一 5）上的标记：tri = 投递口（蓝三角），dot = 传递口（红圆，n 是号） */
+export interface PairMark {
+  x: number
+  y: number
+  t: 'tri' | 'dot'
+  n?: number
+}
+// ── 六年级数学的辅助类型 B ──
+/**
+ * 多行线段图（FracBars，六上「分数乘法」例 6、「分数除法」例 2、「百分数」的增长线段图）的一行：
+ * len = 这一行多长（以第一行平均分的「段」为单位，可以是小数：2.5 段）；parts = 这一行自己平均分成几段画刻度（不填按 len 取整；1 = 只画两端）；
+ * dash = 这一段画虚线（少掉的部分，例 6「现在」比原来少的 1/4）；name 写在左边（图里的字，不注音、不朗读）
+ */
+export interface BarRow {
+  name?: LStr
+  len: number
+  parts?: number
+  dash?: [number, number]
+  braces?: BarBrace[]
+}
+/** 线段图上的括号：括第 from 到 to 段（按「段」计，可以只括一部分），label 写数、分数（画两层）、百分数或「?」，不写汉字和单位 */
+export interface BarBrace {
+  from: number
+  to: number
+  side: 'top' | 'bottom'
+  label: string
+}
+/**
+ * 长方形面积图（FracArea）上的大括号：写在左边或右边，from、to 按条的边算、从下往上数（0 是下沿，rows 是上沿）——
+ * from 0、to 4 = 最下面 4 条；label 写数、分数（画两层）或「?」，不写汉字和单位
+ */
+export interface AreaBrace {
+  side: 'left' | 'right'
+  from: number
+  to: number
+  label: string
+}
+// ── 六年级数学的辅助类型 C ──
+// ── 六年级数学的辅助类型 D ──
+// ── 六年级数学的辅助类型 E ──
+// ── 六年级数学的辅助类型 F ──
+/** 温度计（Thermometer，六上「生活中的负数」、六下「负数」）里的一支：value = 液柱停在几摄氏度；name = 下面写的名字（两支比高低时的「甲」「乙」，图里的字，不注音、不朗读） */
+export interface ThermoItem {
+  value: number
+  name?: LStr
+}
+/** 直线上的一个点（DecScale 的 points，六下「负数」例 3、做一做、练习一 5 和 7）：i = 从左数第几小格（0 起），name = 点上方写的字（A、B……、人名、「树」） */
+export interface ScalePoint {
+  i: number
+  name: LStr
+}
+// ── 六年级数学的辅助类型 G ──
+/**
+ * 圆柱、圆锥立体图（RoundSolid，六下「圆柱与圆锥」）的一个：照课本斜着往下看的画法——底面是扁椭圆，看不见的那半圈画虚线。
+ * shape：cylinder 圆柱、cone 圆锥；干扰项 frustum 圆台、cut 上面斜着切过的圆柱、sphere 球；组合体 silo 圆柱上面接一个一样粗的圆锥（粮仓）、
+ * hopper 圆柱下面接一个尖朝下的圆锥（漏斗）；bottle 瓶子（圆柱形的瓶身 + 细瓶颈 + 瓶盖，例 7）。
+ * r 底面半径、h 高（只是画图的比例，悬殊时把短的放大到长的 0.3 倍；标的数写在 labels 里）；silo / hopper 的 h 是圆柱部分、h2 是圆锥部分。
+ * pose：up 立着（默认）、down 倒过来（圆锥尖朝下、瓶口朝下）、side 横放（底面朝左右）、tilt 斜放、lie 圆锥横倒（底面朝左上）。
+ * labels（只写数、字母、「?」，单位写在题目文字里）：r 从底面圆心画到边、d 直径的尺寸线（dAt：画在上面还是下面，默认上面）、
+ * h 高的尺寸线（立着的画在右边，横放的画在上面）、h2 圆锥部分的高、water 水的高度（瓶子倒过来时是上面没有水的那一段）。
+ * marks：大写字母加一条引线指着的部位（base 看得见的那个底面、base2 另一个底面、side 侧面、h 高、apex 顶点）。
+ * water：透明容器（cylinder、bottle）里水的高度（与 h 同一单位）；bottle 倒过来时是上面没有水的那一段的高度。
+ * tone：颜色（0 蓝、1 粉、2 绿、3 沙黄），一组图里颜色不跟形状走
+ */
+export interface RoundSolidSpec {
+  shape: 'cylinder' | 'cone' | 'frustum' | 'cut' | 'sphere' | 'silo' | 'hopper' | 'bottle'
+  r: number
+  h: number
+  h2?: number
+  pose?: 'up' | 'down' | 'side' | 'tilt' | 'lie'
+  labels?: { r?: string; d?: string; h?: string; h2?: string; water?: string }
+  dAt?: 'top' | 'bottom'
+  marks?: { at: 'base' | 'base2' | 'side' | 'h' | 'apex'; text: string }[]
+  water?: number
+  tone?: number
+}
+// ── 六年级数学的辅助类型 H ──
+/**
+ * 正比例 / 反比例图象（PropGraph，六下「比例」p44–50）的一条轴：每格代表 step、一共 cells 格，刻度从 0 起每 every 格标一个数（不填 1）；
+ * name 是轴名（「总价/元」，图里的字，不注音、不朗读）
+ */
+export interface GraphAxis {
+  name: LStr
+  step: number
+  cells: number
+  every?: number
+}
+/**
+ * 坐标图里的一组点（照课本描的点）：line = 'origin' 从 0 点画直线经过这些点（extend = 一直画到方格的边上，课本「连起来再延长」）、
+ * 'curve' 过这些点的光滑曲线（反比例，点的横纵坐标乘积一样）、'none'（默认）只描点；name 写在线的末端（课本斑马那幅不画图例，
+ * 名字写在线的顶上），tone 线和点的颜色
+ */
+export interface GraphSeries {
+  name?: LStr
+  tone?: 'blue' | 'orange' | 'green'
+  pts: [number, number][]
+  line?: 'origin' | 'curve' | 'none'
+  extend?: boolean
+}
+
 export type StemPart =
   | { kind: 'text'; text: LStr }
   | { kind: 'expr'; expr: string }
@@ -575,16 +743,18 @@ export type StemPart =
   /**
    * 小数卡（DecCard，四下「小数的意义和性质」）：照课本写的一个小数（n），大字显示，**不朗读**——读法题把数读出来就等于报了答案；
    * marks = 下面画横线的那几位（按 n 的字符下标，从左数，0 起，小数点也占一个下标）；
-   * frac = 不写小数、画一个上下两层的分数 [分子, 分母]（分母是 1000、10000 的分数在文字里画不成两层、也读不对，放在卡上）
+   * frac = 不写小数、画一个上下两层的分数 [分子, 分母]（分母是 1000、10000 的分数在文字里画不成两层、也读不对，放在卡上）；
+   * 六年级起 n 里还可以有正负号（「−6」「+41」）、单位「℃」「%」（「−6 ℃」「35%」）；sign = 分数前面的正负号（「−3/8」「+4/5」）
    */
-  | { kind: 'dec-card'; n?: string; marks?: number[]; frac?: [number, number] }
+  | { kind: 'dec-card'; n?: string; marks?: number[]; frac?: [number, number]; sign?: '+' | '−' }
   /**
    * 米尺和数线（DecScale，四下「小数的意义」例 1 的米尺、练习九 7 / 练习十 6 的直线）：labels 是长刻度下面写的字（「0」「1」……「1 m」「0.1」），
    * 相邻两个长刻度之间平均分成 per 小格（per 是双数时正中间那一格画中长刻度）；extra = 最后一个长刻度后面再画几小格；
    * ruler = 画成浅蓝的尺身（刻度从上沿往下、字在刻度下面、红箭头从下面指上去），broken = 右端画成折断线（放大的一段）；
-   * 否则画成向右带箭头的直线（红箭头从上面指下来）；arrow = 红箭头指着从左数第几小格（0 起，可以是 .5：指在两小格中间）
+   * 否则画成向右带箭头的直线（红箭头从上面指下来）；arrow = 红箭头指着从左数第几小格（0 起，可以是 .5：指在两小格中间）；
+   * 六年级起 labels 可以有正负数（「−4」），空串 = 这个长刻度不写数；points = 直线上的红点，点上方写名字（见 ScalePoint）
    */
-  | { kind: 'dec-scale'; labels: string[]; per: number; extra?: number; ruler?: boolean; broken?: boolean; arrow?: number }
+  | { kind: 'dec-scale'; labels: string[]; per: number; extra?: number; ruler?: boolean; broken?: boolean; arrow?: number; points?: ScalePoint[] }
   /**
    * 小数的数位顺序表（PlaceTable 的小数版，四下 p34）：第一行「整数部分 | 小数点 | 小数部分」，下面「数位」「计数单位」两行；
    * 整数部分从 top 位到个位（前面一列「……」），小数部分从十分位到第 dec 位（4 = 万分位，后面一列「……」），计数单位的个位写「一（个）」；
@@ -717,6 +887,93 @@ export type StemPart =
   | { kind: 'line-chart'; title?: LStr; cats: LStr[]; series: LineSeries[]; step: number; cells: number; from?: number; valueAxis: LStr; catAxis: LStr; numbers?: boolean; grid?: boolean }
   /** 带括号的线段图（FracLine 的 braces，五下「同分母分数加、减法」做一做 1）：一条线段（整条是 1）平均分成 parts 小段，线上下画几个括号，见 SegBrace */
   | { kind: 'seg-braces'; parts: number; braces: SegBrace[] }
+  // ── 六年级数学 A ──
+  /**
+   * 有序数对方格图（PairGrid，六上「用有序数对确定位置」）：mode = 'cells' 是格子（座位表、格子柜、涂色格：数标在格子上、从 1 起，
+   * 列号在下、行号在左，第 1 行在最下面；seats = 画成一张张分开的桌子，下面、左边写「第 1 列」「第 1 行」），'points' 是格点
+   * （数标在格线上、从 0 起，axes = 两条轴画箭头）；cols × rows 格。shapes = 连线，route = 带箭头的虚线路线，marks = 机器人图的投递口 / 传递口，
+   * north = 右上角画「北」和箭头，per = 左上角写一格表示多少（「100 m」），diag = 在第一个小正方形里画对角线（练习二 8）。
+   * 图里的字不注音、不朗读，题目文字里说出要找的东西；alt 是图的文字说明（读屏、静态页，不说出答案）
+   */
+  | {
+      kind: 'pair-grid'
+      mode: 'cells' | 'points'
+      cols: number
+      rows: number
+      seats?: boolean
+      axes?: boolean
+      items?: PairItem[]
+      shapes?: PairShape[]
+      route?: [number, number][]
+      marks?: PairMark[]
+      north?: boolean
+      per?: string
+      diag?: boolean
+      alt: string
+    }
+  /**
+   * 方向和距离图（BearingMap，六上「用方向和距离确定位置」）：参照点 center 在十字的交点，axes = 'n' 只标「北」（默认）、'all' 东南西北都标；
+   * places 是从参照点出去的射线（见 BearingPlace），per = 比例尺一小段写的字（「500 m」，不填不画）。alt 同 pair-grid
+   */
+  | { kind: 'bearing-map'; center: LStr; axes?: 'n' | 'all'; places: BearingPlace[]; per?: string; alt: string }
+  /** 路线图（RouteMap，六上例 5）：一幅或几幅（numbered = 下面标 1、2、3，「哪幅图画的是这条路线」），每个拐点画虚线小十字，右上角画「北」 */
+  | { kind: 'route-map'; figs: RouteFig[]; numbered?: boolean; alt: string }
+  /**
+   * 鸽巢问题的放法图（Pigeonholes，六下例 1、例 2）：几个笔筒 / 抽屉 / 鸽笼并排，counts = 每个里面放了几个 icon，
+   * extra = 旁边还没放进去的几个（虚线框）。图里没有字
+   */
+  | { kind: 'pigeonholes'; holder: 'cup' | 'drawer' | 'cage'; icon: string; counts: number[]; extra?: number }
+  // ── 六年级数学 B ──
+  /**
+   * 长方形面积图（FracArea，六上「分数乘法」的格子图、「分数除法」例 1 的面积条）：整个长方形横着平均分 rows 条、竖着平均分 cols 列。
+   * 乘法：first = 第一个乘数（前 n 行 / 列画红色斜线），second = 在 first 那部分里沿另一个方向再取 n 条（画交叉网线，from: 'end' 从最后一条往前取），
+   * ghost = 最后几行（或列）画虚线（不属于这块地）；除法：solid = 从下往上几条画实线、上面的画虚线框（整体里不算的那部分），
+   * shade = 涂浅蓝的条（along: 'row'）或列（along: 'col'，只涂实线的格），braces = 左右的大括号。图里不写汉字和单位，aria 只说「长方形面积图」
+   */
+  | {
+      kind: 'frac-area'
+      rows: number
+      cols: number
+      first?: { along: 'row' | 'col'; n: number }
+      second?: { n: number; from?: 'start' | 'end' }
+      ghost?: number
+      solid?: number
+      shade?: { along: 'row' | 'col'; cells: number[] }
+      braces?: AreaBrace[]
+    }
+  /**
+   * 多行线段图（FracBars）：第一行平均分成 unit 段，别的行按 len 用同样的「段」画长短、左端对齐（见 BarRow）；
+   * guides = true 从上一行的分点拉竖虚线到下一行，给数组就在这些位置（按「段」计）拉红色竖虚线（百分数例 3 标出原来的长度）
+   */
+  | { kind: 'frac-bars'; unit: number; rows: BarRow[]; guides?: boolean | number[] }
+  // ── 六年级数学 C ──
+  // ── 六年级数学 D ──
+  // ── 六年级数学 E ──
+  // ── 六年级数学 F ──
+  /**
+   * 温度计（Thermometer，六上「生活中的负数」p45、六下「负数」做一做 1）：竖的玻璃管、下面一个圆泡，min…max 摄氏度，
+   * 每 major 一个长刻度、左边写数（0 写红字，负数写「−」），每 minor 一个短刻度，管顶写「℃」；液柱停在 value（ThermoItem）。
+   * items 一到两支并排（比高低时下面写名字）。图里只有数和 ℃，不注音、不朗读
+   */
+  | { kind: 'thermo'; items: ThermoItem[]; min: number; max: number; major: number; minor: number }
+  // ── 六年级数学 G ──
+  /**
+   * 圆柱、圆锥立体图（RoundSolid）：一个或几个并排（共用一个比例；numbered = 下面标 1、2、3……，选项就是这几个数；
+   * arrow = 两个中间画箭头，例 7 的瓶子正放 → 倒过来），见 RoundSolidSpec。图里只写数、字母，不注音、不朗读
+   */
+  | { kind: 'round-solid'; items: RoundSolidSpec[]; numbered?: boolean; arrow?: boolean }
+  // ── 六年级数学 H ──
+  /**
+   * 正比例 / 反比例图象（PropGraph，六下「比例」）：方格纸上两条带箭头的数轴（横轴 x、纵轴 y，见 GraphAxis），原点写 0；
+   * series 一组或两组点和线（见 GraphSeries）；guide = 读图的红虚线：从横轴上的 x（或纵轴上的 y）画到第一组的线上、再拐到另一条轴，
+   * 那一头画「?」；marks = 另外描的点（空心圈：「这个点在不在直线上」）。图里的字不注音、不朗读，要问的写在题干文字里
+   */
+  | { kind: 'prop-graph'; x: GraphAxis; y: GraphAxis; series: GraphSeries[]; guide?: { x?: number; y?: number }; marks?: [number, number][] }
+  /**
+   * 线段比例尺（ScaleBar，六下「比例尺」p51–53）：一条分成 segs 段（默认 1）的短线（课本的「└──┘」），左端上面写 0，
+   * 每段右端写 per、2 × per……，最后一个数后面写单位 unit（米 / 千米，图里的字，不注音、不朗读）；per 不填画「?」（例 3「0 (  ) m」要填的数）
+   */
+  | { kind: 'scale-bar'; per?: number; segs?: number; unit: LStr }
   // ── 语文（§9）：这几种都是中文内容，不翻译；朗读时在英文界面下也用中文读（Y6）──
   /** 大字：每个汉字一个田字格（楷体），其它字符（＋ ＝ ？）原样放大；不注音、不朗读——考的就是认不认得（Y3） */
   /** mark：标红的那个字（多音字「这个词里红色的字怎么读」，Y9） */

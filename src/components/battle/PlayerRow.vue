@@ -588,6 +588,17 @@ onBeforeUnmount(() => {
     padding: 2px 6px;
   }
 }
+/* 四个字母的拼音（dāng、dàng）两列在打怪兽手机横屏两人 125px 的栏里也伸出去 3px（2026-10-16 普查），130px 以内也排一列 */
+@container (max-width: 130px) {
+  .compact .a :deep(.cards.py4) {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .compact .a :deep(.cards.py4 .card) {
+    min-height: 44px;
+    padding: 2px 6px;
+  }
+}
 @container (max-width: 240px) {
   .compact .a :deep(.cards.num7) {
     grid-template-columns: 1fr;

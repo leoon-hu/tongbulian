@@ -98,7 +98,7 @@ describe('App 集成冒烟', () => {
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('.about .about-links a')
-    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '四年级数学知识点清单', '五年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单', '四年级语文知识点清单', '五年级语文知识点清单'])
+    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '四年级数学知识点清单', '五年级数学知识点清单', '六年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单', '四年级语文知识点清单', '五年级语文知识点清单', '六年级语文知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
     // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
     const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])
@@ -159,7 +159,7 @@ describe('App 集成冒烟', () => {
   it('数学的选年级页：一至五年级每一册单独一张卡（课本封面 + 「几年级 几册」），点哪一张就进那一册的地图；六年级占位（F1）', async () => {
     const w = await mountAt('/s/math')
     const vols = w.findAll('button.vol')
-    expect(vols.map((v) => `${v.attributes('data-grade')}-${v.attributes('data-sem')}`)).toEqual(['g1-1', 'g1-2', 'g2-1', 'g2-2', 'g3-1', 'g3-2', 'g4-1', 'g4-2', 'g5-1', 'g5-2'])
+    expect(vols.map((v) => `${v.attributes('data-grade')}-${v.attributes('data-sem')}`)).toEqual(['g1-1', 'g1-2', 'g2-1', 'g2-2', 'g3-1', 'g3-2', 'g4-1', 'g4-2', 'g5-1', 'g5-2', 'g6-1', 'g6-2'])
     for (const v of vols) {
       const src = v.find('img.cover').attributes('src')!.replace(/^.*covers\//, 'covers/')
       expect(src).toBe(`covers/math-${v.attributes('data-grade')}-s${v.attributes('data-sem')}.webp`)
@@ -167,13 +167,8 @@ describe('App 集成冒烟', () => {
     expect(shown(vols[3]!)).toContain('二年级')
     expect(shown(vols[3]!)).toContain('下册')
     expect(vols[3]!.find('img.cover').attributes('alt')).toContain('下册')
-    const soon = w.findAll('button.card.soon')
-    expect(soon.map((c) => c.attributes('data-grade'))).toEqual(['g6'])
-    for (const c of soon) {
-      expect(c.attributes('disabled')).toBeDefined()
-      expect(c.find('img').exists()).toBe(false)
-      expect(c.attributes('data-sem')).toBeUndefined()
-    }
+    // 一到六年级都上线了，没有「敬请期待」的卡（英语那一页才有）
+    expect(w.findAll('button.card.soon')).toHaveLength(0)
     // 点二年级下册 → 地图直接是下册页签
     await vols[3]!.trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
@@ -196,6 +191,8 @@ describe('App 集成冒烟', () => {
       'covers/chinese-g4-s2.webp',
       'covers/chinese-g5-s1.webp',
       'covers/chinese-g5-s2.webp',
+      'covers/chinese-g6-s1.webp',
+      'covers/chinese-g6-s2.webp',
     ])
     await vols[0]!.trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')

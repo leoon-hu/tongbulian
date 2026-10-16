@@ -81,6 +81,24 @@ import FracChain from '@/components/math/FracChain.vue'
 import VennSets from '@/components/math/VennSets.vue'
 // 五年级数学 I
 import LineChart from '@/components/math/LineChart.vue'
+// 六年级数学 A
+import PairGrid from '@/components/math/PairGrid.vue'
+import BearingMap from '@/components/math/BearingMap.vue'
+import RouteMap from '@/components/math/RouteMap.vue'
+import Pigeonholes from '@/components/math/Pigeonholes.vue'
+// 六年级数学 B
+import FracArea from '@/components/math/FracArea.vue'
+import FracBars from '@/components/math/FracBars.vue'
+// 六年级数学 C
+// 六年级数学 D
+// 六年级数学 E
+// 六年级数学 F
+import Thermometer from '@/components/math/Thermometer.vue'
+// 六年级数学 G
+import RoundSolid from '@/components/math/RoundSolid.vue'
+// 六年级数学 H
+import PropGraph from '@/components/math/PropGraph.vue'
+import ScaleBar from '@/components/math/ScaleBar.vue'
 import HanziGrid from '@/components/chinese/HanziGrid.vue'
 import PinyinCard from '@/components/chinese/PinyinCard.vue'
 import ListenCue from '@/components/chinese/ListenCue.vue'
@@ -251,7 +269,7 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
       <CalcTree v-else-if="part.kind === 'calc-tree'" :a="part.a" :b="part.b" :steps="part.steps" :fill="fill" />
       <!-- 四年级数学下册 B -->
       <!-- 四年级数学下册 C -->
-      <DecCard v-else-if="part.kind === 'dec-card'" :n="part.n" :marks="part.marks" :frac="part.frac" />
+      <DecCard v-else-if="part.kind === 'dec-card'" :n="part.n" :marks="part.marks" :frac="part.frac" :sign="part.sign" />
       <DecScale
         v-else-if="part.kind === 'dec-scale'"
         :labels="part.labels"
@@ -260,6 +278,7 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
         :ruler="part.ruler"
         :broken="part.broken"
         :arrow="part.arrow"
+        :points="part.points"
       />
       <PlaceTable v-else-if="part.kind === 'dec-table'" :top="part.top" :dec="part.dec" :ask="part.ask" />
       <!-- 四年级数学下册 D -->
@@ -372,6 +391,49 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
         :grid="part.grid"
       />
       <FracLine v-else-if="part.kind === 'seg-braces'" :units="1" :per="part.parts" :labels="false" :braces="part.braces" />
+      <!-- 六年级数学 A -->
+      <PairGrid
+        v-else-if="part.kind === 'pair-grid'"
+        :mode="part.mode"
+        :cols="part.cols"
+        :rows="part.rows"
+        :seats="part.seats"
+        :axes="part.axes"
+        :items="part.items"
+        :shapes="part.shapes"
+        :route="part.route"
+        :marks="part.marks"
+        :north="part.north"
+        :per="part.per"
+        :diag="part.diag"
+        :alt="part.alt"
+      />
+      <BearingMap v-else-if="part.kind === 'bearing-map'" :center="part.center" :axes="part.axes" :places="part.places" :per="part.per" :alt="part.alt" />
+      <RouteMap v-else-if="part.kind === 'route-map'" :figs="part.figs" :numbered="part.numbered" :alt="part.alt" />
+      <Pigeonholes v-else-if="part.kind === 'pigeonholes'" :holder="part.holder" :icon="part.icon" :counts="part.counts" :extra="part.extra" />
+      <!-- 六年级数学 B -->
+      <FracArea
+        v-else-if="part.kind === 'frac-area'"
+        :rows="part.rows"
+        :cols="part.cols"
+        :first="part.first"
+        :second="part.second"
+        :ghost="part.ghost"
+        :solid="part.solid"
+        :shade="part.shade"
+        :braces="part.braces"
+      />
+      <FracBars v-else-if="part.kind === 'frac-bars'" :unit="part.unit" :rows="part.rows" :guides="part.guides" />
+      <!-- 六年级数学 C -->
+      <!-- 六年级数学 D -->
+      <!-- 六年级数学 E -->
+      <!-- 六年级数学 F -->
+      <Thermometer v-else-if="part.kind === 'thermo'" :items="part.items" :min="part.min" :max="part.max" :major="part.major" :minor="part.minor" />
+      <!-- 六年级数学 G -->
+      <RoundSolid v-else-if="part.kind === 'round-solid'" :items="part.items" :numbered="part.numbered" :arrow="part.arrow" />
+      <!-- 六年级数学 H -->
+      <PropGraph v-else-if="part.kind === 'prop-graph'" :x="part.x" :y="part.y" :series="part.series" :guide="part.guide" :marks="part.marks" />
+      <ScaleBar v-else-if="part.kind === 'scale-bar'" :per="part.per" :segs="part.segs" :unit="part.unit" />
       <VerticalForm
         v-else-if="part.kind === 'vertical'"
         :a="part.a"

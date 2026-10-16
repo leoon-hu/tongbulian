@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ScalePoint } from '@/types/models'
+import { t as tr } from '@/engine/i18n'
 
 /**
  * 米尺和数线（四下「小数的意义」例 1 的米尺、练习九 7 / 练习十 6 的直线）：
@@ -8,12 +10,15 @@ import { computed } from 'vue'
  * - ruler：照课本画成浅蓝的尺身，刻度从上沿往下，字写在刻度下面；broken = 右端是折断线（课本放大的那一段）；红箭头从尺子下面指上去。
  * - 否则是向右带箭头的直线，刻度穿过直线、字写在下面；红箭头从上面指下来。
  * arrow = 红箭头指着从左数第几小格（0 起，可以是 .5：指在两小格中间，3.85）。图里只有数和字母，不朗读；宽度按 viewBox 缩放。
+ * 六年级「负数」加的（不传和原来一样）：labels 里有负数（「−4」）时字小一号；空串 = 这个长刻度不写数（做一做只写 0 和 1）；
+ * points = 直线上的红点，点上方写名字（A、B……、人名、「树」，图里的字，不注音、不朗读），这时直线往下挪，上面留出写名字的地方。
  */
-const props = withDefaults(defineProps<{ labels: string[]; per: number; extra?: number; ruler?: boolean; broken?: boolean; arrow?: number }>(), {
+const props = withDefaults(defineProps<{ labels: string[]; per: number; extra?: number; ruler?: boolean; broken?: boolean; arrow?: number; points?: ScalePoint[] }>(), {
   extra: 0,
   ruler: false,
   broken: false,
   arrow: undefined,
+  points: undefined,
 })
 
 const W = 340
@@ -22,8 +27,8 @@ const R = W - 30 // 最后一个刻度（右边留给折断线 / 直线的箭头
 const count = computed(() => Math.max(1, (props.labels.length - 1) * props.per + props.extra))
 const x = (i: number): number => L + ((R - L) * i) / count.value
 
-/** 尺身上沿 / 直线的 y */
-const top = computed(() => (props.ruler ? 8 : props.arrow !== undefined ? 50 : 16))
+/** 尺身上沿 / 直线的 y（直线上有点时，上面留出写名字的地方） */
+const top = computed(() => (props.ruler ? 8 : props.arrow !== undefined ? 50 : props.points?.length ? 36 : 16))
 const H = computed(() => (props.ruler ? top.value + 46 + (props.arrow !== undefined ? 40 : 6) : top.value + 34))
 
 const ticks = computed(() =>
@@ -45,6 +50,9 @@ const body = computed(() => {
   return `M${l} ${t}H${r}L${r - 6} ${t + 12}L${r + 4} ${t + 23}L${r - 6} ${t + 34}L${r} ${b}H${l}Z`
 })
 const arrowX = computed(() => (props.arrow === undefined ? null : x(props.arrow)))
+/** 正负数的直线：刻度下面的数字小一号（17 个刻度也写得下「−8」） */
+const signed = computed(() => props.labels.some((l) => /[−-]\d/.test(l)))
+const dots = computed(() => (props.points ?? []).map((p) => ({ x: x(p.i), name: tr(p.name) })))
 </script>
 
 <template>
@@ -65,7 +73,11 @@ const arrowX = computed(() => (props.arrow === undefined ? null : x(props.arrow)
       <path class="axis-head" :d="`M${R + 26} ${top}L${R + 15} ${top - 6}L${R + 15} ${top + 6}Z`" />
       <g v-for="(t, i) in ticks" :key="i">
         <line class="tick" :class="{ major: t.major }" :x1="t.x" :y1="top - tickLen(t) / 2" :x2="t.x" :y2="top + tickLen(t) / 2" />
-        <text v-if="t.label !== undefined" class="num" :x="t.x" :y="top + 28">{{ t.label }}</text>
+        <text v-if="t.label !== undefined && t.label !== ''" class="num" :class="{ signed }" :x="t.x" :y="top + 28">{{ t.label }}</text>
+      </g>
+      <g v-for="(d, k) in dots" :key="`p${k}`" class="point">
+        <circle :cx="d.x" :cy="top" r="4.5" />
+        <text :x="d.x" :y="top - 12">{{ d.name }}</text>
       </g>
       <g v-if="arrowX !== null" class="arrow">
         <line :x1="arrowX" :y1="top - 46" :x2="arrowX" :y2="top - 18" />
@@ -117,6 +129,19 @@ const arrowX = computed(() => (props.arrow === undefined ? null : x(props.arrow)
 /* 带单位的字（1 m、1 cm）小一号 */
 .num.unit {
   font-size: 13px;
+}
+/* 六年级：正负数的刻度字小一号；直线上的红点和点上方的名字 */
+.num.signed {
+  font-size: 13px;
+}
+.point circle {
+  fill: var(--c-red);
+}
+.point text {
+  font-size: 14px;
+  font-weight: 800;
+  text-anchor: middle;
+  fill: var(--c-text);
 }
 .arrow line {
   stroke: var(--c-red);

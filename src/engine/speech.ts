@@ -12,7 +12,7 @@
 import type { Lang, LStr, Question } from '@/types/models'
 import { hasEntry, translate } from './i18n'
 import { answerLabel } from './answer'
-import { DOT_ABOVE, fractionWords, REPEATING, repeatingParts } from './fraction'
+import { DOT_ABOVE, fractionWords, percentWords, REPEATING, repeatingParts } from './fraction'
 
 // 符号组放在 emoji 组前面：⬜ 也算 Extended_Pictographic，但它是算式里的空格子。
 // 算式末尾的「= ?」合成一个片段（读「等于几」），单独一个「几」读起来生硬还容易读错声调。
@@ -21,8 +21,16 @@ import { DOT_ABOVE, fractionWords, REPEATING, repeatingParts } from './fraction'
 // 分数「3/4」一整组（三年级），读「四分之三」「three fourths」，当一个槽（同 0–100 的数，能并进短语）；
 // 带分数「2 1/5」（整数和分数之间是细空格，五下）也是一整组，读「二又五分之一」「two and one fifth」。
 // 「≈」（四年级求近似数）同 = 一样是独立成项才读的符号，读「约等于」。
+// 六年级：百分数「35%」一整组，读「百分之三十五」「35 percent」，当一个槽；比号「∶」（U+2236，3∶4、1∶500）和括号一样挨着数也读，读「比」；
+// 正负号见 rawTokens（紧挨着数、前面不是数 / 字母 / 右括号的 + − 读「正 / 负」）。
 const TOKEN =
-  /(¥\d+(?:\.\d)?)|((?<![\d./])(?:\d{1,3}\u2009)?\d{1,4}\/\d{1,4}(?![\d/]|\.\d))|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-−=?><⬜○×÷≈≠])|([()（）[\]［］□])|(\p{Extended_Pictographic}\uFE0F?)/gu
+  /(¥\d+(?:\.\d)?)|((?<![\d./])(?:\d{1,3}\u2009)?\d{1,4}\/\d{1,4}(?![\d/]|\.\d))|(\d+(?:\.\d+)?[%％])|(\d+(?:\.\d+)?)|(\p{Script=Han}+)|([A-Za-z][A-Za-z'’-]*(?:[ \u00a0][A-Za-z][A-Za-z'’-]*)*)|(=\s*\?|[+\-−=?><⬜○×÷≈≠])|([()（）[\]［］□∶])|(\p{Extended_Pictographic}\uFE0F?)/gu
+
+/**
+ * 正负号前面是这些就是加减号（「5 − 3」「x − 2」「(…) − 1」「? − 2」，字母只算单独一个的——英文单词「is −2」后面是负号）；
+ * 别的（句首、汉字、等号、左括号）后面紧挨着数的 + − 是正负号
+ */
+const OPERAND_BEFORE = /(?:^|[^A-Za-z])[A-Za-z]\s*$|[0-9)）\]］?？□⬜○]\s*$/
 
 /** 符号只有独立成项（两边不挨着字母 / 数字 / 汉字 / emoji）才读：「9 + 5」的 + 读，「ten-frame」的 -、「🐰?」的 ? 不读 */
 const WORDISH_BEFORE = /[\p{L}\p{N}\p{Extended_Pictographic}\uFE0F]$/u
@@ -42,10 +50,14 @@ const ZH_MEASURE =
   // 四年级：大数的单位连同后面的量词（「18万」「1亿张」「22万步」，2 万读「两万」）、角的度数（「60度」，课本写 60°，见 spellMarks）
   '[万亿](?:张|步|人|个|次|元|吨|千克|千米|米|台|户|粒|名|本|页|件|字|颗|棵|辆|年|天|秒)?|度(?!量)|' +
   // 计数单位：「1个十」「4个百万」「10个一万」「3个千亿」（长的在前）；四下小数的「4个十分之一」只留「4个」（别切成「4个十 · 分之一」）
-  '个(?:一?[十百千]?[万亿]|一?[十百千]|一)?(?!数)(?!分之)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆'
+  '个(?:一?[十百千]?[万亿]|一?[十百千]|一)?(?!数)(?!分之)|厘米|米|元|角|分(?![成给别针])|时|点|排(?![成队])|份|倍|盒|袋|辆|题|只(?![有剩])|张|条|本|朵|棵|根|颗|支|块|人|天|层|组(?!成)|双|瓶|杯|碗|盘|箱|筐|篮|桶|堆|' +
+  // 六年级：几种颜色、几列、几环（飞镖的成绩）
+  '种|列|环'
 /** 中文里数字 2 后面紧跟量词时读「两」：2 个十 → 两个十、2 元 → 两元、2 排 → 两排；序数除外：第 2 个 → 第二个 */
 const LIANG_BEFORE = new RegExp(`^(?:${ZH_MEASURE})`)
 const ORDINAL_BEFORE = /第$/
+/** 正负号后面的 2 读「二」：−2 ℃ → 负二摄氏度（不读「负两」） */
+const SIGN_BEFORE = /^[负正]$/
 
 /** 英文 emoji 名字的复数：数字（不是 1）/ hundred / more / fewer / many 后面、「N rows of」后面读复数；不变的 fish / books / pants… */
 const EN_INVARIANT = new Set(['fish', 'grapes', 'books', 'chopsticks', 'pants', 'bread', 'sheep'])
@@ -180,6 +192,12 @@ export function numberPieces(num: string, lang: Lang): string[] {
  * 分数「3/8」两边是数字，不受影响。
  */
 export function spellMarks(text: string, lang: Lang): string {
+  // 六上「圆」的 π 读「派」/「pi」（2πr → 2派r，πr² → 派r的平方）
+  if (text.includes('π')) text = lang === 'zh' ? text.replace(/π/g, '派') : text.replace(/\s*π\s*/g, ' pi ').replace(/ {2,}/g, ' ').trim()
+  // 六上「用有序数对确定位置」的数对（2，3）只读两个数「2，3」，括号不读
+  text = text.replace(PAIR, lang === 'zh' ? '$1，$2' : '$1, $2')
+  // 百分数的填空「?%」读「百分之几」/「what percent」（问号单独读「几」，百分号读不出来）
+  text = text.replace(/[?？]\s*[%％]/g, lang === 'zh' ? '百分之几' : 'what percent')
   if (text.includes(DOT_ABOVE)) text = spellRepeating(text, lang)
   if (/[℃℉²³·]|°\s*[CF]\b/.test(text)) text = spellAlgebra(text, lang)
   if (!/[°∠⊥/′]/.test(text)) return text
@@ -234,6 +252,9 @@ function spellRepeating(text: string, lang: Lang): string {
   })
 }
 
+/** 数对：括号里只有「数，数」（六上「确定位置」） */
+const PAIR = /[（(]\s*(\d+)\s*[,，]\s*(\d+)\s*[）)]/g
+
 /** 复合单位（速度、单价）：斜杠两边都是单位才读「每」；统计图的轴名「数量/本」「金额/元」不是复合单位，不动 */
 const ZH_RATE =
   /(元|米|千米|千克|克|吨|字|个|页|本|件|张|人|次)\/(千米|千克|小时|分钟|时|分|秒|天|周|月|年|克|吨|米|个|人|本|件|张|盒|袋|箱|瓶|份|套|支|枝|台|双|组|辆|桶|条)/g
@@ -256,8 +277,12 @@ function rawTokens(source: string, lang: Lang): Raw[] {
     dun = false
     out.push(r)
   }
+  let sign = ''
   for (const m of text.matchAll(TOKEN)) {
-    const [whole, money, fraction, num, han, latin, sym, paren, emoji] = m
+    const [whole, money, fraction, percent, num, han, latin, sym, paren, emoji] = m
+    // 上一个片段是正负号：读在这个数前面（「负3」「正8848」「negative 3」），作一条短语，和数并成一条
+    const signWord = sign
+    sign = ''
     const gap = text.slice(last, m.index)
     const timeColon = /^[:：]$/.test(gap) && /\d$/.test(text.slice(0, last)) && /^\d/.test(whole) // 3:05 里的冒号
     last = m.index + whole.length
@@ -275,10 +300,15 @@ function rawTokens(source: string, lang: Lang): Raw[] {
         push({ kind: 'phrase', text: 'jiao' })
       }
     } else if (fraction) {
+      if (signWord) push({ kind: 'phrase', text: signWord })
       const [w, f] = fraction.includes('\u2009') ? fraction.split('\u2009') : [undefined, fraction]
       const [n, d] = f!.split('/').map(Number)
       push({ kind: 'number', text: fractionWords(n!, d!, lang, w === undefined ? undefined : Number(w)) })
+    } else if (percent) {
+      if (signWord) push({ kind: 'phrase', text: signWord })
+      push({ kind: 'number', text: percentWords(percent.slice(0, -1), lang) })
     } else if (num) {
+      if (signWord) push({ kind: 'phrase', text: signWord })
       if (timeColon && lang === 'en' && /^0\d$/.test(num)) {
         // 英文时刻 1:02 读「1 oh 2」
         push({ kind: 'phrase', text: 'oh' })
@@ -305,11 +335,16 @@ function rawTokens(source: string, lang: Lang): Raw[] {
     } else if (han) push({ kind: lang === 'zh' ? 'phrase' : 'zh', text: han })
     else if (latin) push({ kind: 'phrase', text: latin.trim() })
     else if (sym) {
+      // 正负号（六年级「负数」）：「−3」「+8848」「温度是 −2 ℃」「x = −5」读「负 / 正」，「5 − 3」「? − 2」照旧是减号
+      if (/^[+\-−]$/.test(sym) && /^\d/.test(text.slice(m.index + 1)) && !OPERAND_BEFORE.test(text.slice(0, m.index))) {
+        sign = lang === 'zh' ? (sym === '+' ? '正' : '负') : sym === '+' ? 'positive' : 'negative'
+        continue
+      }
       if (WORDISH_BEFORE.test(text.slice(0, m.index)) || WORDISH_AFTER.test(text.slice(m.index + whole.length))) continue
       const key = `sym.${sym.replace(/\s+/g, '').replace('−', '-')}`
       if (hasEntry(key, lang)) push({ kind: 'symbol', text: translate({ k: key }, lang) })
     } else if (paren) {
-      const key = `sym.${paren === '□' ? '□' : /[[［]/.test(paren) ? '[' : /[\]］]/.test(paren) ? ']' : /[(（]/.test(paren) ? '(' : ')'}`
+      const key = `sym.${paren === '□' || paren === '∶' ? paren : /[[［]/.test(paren) ? '[' : /[\]］]/.test(paren) ? ']' : /[(（]/.test(paren) ? '(' : ')'}`
       if (hasEntry(key, lang)) push({ kind: 'symbol', text: translate({ k: key }, lang) })
     } else if (emoji) {
       const key = hasEntry(`emoji.${emoji}`, lang) ? `emoji.${emoji}` : `emoji.${emoji.replace(/\uFE0F$/, '')}`
@@ -412,7 +447,7 @@ export function tokenize(text: string, lang: Lang, merge = true): string[] {
       r.text === '2' &&
       next?.kind === 'phrase' &&
       LIANG_BEFORE.test(next.text) &&
-      !(prev?.kind === 'phrase' && ORDINAL_BEFORE.test(prev.text))
+      !(prev?.kind === 'phrase' && (ORDINAL_BEFORE.test(prev.text) || SIGN_BEFORE.test(prev.text)))
     ) {
       mapped.push({ ...r, text: '两' })
       continue
@@ -455,7 +490,14 @@ export function tokenize(text: string, lang: Lang, merge = true): string[] {
           if (n && lang === 'zh' && ZH_STICKS_TO_NOUN.test(phrase)) split(phrase, '')
           // 英文两个 emoji 之间的短语在纯虚词处切（「does fox have · than puppy」）；后面是数字则整个跟着数字走（「fox · has 16」）
           else if (n && lang === 'en' && r.kind === 'emoji') split(...splitAfterNumber(phrase, lang, EN_FUNCTION_SET))
-        } else if (n) split(...splitAfterNumber(phrase, lang))
+        } else if (n) {
+          // 数字后面的短语里有顿号（「前齿轮48个齿、后齿轮16个齿」）：顿号前面的整个留在前一条（「48个齿」），顿号后面的跟着新槽走
+          const k = lang === 'zh' ? after.slice(1, n).findIndex((x) => x.dun) + 1 : 0
+          if (k > 0) {
+            keep = after.slice(0, k)
+            tail = after.slice(k)
+          } else split(...splitAfterNumber(phrase, lang))
+        }
         run = [...run.slice(0, at + 1), ...keep]
         flush()
         run = tail

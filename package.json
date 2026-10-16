@@ -17,6 +17,7 @@
     "seo": "node scripts/seo.mjs",
     "videos": "node scripts/videos.mjs",
     "og": "node scripts/og.mjs",
+    "promo": "node scripts/promo.mjs",
     "audio": "node scripts/collect-speech.mjs && python3 scripts/build-audio.py",
     "battle:survey": "node scripts/battle-survey.mjs",
     "game:survey": "node scripts/game-survey.mjs",

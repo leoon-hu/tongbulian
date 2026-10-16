@@ -116,6 +116,14 @@ export const EMOJI_ZH: Record<string, string> = {
   // 五年级数学 G
   // 五年级数学 H
   // 五年级数学 I
+  // 六年级数学 A
+  // 六年级数学 B
+  // 六年级数学 C
+  // 六年级数学 D
+  // 六年级数学 E
+  // 六年级数学 F
+  // 六年级数学 G
+  // 六年级数学 H
 }
 
 export const EMOJI_EN: Record<string, string> = {
@@ -226,4 +234,12 @@ export const EMOJI_EN: Record<string, string> = {
   // 五年级数学 G
   // 五年级数学 H
   // 五年级数学 I
+  // 六年级数学 A
+  // 六年级数学 B
+  // 六年级数学 C
+  // 六年级数学 D
+  // 六年级数学 E
+  // 六年级数学 F
+  // 六年级数学 G
+  // 六年级数学 H
 }

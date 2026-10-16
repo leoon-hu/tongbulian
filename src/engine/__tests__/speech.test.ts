@@ -4,17 +4,19 @@ import '@/content/math/grade2'
 import '@/content/math/grade3'
 import '@/content/math/grade4'
 import '@/content/math/grade5'
+import '@/content/math/grade6'
 import { KNOWLEDGE_POINTS as G1 } from '@/content/math/grade1/curriculum'
 import { KNOWLEDGE_POINTS as G2 } from '@/content/math/grade2/curriculum'
 import { KNOWLEDGE_POINTS as G3 } from '@/content/math/grade3/curriculum'
 import { KNOWLEDGE_POINTS as G4 } from '@/content/math/grade4/curriculum'
 import { KNOWLEDGE_POINTS as G5 } from '@/content/math/grade5/curriculum'
+import { KNOWLEDGE_POINTS as G6 } from '@/content/math/grade6/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { translate } from '@/engine/i18n'
 import type { Question } from '@/types/models'
 import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, spellMarks, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
 
-const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3, ...G4, ...G5]
+const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3, ...G4, ...G5, ...G6]
 
 describe('tokenize（中文）', () => {
   it('短语里夹着的数并进短语（一条最多一个数），逗号变成停顿标记；数字后面只留量词头，动词 / 连词跟着后一个数走', () => {
@@ -422,5 +424,51 @@ describe('土石方的「方」', () => {
     expect(tokenize('1 方就是 1 立方米', 'zh')).toEqual(['1方', '就是1立方米'])
     expect(tokenize('一共挖了 75 方', 'zh')).toEqual(['一共挖了75方'])
     expect(tokenize('9.86 □ 9.68', 'zh')).toEqual(['9.86', '方框9.68'])
+  })
+})
+
+describe('六年级的百分数、正负数、比、π', () => {
+  it('百分数一整组读「百分之……」，当一个槽', () => {
+    expect(tokenize('出勤率是 98%', 'zh')).toEqual(['出勤率是百分之九十八'])
+    expect(tokenize('12.5% 和 120%', 'zh')).toEqual(['百分之十二点五', '和百分之一百二十'])
+    expect(tokenize('0.5%', 'zh')).toEqual(['百分之零点五'])
+    expect(tokenize('35% of the students', 'en')).toEqual(['35 percent of the students'])
+    expect(tokenize('命中率是 ?%', 'zh')).toEqual(['命中率是百分之几'])
+    expect(tokenize('3/5 = ?%', 'zh')).toEqual(['五分之三等于百分之几'])
+  })
+
+  it('紧挨着数、前面不是数 / 字母 / 右括号 / 问号的 + − 读「正 / 负」；加减照旧；负号后的 2 读「二」', () => {
+    expect(tokenize('−3 读作什么？', 'zh')).toEqual(['负3读作什么'])
+    expect(tokenize('珠穆朗玛峰海拔 +8848 米', 'zh')).toEqual(['珠穆朗玛峰海拔正八千', '八百', '48米'])
+    expect(tokenize('最低气温 −2 ℃', 'zh')).toEqual(['最低气温负2摄氏度'])
+    expect(tokenize('−0.5 和 -1/2', 'zh')).toEqual(['负0.5', '和负二分之一'])
+    expect(tokenize('5 − 3 = ?', 'zh')).toEqual(['5', '减3等于几'])
+    expect(tokenize('? − 2 = 7', 'zh')).toEqual(['几减2', '等于7'])
+    expect(tokenize('x − 2', 'zh')).toEqual(['x减2'])
+    expect(tokenize('The lowest is −2 ℃', 'en')).toEqual(['The lowest is negative 2 degrees Celsius'])
+  })
+
+  it('比号「∶」挨着数也读「比」；时刻的冒号不受影响', () => {
+    expect(tokenize('3∶4 的比值', 'zh')).toEqual(['3', '比4的比值'])
+    expect(tokenize('比例尺 1∶500', 'zh')).toEqual(['比例尺1', '比五百'])
+    expect(tokenize('14:30', 'zh')).toEqual(['14点', '30'])
+    expect(tokenize('3∶4', 'en')).toEqual(['3', 'to 4'])
+  })
+
+  it('数对（2，3）只读两个数，括号不读；别的括号照旧', () => {
+    expect(tokenize('用数对（2，3）表示', 'zh')).toEqual(['用数对2', PAUSE, '3表示'])
+    expect(tokenize('A (4, 3)', 'en')).toEqual(['A 4', PAUSE, '3'])
+    expect(tokenize('(3 + 4) × 5', 'zh')).toEqual(['括号3', '加4', '括号乘5'])
+  })
+
+  it('数字后面的短语里有顿号：顿号前面的整个留在前一条，顿号读出停顿', () => {
+    expect(tokenize('前齿轮 48 个齿、后齿轮 16 个齿', 'zh')).toEqual(['前齿轮48个齿', '后齿轮16个齿'])
+    expect(tokenize('涂上红、黄、蓝 3 种颜色', 'zh')).toEqual(['涂上红、黄、蓝3种颜色'])
+  })
+
+  it('π 读「派」/「pi」', () => {
+    expect(spellMarks('C = 2πr', 'zh')).toBe('C = 2派r')
+    expect(spellMarks('S = πr²', 'zh')).toBe('S = 派r的平方')
+    expect(spellMarks('C = πd', 'en')).toBe('C = pi d')
   })
 })

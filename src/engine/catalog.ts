@@ -4,11 +4,13 @@ import { mathGrade2 } from '@/content/math/grade2'
 import { mathGrade3 } from '@/content/math/grade3/course'
 import { mathGrade4 } from '@/content/math/grade4/course'
 import { mathGrade5 } from '@/content/math/grade5/course'
+import { mathGrade6 } from '@/content/math/grade6/course'
 import { chineseGrade1 } from '@/content/chinese/grade1/course'
 import { chineseGrade2 } from '@/content/chinese/grade2/course'
 import { chineseGrade3 } from '@/content/chinese/grade3/course'
 import { chineseGrade4 } from '@/content/chinese/grade4/course'
 import { chineseGrade5 } from '@/content/chinese/grade5/course'
+import { chineseGrade6 } from '@/content/chinese/grade6/course'
 
 // ── 课程注册表：key 为 courseId（如 math-g1）。────────────────────────────
 const COURSES = new Map<string, Course>()
@@ -35,11 +37,13 @@ registerCourse(mathGrade2)
 registerCourse(mathGrade3, () => import('@/content/math/grade3'))
 registerCourse(mathGrade4, () => import('@/content/math/grade4'))
 registerCourse(mathGrade5, () => import('@/content/math/grade5'))
+registerCourse(mathGrade6, () => import('@/content/math/grade6'))
 registerCourse(chineseGrade1, () => import('@/content/chinese/grade1'))
 registerCourse(chineseGrade2, () => import('@/content/chinese/grade2'))
 registerCourse(chineseGrade3, () => import('@/content/chinese/grade3'))
 registerCourse(chineseGrade4, () => import('@/content/chinese/grade4'))
 registerCourse(chineseGrade5, () => import('@/content/chinese/grade5'))
+registerCourse(chineseGrade6, () => import('@/content/chinese/grade6'))
 
 /** 这门课的内容包加载好了没有（没有加载函数的一直是好的） */
 export function courseLoaded(courseId: string): boolean {
@@ -200,7 +204,7 @@ export const SUBJECTS: SubjectMeta[] = [
       grade('g3', 'math-g3'),
       grade('g4', 'math-g4'),
       grade('g5', 'math-g5'),
-      grade('g6'),
+      grade('g6', 'math-g6'),
     ],
   },
   {
@@ -209,7 +213,7 @@ export const SUBJECTS: SubjectMeta[] = [
     icon: '📖',
     theme: 'chinese',
     status: 'live',
-    grades: [grade('g1', 'chinese-g1'), grade('g2', 'chinese-g2'), grade('g3', 'chinese-g3'), grade('g4', 'chinese-g4'), grade('g5', 'chinese-g5'), grade('g6')],
+    grades: [grade('g1', 'chinese-g1'), grade('g2', 'chinese-g2'), grade('g3', 'chinese-g3'), grade('g4', 'chinese-g4'), grade('g5', 'chinese-g5'), grade('g6', 'chinese-g6')],
   },
   {
     id: 'english',

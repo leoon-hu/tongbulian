@@ -27,6 +27,13 @@ describe('选项卡的长短档', () => {
     expect(long.numLen).toBe('8')
   })
 
+  it('带正负号的数多算一个字符（减号比数字宽）：「−20」按 4 个排一列', () => {
+    const neg = classesOf(['−20', '20', '−30', '60'])
+    expect(neg.cls).toContain('num4')
+    expect(neg.numLen).toBe('4')
+    expect(classesOf(['−2', '2', '3', '−3']).cls).not.toContain('num4')
+  })
+
   it('三位以内的数两列照旧；文字选项不算数字', () => {
     expect(classesOf(['3', '12', '125', '99']).cls).not.toContain('num4')
     const text = classesOf(['长方形', '正方形', '三角形', '梯形'])
@@ -39,6 +46,10 @@ describe('选项卡的长短档', () => {
     expect(classesOf(['zhǎng', 'zhàng'], 'pinyin').cls).toEqual(expect.arrayContaining(['py5', 'as-pinyin']))
     expect(classesOf(['chuǎng', 'shǎng', 'shuǎng', 'shuāng'], 'pinyin').cls).toContain('py5')
     expect(classesOf(['bā', 'pō', 'mō', 'fó'], 'pinyin').cls).not.toContain('py5')
+    // 4 个字母的 py4（打怪兽两人横屏 125px 的栏里两列放不下 dāng / dàng，2026-10-16 普查）
+    expect(classesOf(['dāng', 'dàng'], 'pinyin').cls).toEqual(expect.arrayContaining(['py4']))
+    expect(classesOf(['dāng', 'dàng'], 'pinyin').cls).not.toContain('py5')
+    expect(classesOf(['bā', 'pō', 'mō', 'fó'], 'pinyin').cls).not.toContain('py4')
     // 文字选项不算拼音
     expect(classesOf(['大大的', '小小的', '高高的', '长长的']).cls).not.toContain('py5')
   })
@@ -52,5 +63,7 @@ describe('选项卡的长短档', () => {
     expect(src).toContain(':deep(.cards.num7)')
     expect(src).toContain('var(--num-len)')
     expect(src).toContain(':deep(.cards.py5)')
+    expect(src).toContain('@container (max-width: 130px)')
+    expect(src).toContain(':deep(.cards.py4)')
   })
 })

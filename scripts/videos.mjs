@@ -23,6 +23,9 @@ const BOOKS = {
   'math-g4': ['ce032a22-7d96-4c36-b19c-f5cb8548a10e', 'a0bd25a0-6a56-4235-8225-eab16c04e217'],
   // 五上「新教材-人教版小学数学五年级上册目录」；五下的电子课本平台上还是旧版，同步课就是旧版五下那一本（「小学数学人教版五年级下册」）
   'math-g5': ['513c534a-9f5d-4880-8a6b-2bbb069040fe', 'f4184328-83db-4a43-8dab-bb9df75597a6'],
+  // 六上「新教材-人教版小学数学六年级上册目录」（2026-10 只有确定位置的前两节挂了课）；六下的电子课本平台上还是旧版，同步课就是旧版六下那一本
+  // （「小学数学人教版六年级下册」，同 OLD_MATH_G6S2）
+  'math-g6': ['31b6e70f-46d8-43b2-8ca6-2ebb6f010cbc', 'b7084be4-6fec-4073-86bc-9a2eafed88e0'],
   'chinese-g1': ['b7062df1-f929-458e-964c-d778f89ca255', '2d22a5c9-80b8-46cb-8595-564f5c368f3e'],
   'chinese-g2': ['4bf136c9-43cc-4005-8c8b-b21d21bad96f', 'ac9ba3ad-c2ab-4736-b347-dabae34c6b80'],
   'chinese-g3': ['22707f9a-a593-44a7-89ee-3f4d78905f2e', '6042ef62-a820-41aa-858d-1d6f1d6e3aa7'],
@@ -30,9 +33,11 @@ const BOOKS = {
   'chinese-g4': ['1cea417b-ba9c-44b7-b7c1-db53a962f2d4', 'fafb7ff0-f6bb-4fe4-bc6c-362380b28735'],
   // 五上「新教材-小学语文统编版五年级上册」；五下的电子课本平台上还是旧版，同步课就是旧版五下那一本（「小学语文统编版五年级下册」）
   'chinese-g5': ['fb0308d9-2e7f-480b-8723-f48852bb2f28', '117306e1-40c4-4106-bebb-b01a34927951'],
+  // 六上「新教材-小学语文统编版六年级上册」；六下的电子课本平台上还是旧版，同步课就是旧版六下那一本（「小学语文统编版六年级下册」）
+  'chinese-g6': ['cec38514-a1b4-40ff-b7bb-e443b56a1dbd', '46fcb680-0486-4d3c-8d25-073bdf922c8e'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'chinese-g4:2', 'chinese-g5:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -43,6 +48,7 @@ const OLD_BOOKS = {
   'chinese-g3': ['0eb31453-f373-4c85-8f3c-2bff5f49552e', 'ecc10b88-9661-451f-b9c1-b6dd5fd9a72d'],
   'chinese-g4': ['c86543a9-4b6a-4d79-8353-c805af23273c', 'fafb7ff0-f6bb-4fe4-bc6c-362380b28735'],
   'chinese-g5': ['edbd7846-7206-42ec-8be5-f690e9d873aa', '117306e1-40c4-4106-bebb-b01a34927951'],
+  'chinese-g6': ['4d2e2415-46d3-47f4-8393-30707820123c', '46fcb680-0486-4d3c-8d25-073bdf922c8e'],
 }
 /**
  * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，
@@ -53,6 +59,8 @@ const OLD_MATH_G4S1 = '208f77e0-0d63-4ca2-8a4c-86af05dd72de' // 小学数学人�
 const OLD_MATH_G4S2 = 'a0bd25a0-6a56-4235-8225-eab16c04e217' // 小学数学人教版四年级下册（旧）
 const OLD_MATH_G5S1 = '39d25324-a03d-4c79-94ca-1d45f3282f65' // 小学数学人教版五年级上册（旧）
 const OLD_MATH_G5S2 = 'f4184328-83db-4a43-8dab-bb9df75597a6' // 小学数学人教版五年级下册（旧，也是五下 BOOKS 里那一本）
+const OLD_MATH_G6S1 = '948ac1e5-1586-4ca7-b0d5-14f6e52583b9' // 小学数学人教版六年级上册（旧）
+const OLD_MATH_G6S2 = 'b7084be4-6fec-4073-86bc-9a2eafed88e0' // 小学数学人教版六年级下册（旧，也是六下 BOOKS 里那一本）
 /**
  * 语文按课题自动找不到的旧教材对应课（旧教材里同名的课不止一课，或者在别的年级）：知识点 → [同步课教材 id, 章节名, 哪本书]，
  * 章节名可以写「单元>课题」
@@ -62,6 +70,8 @@ const OLD_CN_G4S1 = 'c86543a9-4b6a-4d79-8353-c805af23273c' // 小学语文统编
 const OLD_CN_G4S2 = 'fafb7ff0-f6bb-4fe4-bc6c-362380b28735' // 小学语文统编版四年级下册（平台上还是旧版）
 const OLD_CN_G5S1 = 'edbd7846-7206-42ec-8be5-f690e9d873aa' // 小学语文统编版五年级上册（旧）
 const OLD_CN_G5S2 = '117306e1-40c4-4106-bebb-b01a34927951' // 小学语文统编版五年级下册（平台上还是旧版）
+const OLD_CN_G6S1 = '4d2e2415-46d3-47f4-8393-30707820123c' // 小学语文统编版六年级上册（旧）
+const OLD_CN_G6S2 = '46fcb680-0486-4d3c-8d25-073bdf922c8e' // 小学语文统编版六年级下册（平台上还是旧版）
 const OLD_CHINESE = {
   'c4s1-02-maozi': [OLD_CN_G3S2, '方帽子店', '旧教材三年级下册'],
   'c4s1-02-saima': [OLD_CN_G5S2, '田忌赛马', '旧教材五年级下册'],
@@ -71,6 +81,10 @@ const OLD_CHINESE = {
   'c5s1-04-gushi': [OLD_CN_G5S1, '古诗三首', '旧教材五年级上册'], // 示儿、题临安邸、己亥杂诗（同步课挂在己亥杂诗下面）
   'c5s1-04-meilanfang': [OLD_CN_G4S1, '梅兰芳蓄须', '旧教材四年级上册'],
   'c5s1-07-gushi': [OLD_CN_G5S1, '古诗词三首', '旧教材五年级上册'], // 山居秋暝、枫桥夜泊、长相思（新教材第三首换成早春呈水部张十八员外）
+  'c6s1-04-yugou': [OLD_CN_G6S1, '第四单元>金色的鱼钩', '旧教材六年级上册'], // 旧版六下第四单元也有一篇（只有精品课）
+  'c6s1-06-gushi': [OLD_CN_G6S1, '第六单元>古诗三首', '旧教材六年级上册'], // 浪淘沙（其一）、江南春、书湖阴先生壁（同步课挂在书湖阴先生壁下面）
+  'c6s1-07-wenyan': [OLD_CN_G6S2, '文言文二则>两小儿辩日', '旧教材六年级下册'], // 新教材是两小儿辩日、曹冲称象；旧版六下是学弈、两小儿辩日，同步课挂在两小儿辩日下面
+  'c6s1-07-garden': [OLD_CN_G6S2, '第五单元>语文园地', '旧教材六年级下册'], // 新教材第七单元的表里的生物、他们那时候多有趣啊、习作在旧版六下第五单元
 }
 const OLD_MATH = {
   'm4s1-02-yi': [OLD_MATH_G4S1, '1亿有多大'],
@@ -120,6 +134,38 @@ const OLD_MATH = {
   'm5s1-08-certain': [OLD_MATH_G5S1, '可能性'],
   'm5s1-08-likely': [OLD_MATH_G5S1, '可能性'],
   'm5s1-08-infer': [OLD_MATH_G5S1, '可能性'],
+  // 六上：新教材只有确定位置的前两节有同步课；旧版六上没有「确定位置」（数对在旧版五上），有「位置与方向（二）」「比」「扇形统计图」
+  'm6s1-01-route': [OLD_MATH_G6S1, '描述简单的路线图（例3）'],
+  'm6s1-02-frac-int': [OLD_MATH_G6S1, '分数乘整数'],
+  'm6s1-02-num-frac': [OLD_MATH_G6S1, '分数乘分数'], // 旧版「分数乘分数」这一节从「一个数乘分数」讲起
+  'm6s1-02-frac-frac': [OLD_MATH_G6S1, '分数乘分数'],
+  'm6s1-02-dec-frac': [OLD_MATH_G6S1, '分数乘小数'],
+  'm6s1-02-laws': [OLD_MATH_G6S1, '分数四则混合运算'],
+  'm6s1-02-chain': [OLD_MATH_G6S1, '分数乘法>解决问题'],
+  'm6s1-02-more-less': [OLD_MATH_G6S1, '分数乘法>解决问题'],
+  'm6s1-03-reciprocal': [OLD_MATH_G6S1, '倒数的认识'],
+  'm6s1-03-frac-int': [OLD_MATH_G6S1, '分数除法>分数除法'],
+  'm6s1-03-div-frac': [OLD_MATH_G6S1, '分数除法>分数除法'],
+  'm6s1-03-find-whole': [OLD_MATH_G6S1, '已知一个数的几分之几是多少，求这个数（例4）'],
+  'm6s1-03-as-one': [OLD_MATH_G6S1, '解决问题（利用抽象的“1”解决实际问题）'],
+  'm6s1-04-negative': [OLD_MATH_G6S2, '认识负数'], // 旧教材的负数在六下
+  'm6s1-05-circle': [OLD_MATH_G6S1, '圆的认识'],
+  'm6s1-05-sector': [OLD_MATH_G6S1, '扇形'],
+  'm6s1-05-circumference': [OLD_MATH_G6S1, '圆的周长'],
+  'm6s1-05-area': [OLD_MATH_G6S1, '圆的面积'],
+  'm6s1-05-ring': [OLD_MATH_G6S1, '圆的面积'], // 旧版圆的面积这一节有圆环
+  'm6s1-05-composite': [OLD_MATH_G6S1, '圆>解决问题'],
+  'm6s1-05-square-circle': [OLD_MATH_G6S1, '圆>解决问题'],
+  'm6s1-06-sports': [OLD_MATH_G6S1, '确定起跑线'],
+  'm6s1-07-meaning': [OLD_MATH_G6S1, '百分数的意义'],
+  'm6s1-07-rate': [OLD_MATH_G6S1, '百分数和分数、小数的互化'],
+  'm6s1-07-part': [OLD_MATH_G6S1, '百分数和分数、小数的互化'],
+  'm6s1-07-discount': [OLD_MATH_G6S2, '折扣'], // 新六上的折扣、利率两节和旧版六下的一样
+  'm6s1-07-interest': [OLD_MATH_G6S2, '利率'],
+  'm6s1-07-growth': [OLD_MATH_G6S1, '求一个数比另一个数多（少）百分之几（例3）'],
+  'm6s1-07-base': [OLD_MATH_G6S1, '求比一个数多百分之几的数是多少（例4）'],
+  'm6s1-07-chain': [OLD_MATH_G6S1, '求比一个数连续多（或）少百分之几的数是多少（例5）'],
+  'm6s1-08-water': [OLD_MATH_G6S1, '节约用水'],
 }
 const NATIONAL = 'national_lesson'
 const ELITE = 'elite_lesson'
@@ -368,16 +414,79 @@ const MATH = {
   'm5s2-09-single': '单式折线统计图',
   'm5s2-09-double': '复式折线统计图',
   'm5s2-10-defective': '数学广角——找次品',
+  // 六年级上册（新教材，平台的章节名比课本的小节名细；同一节里的几个知识点用同一节）
+  'm6s1-01-pairs': '用有序数对确定位置',
+  'm6s1-01-bearing': '用方向和距离确定位置',
+  'm6s1-01-route': '描述简单的物体的运动路线',
+  'm6s1-02-frac-int': '分数乘整数（意义及计算）',
+  'm6s1-02-num-frac': '一个数乘分数',
+  'm6s1-02-frac-frac': '一个数乘分数',
+  'm6s1-02-dec-frac': '小数乘分数',
+  'm6s1-02-laws': '分数混合运算及运算律',
+  'm6s1-02-chain': '连续求一个数的几分之几是多少',
+  'm6s1-02-more-less': '求比一个数多几分之几的数是多少',
+  'm6s1-03-reciprocal': '倒数的概念及求法',
+  'm6s1-03-frac-int': '分数除以整数',
+  'm6s1-03-div-frac': '一个数除以分数',
+  'm6s1-03-find-whole': '一个数除以分数',
+  'm6s1-03-as-one': '涉及抽象1的工程问题',
+  'm6s1-04-negative': '生活中的负数',
+  'm6s1-05-circle': '圆的认识',
+  'm6s1-05-sector': '扇形的认识',
+  'm6s1-05-circumference': '圆的周长推导及简单应用',
+  'm6s1-05-area': '圆的面积推导及简单应用',
+  'm6s1-05-ring': '圆的面积的稍复杂的应用（圆环、变形）',
+  'm6s1-05-composite': '圆的面积的稍复杂的应用（圆环、变形）',
+  'm6s1-05-square-circle': '问题解决（圆中方、方中圆）',
+  'm6s1-06-sports': '体育中的数学',
+  'm6s1-07-meaning': '百分数的意义',
+  'm6s1-07-rate': '求百分率（分数、小数化为百分数）',
+  'm6s1-07-part': '求一个数的百分之几是多少（百分数化为分数、小数）',
+  'm6s1-07-discount': '折扣',
+  'm6s1-07-interest': '利率',
+  'm6s1-07-growth': '求增长率',
+  'm6s1-07-base': '已知比一个数多百分之几的数是多少求这个数',
+  'm6s1-07-chain': '价格连续变化带来的价格变化幅度',
+  'm6s1-07-standard': '确定达标线',
+  'm6s1-08-water': '水是生命之源',
+  // 六年级下册（平台当前的旧版六下）
+  'm6s2-01-meaning': '认识负数',
+  'm6s2-01-line': '负数>解决问题', // 旧版六下负数的「解决问题」就是在一条直线上表示到达的位置
+  'm6s2-02-discount': '折扣',
+  'm6s2-02-chengshu': '成数',
+  'm6s2-02-tax': '税率',
+  'm6s2-02-interest': '利率',
+  'm6s2-02-sale': '百分数（二）>解决问题',
+  'm6s2-04-cyl-know': '圆柱的认识',
+  'm6s2-04-cyl-net': '圆柱的认识',
+  'm6s2-04-cyl-side': '圆柱的表面积',
+  'm6s2-04-cyl-surface': '圆柱的表面积',
+  'm6s2-04-cyl-volume': '圆柱的体积',
+  'm6s2-04-cyl-capacity': '圆柱的体积', // 容积的例 6、例 7 在圆柱的体积这一节
+  'm6s2-04-cone-know': '圆锥的认识',
+  'm6s2-04-cone-volume': '圆锥的体积',
+  'm6s2-05-meaning': '比例的意义',
+  'm6s2-05-property': '比例的基本性质',
+  'm6s2-05-solve': '解比例',
+  'm6s2-05-direct': '正比例和反比例',
+  'm6s2-05-inverse': '正比例和反比例',
+  'm6s2-05-scale': '比例尺',
+  'm6s2-05-scale-use': '比例尺',
+  'm6s2-05-zoom': '图形的放大与缩小',
+  'm6s2-05-apply': '用比例解决问题',
+  'm6s2-06-bike': '自行车里的数学',
+  'm6s2-07-pigeonhole': '数学广角——鸽巢问题',
 }
 
 const CN_NUM = '一二三四五六七八九十'
 /**
  * 章节名比较用：去空格、去开头的编号（「1 天地人」「一、认识平面图形」「10 古诗二首」「3* 不懂就要问」）、去引号（“贝”与「贝」）、
- * 去结尾的「（节选）」与多打的点（新教材四上「6 方帽子店.」「语文园地 .」），～ 与 ~ 不分，ɑ 当 a
+ * 去结尾的「（节选）」与多打的点（新教材四上「6 方帽子店.」「语文园地 .」），～ 与 ~ 不分，ɑ 当 a，间隔号不分写法（旧教材六上「七律•长征」）
  */
 const norm = (s) =>
   s
     .replace(/\s+/g, '')
+    .replace(/[•・‧]/g, '·')
     .replace(/^[0-9]+\*?/, '')
     .replace(/^[一二三四五六七八九十]+[、．.]?/, '')
     .replace(/～/g, '~')
@@ -483,10 +592,13 @@ function mathNode(book, want) {
 
 /**
  * 语文：第 n 单元（课本的单元序号）里课题 / 语文园地对得上的章节。三年级起课题在单元下面多一层「阅读」，所以在整个单元里找；
- * 三年级的园地平台上只叫「语文园地」，不带序号
+ * 三年级的园地平台上只叫「语文园地」，不带序号。不编号的单元（六下书末的「古诗词诵读」）按单元名找最上面一层的章节
  */
-function chineseNode(book, unitOrder, title) {
-  const unit = book.tree.find((n) => n.title.replace(/\s+/g, '').startsWith(`第${CN_NUM[unitOrder - 1]}单元`))
+function chineseNode(book, unitOf, title) {
+  const unit =
+    unitOf.numbered === false
+      ? book.tree.find((n) => norm(n.title) === norm(unitOf.title))
+      : book.tree.find((n) => n.title.replace(/\s+/g, '').startsWith(`第${CN_NUM[unitOf.order - 1]}单元`))
   if (!unit) return undefined
   const inUnit = book.nodes.filter((n) => n.parents.some((p) => p.id === unit.id))
   const want = norm(title)
@@ -609,7 +721,7 @@ try {
       if (course.subjectId === 'math') {
         node = mathNode(book, MATH[kp.id])
       } else {
-        node = chineseNode(book, unit.order, kp.title)
+        node = chineseNode(book, unit, kp.title)
       }
       const lesson = node && book.first(node, NATIONAL)
       if (lesson) {

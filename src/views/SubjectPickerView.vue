@@ -7,13 +7,14 @@ import { t, ui } from '@/engine/i18n'
 import AppVersion from '@/components/ui/AppVersion.vue'
 import ContactSheet from '@/components/ui/ContactSheet.vue'
 import InstallBar from '@/components/ui/InstallBar.vue'
+import PromoVideo from '@/components/ui/PromoVideo.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import { REPO_URL, SISTER_SITES } from '@/engine/sites'
 import { useShareStore } from '@/stores/share'
-import { SKINS } from '@/battle/skins'
 
 // 顶层选择页：选学科。soon 学科显示占位「敬请期待」，不可进入。
-// 标题上方一条对战 hero（F1，2026-09-21 对战版定位）：每种游戏的图标 + 一句带拼音的话，静态、不出声、不可点。
+// 标题上方一条对战 hero（F1）：宣传片（PromoVideo，静音循环播放，点一下听声音；2026-10-17 替换了原来那排游戏图标）
+// + 一句带拼音的话。
 // 卡片下面给家长（也给搜索引擎）的说明、帮助入口与各上线课程的知识点清单链接：清单是构建时生成的静态页
 // <学科>/<年级>/（见 src/seo），普通链接、不走路由。
 // 再下面是页脚（F1，排版三个静态站统一）：版本卡片（当前版本 + 检查更新，AppVersion）→ 一句「开源」说明（免费 / 无广告 /
@@ -22,9 +23,6 @@ import { SKINS } from '@/battle/skins'
 // 都是家长自己点开的，不出声不注音。
 const router = useRouter()
 const courses = liveCourses()
-// 游戏图标分两排：宽屏两排并成一行，手机上放不下就成上下均分的两排（不会一排 8 个、一排 1 个）
-const half = Math.ceil(SKINS.length / 2)
-const iconRows = [SKINS.slice(0, half), SKINS.slice(half)]
 const contactOpen = ref(false)
 const shareStore = useShareStore()
 
@@ -38,7 +36,7 @@ function tapSubject(sub: SubjectMeta): void {
     <!-- 安装提示条（F16）：没装到主屏幕时从第一次打开就在首页顶上，标题之上 -->
     <InstallBar />
     <section class="hero" :aria-label="ui('battle.title')">
-      <span class="hero-icons" aria-hidden="true"><span v-for="(row, r) in iconRows" :key="r" class="hero-row"><span v-for="s in row" :key="s.id">{{ s.icon }}</span></span></span>
+      <PromoVideo />
       <p class="hero-line"><RubyText :text="{ k: 'battle.hero' }" /></p>
     </section>
     <h2 class="picker-title">{{ ui('chooser.pickSubject') }}</h2>
@@ -87,37 +85,16 @@ function tapSubject(sub: SubjectMeta): void {
 <style scoped>
 .hero {
   margin: 12px 0 4px;
-  padding: 14px 16px 12px;
+  padding: 8px 8px 12px;
   border-radius: var(--radius-lg);
   background: var(--c-card);
   box-shadow: var(--shadow-card);
   border: 2px solid var(--c-primary);
   text-align: center;
 }
-.hero-icons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 6px;
-  font-size: 26px;
-  line-height: 1.2;
-}
-.hero-row {
-  display: flex;
-  gap: 6px;
-}
-/* 手机上图标小一号，十来个也能排在一行 */
-@media (max-width: 420px) {
-  .hero-icons {
-    gap: 3px 4px;
-    font-size: 22px;
-  }
-  .hero-row {
-    gap: 4px;
-  }
-}
 .hero-line {
-  margin: 8px auto 0;
+  margin: 10px auto 0;
+  padding: 0 8px;
   max-width: 24em;
   font-size: var(--fs-md);
   font-weight: 800;

@@ -36,6 +36,16 @@ describe('内容包按需加载（N8）', () => {
     expect(translate({ k: 'kp.c5s2-06-maodun' }, 'zh')).toBe('自相矛盾')
     expect(translate({ k: 'kp.c5s2-06-maodun' }, 'en')).toBe('The Spear and the Shield')
     expect(hasGenerator('c5s2-06-maodun')).toBe(false)
+    expect(courseLoaded('chinese-g6')).toBe(false)
+    expect(courseOfKp('c6s2-07-caiwei')?.course.id).toBe('chinese-g6')
+    expect(translate({ k: 'kp.c6s2-07-caiwei' }, 'zh')).toBe('采薇')
+    expect(translate({ k: 'kp.c6s2-07-caiwei' }, 'en')).toBe('Picking Ferns')
+    expect(hasGenerator('c6s2-07-caiwei')).toBe(false)
+    expect(courseLoaded('math-g6')).toBe(false)
+    expect(courseOfKp('m6s2-07-pigeonhole')?.course.id).toBe('math-g6')
+    expect(translate({ k: 'kp.m6s2-07-pigeonhole' }, 'zh')).toBe('鸽巢问题')
+    expect(translate({ k: 'kp.m6s2-07-pigeonhole' }, 'en')).toBe('The Pigeonhole Principle')
+    expect(hasGenerator('m6s2-07-pigeonhole')).toBe(false)
   })
 
   it('进语文的页面之前，路由守卫把这门课的内容包加载好（对战页按知识点反查）', async () => {
@@ -60,6 +70,14 @@ describe('内容包按需加载（N8）', () => {
     await router.push('/s/chinese/g/g5?sem=2')
     expect(courseLoaded('chinese-g5')).toBe(true)
     expect(hasGenerator('c5s2-08-tongnian')).toBe(true)
+    expect(courseLoaded('chinese-g6')).toBe(false)
+    await router.push('/s/chinese/g/g6?sem=2')
+    expect(courseLoaded('chinese-g6')).toBe(true)
+    expect(hasGenerator('c6s2-07-qingpingle')).toBe(true)
+    expect(courseLoaded('math-g6')).toBe(false)
+    await router.push('/s/math/g/g6?sem=2')
+    expect(courseLoaded('math-g6')).toBe(true)
+    expect(hasGenerator('m6s2-07-pigeonhole')).toBe(true)
   })
 
   it('同时几处要只加载一次；加载失败下次再试，成功了就不再调', async () => {

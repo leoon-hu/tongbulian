@@ -31,8 +31,13 @@ export const SHELL_ZH: Dict = {
   // 学期分册（年级无关，年级信息在页头/面包屑体现）
   'sem.1': '上册',
   'sem.2': '下册',
-  // 首页「选择学科」上方的对战 hero（F1）：每种游戏的图标 + 一句带拼音的话，静态、不出声
+  // 首页「选择学科」上方的对战 hero（F1）：宣传片 + 一句带拼音的话
   'battle.hero': '答对课本题就得分，谁先答对 8 题谁赢！',
+  // 首页宣传片（F1）：只给读屏器的说明（画面上只有 ▶ / 🔇 / 🔊），不注音、不朗读
+  'promo.label': '宣传片，{action}',
+  'promo.play': '点一下播放',
+  'promo.unmute': '点一下听声音',
+  'promo.mute': '点一下关掉声音',
   // 首页底部给家长的一句说明 + 各年级知识点清单（静态页）的链接
   'home.about': '把人教版课本的知识点测验变成游戏积分：打机器人、两人一台或各用各的设备，谁先答对 8 题谁赢；也能一个人安静地练。汉字标拼音、题目自动朗读；免费、无广告、不用注册。',
   'help.title': '帮助与说明',
@@ -876,6 +881,10 @@ export const SHELL_EN: Dict = {
   'sem.1': 'Term 1',
   'sem.2': 'Term 2',
   'battle.hero': 'Answer textbook questions to score — first to 8 wins!',
+  'promo.label': 'Promo video, {action}',
+  'promo.play': 'tap to play',
+  'promo.unmute': 'tap to hear the sound',
+  'promo.mute': 'tap to turn the sound off',
   'home.about': 'PEP textbook quizzes turned into game points: play the robot, two on one tablet or one device each, first to 8 wins; or practise quietly on your own. Pinyin on every character, every question read aloud; free, no ads, no account needed.',
   'help.title': 'Help & guide',
   'version.label': 'Version',

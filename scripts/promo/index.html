@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>宣传片画面</title>
+    <!-- 首页宣传片的画面（npm run promo 用无头 Chrome 逐帧截图；不进网站构建，vite build 只打包根目录的 index.html）：
+         1280×720，所有动画都由 scene.ts 的 frame(i) 按帧号算出来，没有 CSS 动画 / 过渡 -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        background: #fdf6ec;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      #stage {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        background: #fdf6ec;
+        color: #3d2c1e;
+        font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+      }
+      /* 背景：奶油色上很淡的圆点，慢慢飘 */
+      #deco {
+        background-image: radial-gradient(circle, rgba(255, 138, 61, 0.09) 3px, transparent 3.5px), radial-gradient(circle, rgba(74, 163, 255, 0.07) 3px, transparent 3.5px);
+        background-size: 64px 64px, 64px 64px;
+        background-position: 0 0, 32px 32px;
+      }
+
+      /* ── 对战 ── */
+      #world {
+        transform-origin: 0 0;
+      }
+      .strip {
+        position: absolute;
+        left: 542px;
+        top: 18px;
+        width: 196px;
+        height: 510px;
+        border-radius: 26px;
+        overflow: hidden;
+        box-shadow: 0 0 0 5px #fff, 0 10px 24px rgba(61, 44, 30, 0.14);
+      }
+      .strip canvas,
+      .tile canvas,
+      .boss-stage canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      .team {
+        --team: #ff6b6b;
+        --team-dark: #d94c4c;
+        --team-soft: #fff1ef;
+        --team-line: #ffb8b8;
+        position: absolute;
+        top: 18px;
+        width: 502px;
+        height: 510px;
+        border-radius: 30px;
+        border: 5px solid var(--team);
+        background: var(--team-soft);
+        overflow: hidden;
+        box-shadow: 0 10px 22px rgba(61, 44, 30, 0.1);
+      }
+      .team.red {
+        left: 24px;
+      }
+      .team.blue {
+        left: 754px;
+        --team: #4aa3ff;
+        --team-dark: #2f7fd6;
+        --team-soft: #edf5ff;
+        --team-line: #b3d6ff;
+      }
+      .head {
+        position: relative;
+        height: 78px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 22px;
+        background: var(--team-dark);
+        color: #fff;
+        font-weight: 800;
+        font-size: 36px;
+      }
+      .ava {
+        font-size: 44px;
+        line-height: 1;
+      }
+      .head .name {
+        flex: 1;
+        white-space: nowrap;
+      }
+      .dots {
+        display: flex;
+        gap: 6px;
+      }
+      .dots i {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.33);
+      }
+      .dots i.on {
+        background: #fff;
+      }
+      .score {
+        min-width: 1.15em;
+        text-align: right;
+        font-size: 60px;
+        font-weight: 900;
+        line-height: 1;
+      }
+      .plus {
+        position: absolute;
+        right: 26px;
+        top: 6px;
+        font-size: 34px;
+        font-weight: 900;
+        color: #ffe27a;
+        opacity: 0;
+      }
+      .body {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 78px;
+        bottom: 0;
+      }
+      .qset {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 26px;
+      }
+      .qrow {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 112px;
+      }
+      .spk {
+        font-size: 42px;
+      }
+      .expr {
+        font-size: 82px;
+        font-weight: 800;
+        letter-spacing: 3px;
+        white-space: nowrap;
+      }
+      .pycard {
+        padding: 0 34px 6px;
+        border-radius: 26px;
+        background: #fff;
+        border: 3px solid var(--c-line, #f0e6d8);
+        box-shadow: 0 4px 12px rgba(61, 44, 30, 0.08);
+        font-family: 'Andika', sans-serif;
+        font-size: 74px;
+        line-height: 1.25;
+        color: #f2691d;
+      }
+      .choices {
+        display: grid;
+        grid-template-columns: repeat(2, 200px);
+        gap: 20px;
+      }
+      .card {
+        position: relative;
+        height: 116px;
+        border-radius: 26px;
+        background: #fff;
+        border: 5px solid transparent;
+        box-shadow: 0 5px 14px rgba(61, 44, 30, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        font-weight: 800;
+      }
+      .card.hz {
+        font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', serif;
+        font-weight: 400;
+        font-size: 82px;
+      }
+      .card.ok {
+        border-color: #3ecf8e;
+        background: #e9faf2;
+        color: #23b574;
+      }
+      .tick {
+        position: absolute;
+        right: -16px;
+        top: -22px;
+        font-size: 54px;
+        line-height: 1;
+        opacity: 0;
+      }
+      .ripple {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        margin: -70px 0 0 -70px;
+        border-radius: 50%;
+        border: 7px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 0 3px rgba(61, 44, 30, 0.12);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .finger {
+        position: absolute;
+        font-size: 96px;
+        line-height: 1;
+        opacity: 0;
+        filter: drop-shadow(0 6px 6px rgba(61, 44, 30, 0.25));
+        transform-origin: 30% 10%;
+      }
+      .ff {
+        position: absolute;
+        left: 640px;
+        top: 273px;
+        width: 104px;
+        height: 104px;
+        margin: -52px 0 0 -52px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 6px 16px rgba(61, 44, 30, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 56px;
+        opacity: 0;
+      }
+
+      /* 弹出的提示（连对 / 决胜题 / 赢啦 / 打倒啦）：和竞技场一样的胶囊 */
+      .pill {
+        position: absolute;
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        padding: 6px 28px 12px;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 10px 26px rgba(61, 44, 30, 0.2);
+        font-weight: 800;
+        white-space: nowrap;
+        opacity: 0;
+        transform-origin: 50% 50%;
+      }
+      .pill .emo {
+        font-size: 1.15em;
+        line-height: 1.25;
+      }
+      .pill ruby rt {
+        font-family: 'Andika', sans-serif;
+        font-weight: 400;
+        font-size: 0.42em;
+        color: #8a7a6d;
+        padding: 0 0.1em;
+      }
+      .pill.streak {
+        font-size: 44px;
+        color: #f2691d;
+        border: 4px solid #ffb469;
+      }
+      .pill.deuce {
+        font-size: 66px;
+        color: #fff;
+        background: linear-gradient(90deg, #e8453c 0%, #e8453c 50%, #2f80ed 50%, #2f80ed 100%);
+        border: 5px solid #fff;
+      }
+      .pill.deuce ruby rt,
+      .pill.win ruby rt,
+      .pill.ko ruby rt {
+        color: rgba(255, 255, 255, 0.92);
+      }
+      .pill.win {
+        font-size: 76px;
+        color: #fff;
+        background: linear-gradient(180deg, #ffb444, #ff8a3d);
+        border: 6px solid #fff;
+        padding: 6px 44px 16px;
+      }
+      .pill.ko {
+        font-size: 80px;
+        color: #fff;
+        background: linear-gradient(180deg, #ffcf3d, #ff9a1f);
+        border: 6px solid #fff;
+      }
+
+      /* ── 游戏墙 ── */
+      .tile {
+        position: absolute;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 0 0 5px #fff, 0 10px 22px rgba(61, 44, 30, 0.16);
+        background: #cfe8ff;
+      }
+
+      /* ── 打怪兽 ── */
+      .boss-stage {
+        position: absolute;
+        left: 24px;
+        top: 18px;
+        width: 1232px;
+        height: 500px;
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 0 0 5px #fff, 0 12px 26px rgba(61, 44, 30, 0.18);
+        background: #2b2350;
+      }
+      .boss-cam {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1232px;
+        height: 500px;
+        transform-origin: 0 0;
+      }
+
+      /* ── 怎么玩 ── */
+      .mode {
+        position: absolute;
+        top: 92px;
+        width: 276px;
+        height: 352px;
+        border-radius: 32px;
+        background: #fff;
+        box-shadow: 0 10px 24px rgba(61, 44, 30, 0.12);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        opacity: 0;
+      }
+      .mode .pic {
+        width: 224px;
+      }
+      .mode .pic svg.mode-pic {
+        max-width: none !important;
+        width: 224px !important;
+      }
+      .mode .label {
+        font-size: 44px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .mode .label ruby rt {
+        font-family: 'Andika', sans-serif;
+        font-weight: 400;
+        font-size: 0.45em;
+        color: #8a7a6d;
+      }
+      .mode.en .label {
+        font-size: 30px;
+        text-align: center;
+        white-space: normal;
+        line-height: 1.15;
+        padding: 0 14px;
+      }
+
+      /* ── 片尾 ── */
+      .cover-row {
+        position: absolute;
+        left: 0;
+        display: flex;
+        gap: 18px;
+        white-space: nowrap;
+      }
+      .cover-row img {
+        width: 112px;
+        height: 159px;
+        border-radius: 10px;
+        box-shadow: 0 6px 14px rgba(61, 44, 30, 0.18);
+        display: block;
+      }
+      #end-fade {
+        background: radial-gradient(ellipse 560px 250px at 640px 360px, rgba(253, 246, 236, 0.97) 0%, rgba(253, 246, 236, 0.9) 62%, rgba(253, 246, 236, 0.25) 100%);
+      }
+      .brand {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 166px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 34px;
+      }
+      .brand img {
+        width: 156px;
+        height: 156px;
+        border-radius: 36px;
+        box-shadow: 0 14px 30px rgba(242, 105, 29, 0.32);
+      }
+      .brand .name {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 112px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: 2px;
+      }
+      .brand .badge {
+        font-size: 44px;
+        padding: 10px 26px 12px;
+        border-radius: 999px;
+        background: #ff8a3d;
+        color: #fff;
+        letter-spacing: 1px;
+      }
+      .brand.en .name {
+        font-size: 74px;
+        letter-spacing: 0;
+      }
+      .brand.en .badge {
+        font-size: 38px;
+      }
+      .sub {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 352px;
+        text-align: center;
+        font-size: 36px;
+        font-weight: 700;
+        color: #8a7a6d;
+        letter-spacing: 1px;
+      }
+      .badges {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 420px;
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+      }
+      .badges span {
+        padding: 8px 24px 10px;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(61, 44, 30, 0.1);
+        font-size: 32px;
+        font-weight: 800;
+        color: #3d2c1e;
+      }
+      .badges span::before {
+        content: '✓';
+        margin-right: 10px;
+        color: #3ecf8e;
+        font-weight: 900;
+      }
+      .url {
+        position: absolute;
+        left: 50%;
+        top: 494px;
+        transform: translateX(-50%);
+        padding: 6px 30px 8px;
+        border-radius: 999px;
+        background: #fff;
+        border: 4px solid #ff8a3d;
+        font-family: 'Andika', sans-serif;
+        font-size: 36px;
+        color: #f2691d;
+        white-space: nowrap;
+      }
+
+      /* ── 字幕：汉字带拼音、白描边的贴纸字 ── */
+      #caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 548px;
+        height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cap {
+        position: absolute;
+        display: flex;
+        align-items: flex-end;
+        white-space: nowrap;
+        font-family: 'Yuanti SC', 'PingFang SC', sans-serif;
+        font-weight: 700;
+        font-size: 68px;
+        line-height: 1.1;
+        color: #3d2c1e;
+        -webkit-text-stroke: 14px #fff;
+        paint-order: stroke fill;
+        filter: drop-shadow(0 5px 0 rgba(61, 44, 30, 0.12));
+      }
+      .cap.en {
+        font-family: 'Avenir Next', 'PingFang SC', sans-serif;
+        font-weight: 800;
+        font-size: 62px;
+      }
+      .cap .u {
+        display: inline-block;
+        transform-origin: 50% 85%;
+      }
+      .cap .u.hot {
+        color: #f2691d;
+      }
+      .cap .gap {
+        width: 0.28em;
+      }
+      .cap ruby {
+        ruby-position: over;
+      }
+      .cap rt {
+        font-family: 'Andika', sans-serif;
+        font-weight: 400;
+        font-size: 0.4em;
+        line-height: 1.3;
+        color: #8a7a6d;
+        -webkit-text-stroke: 6px #fff;
+      }
+
+      #flash {
+        background: #fff;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <script type="module" src="./scene.ts"></script>
+  </body>
+</html>

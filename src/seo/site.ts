@@ -23,23 +23,27 @@ import { KP_SEO as SEO_G2 } from '@/content/math/grade2/seo'
 import { KP_SEO as SEO_G3 } from '@/content/math/grade3/seo'
 import { KP_SEO as SEO_G4 } from '@/content/math/grade4/seo'
 import { KP_SEO as SEO_G5 } from '@/content/math/grade5/seo'
+import { KP_SEO as SEO_G6 } from '@/content/math/grade6/seo'
 import { KP_SEO as SEO_C1 } from '@/content/chinese/grade1/seo'
 import { KP_SEO as SEO_C2 } from '@/content/chinese/grade2/seo'
 import { KP_SEO as SEO_C3 } from '@/content/chinese/grade3/seo'
 import { KP_SEO as SEO_C4 } from '@/content/chinese/grade4/seo'
 import { KP_SEO as SEO_C5 } from '@/content/chinese/grade5/seo'
+import { KP_SEO as SEO_C6 } from '@/content/chinese/grade6/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
 import '@/content/math/grade5'
+import '@/content/math/grade6'
 import '@/content/chinese/grade1'
 import '@/content/chinese/grade2'
 import '@/content/chinese/grade3'
 import '@/content/chinese/grade4'
 import '@/content/chinese/grade5'
+import '@/content/chinese/grade6'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -402,7 +406,7 @@ export function stemText(part: StemPart): string {
     // 四年级数学下册 C
     case 'dec-card': {
       // 小数卡：数照写，画横线的数字另外说；分数写成「47/1000」
-      if (part.frac) return `（卡片上的分数：${part.frac[0]}/${part.frac[1]}）`
+      if (part.frac) return `（卡片上的分数：${part.sign ?? ''}${part.frac[0]}/${part.frac[1]}）`
       const n = part.n ?? ''
       const marks = part.marks?.length ? `（画横线的是 ${part.marks.map((i) => n[i]).join('、')}，从左数第 ${part.marks.map((i) => i + 1).join('、')} 个字）` : ''
       return `${n}${marks}`
@@ -412,7 +416,11 @@ export function stemText(part: StemPart): string {
       const what = part.ruler ? '米尺' : '直线'
       const extra = part.extra ? `，最后一个数后面还有 ${part.extra} 小格` : ''
       const arrow = part.arrow === undefined ? '' : `，红箭头指着从左数第 ${part.arrow} 小格`
-      return `（${what}：刻度下面依次标着 ${part.labels.join('、')}，相邻两个数之间平均分成 ${part.per} 小格${extra}${arrow}）`
+      // 六年级的直线：有的长刻度不写数（空串）就说第几个长刻度写着什么；线上的红点写出名字在第几小格
+      const dots = part.points?.length ? `；线上的红点：${part.points.map((p) => `${zh(p.name)} 在从左数第 ${p.i} 小格`).join('，')}` : ''
+      if (part.labels.every((l) => l !== '')) return `（${what}：刻度下面依次标着 ${part.labels.join('、')}，相邻两个数之间平均分成 ${part.per} 小格${extra}${arrow}${dots}）`
+      const marks = part.labels.flatMap((l, i) => (l === '' ? [] : [`第 ${i + 1} 个下面写着 ${l}`])).join('，')
+      return `（${what}：一共 ${part.labels.length} 个长刻度，${marks}，相邻两个长刻度之间平均分成 ${part.per} 小格${extra}${arrow}${dots}）`
     }
     case 'dec-table': {
       const NAME = (p: number): string => (p >= 0 ? ['个位', '十位', '百位', '千位', '万位'][p] ?? '' : ['十分位', '百分位', '千分位', '万分位'][-p - 1] ?? '')
@@ -629,6 +637,107 @@ export function stemText(part: StemPart): string {
         `${b.side === 'top' ? '上面' : '下面'}的括号括出第 ${Math.min(b.from, b.to) + 1} 到第 ${Math.max(b.from, b.to)} 段，写着 ${b.label}`
       return `（一条线段平均分成 ${part.parts} 段；${part.braces.map(where).join('；')}）`
     }
+    // 六年级数学 A
+    case 'pair-grid':
+    case 'bearing-map':
+    case 'route-map':
+      // 方格图、方向图、路线图：生成器写好的文字说明（只说图上有什么，不说出答案）
+      return `（${part.alt}）`
+    case 'pigeonholes': {
+      const HOLDER = { cup: '笔筒', drawer: '抽屉', cage: '鸽笼' } as const
+      return `（${part.counts.length} 个${HOLDER[part.holder]}，里面依次放了 ${part.counts.join('、')} 个${part.extra ? `，旁边有 ${part.extra} 个没放进去` : ''}）`
+    }
+    // 六年级数学 B
+    case 'frac-area': {
+      // 长方形面积图：分成几条几列；乘法说斜线、交叉线画在哪里，除法说虚线、涂色的条 / 列和括号（照图说，不算结果）
+      const bits: string[] = [`横着平均分成 ${part.rows} 条，竖着平均分成 ${part.cols} 列`]
+      const f = part.first
+      if (f) {
+        bits.push(f.along === 'row' ? `上面 ${f.n} 条画了斜线` : `左边 ${f.n} 列画了斜线`)
+        const s = part.second
+        if (s) bits.push(`斜线部分里${f.along === 'row' ? `${s.from === 'end' ? '右边' : '左边'} ${s.n} 列` : `${s.from === 'end' ? '下面' : '上面'} ${s.n} 条`}又画了交叉线`)
+      }
+      if (part.ghost) bits.push(f?.along === 'col' ? `右边 ${part.ghost} 列画的是虚线` : `下面 ${part.ghost} 条画的是虚线`)
+      if (part.solid !== undefined && part.solid < part.rows) bits.push(`下面 ${part.solid} 条是实线，上面 ${part.rows - part.solid} 条画的是虚线`)
+      const sh = part.shade
+      if (sh?.cells.length) {
+        const nums = [...sh.cells].sort((a, b) => a - b).map((c) => c + 1).join('、')
+        bits.push(sh.along === 'row' ? `从下往上数第 ${nums} 条涂了色` : `从左往右数第 ${nums} 列涂了色`)
+      }
+      for (const b of part.braces ?? []) {
+        const lo = Math.min(b.from, b.to)
+        const hi = Math.max(b.from, b.to)
+        bits.push(`${b.side === 'left' ? '左边' : '右边'}的括号括住下面数起第 ${lo + 1} 到第 ${hi} 条，写着 ${b.label}`)
+      }
+      return `（长方形面积图：${bits.join('；')}）`
+    }
+    case 'frac-bars': {
+      // 线段图：每一行的名字、有几段、虚线段、括号括住的地方和写的数（照图说，不算结果）
+      const seg = (p: number): string => (Number.isInteger(p) ? String(p) : String(Math.round(p * 100) / 100))
+      const rows = part.rows.map((r) => {
+        const bits = [`${r.name ? zh(r.name) : '线段'}：${seg(r.len)} 段那么长`]
+        const parts = Math.round(r.parts ?? r.len)
+        if (r.parts !== undefined && parts > 1 && parts !== r.len) bits.push(`平均分成 ${parts} 小段`)
+        if (r.dash) bits.push(`从 ${seg(Math.min(...r.dash))} 段到 ${seg(Math.max(...r.dash))} 段画的是虚线`)
+        for (const b of r.braces ?? []) bits.push(`${b.side === 'top' ? '上面' : '下面'}的括号括住 ${seg(Math.min(b.from, b.to))} 段到 ${seg(Math.max(b.from, b.to))} 段，写着 ${b.label}`)
+        return bits.join('，')
+      })
+      const guides = Array.isArray(part.guides) ? `；在 ${part.guides.map(seg).join('、')} 段处画了红色竖虚线` : part.guides ? '；上下对齐的地方画了竖虚线' : ''
+      return `（线段图，每段一样长，第一条平均分成 ${part.unit} 段：${rows.join('；')}${guides}）`
+    }
+    // 六年级数学 C
+    // 六年级数学 D
+    // 六年级数学 E
+    // 六年级数学 F
+    case 'thermo': {
+      // 温度计：刻度范围、每格几摄氏度，每支液柱停在几摄氏度（读温度计的题，示例题的答案在后面另外写着）
+      const one = (it: (typeof part.items)[number]): string => `${it.name ? `${zh(it.name)}：` : ''}液柱停在 ${it.value < 0 ? `−${-it.value}` : it.value} ℃`
+      return `（温度计：${part.min < 0 ? `−${-part.min}` : part.min} ℃ 到 ${part.max} ℃，每小格 ${part.minor} ℃；${part.items.map(one).join('；')}）`
+    }
+    // 六年级数学 G
+    case 'round-solid': {
+      // 圆柱、圆锥立体图：编号的一组只说有几个（问的就是哪个是什么形状）；单个的说是什么、标着哪些数，
+      // 字母标记只说标了哪几个字母（问的就是指着哪个部位）；组合体不说由什么组成（也是要问的）
+      if (part.numbered) return `（${part.items.length} 个立体图形，下面编号 1 到 ${part.items.length}）`
+      const NAME: Record<string, string> = { cylinder: '圆柱', cone: '圆锥', frustum: '立体图形', cut: '立体图形', sphere: '立体图形', silo: '组合的立体图形', hopper: '组合的立体图形', bottle: '瓶子' }
+      const one = (s: (typeof part.items)[number]): string => {
+        const lab = s.labels ?? {}
+        const combo = s.shape === 'silo' || s.shape === 'hopper'
+        const flipped = s.shape === 'bottle' && s.pose === 'down'
+        const marks = [
+          lab.r !== undefined ? `底面半径标着 ${lab.r}` : '',
+          lab.d !== undefined ? `底面直径标着 ${lab.d}` : '',
+          lab.h !== undefined ? `${combo ? '圆柱部分的高' : s.pose === 'side' ? '长度' : '高'}标着 ${lab.h}` : '',
+          lab.h2 !== undefined ? `圆锥部分的高标着 ${lab.h2}` : '',
+          lab.water !== undefined ? (flipped ? `没有水的部分高标着 ${lab.water}` : `水的高度标着 ${lab.water}`) : '',
+          s.marks?.length ? `图上用字母 ${s.marks.map((m) => m.text).join('、')} 标出了几个部位` : '',
+        ].filter(Boolean)
+        const name = flipped ? '瓶口朝下放的瓶子' : s.pose === 'side' && s.shape === 'cylinder' ? '横放的圆柱' : NAME[s.shape]!
+        return `${name}${marks.length ? `：${marks.join('，')}` : ''}`
+      }
+      return `（${part.items.map(one).join(part.arrow ? ' → ' : '；')}）`
+    }
+    // 六年级数学 H
+    case 'prop-graph': {
+      // 正比例 / 反比例图象：两条轴每格代表几、每组描的点和线、读图的虚线从哪里画起（那一头是「？」）、另外描的点
+      const axis = (a: typeof part.x): string => `${zh(a.name)}，每格 ${a.step}`
+      const LINE = { origin: '从 0 点连成一条直线', curve: '连成一条光滑的曲线', none: '' } as const
+      const one = (s: (typeof part.series)[number]): string => {
+        const line = LINE[s.line ?? 'none']
+        return `${s.name ? `${zh(s.name)}：` : ''}描了 ${s.pts.map(([x, y]) => `(${x}, ${y})`).join('、')}${line ? `，${line}${s.extend ? '并延长' : ''}` : ''}`
+      }
+      const guide =
+        part.guide?.x !== undefined
+          ? `；从横轴上的 ${part.guide.x} 画虚线到线上，再画到纵轴（？）`
+          : part.guide?.y !== undefined
+            ? `；从纵轴上的 ${part.guide.y} 画虚线到线上，再画到横轴（？）`
+            : ''
+      const marks = part.marks?.length ? `；另外描了点 ${part.marks.map(([x, y]) => `(${x}, ${y})`).join('、')}` : ''
+      return `（图象：横轴是${axis(part.x)}；纵轴是${axis(part.y)}；${part.series.map(one).join('；')}${guide}${marks}）`
+    }
+    case 'scale-bar':
+      // 线段比例尺：左端 0、右端的数（要填的写「（　）」）和单位
+      return `（线段比例尺：0 到 ${part.per === undefined ? '（　）' : part.per * (part.segs ?? 1)} ${zh(part.unit)}${(part.segs ?? 1) > 1 ? `，平均分成 ${part.segs} 段` : ''}）`
     // 语文（§9）
     case 'hanzi':
       return part.mark === undefined ? part.text : `${part.text}（红字：${Array.from(part.text)[part.mark]}）`

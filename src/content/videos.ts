@@ -178,6 +178,34 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm5s2-08-notify': 'c14bec7b-0cf6-05aa-1c6a-2b274727d879', // ★ 怎样通知最快
   'm5s2-09-double': '1eb0f934-7016-d6ca-68de-1db853e7af31', // 复式折线统计图
   'm5s2-10-defective': 'f609d22e-6036-46b0-8f20-3d87cd27da72', // 8 数学广角——找次品
+  'm6s1-01-pairs': 'e3a6c804-0c65-d437-2296-ace406c02e93', // 用有序数对确定位置
+  'm6s1-01-bearing': '3ec5ccc9-876f-0b9e-5af6-a186fc822b6b', // 用方向和距离确定位置
+  'm6s2-01-meaning': '763b7eb0-1e06-4a0b-a9d4-2f5bceea0d94', // 认识负数
+  'm6s2-01-line': '95ca359e-28f2-407b-8d0b-6ff5a22f1875', // 解决问题
+  'm6s2-02-discount': 'e2816d0d-5a30-4128-b0e2-ddb9899cbd58', // 折扣
+  'm6s2-02-chengshu': 'cc531998-23b6-496e-8b7b-c756f5bb1422', // 成数
+  'm6s2-02-tax': 'a6d0f87c-4c77-4b72-a248-c1dcf7a51cf8', // 税率
+  'm6s2-02-interest': '97eb2263-4d09-4c2d-8397-f35888e8a7be', // 利率
+  'm6s2-02-sale': '85babd3e-d41d-484e-85ac-339640ea0191', // 解决问题
+  'm6s2-04-cyl-know': '0b1e591e-695d-4a19-85eb-4939fc324e68', // 圆柱的认识
+  'm6s2-04-cyl-net': '0b1e591e-695d-4a19-85eb-4939fc324e68', // 圆柱的认识
+  'm6s2-04-cyl-side': 'faf3946f-b203-461c-9fc5-8d50ba8095f8', // 圆柱的表面积
+  'm6s2-04-cyl-surface': 'faf3946f-b203-461c-9fc5-8d50ba8095f8', // 圆柱的表面积
+  'm6s2-04-cyl-volume': '7b7ef7f1-95ed-4396-978a-ffcb74df1af6', // 圆柱的体积
+  'm6s2-04-cyl-capacity': '7b7ef7f1-95ed-4396-978a-ffcb74df1af6', // 圆柱的体积
+  'm6s2-04-cone-know': '5a4462ab-93d7-4cae-aa0a-4a46db0d46c2', // 圆锥的认识
+  'm6s2-04-cone-volume': '0eb95f26-0165-491a-980c-cddd6f2eb99d', // 圆锥的体积
+  'm6s2-05-meaning': '2d554d37-7d22-4d5a-9f0e-4daf60b68161', // 比例的意义
+  'm6s2-05-property': '0e1f4c97-7933-4c47-92b3-e685eb817202', // 比例的基本性质
+  'm6s2-05-solve': '01d317a8-8c8a-4968-a2e5-c47c401a260d', // 解比例
+  'm6s2-05-direct': 'ed45ec41-db88-4242-8eb8-1cf91f45ecdb', // 正比例和反比例
+  'm6s2-05-inverse': 'ed45ec41-db88-4242-8eb8-1cf91f45ecdb', // 正比例和反比例
+  'm6s2-05-scale': '76e89496-dbdb-415c-89da-2fdad901dcaa', // 比例尺
+  'm6s2-05-scale-use': '76e89496-dbdb-415c-89da-2fdad901dcaa', // 比例尺
+  'm6s2-05-zoom': 'b15be436-3855-4404-be27-f5c66df25585', // 图形的放大与缩小
+  'm6s2-05-apply': '8bfb7118-3ce6-4637-a5c3-ccb25152be4d', // 用比例解决问题
+  'm6s2-06-bike': '78a85b92-2834-4547-921d-ed53ec7207de', // ★ 自行车里的数学
+  'm6s2-07-pigeonhole': '87add3eb-0410-4019-a808-56d6a2813488', // 5 数学广角——鸽巢问题
   'c1s1-01-tiandiren': '8b8984a0-3ad9-3183-8250-9dd550069836', // 1 天地人
   'c1s1-01-jinmu': 'f7ba363a-5941-06f0-3300-7972d3fee8d1', // 2 金木水火土
   'c1s1-01-kouer': '8ecbb01e-3df7-91b1-dcaf-5755dd305690', // 3 口耳目手足
@@ -451,6 +479,30 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c5s2-08-shouzhi': 'e6424192-c40c-45f7-b11f-173177bc332f', // 22 手指
   'c5s2-08-tongnian': 'd0ceed64-57d6-47d9-8363-95f13f24a5f6', // 23*童年的发现
   'c5s2-08-garden': 'd592f3c4-8f7d-47c3-91a6-a9676e6eeec2', // 语文园地
+  'c6s1-01-caoyuan': 'afa295a3-a5f6-b6e4-bdcb-18cefb4541a3', // 1 草原
+  'c6s1-01-dingxiangjie': 'f2c180e2-c5b9-6a6a-d8ff-be833ce939bd', // 2 丁香结
+  'c6s1-01-gushici': '00414fea-ff36-ad91-09a6-686b1eae10d4', // 3 古诗词三首
+  'c6s2-01-chunjie': '356e43aa-9714-4078-a15e-1ecb656ca39e', // 1 北京的春节
+  'c6s2-01-labazhou': '4f2da214-b9e1-4a96-831c-6a51cdc04cc5', // 2 腊八粥
+  'c6s2-01-gushi': 'ead93583-f4ed-43c6-8035-07f86a02c578', // 3 古诗三首
+  'c6s2-01-zangxi': '58eba64f-e6d8-46aa-a4ae-2116068e739e', // 4*藏戏
+  'c6s2-01-garden': '7ec60b3b-18db-4325-9c94-59d8bac6934d', // 语文园地
+  'c6s2-02-lubinxun': '4196a51b-bb08-4a0e-bfe7-75b82da90991', // 5 鲁滨逊漂流记（节选）
+  'c6s2-02-qie': '460056c2-707c-46f2-85ba-3869717d235a', // 6*骑鹅旅行记（节选）
+  'c6s2-02-tangmu': '50f12751-6e5a-4508-b3eb-1f9c3df0ee25', // 7*汤姆·索亚历险记（节选）
+  'c6s2-02-garden': '5132c27b-c0bc-49ee-be61-f08f74de0304', // 语文园地
+  'c6s2-03-congcong': '7eea20a5-332f-4574-a6ee-d4f6841154be', // 8 匆匆
+  'c6s2-03-xingqitian': '4bb8a0f9-2951-4fb1-b22f-66db0ab490d3', // 9 那个星期天
+  'c6s2-04-gushi': 'e8ff9337-875b-4b9d-a222-95c678c3b774', // 10 古诗三首
+  'c6s2-04-huiyi': '6492e8df-469c-48b6-9e04-a10710e9e479', // 11 十六年前的回忆
+  'c6s2-04-weirenmin': '25f681a1-1516-4afd-86b5-002188b08503', // 12 为人民服务
+  'c6s2-04-dongcunrui': 'f298831e-a3fb-a7f1-eba9-cbd5f6c9fd5e', // 13*董存瑞舍身炸暗堡
+  'c6s2-04-garden': 'b8092c2f-56ab-45db-8a24-be72362e1d8c', // 语文园地
+  'c6s2-05-wenyan': '792b1e38-1968-4c7b-bf23-80386a4e75cb', // 14 文言文二则
+  'c6s2-05-zhenli': '1262a1bc-33a1-4510-8401-21530db53065', // 15 真理诞生于一百个问号之后
+  'c6s2-05-biaoli': '25c296d4-547b-40e3-8cc0-f03043040b12', // 16 表里的生物
+  'c6s2-05-youqu': '51e4f640-ad63-418d-972d-2c3f09030a63', // 17*他们那时候多有趣啊
+  'c6s2-05-garden': 'a487b6b3-71ca-4289-bd64-c6d60973a4c8', // 语文园地
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -517,6 +569,37 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'm5s2-07-mixed': { id: '56cadff1-3ee9-e487-b8e1-ecc1da0acb3a', from: 'elite' }, // 五年级下册 · 6 分数的加法和减法 · 分数加减混合运算（精品课）
   'm5s2-07-laws': { id: '56cadff1-3ee9-e487-b8e1-ecc1da0acb3a', from: 'elite' }, // 五年级下册 · 6 分数的加法和减法 · 分数加减混合运算（精品课）
   'm5s2-09-single': { id: '763181ee-9db3-ea6d-c080-e8934f402abd', from: 'elite' }, // 五年级下册 · 7 折线统计图 · 单式折线统计图（精品课）
+  'm6s1-01-route': { id: '713d4809-e590-4f80-bc11-270dc87d01f5', from: 'old' }, // 旧教材 · 2 位置与方向（二） · 描述简单的路线图（例3）
+  'm6s1-02-frac-int': { id: '077ef535-771d-4e9b-ad65-dd764da6d69d', from: 'old' }, // 旧教材 · 1 分数乘法 · 分数乘整数
+  'm6s1-02-num-frac': { id: 'f11b3df3-4757-4140-8e11-d70d5d3af087', from: 'old' }, // 旧教材 · 1 分数乘法 · 分数乘分数
+  'm6s1-02-frac-frac': { id: 'f11b3df3-4757-4140-8e11-d70d5d3af087', from: 'old' }, // 旧教材 · 1 分数乘法 · 分数乘分数
+  'm6s1-02-dec-frac': { id: '3419d22c-deef-41e1-b730-5653939dfa1b', from: 'old' }, // 旧教材 · 1 分数乘法 · 分数乘小数
+  'm6s1-02-laws': { id: '77704779-84a0-4001-b59a-27a24ffdc137', from: 'old' }, // 旧教材 · 1 分数乘法 · 分数四则混合运算
+  'm6s1-02-chain': { id: 'c18d09fd-5851-469c-8cfb-8bf4e8477023', from: 'old' }, // 旧教材 · 1 分数乘法 · 解决问题
+  'm6s1-02-more-less': { id: 'c18d09fd-5851-469c-8cfb-8bf4e8477023', from: 'old' }, // 旧教材 · 1 分数乘法 · 解决问题
+  'm6s1-03-reciprocal': { id: 'b5b8290d-0678-4408-ae98-1154b1b8425b', from: 'old' }, // 旧教材 · 3 分数除法 · 倒数的认识
+  'm6s1-03-frac-int': { id: 'a3ea124d-81e2-4ad5-a4f8-ecfd18b7e138', from: 'old' }, // 旧教材 · 3 分数除法 · 分数除法
+  'm6s1-03-div-frac': { id: 'a3ea124d-81e2-4ad5-a4f8-ecfd18b7e138', from: 'old' }, // 旧教材 · 3 分数除法 · 分数除法
+  'm6s1-03-find-whole': { id: '8ae7e495-84a2-1319-0184-b894f57802a5', from: 'old-elite' }, // 旧教材 · 3 分数除法 · 解决问题 · 已知一个数的几分之几是多少，求这个数（例4）（精品课）
+  'm6s1-03-as-one': { id: '54c52508-bf4d-e839-eef2-028ab21ef289', from: 'old-elite' }, // 旧教材 · 3 分数除法 · 解决问题（利用抽象的“1”解决实际问题）（精品课）
+  'm6s1-04-negative': { id: '763b7eb0-1e06-4a0b-a9d4-2f5bceea0d94', from: 'old' }, // 旧教材 · 1 负数 · 认识负数
+  'm6s1-05-circle': { id: '4685370f-5a90-4b18-a46e-617ac5013819', from: 'old' }, // 旧教材 · 5 圆 · 圆的认识
+  'm6s1-05-sector': { id: '71848eab-baaa-4212-9957-755e356d3a07', from: 'old' }, // 旧教材 · 5 圆 · 扇形
+  'm6s1-05-circumference': { id: 'e9f30f49-1094-43be-a4f8-dd474aaf4248', from: 'old' }, // 旧教材 · 5 圆 · 圆的周长
+  'm6s1-05-area': { id: 'b6fc3464-80dd-4c6c-80d9-56e5be60d73a', from: 'old' }, // 旧教材 · 5 圆 · 圆的面积
+  'm6s1-05-ring': { id: 'b6fc3464-80dd-4c6c-80d9-56e5be60d73a', from: 'old' }, // 旧教材 · 5 圆 · 圆的面积
+  'm6s1-05-composite': { id: '0860683c-e824-646b-68bf-1d6052c6f496', from: 'old-elite' }, // 旧教材 · 5 圆 · 解决问题（精品课）
+  'm6s1-05-square-circle': { id: '0860683c-e824-646b-68bf-1d6052c6f496', from: 'old-elite' }, // 旧教材 · 5 圆 · 解决问题（精品课）
+  'm6s1-06-sports': { id: '958dc1be-a04e-4107-a409-8a56701a9533', from: 'old' }, // 旧教材 · ★确定起跑线
+  'm6s1-07-meaning': { id: '4329574c-b6f8-4342-aef2-fef47fff5a6a', from: 'old' }, // 旧教材 · 6 百分数（一） · 百分数的意义
+  'm6s1-07-rate': { id: '8ae7e4b5-83d5-d03a-0183-de945f7d15c1', from: 'old-elite' }, // 旧教材 · 6 百分数（一） · 百分数和分数、小数的互化（精品课）
+  'm6s1-07-part': { id: '8ae7e4b5-83d5-d03a-0183-de945f7d15c1', from: 'old-elite' }, // 旧教材 · 6 百分数（一） · 百分数和分数、小数的互化（精品课）
+  'm6s1-07-discount': { id: 'e2816d0d-5a30-4128-b0e2-ddb9899cbd58', from: 'old' }, // 旧教材 · 2 百分数（二） · 折扣
+  'm6s1-07-interest': { id: '97eb2263-4d09-4c2d-8397-f35888e8a7be', from: 'old' }, // 旧教材 · 2 百分数（二） · 利率
+  'm6s1-07-growth': { id: '2abd40b7-caab-b1e1-7fb5-7b694cb4df4e', from: 'old-elite' }, // 旧教材 · 6 百分数（一） · 用百分数解决问题 · 求一个数比另一个数多（少）百分之几（例3）（精品课）
+  'm6s1-07-base': { id: '63861c1c-0d8a-28ec-0ef6-aa3c1b5ad8f7', from: 'old-elite' }, // 旧教材 · 6 百分数（一） · 用百分数解决问题 · 求比一个数多百分之几的数是多少（例4）（精品课）
+  'm6s1-07-chain': { id: '08bc98d3-3510-4bf9-9bf9-f898883cf6d8', from: 'old' }, // 旧教材 · 6 百分数（一） · 用百分数解决问题 · 求比一个数连续多（或）少百分之几的数是多少（例5）
+  'm6s1-08-water': { id: '8b7961ba-362b-42be-938f-b40e203f9c33', from: 'old' }, // 旧教材 · ★节约用水
   'c2s2-01-garden': { id: 'b612ee0d-a464-438c-9466-bf7ca110e59e', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地一（单元里相同的：咏柳、村居、找春天、开满鲜花的小路、邓小平爷爷植树）
   'c2s2-02-garden': { id: 'e538e7b0-f64c-4b9f-a13a-69dea22463ec', from: 'old' }, // 旧教材二年级下册 · 课文 · 语文园地二（单元里相同的：雷锋叔叔，你在哪里、千人糕、读读儿童故事）
   'c3s1-02-garden': { id: 'f7fdf3e0-44e2-1369-c058-2db1440308ef', from: 'elite' }, // 新教材三年级上册 · 第二单元 · 语文园地（精品课）
@@ -578,6 +661,46 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'c5s1-08-guren': { id: '430ec659-6529-4e50-99b5-9a3b5726bcb1', from: 'old' }, // 旧教材五年级上册 · 第八单元 · 25 古人谈读书
   'c5s1-08-yidushu': { id: 'b2ffdd44-c01d-44a0-b420-03c5340d600e', from: 'old' }, // 旧教材五年级上册 · 第八单元 · 26 忆读书
   'c5s1-08-garden': { id: 'bd1c84d3-4d85-451f-b343-e08a935f1173', from: 'old' }, // 旧教材五年级上册 · 第八单元 · 语文园地（单元里相同的：古人谈读书、忆读书、推荐一本书）
+  'c6s1-01-garden': { id: '321c72e0-3443-4b46-a6a8-5bc4a75dd63f', from: 'old' }, // 旧教材六年级上册 · 第一单元 · 语文园地（单元里相同的：草原、丁香结、古诗词三首、变形记）
+  'c6s1-02-changzheng': { id: 'f4b56808-e412-4742-863a-c204326b8230', from: 'old' }, // 旧教材六年级上册 · 第二单元 · 5 七律•长征
+  'c6s1-02-langyashan': { id: '0d7f05e4-c33f-41a7-bca2-331586e00bf7', from: 'old' }, // 旧教材六年级上册 · 第二单元 · 6 狼牙山五壮士
+  'c6s1-02-kaiguo': { id: 'f899eded-4611-492e-8124-b9b62253f9d1', from: 'old' }, // 旧教材六年级上册 · 第二单元 · 7 开国大典
+  'c6s1-02-qiushaoyun': { id: '66ce497d-9777-11ec-92ef-246e9675e50c', from: 'old' }, // 旧教材六年级上册 · 第二单元 · 9*我的战友邱少云
+  'c6s1-02-garden': { id: '672e09f0-fd90-4a88-8c6d-50c2fa955f53', from: 'old' }, // 旧教材六年级上册 · 第二单元 · 语文园地（单元里相同的：七律·长征、狼牙山五壮士、开国大典、我的战友邱少云、演讲、多彩的活动）
+  'c6s1-03-zhujieren': { id: '72eedf25-0135-4d33-8a5d-8f465db47526', from: 'old' }, // 旧教材六年级上册 · 第三单元 · 10 竹节人
+  'c6s1-03-yuzhou': { id: '50f25f55-830a-41c6-a9fe-ff6660e76fdb', from: 'old' }, // 旧教材六年级上册 · 第三单元 · 11 宇宙生命之谜
+  'c6s1-03-gugong': { id: 'cefbdbe8-0458-4fd7-ac3d-15a6d516fd90', from: 'old' }, // 旧教材六年级上册 · 第三单元 · 12*故宫博物院
+  'c6s1-03-garden': { id: 'b4b76d1f-977c-48d2-9507-d20a146f9282', from: 'old' }, // 旧教材六年级上册 · 第三单元 · 语文园地（单元里相同的：竹节人、宇宙生命之谜、故宫博物院）
+  'c6s1-04-qiao': { id: 'd249d901-33a9-472f-bec1-b44d0d983f2a', from: 'old' }, // 旧教材六年级上册 · 第四单元 · 13 桥
+  'c6s1-04-qiongren': { id: '051a400c-cdd8-4600-8bd7-ba22a63d9293', from: 'old' }, // 旧教材六年级上册 · 第四单元 · 14 穷人
+  'c6s1-04-yugou': { id: '66ce4a81-9777-11ec-92ef-246e9675e50c', from: 'old' }, // 旧教材六年级上册 · 第四单元 · 15*金色的鱼钩
+  'c6s1-04-garden': { id: '70b447dd-8c46-42cb-bdf6-a2229747f0e5', from: 'old' }, // 旧教材六年级上册 · 第四单元 · 语文园地（单元里相同的：桥、穷人、请你支持我、笔尖流出的故事、笑与泪，经历与成长）
+  'c6s1-05-dengguang': { id: '0939c22c-8240-49f0-a8c2-47bdda25528c', from: 'old' }, // 旧教材六年级上册 · 第二单元 · 8* 灯光
+  'c6s1-05-pan': { id: 'b3b5ba2e-4dab-4497-90b6-5ffdaad39f84', from: 'old' }, // 旧教材六年级上册 · 第五单元 · 17 盼
+  'c6s1-06-diqiu': { id: 'bcbe17d4-5fdd-4c54-a70f-bddaf4a29947', from: 'old' }, // 旧教材六年级上册 · 第六单元 · 19 只有一个地球
+  'c6s1-06-qingshan': { id: '8e485e76-3d2a-4ce5-85d4-47dbd14e9bce', from: 'old' }, // 旧教材六年级上册 · 第六单元 · 20*青山不老
+  'c6s1-06-sanhei': { id: '630b7260-b32b-4283-a64a-e0f6386d40d5', from: 'old' }, // 旧教材六年级上册 · 第六单元 · 21*三黑和土地
+  'c6s1-06-gushi': { id: '527f4ffb-0f95-46b6-8234-fe115fbfa977', from: 'old' }, // 旧教材六年级上册 · 第六单元 · 18 古诗三首
+  'c6s1-06-garden': { id: '47072d86-1c12-407c-9d39-68798eea515c', from: 'old' }, // 旧教材六年级上册 · 第六单元 · 语文园地（单元里相同的：只有一个地球、青山不老、三黑和土地、意见不同怎么办、学写倡议书）
+  'c6s1-07-wenyan': { id: '792b1e38-1968-4c7b-bf23-80386a4e75cb', from: 'old' }, // 旧教材六年级下册 · 第五单元 · 14 文言文二则 · 两小儿辩日
+  'c6s1-07-biaoli': { id: '25c296d4-547b-40e3-8cc0-f03043040b12', from: 'old' }, // 旧教材六年级下册 · 第五单元 · 16 表里的生物
+  'c6s1-07-youqu': { id: '51e4f640-ad63-418d-972d-2c3f09030a63', from: 'old' }, // 旧教材六年级下册 · 第五单元 · 17*他们那时候多有趣啊
+  'c6s1-07-garden': { id: 'a487b6b3-71ca-4289-bd64-c6d60973a4c8', from: 'old' }, // 旧教材六年级下册 · 第五单元 · 语文园地
+  'c6s1-08-runtu': { id: 'b2f06335-d5eb-4f84-bd95-3b36b1f03696', from: 'old' }, // 旧教材六年级上册 · 第八单元 · 25 少年闰土
+  'c6s1-08-haogushi': { id: '405d5dad-7c64-4a48-9f17-167c1930e221', from: 'old' }, // 旧教材六年级上册 · 第八单元 · 26 好的故事
+  'c6s1-08-bofu': { id: 'fb2997bd-74c6-4c96-aa5e-5c2d19545275', from: 'old' }, // 旧教材六年级上册 · 第八单元 · 27*我的伯父鲁迅先生
+  'c6s1-08-youderen': { id: '1319d968-6157-4d0e-908d-0ba879016d21', from: 'old' }, // 旧教材六年级上册 · 第八单元 · 28*有的人——纪念鲁迅有感
+  'c6s1-08-garden': { id: '8d1a01b7-a562-431c-8a40-519e684ec0e8', from: 'old' }, // 旧教材六年级上册 · 第八单元 · 语文园地（单元里相同的：少年闰土、好的故事、我的伯父鲁迅先生）
+  'c6s2-07-caiwei': { id: '84c223bc-1a62-e755-a1ad-035edf5021f3', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 1 采薇（节选）（精品课）
+  'c6s2-07-songyuaner': { id: 'fb15c193-6341-c8c6-ea4e-fb26f94f35b3', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 2 送元二使安西（精品课）
+  'c6s2-07-chunye': { id: 'e3895562-cdfa-9a77-56c8-9e27c6e84477', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 3 春夜喜雨（精品课）
+  'c6s2-07-zaochun': { id: 'fbd33638-fdda-5e3c-a4fd-60634e922bfa', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 4 早春呈水部张十八员外（精品课）
+  'c6s2-07-yuzhe': { id: 'd6cdc311-f5f9-0230-2b61-f21edaabc4a4', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 5 江上渔者（精品课）
+  'c6s2-07-guazhou': { id: 'e0bdcb3b-5ee4-bca3-9eeb-00ada120e332', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 6 泊船瓜洲（精品课）
+  'c6s2-07-youyuan': { id: 'ae955655-64d0-c770-2f61-5c0280381b68', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 7 游园不值（精品课）
+  'c6s2-07-busuanzi': { id: '496cce7f-fce6-55a3-9655-53944f56b296', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 8 卜算子·送鲍浩然之浙东（精品课）
+  'c6s2-07-huanxisha': { id: 'bae07e9d-3b01-f055-50a0-df08b8a81f90', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 9 浣溪沙（精品课）
+  'c6s2-07-qingpingle': { id: 'bb08f5f5-497d-c1bb-7b1a-364fb61b3921', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 10 清平乐（精品课）
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

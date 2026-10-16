@@ -272,6 +272,25 @@ export const POLY_SAY: Readonly<Record<string, Readonly<Record<string, string>>>
   娜: { nà: '安娜的娜' },
   嘿: { hēi: '嘿嘿的嘿' },
   岗: { gǎng: '岗位的岗' },
+  // 六年级：课文注的不是这个字最常用的读音（迤 yí、磅 páng……），单念会读错
+  迤: { yí: '逶迤的迤' },
+  磅: { páng: '磅礴的磅' },
+  靡: { mǐ: '风靡的靡' },
+  攒: { cuán: '攒动的攒' },
+  咋: { zhā: '咋呼的咋' },
+  镏: { liú: '镏金的镏' },
+  嶷: { nì: '岐嶷的嶷' },
+  嘀: { dī: '嘀嗒的嘀' },
+  伽: { qié: '伽蓝的伽' },
+  缥: { piāo: '缥缈的缥' },
+  咔: { kā: '咔嚓的咔' },
+  栅: { zhà: '栅栏的栅' },
+  簿: { bù: '账簿的簿' },
+  逮: { dǎi: '逮住的逮' },
+  耙: { pá: '钉耙的耙' },
+  刨: { páo: '刨土的刨' },
+  嗒: { dā: '嗒嗒的嗒' },
+  呃: { è: '打呃的呃' },
 }
 
 /** 读一个字：多音字给个词——按这个字的读音挑，不给读音或没有这个读音的词就用第一个 */
@@ -568,8 +587,12 @@ export function clozeAnswerPy(ctx: Pick<Ctx, 'py'>, it: ClozeItem): string | und
   return ctx.py(verseKey(it.text)).split(' ')[at]
 }
 function clozeItems(ctx: Ctx, items: ClozeItem[]): Item[] {
+  const used = new Set<string>()
   return items.map((it) => {
-    const key = `cloze-${verseKey(it.text)}-${it.blank[0]}`
+    // 同一句、同一个起点挖不同长度的两条（「[镜子]」与楷体的「[镜]子」）是两道题：后一条的 key 带上空的长度，不然一轮里当成同一道
+    let key = `cloze-${verseKey(it.text)}-${it.blank[0]}`
+    if (used.has(key)) key += `-${it.blank[1]}`
+    used.add(key)
     const answerPy = clozeAnswerPy(ctx, it)
     return {
       key,

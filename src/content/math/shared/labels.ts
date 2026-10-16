@@ -111,6 +111,7 @@ export const SYMBOL_WORDS = {
     'sym.[': '中括号', // 四下「括号」：96÷[(12+4)×2]
     'sym.]': '中括号',
     'sym.□': '方框', // 四下「在 □ 里填上适当的数」
+    'sym.∶': '比', // 六年级的比、比例、比例尺（3∶4、1∶500）：比号用 U+2236，和时刻的冒号「14:30」分开
   },
   en: {
     'sym.+': 'plus',
@@ -131,6 +132,7 @@ export const SYMBOL_WORDS = {
     'sym.[': 'open square bracket',
     'sym.]': 'close square bracket',
     'sym.□': 'box',
+    'sym.∶': 'to',
   },
 } as const
 
