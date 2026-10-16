@@ -1237,8 +1237,12 @@ export function staticPages(siteUrl: string, analytics: AnalyticsConfig | null =
 /** 静态页所在的顶层目录（= 学科 id + help），脚本重新生成前先清掉，改了知识点 id 不会留下旧页 */
 export const STATIC_DIRS: string[] = [...SUBJECTS.map((s) => s.id), 'help']
 
+/** SEO 工具的外链爬虫（Semrush、Ahrefs、Moz）整站拒掉：抓来的数据卖给它们自己的付费用户，不带来访客 */
+const BLOCKED_CRAWLERS = ['SemrushBot', 'AhrefsBot', 'DotBot']
+
 export function robotsTxt(siteUrl: string): string {
-  return `User-agent: *\nAllow: /\n${siteUrl ? `Sitemap: ${siteUrl}/sitemap.xml\n` : ''}`
+  const blocked = BLOCKED_CRAWLERS.map((ua) => `User-agent: ${ua}\n`).join('') + 'Disallow: /\n\n'
+  return `${blocked}User-agent: *\nAllow: /\n${siteUrl ? `Sitemap: ${siteUrl}/sitemap.xml\n` : ''}`
 }
 
 /**

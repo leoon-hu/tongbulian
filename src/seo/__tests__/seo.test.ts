@@ -97,7 +97,7 @@ describe('SEO 静态页', () => {
     const p = staticPages('')[0]!
     expect(p.html).not.toContain('canonical')
     expect(p.html).not.toContain('og:url')
-    expect(robotsTxt('')).toBe('User-agent: *\nAllow: /\n')
+    expect(robotsTxt('')).toBe('User-agent: SemrushBot\nUser-agent: AhrefsBot\nUser-agent: DotBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n')
     expect(robotsTxt(SITE)).toContain(`Sitemap: ${SITE}/sitemap.xml`)
   })
 
