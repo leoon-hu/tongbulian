@@ -11,6 +11,7 @@ import { chineseGrade3 } from '@/content/chinese/grade3/course'
 import { chineseGrade4 } from '@/content/chinese/grade4/course'
 import { chineseGrade5 } from '@/content/chinese/grade5/course'
 import { chineseGrade6 } from '@/content/chinese/grade6/course'
+import { englishGrade3 } from '@/content/english/grade3/course'
 
 // ── 课程注册表：key 为 courseId（如 math-g1）。────────────────────────────
 const COURSES = new Map<string, Course>()
@@ -44,6 +45,7 @@ registerCourse(chineseGrade3, () => import('@/content/chinese/grade3'))
 registerCourse(chineseGrade4, () => import('@/content/chinese/grade4'))
 registerCourse(chineseGrade5, () => import('@/content/chinese/grade5'))
 registerCourse(chineseGrade6, () => import('@/content/chinese/grade6'))
+registerCourse(englishGrade3, () => import('@/content/english/grade3'))
 
 /** 这门课的内容包加载好了没有（没有加载函数的一直是好的） */
 export function courseLoaded(courseId: string): boolean {
@@ -184,11 +186,12 @@ export function nextKp(kpId: string): string | null {
 // ── 目录：学科 → 年级（驱动选择页与占位）。──────────────────────────────
 // live 的年级挂 courseId 指向已注册课程；soon 为占位「敬请期待」。
 
-const grade = (id: string, courseId?: string): GradeMeta => ({
+const grade = (id: string, courseId?: string, note?: string): GradeMeta => ({
   id,
   title: { k: `grade.${id}` },
   status: courseId ? 'live' : 'soon',
   courseId,
+  ...(note ? { note: { k: note } } : {}),
 })
 
 export const SUBJECTS: SubjectMeta[] = [
@@ -216,12 +219,13 @@ export const SUBJECTS: SubjectMeta[] = [
     grades: [grade('g1', 'chinese-g1'), grade('g2', 'chinese-g2'), grade('g3', 'chinese-g3'), grade('g4', 'chinese-g4'), grade('g5', 'chinese-g5'), grade('g6', 'chinese-g6')],
   },
   {
+    // 英语按人教版 PEP（三年级起点）做：国家课程英语从三年级起、平台上也没有一、二年级的英语课本，一、二年级的占位卡写明原因（R5）
     id: 'english',
     title: { k: 'subject.english' },
     icon: '🔤',
     theme: 'english',
-    status: 'soon',
-    grades: ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'].map((g) => grade(g)),
+    status: 'live',
+    grades: [grade('g1', undefined, 'chooser.fromG3'), grade('g2', undefined, 'chooser.fromG3'), grade('g3', 'english-g3'), grade('g4'), grade('g5'), grade('g6')],
   },
 ]
 

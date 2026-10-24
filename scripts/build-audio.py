@@ -793,13 +793,10 @@ def cache_path(cache: Path, lang: str, text: str) -> Path:
     return cache / f"tts-{lang}-{digest}.mp3"
 
 
-# 跑 edge-tts 的命令行（同 python -m edge_tts）。2026-10 起 speech.platform.bing.com 的合成 WebSocket 一律回 403，
-# Edge 改走 api.msedgeservices.com（同一个令牌作 Ocp-Apim-Subscription-Key，见 edge-tts 的 issue #490）；
-# edge-tts 还连旧地址时就先换过去，出了修好的版本这段自动不起作用。
+# 跑 edge-tts 的命令行（同 python -m edge_tts）。2026-10 中旬 speech.platform.bing.com 的合成 WebSocket 一律回 403，这里曾改走
+# api.msedgeservices.com（edge-tts 的 issue #490）；2026-10-25 那个地址反而回 403，edge-tts 7.3.1（新的 Sec-MS-GEC 令牌）
+# 连默认地址又能用了，所以不再改地址——要用 edge-tts ≥ 7.3.1。
 EDGE_TTS_MAIN = """
-import edge_tts.communicate as c, edge_tts.constants as k
-if "speech.platform.bing.com" in c.WSS_URL:
-    c.WSS_URL = k.WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=" + k.TRUSTED_CLIENT_TOKEN
 from edge_tts.util import main
 main()
 """

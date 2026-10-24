@@ -18,11 +18,8 @@ import { launchChrome, sleep } from './lib/headless.mjs'
 const LANGS = ['zh', 'en'].filter((l) => !process.argv.slice(2).some((a) => /^(zh|en)$/.test(a)) || process.argv.includes(l))
 const OUT = resolve('src/assets/promo')
 const CACHE = join(tmpdir(), 'tongbulian-promo-tts')
-/** 跑 edge-tts（同 scripts/build-audio.py：2026-10 起旧的合成地址回 403，还连旧地址时先换到 api.msedgeservices.com） */
+/** 跑 edge-tts（同 scripts/build-audio.py：要 edge-tts ≥ 7.3.1，2026-10-25 起不再改合成地址） */
 const EDGE_TTS_MAIN = `
-import edge_tts.communicate as c, edge_tts.constants as k
-if "speech.platform.bing.com" in c.WSS_URL:
-    c.WSS_URL = k.WSS_URL = "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=" + k.TRUSTED_CLIENT_TOKEN
 from edge_tts.util import main
 main()
 `

@@ -14,7 +14,8 @@ import { KNOWLEDGE_POINTS as G6 } from '@/content/math/grade6/curriculum'
 import { createRng, getGenerator } from '@/engine'
 import { translate } from '@/engine/i18n'
 import type { Question } from '@/types/models'
-import { answerSpeech, chineseSpeech, numberPieces, PAUSE, piecesOf, questionSpeech, spellMarks, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
+import { answerSpeech, chineseSpeech, englishSpeech, enToken, numberPieces, PAUSE, piecesOf, questionSpeech, spellMarks, summarySpeech, tokenize, tokenVoice, zhToken } from '@/engine/speech'
+import '@/content/english/shared/prompts'
 
 const KNOWLEDGE_POINTS = [...G1, ...G2, ...G3, ...G4, ...G5, ...G6]
 
@@ -470,5 +471,31 @@ describe('六年级的百分数、正负数、比、π', () => {
     expect(spellMarks('C = 2πr', 'zh')).toBe('C = 2派r')
     expect(spellMarks('S = πr²', 'zh')).toBe('S = 派r的平方')
     expect(spellMarks('C = πd', 'en')).toBe('C = pi d')
+  })
+})
+
+describe('英语的英文内容（需求 E5）', () => {
+  it('englishSpeech：按英文切，中文界面每条标成英文声音、英文界面不标；enToken / tokenVoice 对称', () => {
+    expect(englishSpeech("What's your name?", 'en')).toEqual(["What's your name"])
+    expect(englishSpeech("I'm fine, thank you.", 'zh')).toEqual([enToken("I'm fine"), PAUSE, enToken('thank you')])
+    expect(tokenVoice(enToken('cat'), 'zh')).toEqual({ text: 'cat', lang: 'en' })
+    expect(tokenVoice(zhToken('猫'), 'en')).toEqual({ text: '猫', lang: 'zh' })
+    expect(tokenVoice('cat', 'zh')).toEqual({ text: 'cat', lang: 'zh' })
+  })
+
+  it('题干：中文要求用中文读，english / listen（lang en）用英文读；say 为空的单词卡不读；挖空的句子空前空后各切各的', () => {
+    const base = { id: 'x', kpId: 'e3s1-01-a', type: 'word', difficulty: 1, input: 'choice', answer: { kind: 'choice', choiceId: 'a' } } as const
+    const listen: Question = { ...base, stem: [{ kind: 'text', text: { k: 'eq.listenWord' } }, { kind: 'listen', say: 'cat', lang: 'en' }], choices: [{ id: 'a', label: 'cat', lang: 'en' }, { id: 'b', label: 'dog', lang: 'en' }] }
+    expect(questionSpeech(listen, 'zh').map((t) => (t === PAUSE ? t : tokenVoice(t, 'zh')))).toEqual([{ text: '听一听', lang: 'zh' }, PAUSE, { text: '选出你听到的单词', lang: 'zh' }, PAUSE, { text: 'cat', lang: 'en' }])
+    expect(answerSpeech(listen, 'zh')).toEqual(['正确答案是', enToken('cat')])
+    expect(answerSpeech(listen, 'en')).toEqual(['The answer is', 'cat'])
+    const spelling: Question = { ...base, stem: [{ kind: 'listen', say: 'cat', lang: 'en' }, { kind: 'english', text: 'c_t', say: '' }], choices: [{ id: 'a', label: 'a', say: 'A', lang: 'en' }] }
+    expect(questionSpeech(spelling, 'zh')).toEqual([enToken('cat')])
+    expect(answerSpeech(spelling, 'zh')).toEqual(['正确答案是', enToken('A')])
+    const cloze: Question = { ...base, stem: [{ kind: 'english', text: 'I like apples.', blank: [2, 4] }], choices: [{ id: 'a', label: 'like', lang: 'en' }] }
+    expect(questionSpeech(cloze, 'zh')).toEqual([enToken('I'), PAUSE, enToken('apples')])
+    const word: Question = { ...base, stem: [{ kind: 'text', text: { k: 'eq.meaning' } }, { kind: 'english', text: 'apple' }], choices: [{ id: 'a', label: '苹果' }] }
+    expect(questionSpeech(word, 'zh')).toEqual(['这个单词是什么意思', PAUSE, enToken('apple')])
+    expect(answerSpeech(word, 'zh')).toEqual(['正确答案是苹果'])
   })
 })

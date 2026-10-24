@@ -206,7 +206,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Is the robot too strong?', a: 'It has three speeds 🐢 🐰 🚀 and it makes mistakes too. Start with the slow one.' },
               { q: 'How do I change my name?', a: 'Under ⚙️ Settings in the header of the topic\'s Practice page (the one you land on after tapping a topic), together with your animal; the right-hand side for two-on-one-device is there too. Without a name of your own you are called by a random animal.' },
               { q: 'Why do some characters in Chinese questions have no pinyin?', a: 'Questions that test character recognition (pick the character from its pinyin, sound or picture; how do you read this character) would give the answer away with pinyin or by reading it aloud. Lesson texts, questions and all other options carry pinyin and are read aloud.' },
-              { q: 'Why no English yet?', a: 'Content is built grade by grade; English is being added.' },
+              { q: 'Why does English start in Grade 3?', a: 'English follows the PEP textbooks (People\'s Education Press), which start in Grade 3, as the national curriculum does; the e-textbook platform has no Grade 1–2 English books. Grade 3 is live; Grades 4–6 are being added.' },
               { q: 'Which edition do Term 2 of Grades 4–6 follow?', a: 'Everything follows the e-textbooks currently on the National Smart Education Platform. Term 1 of Grades 4–6 math and Chinese is the new edition (revised for the 2022 curriculum standards); Term 2 is still the old edition there, so it follows that for now and will be updated once the platform switches.' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
@@ -358,7 +358,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '机器人会不会太厉害？', a: '有 🐢 慢 / 🐰 中 / 🚀 快三档，它也会答错；先从慢的开始。' },
             { q: '想改名字？', a: '在知识点的「练习」页（点知识点就到）页头的「⚙️ 配置」里改，小动物也在那里，两人一台的右边也是；没改过就用随机分到的小动物的名字。' },
             { q: '语文题里有的字为什么不标拼音？', a: '考认字的题（看拼音选字、听音选字、看图选字、这个字怎么读）要看孩子认不认得这个字，标了拼音、读出了字音就等于告诉了答案；课文、问题和其余选项都标拼音、都朗读。' },
-            { q: '为什么还没有英语？', a: '内容按年级逐个做，英语陆续补充。' },
+            { q: '英语为什么从三年级开始？', a: '英语按人教版 PEP 教材做，这套课本是三年级起点，国家课程的英语也是三年级起，智慧教育平台上没有一、二年级的英语课本。三年级已经可练，四至六年级陆续补充。' },
             { q: '四至六年级下册是哪一版课本？', a: '内容一律照国家中小学智慧教育平台上现在的电子课本做：四至六年级数学和语文的上册是新版（根据 2022 年版课程标准修订），下册平台上现在还是旧版，这里先照旧版做，平台换成新版再跟着改。' },
             {
               q: '收费吗？有广告吗？安全吗？',

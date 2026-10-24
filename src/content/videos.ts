@@ -117,6 +117,10 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm4s1-01-above-yi': 'a219ed82-a73e-e76b-edde-2040d3fa1cfc', // 十进制计数法
   'm4s1-01-compare': '1484f6a2-b2d5-a314-beb9-47667f7710e4', // 数的大小比较
   'm4s1-01-round': 'ab55074c-4ee7-55ab-d556-8baa1b26d52f', // 数的改写和求近似数
+  'm4s1-02-yi': 'ca6722c4-3b99-7908-ecf6-cb65e6d36837', // 1亿张纸有多高
+  'm4s1-03-angles': 'dc0ecb4c-3f6c-9510-2c45-346a12fe5204', // 角的再认识
+  'm4s1-03-measure': 'e7f8fa86-fc85-37fc-c81b-817fff4d1aaa', // 角的度量
+  'm4s1-03-draw': '5ced60c0-f618-945c-8a42-15a8d5a27851', // 画角
   'm4s2-01-addsub': '716cc82c-b238-468a-869f-5998ba9c1030', // 加、减法的意义和各部分间的关系
   'm4s2-01-muldiv': '41622daa-0154-4ea9-ab5d-59b1d4178a7a', // 乘、除法的意义和各部分间的关系
   'm4s2-01-brackets': 'd3e82597-e2a1-4c1f-96e1-507594a17ccd', // 括号
@@ -503,6 +507,42 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'c6s2-05-biaoli': '25c296d4-547b-40e3-8cc0-f03043040b12', // 16 表里的生物
   'c6s2-05-youqu': '51e4f640-ad63-418d-972d-2c3f09030a63', // 17*他们那时候多有趣啊
   'c6s2-05-garden': 'a487b6b3-71ca-4289-bd64-c6d60973a4c8', // 语文园地
+  'e3s1-01-a': '5e7b70d5-8b90-b4e2-3de4-ef4dce5b755d', // part A How do we greet friends?
+  'e3s1-01-letters': '5e7b70d5-8b90-b4e2-3de4-ef4dce5b755d', // part A How do we greet friends?
+  'e3s1-01-b': '29b581af-0f4d-845a-93ce-446cb62f6eb5', // part B How can we be a good friend?
+  'e3s1-02-a': '3cfb6334-8e84-4b74-f1e6-c6a84c9705eb', // part A Who lives with you?
+  'e3s1-02-letters': '3cfb6334-8e84-4b74-f1e6-c6a84c9705eb', // part A Who lives with you?
+  'e3s1-02-b': '48af6647-ada6-bc3f-4209-a09f1e8ad681', // part B How are families different?
+  'e3s1-03-a': '789b326e-f5c7-f687-0f51-534a50a7f3db', // part A What pets do you know?
+  'e3s1-03-letters': '789b326e-f5c7-f687-0f51-534a50a7f3db', // part A What pets do you know?
+  'e3s1-03-b': 'd18794b7-d57c-6316-c24d-5be733ebeef9', // part B What wild animals do you know?
+  'e3s1-04-a': 'c93b83e7-7e7b-5d88-1828-01501d0e5173', // part A What do we get from plants?
+  'e3s1-04-letters': 'c93b83e7-7e7b-5d88-1828-01501d0e5173', // part A What do we get from plants?
+  'e3s1-04-b': '0a89aaa0-446a-35d3-7841-940f673a64fb', // part B How can we help plants?
+  'e3s1-05-a': '94e86bb7-6d0a-85bd-ff07-ad453f7cacbc', // part A What colours do you see?
+  'e3s1-05-letters': '94e86bb7-6d0a-85bd-ff07-ad453f7cacbc', // part A What colours do you see?
+  'e3s1-05-b': '86e6b30b-d8cd-9ff2-c70f-781e0caef8cc', // part B How do colours help us?
+  'e3s1-06-a': '32f02caf-3089-5588-b718-cf30de5f199b', // part A When do we use numbers?
+  'e3s1-06-letters': '32f02caf-3089-5588-b718-cf30de5f199b', // part A When do we use numbers?
+  'e3s1-06-b': '0f35a00d-6b47-81d0-8109-e972f0324b99', // part B How useful are numbers?
+  'e3s2-01-a': '116814bf-e8bb-3a2a-7faa-e6c29e4db407', // Part A How do we greet new people?
+  'e3s2-01-spell': '116814bf-e8bb-3a2a-7faa-e6c29e4db407', // Part A How do we greet new people?
+  'e3s2-01-b': 'b96b1baf-3b1b-3763-d31e-239cf58ec028', // Part B How can we be polite?
+  'e3s2-02-a': '2ecace19-b31b-e543-7aee-5bc2f97d3d95', // Part A How do we describe things?
+  'e3s2-02-spell': '2ecace19-b31b-e543-7aee-5bc2f97d3d95', // Part A How do we describe things?
+  'e3s2-02-b': 'fa742dbe-59e7-c987-2493-0721f287c023', // Part B How do we express our feelings?
+  'e3s2-03-a': 'ed9b9a55-1282-8861-c4f7-03b345e96688', // Part A What tools help us learn?
+  'e3s2-03-spell': 'ed9b9a55-1282-8861-c4f7-03b345e96688', // Part A What tools help us learn?
+  'e3s2-03-b': '285f2713-948f-5c38-c285-405d8629769a', // Part B How do our senses help us learn?
+  'e3s2-04-a': '9dce7c03-533b-c075-f1af-a5314e5c0a61', // Part A What do we eat?
+  'e3s2-04-spell': '9dce7c03-533b-c075-f1af-a5314e5c0a61', // Part A What do we eat?
+  'e3s2-04-b': 'f1560e5f-cd48-09b7-c9ab-dc0e7707f0e3', // Part B What shall we eat?
+  'e3s2-05-a': '6e60cd05-c002-055e-76eb-8ad3a76389ea', // Part A What kinds of old things do you have?
+  'e3s2-05-spell': '6e60cd05-c002-055e-76eb-8ad3a76389ea', // Part A What kinds of old things do you have?
+  'e3s2-05-b': 'fb0eee49-43be-f428-f0ff-b93b9d6c9c8f', // Part B How can old things be reused?
+  'e3s2-06-a': '62e1eaf2-dd22-3cab-4f65-24efba0b9c89', // Part A How do numbers help us count and sort?
+  'e3s2-06-spell': '62e1eaf2-dd22-3cab-4f65-24efba0b9c89', // Part A How do numbers help us count and sort?
+  'e3s2-06-b': '22795ff0-761e-1282-6217-08f24da3cb07', // Part B How do numbers help us make decisions?
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -514,10 +554,6 @@ export type VideoFallbackFrom = 'elite' | 'old' | 'old-elite'
  * （旧教材那个单元里和新教材相同的课题）
  */
 export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoFallbackFrom }>> = {
-  'm4s1-02-yi': { id: '46715603-149a-4410-96dc-958b787b5528', from: 'old' }, // 旧教材 · ★ 1亿有多大
-  'm4s1-03-angles': { id: 'ec912ae4-d2dc-48d2-8cc9-b7d7603ccd3a', from: 'old' }, // 旧教材 · 3 角的度量 · 角的分类
-  'm4s1-03-measure': { id: 'cb32808b-c504-44f7-8716-21b3633b1d4f', from: 'old' }, // 旧教材 · 3 角的度量 · 角的度量
-  'm4s1-03-draw': { id: '28a11882-93d7-4806-879d-ac102f885541', from: 'old' }, // 旧教材 · 3 角的度量 · 画角
   'm4s1-04-oral': { id: 'c707d102-59fe-4d14-9298-42ff2d8082b4', from: 'old' }, // 旧教材 · 第四单元 两位数乘两位数 · 口算乘法
   'm4s1-04-written': { id: 'ef6c2ce6-8a0d-4ad0-adaa-f5335fd63691', from: 'old' }, // 旧教材 · 4 三位数乘两位数 · 三位数乘两位数笔算
   'm4s1-04-pattern': { id: '3562cd5d-3e98-4d41-b069-4a7c85fc1220', from: 'old' }, // 旧教材 · 4 三位数乘两位数 · 积的变化规律
@@ -701,6 +737,7 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'c6s2-07-busuanzi': { id: '496cce7f-fce6-55a3-9655-53944f56b296', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 8 卜算子·送鲍浩然之浙东（精品课）
   'c6s2-07-huanxisha': { id: 'bae07e9d-3b01-f055-50a0-df08b8a81f90', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 9 浣溪沙（精品课）
   'c6s2-07-qingpingle': { id: 'bb08f5f5-497d-c1bb-7b1a-364fb61b3921', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 10 清平乐（精品课）
+  'e3s1-07-revision': { id: 'ec818ee0-d48d-f17c-ffba-24202236ef20', from: 'elite' }, // 新教材三年级上册 · Revision Being a good guest（精品课）
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

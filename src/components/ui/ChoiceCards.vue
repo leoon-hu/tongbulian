@@ -28,7 +28,7 @@ const NUMERIC = /^[+\-−]?\d+(?:[./∶]\d+)?[%％]?$|^\d+(?:\.\d+)?∶\d+(?:\.\
  * longer = 6 个字以上（九千零三十六这种汉字读法、语文的短句），再小一点、两边留白收窄，手机上两列不在词中间折行
  */
 const textLen = computed(() =>
-  props.choiceStyle === 'pinyin' || props.choiceStyle === 'emoji'
+  props.choiceStyle === 'pinyin' || props.choiceStyle === 'emoji' || props.choiceStyle === 'english'
     ? 0
     : Math.max(0, ...props.choices.map((c) => plain(t(c.label))).filter((s) => !NUMERIC.test(s)).map((s) => Array.from(s.replace(/\s/g, '')).length)),
 )
@@ -39,7 +39,11 @@ const textLen = computed(() =>
  * 正负号比数字宽，多算一个字符（「−20」按 4 个：打怪兽两人 125px 的栏里两列伸出 4px，2026-10-17 普查）
  */
 const numLen = computed(() => Math.max(0, ...props.choices.map((c) => plain(t(c.label))).filter((s) => /^[+\-−]?\d+(?:[.∶]\d+)*[%％]?$/.test(s)).map((s) => s.length + (/^[+\-−]/.test(s) ? 1 : 0))))
-const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8)
+/** 英语的选项（E6）：按最长一个的字符数定字号，10 个字符以上（句子）小一号、紧凑版排成一列 */
+const enLen = computed(() => (props.choiceStyle === 'english' ? Math.max(0, ...props.choices.map((c) => t(c.label).length)) : 0))
+const enLong = computed(() => enLen.value >= 10)
+const enSentence = computed(() => enLen.value >= 18)
+const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8 || enLong.value)
 const num4 = computed(() => numLen.value >= 4)
 const num7 = computed(() => numLen.value >= 7)
 /** 拼音选项（看字选读音、多音字）最长的有 5 个字母以上（zhàng、chuǎng）：对战紧凑版栏窄时排一列（PlayerRow，同 num4）；py4 = 4 个以上，栏更窄时排一列 */
@@ -53,7 +57,7 @@ const digits10 = computed(() => numLen.value >= 10)
 </script>
 
 <template>
-  <div class="cards" :class="[{ wordy, long, longer, digits, digits10, num4, num7, py4, py5 }, choiceStyle ? `as-${choiceStyle}` : '']" :style="{ '--num-len': numLen }">
+  <div class="cards" :class="[{ wordy, long, longer, digits, digits10, num4, num7, py4, py5, 'en-long': enLong, 'en-sentence': enSentence }, choiceStyle ? `as-${choiceStyle}` : '']" :style="{ '--num-len': numLen }">
     <button
       v-for="c in choices"
       :key="c.id"
@@ -67,7 +71,8 @@ const digits10 = computed(() => numLen.value >= 10)
       @pointerup="onTap($event, () => emit('select', c.id))"
       @click="onTap($event, () => emit('select', c.id))"
     >
-      <RubyText :text="c.label" />
+      <span v-if="choiceStyle === 'english'" class="en" lang="en">{{ t(c.label) }}</span>
+      <RubyText v-else :text="c.label" />
     </button>
   </div>
 </template>
@@ -128,6 +133,23 @@ const digits10 = computed(() => numLen.value >= 10)
 }
 .cards.as-emoji .card {
   font-size: 48px;
+}
+/* 英语（E6）：单词 / 句子用初学者字体（单层 a / g），句子小一号、按词换行 */
+.cards.as-english .card {
+  font-family: var(--font-pinyin);
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.cards.as-english.en-long .card {
+  font-size: 24px;
+}
+.cards.as-english.en-sentence .card {
+  font-size: 20px;
+  padding: 6px 8px;
+  text-wrap: balance;
 }
 .card.correct {
   border-color: var(--c-green);

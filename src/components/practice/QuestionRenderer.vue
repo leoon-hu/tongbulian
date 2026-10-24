@@ -104,6 +104,7 @@ import PinyinCard from '@/components/chinese/PinyinCard.vue'
 import ListenCue from '@/components/chinese/ListenCue.vue'
 import PictureCard from '@/components/chinese/PictureCard.vue'
 import VerseLine from '@/components/chinese/VerseLine.vue'
+import EnglishText from '@/components/english/EnglishText.vue'
 
 /**
  * withSpeaker：题干第一行开头放一个小喇叭（点读的提示），点击由外层处理。
@@ -483,6 +484,7 @@ withDefaults(defineProps<{ question: Question; withSpeaker?: boolean; fill?: Bla
         :blank="part.blank"
         :fill="fill?.done ? fill.value : undefined"
       />
+      <EnglishText v-else-if="part.kind === 'english'" :text="part.text" :size="part.size" :blank="part.blank" :fill="fill?.done ? fill.value : undefined" />
     </template>
   </div>
 </template>

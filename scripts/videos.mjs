@@ -35,6 +35,8 @@ const BOOKS = {
   'chinese-g5': ['fb0308d9-2e7f-480b-8723-f48852bb2f28', '117306e1-40c4-4106-bebb-b01a34927951'],
   // 六上「新教材-小学语文统编版六年级上册」；六下的电子课本平台上还是旧版，同步课就是旧版六下那一本（「小学语文统编版六年级下册」）
   'chinese-g6': ['cec38514-a1b4-40ff-b7bb-e443b56a1dbd', '46fcb680-0486-4d3c-8d25-073bdf922c8e'],
+  // 英语：新教材-小学英语人教版（PEP）（主编：吴欣）三年级上册 / 下册（新教材都有，不用旧教材兜底）
+  'english-g3': ['8dabed50-6eed-40dd-8bea-c70f0718114d', 'cb26c613-b227-41c1-bd10-1e2022e46387'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
 const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2'])
@@ -665,6 +667,22 @@ function oldNode(newBooks, newNode, oldBooks, title) {
   return best && best.same.length >= 2 && best.same.length > (second?.same.length ?? 0) ? best : undefined
 }
 
+/**
+ * 英语：平台的章节树是「Unit 1 Making friends > part A … / part B … / part C (optional) / Grammar」（单元名偶尔和课本不一样，
+ * 按 Unit 几找；Revision 按「Revision」找）。知识点 -a 与 -letters / -spell 对 Part A，-b 对 Part B，-revision 对 Revision 这个顶层章节
+ */
+function englishNode(book, unitOf, kpId) {
+  const kind = kpId.split('-').at(-1)
+  const unit =
+    unitOf.numbered === false
+      ? book.tree.find((n) => /^Revision/i.test(n.title.trim()))
+      : book.tree.find((n) => new RegExp(`^Unit\\s*${unitOf.order}\\b`, 'i').test(n.title.trim()))
+  if (!unit) return undefined
+  if (kind === 'revision') return book.nodes.find((n) => n.id === unit.id)
+  const part = kind === 'b' ? 'B' : 'A'
+  return book.nodes.find((n) => n.parents.some((p) => p.id === unit.id) && new RegExp(`^Part\\s*${part}\\b`, 'i').test(n.title.trim()))
+}
+
 const SEM = ['上册', '下册']
 const oldCache = new Map()
 
@@ -720,6 +738,8 @@ try {
       let node
       if (course.subjectId === 'math') {
         node = mathNode(book, MATH[kp.id])
+      } else if (course.subjectId === 'english') {
+        node = englishNode(book, unit, kp.id)
       } else {
         node = chineseNode(book, unit, kp.title)
       }

@@ -79,6 +79,10 @@ export type QuestionType =
   | 'pinyin' // 汉语拼音：声调、拼读、声母韵母、字母表
   | 'reading' // 课文：选词填空、问答、古诗
   | 'phrase' // 词语积累：反义词、对子、量词、称呼、标点
+  // ── 英语（§11） ──
+  | 'word' // 单词：听音 / 看图 / 看词选图、意思、补全字母
+  | 'letter' // 字母与发音：大小写、字母表顺序、首字母、拼读
+  | 'talk' // 对话与句子：应答、选词填空、问答、数字
 
 export interface KnowledgePoint {
   id: string
@@ -980,8 +984,8 @@ export type StemPart =
   | { kind: 'hanzi'; text: string; mark?: number }
   /** 拼音卡：音节 / 声母 / 韵母 / 拼读式「b + ā」，初学者字体大号显示；say 是朗读时读的同音汉字（「bā」读「八」），不填就不读（Y4） */
   | { kind: 'pinyin'; text: string; say?: string }
-  /** 听音题：画一个大喇叭，朗读时读 say（中文），屏幕上不出现 say 的文字（Y3） */
-  | { kind: 'listen'; say: string }
+  /** 听音题：画一个大喇叭，朗读时读 say（中文；英语的 lang: 'en' 用英文读，E5），屏幕上不出现 say 的文字（Y3） */
+  | { kind: 'listen'; say: string; lang?: Lang }
   /** 一张图（emoji）；say 是朗读时读的名字，不填就不读 */
   | { kind: 'picture'; icon: string; say?: string }
   /**
@@ -989,6 +993,12 @@ export type StemPart =
    * blank = 挖掉的那几个字 [起点, 长度]（按字符算），画成虚线空格，朗读时在那里停一下。中文界面注音、英文界面不注音
    */
   | { kind: 'verse'; text: string; py: string; blank?: [number, number] }
+  // ── 英语（§11）：英文内容，不翻译；中文界面下也用英文的声音读（E5）──
+  /**
+   * 英文的单词或句子：big 大号单词卡、line 一行句子（不填按文字定：没有空格的一个词是 big）；say 是朗读时读什么
+   * （不填读 text；'' = 不读，如补全字母的「c _ t」）；blank = 句子里挖掉的词 [起点, 长度]（按字符算），画成空格、答完填上，朗读时在那里停一下
+   */
+  | { kind: 'english'; text: string; size?: 'big' | 'line'; say?: string; blank?: [number, number] }
 
 export type AnswerSpec =
   | { kind: 'number'; value: number }
@@ -1005,10 +1015,12 @@ export interface Choice {
    * 不填就读 label。答错时「正确答案是 X」读的就是它（语文，Y4 / Y6）
    */
   say?: string
+  /** 英语的选项（E5）：label / say 是英文，用英文的声音读 */
+  lang?: Lang
 }
 
-/** 选项卡的样子（语文）：pinyin 拼音（初学者字体）、hanzi 不注音的楷体大字（考认字，Y3）、emoji 大图；不填是普通文字 */
-export type ChoiceStyle = 'pinyin' | 'hanzi' | 'emoji'
+/** 选项卡的样子（语文）：pinyin 拼音（初学者字体）、hanzi 不注音的楷体大字（考认字，Y3）、emoji 大图；english 英文单词 / 句子（初学者字体，E6）；不填是普通文字 */
+export type ChoiceStyle = 'pinyin' | 'hanzi' | 'emoji' | 'english'
 
 /** 答错后的教具演示配置 */
 export type DemoSpec =
@@ -1073,6 +1085,8 @@ export interface GradeMeta {
   status: ContentStatus
   /** live 时指向对应课程包 */
   courseId?: string
+  /** soon 年级占位卡上的说明，代替「敬请期待」（英语一、二年级：「人教版英语从三年级开始」） */
+  note?: LStr
 }
 
 /** 目录里的学科条目 */

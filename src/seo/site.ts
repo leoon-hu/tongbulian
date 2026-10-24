@@ -30,6 +30,7 @@ import { KP_SEO as SEO_C3 } from '@/content/chinese/grade3/seo'
 import { KP_SEO as SEO_C4 } from '@/content/chinese/grade4/seo'
 import { KP_SEO as SEO_C5 } from '@/content/chinese/grade5/seo'
 import { KP_SEO as SEO_C6 } from '@/content/chinese/grade6/seo'
+import { KP_SEO as SEO_E3 } from '@/content/english/grade3/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
@@ -41,9 +42,10 @@ import '@/content/chinese/grade3'
 import '@/content/chinese/grade4'
 import '@/content/chinese/grade5'
 import '@/content/chinese/grade6'
+import '@/content/english/grade3'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -105,6 +107,12 @@ const SUBJECT_COPY: Record<string, SubjectCopy> = {
     lead: (kp) =>
       `题目都按课本要求随机出，每个汉字标拼音、每道题自动朗读，识字不多的孩子也能自己玩；答错显示正确答案${kp.questionTypes.includes('arith') ? '并演示算法' : '并用教具演示'}，不计时、不扣分。`,
   },
+  english: {
+    course: '按人教版 PEP 新教材逐单元出题，单词、字母、对话、句子都有，题目要求带拼音，单词和句子用英文朗读',
+    kp: '单词和句子用英文朗读',
+    lead: () =>
+      '题目都从这一部分的单词、字母、对话和句子里出：听音选单词、看图选单词、单词选意思、字母大小写、对话应答、选词填空……题目要求是中文、标拼音，单词和句子用英文朗读，听音题屏幕上不出现要听的词。答错显示正确答案并读一遍，不计时、不扣分。',
+  },
   chinese: {
     course: '按统编新教材逐课出题，识字、词语、拼音、课文填空、古诗都有，题目带拼音和朗读，考认字的字不标拼音',
     kp: '按课文出题、题目带拼音和朗读',
@@ -123,7 +131,7 @@ function coursesSummary(lcs: LiveCourse[]): string {
   }
   const byGrades = new Map<string, string[]>()
   for (const [subject, grades] of bySubject) byGrades.set(gradeSpan(grades), [...(byGrades.get(gradeSpan(grades)) ?? []), subject])
-  return [...byGrades].map(([grades, subjects]) => `${grades}${subjects.join('和')}`).join('和')
+  return [...byGrades].map(([grades, subjects]) => `${grades}${subjects.join('和')}`).join('、')
 }
 /** 年级列表：连着的三个以上缩成「一至五年级」，别的用顿号连（「一年级、二年级」） */
 function gradeSpan(grades: string[]): string {
@@ -752,6 +760,12 @@ export function stemText(part: StemPart): string {
       const chars = Array.from(part.text)
       return `${chars.slice(0, part.blank[0]).join('')}（　）${chars.slice(part.blank[0] + part.blank[1]).join('')}`
     }
+    // 英语（§11）：单词 / 句子照写，挖掉的词写「____」
+    case 'english': {
+      if (!part.blank) return part.text
+      const chars = Array.from(part.text)
+      return `${chars.slice(0, part.blank[0]).join('')}____${chars.slice(part.blank[0] + part.blank[1]).join('')}`
+    }
   }
 }
 
@@ -1028,7 +1042,8 @@ function kpPage(lc: LiveCourse, kp: KnowledgePoint, siteUrl: string, analytics: 
   const { course, name } = lc
   const unit = course.units.find((u) => u.id === kp.unitId)!
   const sem = semName(unit.semester)
-  const where = `人教版${name}${sem}${unitLabel(unit)}`
+  // 英语的知识点标题里已经有「Unit 3」，这里只写单元名（不然描述超过 150 字）
+  const where = `人教版${name}${sem}${course.subjectId === 'english' ? `《${unit.title}》` : unitLabel(unit)}`
   const extra = KP_SEO[kp.id]
   const title = `${kp.title}练习题｜人教版${name}${sem}`
   const description = `${where}「${kp.title}」的在线练习题：${copyOf(course).kp}；也能打一局对战游戏（打机器人、两人一台或多设备组队，谁先答对 8 题谁赢）。免费、无广告。${extra ? `附示例题与答案、怎么学、常见错误与家长陪练建议。` : '附示例题与答案。'}`
@@ -1286,7 +1301,7 @@ export function homeMeta(): {
   for (const lc of lcs) bySubject.set(zh(lc.subject.title), (bySubject.get(zh(lc.subject.title)) ?? 0) + liveKps(lc.course).length)
   const list = `${[...bySubject].map(([s, n]) => `${s} ${n} 个`).join('、')}知识点`
   // 各学科家长会搜的词
-  const subjectWords: Record<string, string[]> = { math: ['小学数学对战游戏', '口算练习'], chinese: ['小学语文对战游戏', '识字拼音练习'] }
+  const subjectWords: Record<string, string[]> = { math: ['小学数学对战游戏', '口算练习'], chinese: ['小学语文对战游戏', '识字拼音练习'], english: ['小学英语对战游戏', '英语单词练习'] }
   return {
     title: `${SITE_NAME}：人教版小学${subjects}练习题变对战游戏（${grades}，带拼音朗读）`,
     description: `${SITE_NAME}：人教版${grades}${subjects}练习题——${SITE_PITCH}；打机器人、两人一台或多设备扫码组队，${SKINS.length} 种游戏画面；${list}，也能一个人练；汉字标拼音、自动朗读；免费、无广告。`,

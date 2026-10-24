@@ -9,7 +9,8 @@ import RubyText from '@/components/ui/RubyText.vue'
 
 // 选年级页：某学科下的一~六年级。上线的年级每一册单独一张卡（F1）——课本封面 + 「一年级 上册」，
 // 点哪一张就进那一册的知识点地图（下册带 ?sem=2）；上线的年级里还没有内容的那一册（平台上还没有那一册的课本时）
-// 是一张「几年级 下册 · 敬请期待」占位卡，一行仍是一个年级的上下册；soon 年级一个年级一张占位卡；无效学科回顶层。
+// 是一张「几年级 下册 · 敬请期待」占位卡，一行仍是一个年级的上下册；soon 年级一个年级一张占位卡（目录里给了 note 的写它，
+// 英语一、二年级是「人教版英语从三年级开始」）；无效学科回顶层。
 const route = useRoute()
 const router = useRouter()
 
@@ -65,9 +66,9 @@ function volumesOf(g: GradeMeta): { sem: Semester; src: string | null; alt: stri
             </button>
           </template>
         </template>
-        <button v-else class="card soon" :data-grade="g.id" disabled>
+        <button v-else class="card soon" :class="{ noted: g.note }" :data-grade="g.id" disabled>
           <span class="card-title">{{ t(g.title) }}</span>
-          <span class="soon-tag">{{ ui('chooser.soon') }}</span>
+          <span class="soon-tag">{{ g.note ? t(g.note) : ui('chooser.soon') }}</span>
         </button>
       </template>
     </div>

@@ -63,6 +63,13 @@ export interface BlankFill {
 export function hasChoiceBlank(q: Question): boolean {
   return (
     q.input === 'choice' &&
-    q.stem.some((p) => (p.kind === 'verse' && !!p.blank) || (p.kind === 'hanzi' && /[？?]/.test(p.text)) || (p.kind === 'stat-table' && p.rows.some((r) => r.includes(null))))
+    q.stem.some(
+      (p) =>
+        (p.kind === 'verse' && !!p.blank) ||
+        (p.kind === 'hanzi' && /[？?]/.test(p.text)) ||
+        (p.kind === 'stat-table' && p.rows.some((r) => r.includes(null))) ||
+        // 英语的选词填空（E3）：句子里挖掉的词
+        (p.kind === 'english' && !!p.blank),
+    )
   )
 }

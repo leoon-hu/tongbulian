@@ -98,7 +98,7 @@ describe('App 集成冒烟', () => {
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('.about .about-links a')
-    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '四年级数学知识点清单', '五年级数学知识点清单', '六年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单', '四年级语文知识点清单', '五年级语文知识点清单', '六年级语文知识点清单'])
+    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '四年级数学知识点清单', '五年级数学知识点清单', '六年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单', '四年级语文知识点清单', '五年级语文知识点清单', '六年级语文知识点清单', '三年级英语知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
     // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
     const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])
@@ -167,13 +167,29 @@ describe('App 集成冒烟', () => {
     expect(shown(vols[3]!)).toContain('二年级')
     expect(shown(vols[3]!)).toContain('下册')
     expect(vols[3]!.find('img.cover').attributes('alt')).toContain('下册')
-    // 一到六年级都上线了，没有「敬请期待」的卡（英语那一页才有）
+    // 数学一到六年级都上线了，没有「敬请期待」的卡（英语那一页才有）
     expect(w.findAll('button.card.soon')).toHaveLength(0)
     // 点二年级下册 → 地图直接是下册页签
     await vols[3]!.trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
     expect(router.currentRoute.value.path).toBe('/s/math/g/g2')
     expect(router.currentRoute.value.query.sem).toBe('2')
+    w.unmount()
+  })
+
+  it('选年级页（英语）：三年级上下两册各一张封面卡；一、二年级是写明「人教版英语从三年级开始」的占位卡，四至六年级「敬请期待」（R5）', async () => {
+    const w = await mountAt('/s/english')
+    const vols = w.findAll('button.vol')
+    expect(vols.map((v) => `${v.attributes('data-grade')}-${v.attributes('data-sem')}`)).toEqual(['g3-1', 'g3-2'])
+    expect(vols[0]!.find('img.cover').attributes('src')).toContain('covers/english-g3-s1.webp')
+    const soon = w.findAll('button.card.soon')
+    expect(soon.map((c) => c.attributes('data-grade'))).toEqual(['g1', 'g2', 'g4', 'g5', 'g6'])
+    expect(shown(soon[0]!)).toContain('人教版英语从三年级开始')
+    expect(soon[0]!.classes()).toContain('noted')
+    expect(shown(soon[2]!)).toContain('敬请期待')
+    await vols[0]!.trigger('click')
+    await until(() => router.currentRoute.value.name === 'topics')
+    expect(router.currentRoute.value.path).toBe('/s/english/g/g3')
     w.unmount()
   })
 

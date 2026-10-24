@@ -89,9 +89,22 @@ export function zhToken(text: string): string {
   return ZH_MARK + text
 }
 
-/** 这条片段用哪种语言读、读什么：标过的是中文（去掉标记），其余跟着当前语言 */
+/**
+ * 英文内容的标记（需求 E5）：中文界面下，英语题里的单词、句子、要听的词用英文的声音读，片段前面加这个字符
+ * （与 ZH_MARK 对称；英文界面本来就是英文，不加）
+ */
+const EN_MARK = '\uE001'
+
+/** 把一条片段标成「用英文读」 */
+export function enToken(text: string): string {
+  return EN_MARK + text
+}
+
+/** 这条片段用哪种语言读、读什么：标过的是中文 / 英文（去掉标记），其余跟着当前语言 */
 export function tokenVoice(token: string, lang: Lang): { text: string; lang: Lang } {
-  return token.startsWith(ZH_MARK) ? { text: token.slice(ZH_MARK.length), lang: 'zh' } : { text: token, lang }
+  if (token.startsWith(ZH_MARK)) return { text: token.slice(ZH_MARK.length), lang: 'zh' }
+  if (token.startsWith(EN_MARK)) return { text: token.slice(EN_MARK.length), lang: 'en' }
+  return { text: token, lang }
 }
 /** 两个片段之间的文字里有这些就算子句边界（顿号「、」不算：「填 >、< 或 =」「上北下南、左西右东」一口气读完） */
 const CLAUSE_BREAK = /[，。！？；：…—,.!?;:]/
@@ -521,6 +534,23 @@ export function chineseSpeech(text: string, lang: Lang): string[] {
   return lang === 'zh' ? tokens : tokens.map((t) => (t === PAUSE ? t : zhToken(t)))
 }
 
+/**
+ * 一段英文内容的朗读片段（英语的单词、句子、要听的词，需求 E5）：按英文切，
+ * 当前是中文界面就每条都标成「用英文读」。
+ */
+export function englishSpeech(text: string, lang: Lang): string[] {
+  const tokens = tokenize(text, 'en')
+  return lang === 'en' ? tokens : tokens.map((t) => (t === PAUSE ? t : enToken(t)))
+}
+
+/** 英文的单词 / 句子部件：say 给了读 say（'' 不读）；挖了空的句子空前、空后各切各的，空的地方停一下 */
+function englishPartSpeech(part: { text: string; say?: string; blank?: [number, number] }, lang: Lang): string[] {
+  if (part.say !== undefined) return part.say ? englishSpeech(part.say, lang) : []
+  if (!part.blank) return englishSpeech(part.text, lang)
+  const chars = Array.from(part.text)
+  return joinSpeech([englishSpeech(chars.slice(0, part.blank[0]).join(''), lang), englishSpeech(chars.slice(part.blank[0] + part.blank[1]).join(''), lang)])
+}
+
 /** 带空格的句子（verse）：空前、空后各切各的，空的地方停一下（开头 / 结尾的空不停） */
 function verseSpeech(text: string, blank: [number, number] | undefined, lang: Lang): string[] {
   if (!blank) return chineseSpeech(text, lang)
@@ -556,7 +586,8 @@ export function questionSpeech(q: Question, lang: Lang): string[] {
     if (part.kind === 'text') parts.push(phraseSpeech(part.text, lang))
     else if (part.kind === 'expr') parts.push(tokenize(part.expr, lang))
     else if (part.kind === 'verse') parts.push(verseSpeech(part.text, part.blank, lang))
-    else if (part.kind === 'listen') parts.push(chineseSpeech(part.say, lang))
+    else if (part.kind === 'listen') parts.push(part.lang === 'en' ? englishSpeech(part.say, lang) : chineseSpeech(part.say, lang))
+    else if (part.kind === 'english') parts.push(englishPartSpeech(part, lang))
     else if ((part.kind === 'pinyin' || part.kind === 'picture') && part.say) parts.push(chineseSpeech(part.say, lang))
     // 四年级的大数卡平时不读（读出来就等于报了读法 / 组成）；写数题读 say 里的数（课本「听老师读数，写出来」）
     else if (part.kind === 'big-num' && part.say) parts.push(tokenize(part.say, lang))
@@ -570,8 +601,11 @@ export function questionSpeech(q: Question, lang: Lang): string[] {
  */
 export function answerSpeech(q: Question, lang: Lang): string[] {
   const correct = q.answer.kind === 'choice' ? q.answer.choiceId : null
-  const say = correct === null ? undefined : q.choices?.find((c) => c.id === correct)?.say
+  const choice = correct === null ? undefined : q.choices?.find((c) => c.id === correct)
   const lead = translate({ k: 'practice.answerIs' }, lang)
+  // 英语的选项（E5）：读 say（没有就读 label），用英文的声音
+  if (choice?.lang === 'en') return [...tokenize(lead, lang), ...englishSpeech(choice.say ?? translate(choice.label, 'en'), lang)]
+  const say = choice?.say
   if (say === undefined) return tokenize(`${lead} ${translate(answerLabel(q), lang)}`, lang)
   return lang === 'zh' ? tokenize(`${lead}${say}`, 'zh') : [...tokenize(lead, lang), ...chineseSpeech(say, lang)]
 }
