@@ -2,6 +2,7 @@
 // 生成器按档位的权重挑模板、再随机挑条目出题。条目是确定的（签名 = 模板 + 条目），所以一轮里同一道题不会出两次；
 // 干扰项与选项顺序每次随机。英文内容（单词、句子、要听的词）走 english / listen 部件与 lang: 'en' 的选项，
 // 中文界面下也用英文的声音读（E5）；中文的意思、问题走 ctx.word 注册的词条（注音）。只依赖引擎与类型，node 里能单测。
+// 每道题都要考到英语（E3）：题干里有英文、要听英文，或者选项是英文——只数数、只读中文的题不出。
 import type { ChoiceStyle, Difficulty, Lang, LStr, Question, QuestionType, StemPart } from '@/types/models'
 import type { RNG } from '@/engine'
 import { labelKey, numberQuestion, sigId } from '@/engine'
@@ -15,10 +16,16 @@ export interface Opt {
   lang?: Lang
 }
 
-/** 一个单词：英文、中文意思、图（emoji，可无） */
+/** 一个单词（课本单元词汇表里的黑体词）：英文、中文意思、图（emoji，可无） */
 export interface WordItem {
   en: string
   zh: string
+  icon?: string
+}
+
+/** 一个拼读词（字母课 / 拼读课里只要求会读、不要求懂意思的词）：英文、图（emoji，可无，只在「听首字母」时作提示） */
+export interface ReadItem {
+  en: string
   icon?: string
 }
 
@@ -27,7 +34,7 @@ export interface Ctx {
   kp: string
   /** 要注音的中文 → 词条（ew*.*，拼音来自拼音表） */
   word: (text: string) => LStr
-  /** 全年级的单词：本课的词不够凑选项时从这里补，高档的干扰项也从这里挑（更像的词） */
+  /** 全年级的单词（黑体词）：本课的词不够凑选项时从这里补，高档的干扰项也从这里挑（更像的词） */
   pool: WordItem[]
   /** 到本课为止学过的大写字母（字母表顺序、听音选字母的干扰项）；没有字母课的年级是整张字母表 */
   learnedLetters: string[]
@@ -66,6 +73,125 @@ export const NUM_WORDS: Readonly<Record<string, number>> = {
   twenty: 20,
 }
 const HAN = /\p{Script=Han}/u
+
+// ── 不能同时出现在一道题选项里的词（不然两个都对）─────────────────────────
+
+/** 读音一样的词：听音的题（听音选词、听音选图、拼读）里不能同时做选项 */
+const HOMOPHONE_GROUPS: string[][] = [
+  ['sea', 'see'],
+  ['right', 'write'],
+  ['eye', 'i'],
+  ['two', 'too', 'to'],
+  ['four', 'for'],
+  ['one', 'won'],
+  ['meat', 'meet'],
+  ['son', 'sun'],
+  ['be', 'bee'],
+  ['no', 'know'],
+  ['hear', 'here'],
+  ['by', 'buy', 'bye'],
+  ['pear', 'pair'],
+  ['wear', 'where'],
+  ['there', 'their'],
+  ['eight', 'ate'],
+  ['flower', 'flour'],
+  ['tail', 'tale'],
+  ['plane', 'plain'],
+  ['week', 'weak'],
+  ['blue', 'blew'],
+  ['new', 'knew'],
+  ['deer', 'dear'],
+  ['hi', 'high'],
+  ['aunt', 'ant'], // 美音的 aunt 和 ant 一样
+  ['whole', 'hole'],
+  ['night', 'knight'],
+  ['sail', 'sale'],
+  ['rose', 'rows'],
+  ['hair', 'hare'],
+  ['bear', 'bare'],
+  ['wait', 'weight'],
+  ['our', 'hour'],
+  ['road', 'rode'],
+]
+/** 意思相同 / 相近的词：选意思、中文选单词、看图的题里不能同时做选项 */
+const SAME_MEANING: string[][] = [
+  ['mum', 'mother', 'mom'],
+  ['dad', 'father'],
+  ['grandma', 'grandmother'],
+  ['grandpa', 'grandfather'],
+  ['teacher', 'miss'],
+  ['listen', 'hear'],
+  ['say', 'talk', 'speak', 'tell'],
+  ['picture', 'draw'],
+  ['nice', 'good', 'fine', 'great', 'ok'],
+  ['home', 'family', 'house'],
+  ['student', 'classmate', 'pupil'],
+  ['we', 'us'],
+  ['she', 'her'],
+  ['he', 'him'],
+  ['they', 'them'],
+  ['i', 'me', 'my'],
+  ['have', 'has'],
+  ['big', 'large'],
+  ['small', 'little'],
+  ['look', 'see', 'watch'],
+  ['hi', 'hello'],
+  ['bye', 'goodbye'],
+  ['kid', 'child'],
+]
+/**
+ * 一个是另一个的一种、或者图上分不清的词（键是大类 / 图上那样东西，值是它包含的 / 长得像的）：
+ * 🍎 既是 apple 也是 fruit，🐼 也可以叫 bear，👀 会被看成 eye——这些也不能同时做选项
+ */
+const RELATED: Readonly<Record<string, string[]>> = {
+  fruit: ['apple', 'banana', 'orange', 'grape', 'pear', 'peach', 'watermelon', 'strawberry'],
+  animal: ['dog', 'cat', 'fish', 'bird', 'rabbit', 'panda', 'monkey', 'tiger', 'elephant', 'lion', 'bear', 'duck', 'fox', 'giraffe', 'pig'],
+  pet: ['dog', 'cat', 'fish', 'bird', 'rabbit'],
+  toy: ['doll', 'ball', 'car', 'boat', 'kite', 'yo-yo'],
+  food: ['rice', 'bread', 'meat', 'egg', 'noodles', 'cake', 'soup', 'vegetables', 'fruit', 'candy'],
+  colour: ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'brown', 'pink', 'white', 'black'],
+  plant: ['tree', 'flower', 'grass'],
+  flower: ['rose'],
+  bird: ['duck'],
+  bear: ['panda', 'red panda'],
+  water: ['sea'],
+  eye: ['see', 'look'],
+  ear: ['hear', 'listen'],
+  hand: ['touch'],
+  nose: ['smell'],
+  tongue: ['taste'],
+  mouth: ['eat'],
+  box: ['gift'],
+  kid: ['boy', 'girl', 'baby'],
+  boy: ['brother', 'son'],
+  girl: ['sister', 'daughter'],
+  man: ['dad', 'father', 'uncle', 'grandpa', 'grandfather', 'mr'],
+  woman: ['mum', 'mother', 'aunt', 'grandma', 'grandmother', 'miss'],
+}
+
+const norm = (s: string): string => s.toLowerCase()
+const groupIndex = (groups: string[][]): Map<string, number> => {
+  const m = new Map<string, number>()
+  groups.forEach((g, i) => g.forEach((w) => m.set(w, i)))
+  return m
+}
+const HOMOPHONE_OF = groupIndex(HOMOPHONE_GROUPS)
+const MEANING_OF = groupIndex(SAME_MEANING)
+/** 两个词读音一样（听音的题里不能同时做选项） */
+export function soundsSame(a: string, b: string): boolean {
+  const [x, y] = [norm(a), norm(b)]
+  if (x === y) return true
+  const i = HOMOPHONE_OF.get(x)
+  return i !== undefined && i === HOMOPHONE_OF.get(y)
+}
+/** 两个词意思一样、一个包含另一个、或图上分不清（选意思、看图的题里不能同时做选项） */
+export function meaningClash(a: string, b: string): boolean {
+  const [x, y] = [norm(a), norm(b)]
+  if (x === y) return true
+  const i = MEANING_OF.get(x)
+  if (i !== undefined && i === MEANING_OF.get(y)) return true
+  return !!RELATED[x]?.includes(y) || !!RELATED[y]?.includes(x)
+}
 
 /** 选项：正确项 + 干扰项（去掉与正确项或彼此重复的，最多凑到 max 个），打乱 */
 export function optionsFrom(correct: Opt, wrongs: Opt[], rng: RNG, max = 4): { choices: Question['choices']; correctId: string } {
@@ -113,11 +239,17 @@ const uniqBy = <T>(list: T[], key: (x: T) => string): T[] => {
 
 // ── 材料的解析（内容包的测试也用） ──────────────────────────────────────────
 
-/** 「cat 猫 🐱」「red panda 小熊猫 🐼」「o'clock 点钟」：第一个汉字之前的都是英文 */
+/** 「cat 猫 🐱」「red panda 小熊猫 🐼」：第一个汉字之前的都是英文 */
 export function parseWord(s: string): WordItem {
   const m = /^(.*?)\s+(\S*\p{Script=Han}\S*)(?:\s+(\S+))?$/u.exec(s.trim())
   if (!m || !m[1]) throw new Error(`bad word item: ${s}`)
   return { en: m[1].trim(), zh: m[2]!, ...(m[3] ? { icon: m[3] } : {}) }
+}
+/** 「cab 🚕」「bad」「yo-yo 🪀」：一个英文词（可带连字符），后面可跟一个图 */
+export function parseRead(s: string): ReadItem {
+  const m = /^([A-Za-z][A-Za-z'-]*)(?:\s+(\S+))?$/.exec(s.trim())
+  if (!m) throw new Error(`bad read item: ${s}`)
+  return { en: m[1]!, ...(m[2] ? { icon: m[2] } : {}) }
 }
 /** 「Aa Bb Cc Dd」→ ['A', 'B', 'C', 'D'] */
 export function parseLetters(s: string | undefined): string[] {
@@ -219,11 +351,22 @@ export function parseNumbers(s: string | undefined): [string, number][] {
 
 // ── 干扰项 ──────────────────────────────────────────────────────────────
 
+/** 干扰项用在哪种题：听音的题去掉同音词；选意思 / 看图的题去掉意思相同、包含、图上分不清的词；看图的题只要有图的词 */
+interface WrongRule {
+  listening?: boolean
+  meaning?: boolean
+  pictures?: boolean
+}
 /**
  * 单词的干扰项：先从本课的词里挑（意思不同的），不够从全年级的词池补；第 2、3 档混进一两个别的单元里首字母相同的词（更像）
  */
-function wordWrongs(w: WordItem, unit: WordItem[], ctx: Ctx, d: Difficulty, rng: RNG, need = 3, keep: (x: WordItem) => boolean = () => true): WordItem[] {
-  const ok = (x: WordItem): boolean => x.en !== w.en && x.zh !== w.zh && keep(x)
+function wordWrongs(w: WordItem, unit: WordItem[], ctx: Ctx, d: Difficulty, rng: RNG, rule: WrongRule, need = 3): WordItem[] {
+  const ok = (x: WordItem): boolean =>
+    x.en !== w.en &&
+    x.zh !== w.zh &&
+    !(rule.listening && soundsSame(x.en, w.en)) &&
+    !(rule.meaning && meaningClash(x.en, w.en)) &&
+    !(rule.pictures && (!x.icon || x.icon === w.icon))
   const local = rng.shuffle(unit.filter(ok))
   const outside = rng.shuffle(ctx.pool.filter((x) => ok(x) && !unit.some((u) => u.en === x.en)))
   const mixIn = d === 1 ? [] : [...outside.filter((x) => x.en[0] === w.en[0]), ...outside].slice(0, d === 3 ? 2 : 1)
@@ -234,25 +377,32 @@ function letterWrongs(letter: string, unit: string[], ctx: Ctx, rng: RNG, need =
   const pool = uniqBy([...rng.shuffle(unit), ...rng.shuffle(ctx.learnedLetters), ...rng.shuffle(ALPHABET)], (x) => x).filter((x) => x !== letter)
   return pool.slice(0, need)
 }
+/** 两个词拼写有多像：同一位置上相同的字母数，长度一样、末两个字母一样各加一（拼读的干扰项挑像的） */
+function likeness(a: string, b: string): number {
+  let n = a.length === b.length ? 1 : 0
+  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] === b[i]) n++
+  if (a.slice(-2) === b.slice(-2)) n++
+  return n
+}
 
-// ── 单词 ────────────────────────────────────────────────────────────────
+// ── 单词（黑体词） ─────────────────────────────────────────────────────
 
-/** 听音选单词：屏幕上不出现这个词 */
+/** 听音选单词：屏幕上不出现这个词；读音一样的词不做干扰项 */
 function listenItems(ctx: Ctx, words: WordItem[]): Item[] {
   return words.map((w) => ({
     key: `listen-${w.en}`,
     build: (d, rng) =>
-      choiceQ(ctx, 'word', d, `listen-${w.en}`, [text('eq.listenWord'), listen(w.en)], enOpt(w.en), wordWrongs(w, words, ctx, d, rng).map((x) => enOpt(x.en)), rng, 'english'),
+      choiceQ(ctx, 'word', d, `listen-${w.en}`, [text('eq.listenWord'), listen(w.en)], enOpt(w.en), wordWrongs(w, words, ctx, d, rng, { listening: true }).map((x) => enOpt(x.en)), rng, 'english'),
   }))
 }
-/** 看图选单词（图不读，读了等于报答案）；配同一张图的词（ear / listen 都是 👂）不当干扰项，不然两个都对 */
+/** 看图选单词（图不读，读了等于报答案）：干扰项是别的、能画出来的东西，意思相关或图上分不清的不用 */
 function picItems(ctx: Ctx, words: WordItem[]): Item[] {
   return words
     .filter((w) => w.icon)
     .map((w) => ({
       key: `pic-${w.en}`,
       build: (d, rng) =>
-        choiceQ(ctx, 'word', d, `pic-${w.en}`, [text('eq.picWord'), { kind: 'picture', icon: w.icon! }], enOpt(w.en), wordWrongs(w, words, ctx, d, rng, 3, (x) => x.icon !== w.icon).map((x) => enOpt(x.en)), rng, 'english'),
+        choiceQ(ctx, 'word', d, `pic-${w.en}`, [text('eq.picWord'), { kind: 'picture', icon: w.icon! }], enOpt(w.en), wordWrongs(w, words, ctx, d, rng, { meaning: true, pictures: true }).map((x) => enOpt(x.en)), rng, 'english'),
     }))
 }
 /** 看单词选图：选项是 emoji，读英文 */
@@ -262,10 +412,7 @@ function wordPicItems(ctx: Ctx, words: WordItem[]): Item[] {
     .map((w) => ({
       key: `wordpic-${w.en}`,
       build: (d, rng) => {
-        const wrongs = uniqBy(
-          wordWrongs(w, words, ctx, d, rng, 6, (x) => !!x.icon && x.icon !== w.icon),
-          (x) => x.icon!,
-        ).slice(0, 3)
+        const wrongs = uniqBy(wordWrongs(w, words, ctx, d, rng, { meaning: true, pictures: true }, 6), (x) => x.icon!).slice(0, 3)
         return choiceQ(ctx, 'word', d, `wordpic-${w.en}`, [text('eq.wordPic'), en(w.en, 'big')], enOpt(w.icon!, w.en), wrongs.map((x) => enOpt(x.icon!, x.en)), rng, 'emoji')
       },
     }))
@@ -275,14 +422,14 @@ function meaningItems(ctx: Ctx, words: WordItem[]): Item[] {
   return words.map((w) => ({
     key: `meaning-${w.en}`,
     build: (d, rng) =>
-      choiceQ(ctx, 'word', d, `meaning-${w.en}`, [text('eq.meaning'), en(w.en, 'big')], { label: ctx.word(w.zh) }, uniqBy(wordWrongs(w, words, ctx, d, rng, 6), (x) => x.zh).slice(0, 3).map((x) => ({ label: ctx.word(x.zh) })), rng),
+      choiceQ(ctx, 'word', d, `meaning-${w.en}`, [text('eq.meaning'), en(w.en, 'big')], { label: ctx.word(w.zh) }, uniqBy(wordWrongs(w, words, ctx, d, rng, { meaning: true }, 6), (x) => x.zh).slice(0, 3).map((x) => ({ label: ctx.word(x.zh) })), rng),
   }))
 }
 /** 中文选单词 */
 function zh2enItems(ctx: Ctx, words: WordItem[]): Item[] {
   return words.map((w) => ({
     key: `zh2en-${w.en}`,
-    build: (d, rng) => choiceQ(ctx, 'word', d, `zh2en-${w.en}`, [text('eq.zh2en', { w: ctx.word(w.zh) })], enOpt(w.en), wordWrongs(w, words, ctx, d, rng).map((x) => enOpt(x.en)), rng, 'english'),
+    build: (d, rng) => choiceQ(ctx, 'word', d, `zh2en-${w.en}`, [text('eq.zh2en', { w: ctx.word(w.zh) })], enOpt(w.en), wordWrongs(w, words, ctx, d, rng, { meaning: true }).map((x) => enOpt(x.en)), rng, 'english'),
   }))
 }
 /** 听音选图 */
@@ -292,36 +439,34 @@ function listenPicItems(ctx: Ctx, words: WordItem[]): Item[] {
     .map((w) => ({
       key: `listenpic-${w.en}`,
       build: (d, rng) => {
-        const wrongs = uniqBy(
-          wordWrongs(w, words, ctx, d, rng, 6, (x) => !!x.icon && x.icon !== w.icon),
-          (x) => x.icon!,
-        ).slice(0, 3)
+        const wrongs = uniqBy(wordWrongs(w, words, ctx, d, rng, { listening: true, meaning: true, pictures: true }, 6), (x) => x.icon!).slice(0, 3)
         return choiceQ(ctx, 'word', d, `listenpic-${w.en}`, [text('eq.listenPic'), listen(w.en)], enOpt(w.icon!, w.en), wrongs.map((x) => enOpt(x.icon!, x.en)), rng, 'emoji')
       },
     }))
 }
 /** 补全字母：听单词，看「c _ t」选缺的字母（第一个不在开头的元音；没有就中间那个字母）；元音缺了从元音里挑干扰项 */
-function spellingItems(ctx: Ctx, words: WordItem[]): Item[] {
-  return words
-    .filter((w) => /^[a-z]{3,}$/.test(w.en))
-    .map((w) => {
-      const letters = w.en.split('')
-      let at = letters.findIndex((c, i) => i > 0 && VOWELS.has(c))
-      if (at < 0) at = Math.floor(letters.length / 2)
-      const missing = letters[at]!
-      const shown = letters.map((c, i) => (i === at ? '_' : c)).join('')
-      return {
-        key: `spelling-${w.en}`,
-        build: (d, rng) => {
-          const pool = VOWELS.has(missing) ? [...VOWELS] : ALPHABET.map((x) => x.toLowerCase()).filter((x) => !VOWELS.has(x))
-          const wrongs = rng.shuffle(pool.filter((x) => x !== missing)).slice(0, 3)
-          return choiceQ(ctx, 'word', d, `spelling-${w.en}`, [text('eq.spelling'), listen(w.en), en(shown, 'big', { say: '' })], letterOpt(missing), wrongs.map(letterOpt), rng, 'english')
-        },
-      }
-    })
+function spellingItems(ctx: Ctx, words: string[]): Item[] {
+  return uniqBy(
+    words.filter((w) => /^[a-z]{3,}$/.test(w)),
+    (w) => w,
+  ).map((word) => {
+    const letters = word.split('')
+    let at = letters.findIndex((c, i) => i > 0 && VOWELS.has(c))
+    if (at < 0) at = Math.floor(letters.length / 2)
+    const missing = letters[at]!
+    const shown = letters.map((c, i) => (i === at ? '_' : c)).join('')
+    return {
+      key: `spelling-${word}`,
+      build: (d: Difficulty, rng: RNG) => {
+        const pool = VOWELS.has(missing) ? [...VOWELS] : ALPHABET.map((x) => x.toLowerCase()).filter((x) => !VOWELS.has(x))
+        const wrongs = rng.shuffle(pool.filter((x) => x !== missing)).slice(0, 3)
+        return choiceQ(ctx, 'word', d, `spelling-${word}`, [text('eq.spelling'), listen(word), en(shown, 'big', { say: '' })], letterOpt(missing), wrongs.map(letterOpt), rng, 'english')
+      },
+    }
+  })
 }
 
-// ── 字母与发音 ──────────────────────────────────────────────────────────
+// ── 字母与发音、拼读（拼读词只考会不会读，不考意思） ─────────────────────
 
 function lowerItems(ctx: Ctx, letters: string[]): Item[] {
   return letters.map((L) => ({
@@ -343,7 +488,7 @@ function listenLetterItems(ctx: Ctx, letters: string[]): Item[] {
     build: (d, rng) => choiceQ(ctx, 'letter', d, `listenletter-${L}`, [text('eq.listenLetter'), listen(L)], letterOpt(pair(L)), letterWrongs(L, letters, ctx, rng).map((x) => letterOpt(pair(x))), rng, 'english'),
   }))
 }
-/** 字母表顺序：X 后面 / 前面是哪个（干扰项挑它附近的字母） */
+/** 字母表顺序：这个字母（大字卡，用英文读）后面 / 前面是哪个；干扰项挑它附近的字母 */
 function orderItems(ctx: Ctx, letters: string[], dir: 'after' | 'before'): Item[] {
   return letters
     .filter((L) => (dir === 'after' ? L !== 'Z' : L !== 'A'))
@@ -355,49 +500,62 @@ function orderItems(ctx: Ctx, letters: string[], dir: 'after' | 'before'): Item[
         build: (d, rng) => {
           const near = ALPHABET.filter((x, j) => x !== answer && x !== L && Math.abs(j - i) <= 3)
           const wrongs = rng.shuffle(near).slice(0, 3)
-          return choiceQ(ctx, 'letter', d, `${dir}-${L}`, [text(`eq.${dir}`, { l: L })], letterOpt(answer), wrongs.map(letterOpt), rng, 'english')
+          return choiceQ(ctx, 'letter', d, `${dir}-${L}`, [text(`eq.${dir}`), en(L, 'big', { say: L })], letterOpt(answer), wrongs.map(letterOpt), rng, 'english')
         },
       }
     })
 }
-/** 听单词选首字母（三上 Letters and sounds 的「Listen and circle the first sound」） */
-function soundItems(ctx: Ctx, sounds: SoundItem[], letters: string[]): Item[] {
+/** 听单词选首字母（三上 Letters and sounds 的「Listen and circle the first sound」）：拼读词有图的，图也画出来作提示 */
+function soundItems(ctx: Ctx, sounds: SoundItem[], letters: string[], icons: Map<string, string>): Item[] {
   const unitLetters = letters.length ? letters : sounds.map((s) => s.letter.toUpperCase())
   return sounds.flatMap((s) =>
     s.words
       .filter((w) => w.toLowerCase().startsWith(s.letter))
       .map((w) => ({
         key: `sound-${w}`,
-        build: (d: Difficulty, rng: RNG) =>
-          choiceQ(ctx, 'letter', d, `sound-${w}`, [text('eq.firstSound'), listen(w)], letterOpt(s.letter), letterWrongs(s.letter.toUpperCase(), unitLetters, ctx, rng).map((x) => letterOpt(x.toLowerCase())), rng, 'english'),
+        build: (d: Difficulty, rng: RNG) => {
+          const icon = icons.get(w)
+          const stem: StemPart[] = [text('eq.firstSound'), listen(w), ...(icon ? [{ kind: 'picture', icon } as StemPart] : [])]
+          return choiceQ(ctx, 'letter', d, `sound-${w}`, stem, letterOpt(s.letter), letterWrongs(s.letter.toUpperCase(), unitLetters, ctx, rng).map((x) => letterOpt(x.toLowerCase())), rng, 'english')
+        },
       })),
   )
 }
-/** 拼读（三下 Let's spell）：听音在最小对（cake / cat）里选；哪个单词里有这个字母组合 */
-function spellItems(ctx: Ctx, spells: SpellItem[]): { spell: Item[]; spellgroup: Item[] } {
-  const spell: Item[] = []
-  const spellgroup: Item[] = []
-  const all = spells.flatMap((s) => [...s.words, ...s.contrast])
-  for (const s of spells) {
-    for (const w of s.words) {
-      spell.push({
-        key: `spell-${w}`,
-        build: (d, rng) => {
-          const wrongs = uniqBy([...rng.shuffle(s.contrast), ...rng.shuffle(s.words.filter((x) => x !== w)), ...rng.shuffle(all)], (x) => x).filter((x) => x !== w)
-          return choiceQ(ctx, 'letter', d, `spell-${w}`, [text('eq.spellHear'), listen(w)], enOpt(w), wrongs.slice(0, 3).map((x) => enOpt(x)), rng, 'english')
-        },
-      })
-      spellgroup.push({
-        key: `spellgroup-${w}`,
-        build: (d, rng) => {
-          const without = (x: string): boolean => x !== w && !hasPattern(x, s.pattern)
-          const wrongs = uniqBy([...rng.shuffle(s.contrast.filter(without)), ...rng.shuffle(all.filter(without)), ...rng.shuffle(ctx.pool.map((p) => p.en).filter((x) => /^[a-z]+$/.test(x) && without(x)))], (x) => x)
-          return choiceQ(ctx, 'letter', d, `spellgroup-${w}`, [text('eq.spellGroup'), en(s.pattern, 'big', { say: '' })], enOpt(w), wrongs.slice(0, 3).map((x) => enOpt(x)), rng, 'english')
-        },
-      })
-    }
-  }
-  return { spell, spellgroup }
+/**
+ * 听音选拼读词（字母课的例词与「Can you read the words?」）：只考会不会读、不考意思；
+ * 第 1 档干扰项随便挑，第 2、3 档挑拼写像的（cab / cat / can）；读音一样的不做干扰项；人名不出
+ */
+function decodeItems(ctx: Ctx, read: ReadItem[]): Item[] {
+  const words = uniqBy(
+    read.filter((r) => /^[a-z][a-z'-]*$/.test(r.en)),
+    (r) => r.en,
+  )
+  if (words.length < 2) return []
+  return words.map((r) => ({
+    key: `decode-${r.en}`,
+    build: (d, rng) => {
+      const others = rng.shuffle(words.filter((x) => !soundsSame(x.en, r.en)))
+      const ranked = d === 1 ? others : [...others].sort((a, b) => likeness(b.en, r.en) - likeness(a.en, r.en))
+      return choiceQ(ctx, 'letter', d, `decode-${r.en}`, [text('eq.listenWord'), listen(r.en)], enOpt(r.en), ranked.slice(0, 3).map((x) => enOpt(x.en)), rng, 'english')
+    },
+  }))
+}
+/** 拼读（三下 Let's spell）：听一个词（含这个字母组合的或对比词），在同一组的词里选——课本的「Read, listen and circle」 */
+function spellItems(ctx: Ctx, spells: SpellItem[]): Item[] {
+  const all = uniqBy(
+    spells.flatMap((s) => [...s.words, ...s.contrast]),
+    (x) => x,
+  )
+  return spells.flatMap((s) =>
+    uniqBy([...s.words, ...s.contrast], (x) => x).map((w) => ({
+      key: `spell-${w}`,
+      build: (d: Difficulty, rng: RNG) => {
+        const group = [...s.words, ...s.contrast].filter((x) => x !== w)
+        const wrongs = uniqBy([...rng.shuffle(group), ...rng.shuffle(all)], (x) => x).filter((x) => x !== w && !soundsSame(x, w))
+        return choiceQ(ctx, 'letter', d, `spell-${w}`, [text('eq.spellHear'), listen(w)], enOpt(w), wrongs.slice(0, 3).map((x) => enOpt(x)), rng, 'english')
+      },
+    })),
+  )
 }
 
 // ── 对话与句子 ──────────────────────────────────────────────────────────
@@ -414,7 +572,21 @@ function listenSentItems(ctx: Ctx, sentences: string[]): Item[] {
   if (all.length < 2) return []
   return all.map((s) => ({
     key: `listensent-${s}`,
-    build: (d, rng) => choiceQ(ctx, 'talk', d, `listensent-${s}`, [text('eq.listenSentence'), listen(s)], enOpt(s), rng.shuffle(all.filter((x) => x !== s)).slice(0, 3).map((x) => enOpt(x)), rng, 'english'),
+    build: (d, rng) =>
+      choiceQ(
+        ctx,
+        'talk',
+        d,
+        `listensent-${s}`,
+        [text('eq.listenSentence'), listen(s)],
+        enOpt(s),
+        rng
+          .shuffle(all.filter((x) => x !== s))
+          .slice(0, 3)
+          .map((x) => enOpt(x)),
+        rng,
+        'english',
+      ),
   }))
 }
 function clozeItems(ctx: Ctx, items: ClozeItem[]): Item[] {
@@ -428,36 +600,60 @@ function clozeItems(ctx: Ctx, items: ClozeItem[]): Item[] {
 }
 /**
  * 问答：问题 / 选项是中文就走词条（注音、中文读），是英文就走 english 部件与英文选项；
- * 英文句子配中文选项就是「这句话是什么意思」（前面加一句要求）
+ * 英文句子配中文选项就是「这句话是什么意思」（前面加一句要求）。中文问题配中文答案的没考到英语（E3），不许写
  */
 function askItems(ctx: Ctx, items: AskItem[]): Item[] {
-  return items.map((it) => ({
-    key: `ask-${it.q}`,
-    build: (d, rng) => {
-      const zhOptions = [it.answer, ...it.wrongs].every((s) => HAN.test(s))
-      const stem: StemPart[] = HAN.test(it.q) ? [{ kind: 'text', text: ctx.word(it.q) }] : zhOptions && it.number === undefined ? [text('eq.sentMeaning'), en(it.q, 'line')] : [en(it.q, 'line')]
-      if (it.number !== undefined) {
-        return numberQuestion({ kpId: ctx.kp, type: 'talk', difficulty: d, sig: `ask-${it.q}`, stem, value: it.number, rng, min: 0, max: Math.max(10, it.number + 5) })
-      }
-      const opt = (s: string): Opt => (HAN.test(s) ? { label: ctx.word(s) } : enOpt(s))
-      const style: ChoiceStyle | undefined = [it.answer, ...it.wrongs].every((s) => !HAN.test(s)) ? 'english' : undefined
-      return choiceQ(ctx, 'talk', d, `ask-${it.q}`, stem, opt(it.answer), rng.shuffle(it.wrongs).map(opt), rng, style)
-    },
-  }))
+  return items.map((it) => {
+    const zhOptions = it.number === undefined && [it.answer, ...it.wrongs].every((s) => HAN.test(s))
+    if (HAN.test(it.q) && (zhOptions || it.number !== undefined)) throw new Error(`ask item has no English: ${it.q}`)
+    return {
+      key: `ask-${it.q}`,
+      build: (d: Difficulty, rng: RNG) => {
+        const stem: StemPart[] = HAN.test(it.q) ? [{ kind: 'text', text: ctx.word(it.q) }] : zhOptions ? [text('eq.sentMeaning'), en(it.q, 'line')] : [en(it.q, 'line')]
+        if (it.number !== undefined) {
+          return numberQuestion({ kpId: ctx.kp, type: 'talk', difficulty: d, sig: `ask-${it.q}`, stem, value: it.number, rng, min: 0, max: Math.max(10, it.number + 5) })
+        }
+        const opt = (s: string): Opt => (HAN.test(s) ? { label: ctx.word(s) } : enOpt(s))
+        const style: ChoiceStyle | undefined = [it.answer, ...it.wrongs].every((s) => !HAN.test(s)) ? 'english' : undefined
+        return choiceQ(ctx, 'talk', d, `ask-${it.q}`, stem, opt(it.answer), rng.shuffle(it.wrongs).map(opt), rng, style)
+      },
+    }
+  })
 }
 
-// ── 数字 ────────────────────────────────────────────────────────────────
+// ── 数字（数词） ────────────────────────────────────────────────────────
 
 const DEFAULT_ICONS = ['🍎', '🍌', '⭐', '🎈', '🐟', '📚']
-/** 数一数：几个 emoji，数字键盘答 */
+/** 数的英文干扰项：本课的数词里挑离它近的（数错一两个最常见），不够从一到二十里补 */
+function numberWrongs(n: number, numbers: [string, number][], rng: RNG): string[] {
+  const local = rng.shuffle(numbers.filter(([, x]) => x !== n)).sort((a, b) => Math.abs(a[1] - n) - Math.abs(b[1] - n))
+  const more = Object.entries(NUM_WORDS)
+    .filter(([, x]) => x !== n && Math.abs(x - n) <= 3)
+    .sort((a, b) => Math.abs(a[1] - n) - Math.abs(b[1] - n))
+  return uniqBy([...local, ...more], ([w]) => w)
+    .slice(0, 3)
+    .map(([w]) => w)
+}
+/** 数一数，选出对应的英语数词（只数数、按数字的题考不到英语，E3） */
 function countItems(ctx: Ctx, numbers: [string, number][], icons: string[]): Item[] {
   const pool = icons.length ? icons : DEFAULT_ICONS
   return numbers.map(([w, n]) => ({
     key: `count-${n}`,
-    build: (d, rng) => numberQuestion({ kpId: ctx.kp, type: 'talk', difficulty: d, sig: `count-${w}`, stem: [text('eq.howMany'), { kind: 'objects', icon: rng.pick(pool), count: n }], value: n, rng, min: 0, max: 20, input: 'numpad' }),
+    build: (d, rng) =>
+      choiceQ(
+        ctx,
+        'talk',
+        d,
+        `count-${w}`,
+        [text('eq.howMany'), { kind: 'objects', icon: rng.pick(pool), count: n }],
+        enOpt(w),
+        numberWrongs(n, numbers, rng).map((x) => enOpt(x)),
+        rng,
+        'english',
+      ),
   }))
 }
-/** 数词 → 数字键盘 */
+/** 数词 → 数字键盘（读英文的数词，按出数字） */
 function numWordItems(ctx: Ctx, numbers: [string, number][]): Item[] {
   return numbers.map(([w, n]) => ({
     key: `numword-${w}`,
@@ -466,21 +662,29 @@ function numWordItems(ctx: Ctx, numbers: [string, number][]): Item[] {
 }
 /** 数字 → 数词（选项） */
 function num2WordItems(ctx: Ctx, numbers: [string, number][]): Item[] {
-  const all = numbers.length >= 4 ? numbers : [...numbers, ...Object.entries(NUM_WORDS).filter(([w]) => !numbers.some(([x]) => x === w)).slice(0, 4 - numbers.length)]
   return numbers.map(([w, n]) => ({
     key: `num2word-${n}`,
-    build: (d, rng) => choiceQ(ctx, 'talk', d, `num2word-${w}`, [text('eq.whichNum', { n })], enOpt(w), rng.shuffle(all.filter(([x]) => x !== w)).slice(0, 3).map(([x]) => enOpt(x)), rng, 'english'),
+    build: (d, rng) => choiceQ(ctx, 'talk', d, `num2word-${w}`, [text('eq.whichNum', { n })], enOpt(w), numberWrongs(n, numbers, rng).map((x) => enOpt(x)), rng, 'english'),
   }))
 }
 
 // ── 装配 ────────────────────────────────────────────────────────────────
 
-/** 一个知识点的全部单词 */
+/** 一个知识点的全部单词（黑体词） */
 export const unitWords = (spec: UnitSpec): WordItem[] => (spec.words ?? []).map(parseWord)
+/** 一个知识点的全部拼读词：read 里的，加上拼读课 spell 里的词与对比词 */
+export function unitReads(spec: UnitSpec): ReadItem[] {
+  const fromSpell = (spec.spell ?? [])
+    .map(parseSpell)
+    .flatMap((s) => [...s.words, ...s.contrast])
+    .map((en) => ({ en }))
+  return uniqBy([...(spec.read ?? []).map(parseRead), ...fromSpell], (r) => r.en)
+}
 
 /** 一个知识点的材料 → 各模板的条目 */
 export function unitItems(spec: UnitSpec, ctx: Ctx): Record<string, Item[]> {
   const words = unitWords(spec)
+  const reads = unitReads(spec)
   const letters = parseLetters(spec.letters)
   const sounds = (spec.sounds ?? []).map(parseSound)
   const spells = (spec.spell ?? []).map(parseSpell)
@@ -488,7 +692,8 @@ export function unitItems(spec: UnitSpec, ctx: Ctx): Record<string, Item[]> {
   const clozes = (spec.cloze ?? []).map(parseCloze)
   const asks = (spec.ask ?? []).map(parseAsk)
   const numbers = parseNumbers(spec.numbers)
-  const { spell, spellgroup } = spellItems(ctx, spells)
+  const icons = new Map<string, string>()
+  for (const r of reads) if (r.icon) icons.set(r.en, r.icon)
   const sentences = [...talks.flatMap((t) => [t.prompt, t.answer]), ...clozes.map((c) => c.text)]
   return {
     listen: listenItems(ctx, words),
@@ -497,20 +702,24 @@ export function unitItems(spec: UnitSpec, ctx: Ctx): Record<string, Item[]> {
     meaning: meaningItems(ctx, words),
     zh2en: zh2enItems(ctx, words),
     listenpic: listenPicItems(ctx, words),
-    spelling: spellingItems(ctx, words),
+    spelling: spellingItems(ctx, [...words.map((w) => w.en), ...reads.map((r) => r.en)]),
     lower: lowerItems(ctx, letters),
     upper: upperItems(ctx, letters),
     listenletter: listenLetterItems(ctx, letters),
     after: orderItems(ctx, letters, 'after'),
     before: orderItems(ctx, letters, 'before'),
-    sound: soundItems(ctx, sounds, letters),
-    spell,
-    spellgroup,
+    sound: soundItems(ctx, sounds, letters, icons),
+    decode: decodeItems(ctx, reads),
+    spell: spellItems(ctx, spells),
     talk: talkItems(ctx, talks),
     listensent: listenSentItems(ctx, sentences),
     cloze: clozeItems(ctx, clozes),
     ask: askItems(ctx, asks),
-    count: countItems(ctx, numbers, words.filter((w) => w.icon).map((w) => w.icon!)),
+    count: countItems(
+      ctx,
+      numbers,
+      words.filter((w) => w.icon).map((w) => w.icon!),
+    ),
     numword: numWordItems(ctx, numbers),
     num2word: num2WordItems(ctx, numbers),
   }
@@ -534,9 +743,8 @@ export function unitTexts(spec: UnitSpec): string[] {
 
 /** 一个知识点里的全部英文（测试查朗读、查课本词汇） */
 export function unitEnglish(spec: UnitSpec): string[] {
-  const out: string[] = unitWords(spec).map((w) => w.en)
+  const out: string[] = [...unitWords(spec).map((w) => w.en), ...unitReads(spec).map((r) => r.en)]
   for (const s of (spec.sounds ?? []).map(parseSound)) out.push(...s.words)
-  for (const s of (spec.spell ?? []).map(parseSpell)) out.push(...s.words, ...s.contrast)
   for (const t of (spec.talk ?? []).map(parseTalk)) out.push(t.prompt, t.answer, ...t.wrongs)
   for (const c of (spec.cloze ?? []).map(parseCloze)) out.push(c.text, c.answer, ...c.wrongs)
   for (const a of (spec.ask ?? []).map(parseAsk)) for (const s of [a.q, a.answer, ...a.wrongs]) if (!HAN.test(s) && !/^\d+$/.test(s)) out.push(s)

@@ -39,11 +39,14 @@ const textLen = computed(() =>
  * 正负号比数字宽，多算一个字符（「−20」按 4 个：打怪兽两人 125px 的栏里两列伸出 4px，2026-10-17 普查）
  */
 const numLen = computed(() => Math.max(0, ...props.choices.map((c) => plain(t(c.label))).filter((s) => /^[+\-−]?\d+(?:[.∶]\d+)*[%％]?$/.test(s)).map((s) => s.length + (/^[+\-−]/.test(s) ? 1 : 0))))
-/** 英语的选项（E6）：按最长一个的字符数定字号，10 个字符以上（句子）小一号、紧凑版排成一列 */
+/**
+ * 英语的选项（E6）：按最长一个的字符数定字号，10 个字符以上（句子）小一号；6 个字符以上算 wordy——对战紧凑版的作答栏只有
+ * 120–180px，两列时 seventeen、elephant 会被从单词中间折断（2026-10-25 普查），排成一列
+ */
 const enLen = computed(() => (props.choiceStyle === 'english' ? Math.max(0, ...props.choices.map((c) => t(c.label).length)) : 0))
 const enLong = computed(() => enLen.value >= 10)
 const enSentence = computed(() => enLen.value >= 18)
-const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8 || enLong.value)
+const wordy = computed(() => textLen.value >= 3 || numLen.value >= 8 || enLen.value >= 6)
 const num4 = computed(() => numLen.value >= 4)
 const num7 = computed(() => numLen.value >= 7)
 /** 拼音选项（看字选读音、多音字）最长的有 5 个字母以上（zhàng、chuǎng）：对战紧凑版栏窄时排一列（PlayerRow，同 num4）；py4 = 4 个以上，栏更窄时排一列 */
@@ -141,7 +144,8 @@ const digits10 = computed(() => numLen.value >= 10)
   font-size: 28px;
   letter-spacing: 0.02em;
   line-height: 1.3;
-  overflow-wrap: anywhere;
+  /* 句子在空格处换行，单词不从中间折断（放不下时才断） */
+  overflow-wrap: break-word;
 }
 .cards.as-english.en-long .card {
   font-size: 24px;

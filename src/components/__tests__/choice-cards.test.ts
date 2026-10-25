@@ -7,7 +7,7 @@ import ChoiceCards from '@/components/ui/ChoiceCards.vue'
 import type { Choice } from '@/types/models'
 
 const cards = (labels: string[]): Choice[] => labels.map((label, i) => ({ id: `c${i}`, label }))
-const classesOf = (labels: string[], choiceStyle?: 'pinyin'): { cls: string[]; numLen: string } => {
+const classesOf = (labels: string[], choiceStyle?: 'pinyin' | 'english'): { cls: string[]; numLen: string } => {
   const w = mount(ChoiceCards, { props: { choices: cards(labels), choiceStyle } })
   const el = w.find('.cards')
   const out = { cls: el.classes(), numLen: (el.element as HTMLElement).style.getPropertyValue('--num-len') }
@@ -25,6 +25,13 @@ describe('选项卡的长短档', () => {
     const long = classesOf(['105.0900', '105.09', '15.09', '1.0509'])
     expect(long.cls).toEqual(expect.arrayContaining(['num4', 'num7', 'digits', 'wordy']))
     expect(long.numLen).toBe('8')
+  })
+
+  it('英文选项 6 个字母以上算 wordy（对战紧凑版排一列，2026-10-25 普查：两列时 seventeen 被从单词中间折断）；短的单词两列照旧', () => {
+    expect(classesOf(['sixteen', 'seventeen', 'eighteen', 'nineteen'], 'english').cls).toContain('wordy')
+    expect(classesOf(['cat', 'dog', 'pen', 'bag'], 'english').cls).not.toContain('wordy')
+    const src = readFileSync('src/components/ui/ChoiceCards.vue', 'utf8')
+    expect(src).not.toMatch(/as-english[^}]*overflow-wrap: anywhere/)
   })
 
   it('带正负号的数多算一个字符（减号比数字宽）：「−20」按 4 个排一列', () => {
