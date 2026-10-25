@@ -4,7 +4,7 @@
 /**
  * 一个知识点（Part A / 字母与发音 / Part B / Revision）的材料。字段都是可选的，有什么出什么；mix 决定各档出哪些模板、各占多少：
  * 模板名见 makers.ts 的 unitItems（listen / pic / wordpic / meaning / zh2en / listenpic / spelling / digraph / upper / lower / listenletter /
- * after / before / sound / decode / spell / talk / cloze / listensent / ask / count / numword / num2word）。
+ * after / before / sound / decode / spell / past / comparative / talk / cloze / listensent / ask / count / numword / num2word）。
  * 每道题都要考到英语（E3）：中文问题配中文答案的问答不许写，数数要选英文数词。
  */
 export interface UnitSpec {
@@ -31,6 +31,13 @@ export interface UnitSpec {
    * 读音不一样的：ear 组的 bear、pear）；这些词也算拼读词。四上的辅音字母组合（ch sh th ph wh ck）还能出补全字母组合（digraph）
    */
   spell?: string[]
+  /**
+   * 过去式（六年级：新版六上「go（过去式 went）」、旧版六下「cleaned（clean 的过去式）」）：「go went|goes/going」= 原形 + 过去式 |
+   * 同一个词的别的形式（三单、-ing，2 个，用 / 分开，可省）。出「看原形选过去式」：干扰项是原形本身与这些形式，不够再拿本课别的词的过去式补
+   */
+  past?: string[]
+  /** 比较级（旧版六下「taller（tall 的比较级）」）：「tall taller|shorter/older」= 原形 + 比较级 | 干扰项（本课别的比较级，可省）；出「看原形选比较级」 */
+  comparative?: string[]
   /** 对话：「Hello! I'm Mike.=Hi! I'm Sarah.|Thank you./Goodbye.」= 一句话 + 合适的应答 | 不合适的应答（2–3 条，用 / 分开） */
   talk?: string[]
   /** 选词填空：「I [like] apples.|have/am」挖掉的词用 [ ] 括起来，| 后是干扰词（2–3 个，用 / 分开）；「\n」换行 */

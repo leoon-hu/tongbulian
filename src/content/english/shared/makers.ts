@@ -130,6 +130,10 @@ const HOMOPHONE_GROUPS: string[][] = [
   ['ring', 'wring'],
   ['morning', 'mourning'],
   ['flu', 'flew', 'flue'],
+  // 六年级（过去式）
+  ['made', 'maid'],
+  ['wore', 'war'],
+  ['saw', 'sore', 'soar'],
 ]
 /** 意思相同 / 相近的词：选意思、中文选单词、看图的题里不能同时做选项 */
 const SAME_MEANING: string[][] = [
@@ -158,6 +162,9 @@ const SAME_MEANING: string[][] = [
   ['kid', 'child'],
   ['hat', 'cap'],
   ['play', 'game'],
+  // 六年级：dress（穿衣服）和 wear（穿戴）、ago（以前）和 before（之前）
+  ['dress', 'wear'],
+  ['ago', 'before'],
 ]
 /**
  * 一个是另一个的一种、或者图上分不清的词（键是大类 / 图上那样东西，值是它包含的 / 长得像的）：
@@ -183,7 +190,7 @@ const RELATED: Readonly<Record<string, string[]>> = {
   // 洗手间里有厕所；滑梯 🛝 在公园里也有；灯和太阳都是「光」
   bathroom: ['toilet'],
   park: ['playground'],
-  light: ['sunny'],
+  light: ['sunny', 'lamp'],
   // 雪花 ❄️ 和雪人 ⛄、太阳 ☀️ 和太阳镜 🕶️ 放在一道题里容易选岔
   snowy: ['snowman'],
   sunny: ['sunglasses'],
@@ -192,6 +199,12 @@ const RELATED: Readonly<Record<string, string[]>> = {
   festival: ['labour day', 'christmas', 'thanksgiving', 'national day'],
   season: ['spring', 'summer', 'autumn', 'winter', 'fall'],
   exercise: ['play sports', 'sport', 'sports'],
+  // 六年级：饮料（drink）包括果汁、牛奶、茶、水
+  drink: ['juice', 'milk', 'tea', 'water', 'coke', 'coffee'],
+  run: ['race'],
+  // 地球、火星是行星；空间站也是人造卫星
+  planet: ['earth', 'mars'],
+  satellite: ['space station'],
   // nurse 当动词是「照顾」
   nurse: ['look after'],
   bear: ['panda', 'red panda'],
@@ -211,14 +224,35 @@ const RELATED: Readonly<Record<string, string[]>> = {
 }
 
 const norm = (s: string): string => s.toLowerCase()
-/** 词干：去掉 -ing（swimming → swim、doing → do）、复数 s（turns → turn）、词尾 e（dancing / dance → danc） */
+/**
+ * 课本里成对出现的词形 → 原形（六年级：不规则的过去式、比较级；规则的 -ed / -ing / -s 由 stem 去掉）：
+ * went / go 意思一样，taller 和 tall 放在一起「更高的 / 高的」也像两个都对
+ */
+const FORM_BASE: Readonly<Record<string, string>> = {
+  was: 'be', were: 'be', went: 'go', saw: 'see', ate: 'eat', took: 'take', ran: 'run', made: 'make', sang: 'sing', wore: 'wear',
+  woke: 'wake', began: 'begin', won: 'win', had: 'have', slept: 'sleep', drank: 'drink', rode: 'ride', bought: 'buy', fell: 'fall',
+  could: 'can', thought: 'think', felt: 'feel', got: 'get', came: 'come', did: 'do', gave: 'give', told: 'tell', wrote: 'write',
+  travelled: 'travel', better: 'good', younger: 'young', older: 'old', taller: 'tall', shorter: 'short', longer: 'long',
+  thinner: 'thin', heavier: 'heavy', bigger: 'big', smaller: 'small', stronger: 'strong', lower: 'low', smarter: 'smart', faster: 'fast',
+}
+/** 词干：词形表里的换成原形，再去掉 -ing（swimming → swim、doing → do）、-ed（watched → watch、stopped → stop）、复数 s（turns → turn）、词尾 e（dancing / dance → danc） */
 function stem(w: string): string {
-  let s = w
-  if (s.endsWith('ing') && /[aeiouy]/.test(s.slice(0, -3))) {
-    s = s.slice(0, -3)
+  let s = FORM_BASE[w] ?? w
+  const end = /(ing|ed)$/.exec(s)?.[1]
+  const rest = end ? s.slice(0, -end.length) : ''
+  // doing → do，但 thing、sing、need、seed 不拆（剩下的太短或没有元音）
+  if (end && rest.length >= (end === 'ing' ? 2 : 3) && /[aeiouy]/.test(rest)) {
+    s = rest
     if (/[^aeiou][aeiou]([bdgmnprt])\1$/.test(s)) s = s.slice(0, -1)
   } else if (s.length > 3 && s.endsWith('s') && !/(ss|us|is)$/.test(s)) s = s.slice(0, -1)
   return s.replace(/e$/, '')
+}
+/** 一个词可能的原形（查意思表用）：本身、词形表里的原形、去掉 -ed / -ing / -s 的（watched → watch，和 see / look 意思一样） */
+function bases(w: string): string[] {
+  const out = [w]
+  if (FORM_BASE[w]) out.push(FORM_BASE[w])
+  for (const end of ['ed', 'ing', 's']) if (w.endsWith(end) && w.length - end.length >= 2) out.push(w.slice(0, -end.length))
+  return out
 }
 /** 一个词（组）里的词全在另一个里：jump / jumping、eating / eat breakfast、turn / take turns、picnic / go on a picnic */
 function partOf(x: string, y: string): boolean {
@@ -244,9 +278,13 @@ export function soundsSame(a: string, b: string): boolean {
 export function meaningClash(a: string, b: string): boolean {
   const [x, y] = [norm(a), norm(b)]
   if (x === y || partOf(x, y)) return true
-  const i = MEANING_OF.get(x)
-  if (i !== undefined && i === MEANING_OF.get(y)) return true
-  return !!RELATED[x]?.includes(y) || !!RELATED[y]?.includes(x)
+  for (const p of bases(x))
+    for (const q of bases(y)) {
+      const i = MEANING_OF.get(p)
+      if (i !== undefined && i === MEANING_OF.get(q)) return true
+      if (RELATED[p]?.includes(q) || RELATED[q]?.includes(p)) return true
+    }
+  return false
 }
 
 /** 选项：正确项 + 干扰项（去掉与正确项或彼此重复的，最多凑到 max 个），打乱 */
@@ -379,6 +417,18 @@ export function parseCloze(s: string): ClozeItem {
   const wrongs = split(rest, /\//)
   if (!wrongs.length) throw new Error(`bad cloze item: ${s}`)
   return { text: sentence.replace(/[[\]]/g, ''), blank: [before.length, Array.from(answer).length], answer, wrongs }
+}
+export interface FormItem {
+  base: string
+  form: string
+  wrongs: string[]
+}
+/** 「go went|goes/going」= 原形 + 要考的形式（过去式、比较级）| 同一个词的别的形式 */
+export function parseForm(s: string): FormItem {
+  const [head, tail] = s.split('|')
+  const [base, form, ...rest] = split(head ?? '')
+  if (!base || !form || rest.length) throw new Error(`bad form item: ${s}`)
+  return { base, form, wrongs: split(tail ?? '', /\//) }
 }
 export interface AskItem {
   q: string
@@ -679,6 +729,24 @@ function spellItems(ctx: Ctx, spells: SpellItem[]): Item[] {
 
 // ── 对话与句子 ──────────────────────────────────────────────────────────
 
+// ── 词形（六年级的过去式、比较级） ─────────────────────────────────────────
+
+/**
+ * 看原形选它的过去式 / 比较级（原形读出来，选项不读）：干扰项是原形本身与材料给的同一个词的别的形式（goes、going），
+ * 不够再拿本课别的词的这种形式补（saw、ate）——都不是这个词的过去式，只有一个对的。read 的过去式还是 read（原形和答案一样的，原形不做干扰项）
+ */
+function formItems(ctx: Ctx, forms: FormItem[], kind: 'past' | 'comparative'): Item[] {
+  return forms.map((f) => ({
+    key: `${kind}-${f.base}`,
+    build: (d, rng) => {
+      const others = rng.shuffle(forms.filter((x) => x.base !== f.base).map((x) => x.form))
+      const wrongs = uniqBy([f.base, ...rng.shuffle(f.wrongs), ...others], (x) => x).filter((x) => x !== f.form)
+      const prompt = kind === 'past' ? 'eq.pastOf' : 'eq.comparativeOf'
+      return choiceQ(ctx, 'word', d, `${kind}-${f.base}`, [text(prompt), en(f.base, 'big')], enOpt(f.form), wrongs.slice(0, 3).map((x) => enOpt(x)), rng, 'english')
+    },
+  }))
+}
+
 function talkItems(ctx: Ctx, items: TalkItem[]): Item[] {
   return items.map((it) => ({
     key: `talk-${it.prompt}`,
@@ -838,6 +906,8 @@ export function unitItems(spec: UnitSpec, ctx: Ctx): Record<string, Item[]> {
     sound: soundItems(ctx, sounds, letters, icons),
     decode: decodeItems(ctx, reads),
     spell: spellItems(ctx, spells),
+    past: formItems(ctx, (spec.past ?? []).map(parseForm), 'past'),
+    comparative: formItems(ctx, (spec.comparative ?? []).map(parseForm), 'comparative'),
     talk: talkItems(ctx, talks),
     listensent: listenSentItems(ctx, sentences),
     cloze: clozeItems(ctx, clozes),
@@ -872,6 +942,7 @@ export function unitTexts(spec: UnitSpec): string[] {
 export function unitEnglish(spec: UnitSpec): string[] {
   const out: string[] = [...unitWords(spec).map((w) => w.en), ...unitReads(spec).map((r) => r.en)]
   for (const s of (spec.sounds ?? []).map(parseSound)) out.push(...s.words)
+  for (const f of [...(spec.past ?? []), ...(spec.comparative ?? [])].map(parseForm)) out.push(f.base, f.form, ...f.wrongs)
   for (const t of (spec.talk ?? []).map(parseTalk)) out.push(t.prompt, t.answer, ...t.wrongs)
   for (const c of (spec.cloze ?? []).map(parseCloze)) out.push(c.text, c.answer, ...c.wrongs)
   for (const a of (spec.ask ?? []).map(parseAsk)) for (const s of [a.q, a.answer, ...a.wrongs]) if (!HAN.test(s) && !/^\d+$/.test(s)) out.push(s)

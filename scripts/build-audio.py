@@ -345,6 +345,11 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         # 五年级英语的中文：单词意思「教」（teach）jiāo，「你应该睡够觉」jiào（合成语音常读成 jiào、jué）
         (re.compile(r"(?:^|(?<=正确答案是))教(?=用英语怎么说$|$)"), "交"),
         (re.compile(r"(?<=睡够)觉"), "较"),
+        # 六年级英语的中文：倒计时 dào、粘贴 zhān、绕着地球转 zhuàn；「供暖和降温」的和别和暖连成「暖和」nuǎn huo
+        (re.compile(r"倒(?=计时)"), "到"),
+        (re.compile(r"粘(?=贴)"), "沾"),
+        (re.compile(r"(?<=绕着)([^，。、]{1,3})转"), lambda m: m.group(1) + "赚"),  # type: ignore[list-item]
+        (re.compile(r"(?<=供暖)和(?=降温)"), "合"),
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
         # 五年级数学
@@ -418,6 +423,8 @@ def _letter_a_en(m: "re.Match[str]") -> str:
 SAY_AS["en"] = [
     # 四上英语「He's a PE teacher.」：PE 按字母读（不读成 pee）
     (re.compile(r"\bPE\b"), "P.E."),
+    # 六上英语「We can also use LED lighting.」：LED 按字母读
+    (re.compile(r"\bLED\b"), "L.E.D."),
     (re.compile(r"(?:(?<![\d.])(1) )?(?<![\w'’.])(mm|cm|dm|km|kg|m|g)\b"), _unit_en),  # type: ignore[list-item]
     # 时刻后面的 a.m.（四下英语「It's 7:10 a.m.」）不是冠词也不是字母，原样交给英文语音
     (re.compile(r"(?<![\w'’])a(?![\w'’]|\.m\.)"), _letter_a_en),  # type: ignore[list-item]

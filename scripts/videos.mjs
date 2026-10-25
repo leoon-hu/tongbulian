@@ -40,9 +40,11 @@ const BOOKS = {
   'english-g4': ['94cadb99-b206-4954-8dab-62505dd266ca', '4901535c-9ae2-458e-bc0e-e5ed3f7a081d'],
   // 五上「新教材-…（PEP）（三年级起点）…五年级上册」（2026-10 只有 Unit 1 挂了课）；五下的电子课本平台上还是旧版，同步课就是旧版五下那一本
   'english-g5': ['0ffbaa49-0a7e-400e-b83d-e8bb49b65187', 'f76bb763-3652-46b0-8674-0d4e529ecc55'],
+  // 六上「新教材-…（PEP）（三年级起点）（主编：吴欣）六年级上册」；六下的电子课本平台上还是旧版，同步课就是旧版六下那一本
+  'english-g6': ['291dc803-4454-4374-8f31-29d7755efcd2', '638a0cc9-69a5-4369-8472-69148c719583'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -93,6 +95,7 @@ const OLD_CHINESE = {
 }
 /** 英语旧教材（2014 版 PEP）：新教材这一单元还没有同步课的，用旧版里讲同一件事的单元（五上只有 Unit 1 挂了课） */
 const OLD_EN_G5S1 = '755ed193-6bd9-b5a4-7022-df5ccfd38a1f' // 小学英语人教版（PEP）（三年级起点）五年级上册（旧，只有精品课）
+const OLD_EN_G6S1 = '3dd0836b-749b-fe34-588c-29e553010f49' // 小学英语人教版（PEP）（三年级起点）（主编：吴欣）六年级上册（旧）
 const OLD_ENGLISH = {
   'e5s1-03-a': [OLD_EN_G5S1, 'Unit 2 My week>A', '旧教材五年级上册'], // 新教材 Work and play：星期几、周末
   'e5s1-03-spell': [OLD_EN_G5S1, 'Unit 2 My week>A', '旧教材五年级上册'],
@@ -103,6 +106,9 @@ const OLD_ENGLISH = {
   'e5s1-06-a': [OLD_EN_G5S1, 'Unit 6 In a nature park>A', '旧教材五年级上册'], // 新教材 Nature and us
   'e5s1-06-spell': [OLD_EN_G5S1, 'Unit 6 In a nature park>A', '旧教材五年级上册'],
   'e5s1-06-b': [OLD_EN_G5S1, 'Unit 6 In a nature park>B', '旧教材五年级上册'],
+  // 六上新教材 Unit 3 Healthy life（生病、怎么让自己好起来）≈ 旧版六上 Unit 6 How do you feel?；别的单元旧版里没有对得上的
+  'e6s1-03-a': [OLD_EN_G6S1, 'Unit 6 How do you feel?>A', '旧教材六年级上册'],
+  'e6s1-03-b': [OLD_EN_G6S1, 'Unit 6 How do you feel?>B', '旧教材六年级上册'],
 }
 const OLD_MATH = {
   'm4s1-02-yi': [OLD_MATH_G4S1, '1亿有多大'],

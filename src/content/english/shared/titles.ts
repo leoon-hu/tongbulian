@@ -10,7 +10,7 @@ const EN_BY_KIND: Record<string, (n: number, unit: Unit) => string> = {
   spell: (n) => `Unit ${n} Let's spell`,
   b: (n) => `Unit ${n} Part B: Talk and words`,
   revision: () => 'Revision',
-  // 旧版课本（五下）的复习单元：Recycle 1、Recycle 2
+  // 旧版课本的复习单元：五下的 Recycle 1、Recycle 2，六下的「Recycle: Mike's happy days」
   recycle: (_n, unit) => unit.title,
 }
 /** 中文标题里汉字的拼音（Unit、A、B、Recycle 这些英文不占位） */

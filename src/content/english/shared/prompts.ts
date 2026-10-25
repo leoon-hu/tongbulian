@@ -14,6 +14,9 @@ const ZH: Dict = {
   'eq.listenPic': '听一听，选出对应的图。',
   'eq.spelling': '听一听，这个单词缺了哪个字母？',
   'eq.digraph': '听一听，这个单词缺了哪两个字母？',
+  // 词形（六年级）
+  'eq.pastOf': '这个词的过去式是哪一个？',
+  'eq.comparativeOf': '这个词的比较级是哪一个？',
   // 字母与发音
   'eq.lower': '这个大写字母的小写是哪一个？',
   'eq.upper': '这个小写字母的大写是哪一个？',
@@ -42,6 +45,8 @@ const EN: Dict = {
   'eq.listenPic': 'Listen. Which picture is it?',
   'eq.spelling': 'Listen. Which letter is missing?',
   'eq.digraph': 'Listen. Which two letters are missing?',
+  'eq.pastOf': 'Which is the past tense of this word?',
+  'eq.comparativeOf': 'Which is the comparative of this word?',
   'eq.lower': 'Which is the small letter for this capital?',
   'eq.upper': 'Which is the capital for this small letter?',
   'eq.listenLetter': 'Listen. Which letter did you hear?',
@@ -67,6 +72,8 @@ export const PINYIN: Record<string, string> = {
   'eq.listenPic': 'tīng yi tīng xuǎn chū duì yìng de tú',
   'eq.spelling': 'tīng yi tīng zhè ge dān cí quē le nǎ ge zì mǔ',
   'eq.digraph': 'tīng yi tīng zhè ge dān cí quē le nǎ liǎng ge zì mǔ',
+  'eq.pastOf': 'zhè ge cí de guò qù shì shì nǎ yí gè',
+  'eq.comparativeOf': 'zhè ge cí de bǐ jiào jí shì nǎ yí gè',
   'eq.lower': 'zhè ge dà xiě zì mǔ de xiǎo xiě shì nǎ yí gè',
   'eq.upper': 'zhè ge xiǎo xiě zì mǔ de dà xiě shì nǎ yí gè',
   'eq.listenLetter': 'tīng yi tīng xuǎn chū nǐ tīng dào de zì mǔ',

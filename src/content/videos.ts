@@ -602,6 +602,17 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'e5s2-07-spell': 'a6468d64-fe75-4fb6-b710-7c80195d71f8', // A
   'e5s2-07-b': '15b803dc-811b-4a13-9395-60e03e6307b4', // B
   'e5s2-08-recycle': 'e09d152c-61be-496f-bf39-c3d77c01a511', // Recycle 2
+  'e6s1-01-a': 'e2cb507a-3f87-b027-e1f8-dd6230a783f4', // Part A What famous places do you know?
+  'e6s1-01-b': 'ae83a870-b92a-4053-803e-e7012afe5f81', // Part B What makes a trip special?
+  'e6s2-01-a': 'cf0f9705-73b1-4b15-bc17-ef96a8d560d8', // A
+  'e6s2-01-b': 'ad22ca71-507f-4430-a7d0-cc4fdbf4dbf3', // B
+  'e6s2-02-a': '8be3921d-5046-4c6e-9195-44ecf1e4972c', // A
+  'e6s2-02-b': '7ec0f9b1-cd69-44a2-86b5-e6c426b4f527', // B
+  'e6s2-03-a': '9d2ad003-3fcc-445b-b81e-7186b9d4c9a3', // A
+  'e6s2-03-b': 'f05c2e90-c2b0-4594-8c98-1e1c8a32b70d', // B
+  'e6s2-04-a': 'e9b1c933-47b5-4e3a-a681-c7ecf20980e2', // A
+  'e6s2-04-b': '299a29c5-f8c8-45ac-85cf-2fce9a81c08b', // B
+  'e6s2-05-recycle': '93d571b3-5a73-4257-bbae-c89accfa0635', // Recycle Mike's happy days
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -806,6 +817,8 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'e5s1-06-a': { id: '8ae7e49c-7c95-1b9f-017c-95dbe0850031', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · A（精品课）
   'e5s1-06-spell': { id: '8ae7e49c-7c95-1b9f-017c-95dbe0850031', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · A（精品课）
   'e5s1-06-b': { id: '8ae7e493-7c66-c09b-017c-6a99048307c8', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · B（精品课）
+  'e6s1-03-a': { id: '8ae7e498-8422-f8a8-0184-2bdeb971023c', from: 'old-elite' }, // 旧教材六年级上册 · Unit 6 How do you feel? · A（精品课）
+  'e6s1-03-b': { id: '8ae7e48e-8422-f88c-0184-26eda1730171', from: 'old-elite' }, // 旧教材六年级上册 · Unit 6 How do you feel? · B（精品课）
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

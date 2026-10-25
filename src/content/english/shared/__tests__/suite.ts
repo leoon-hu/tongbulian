@@ -9,7 +9,7 @@ import { PAUSE, answerSpeech, questionSpeech, tokenVoice } from '@/engine/speech
 import type { EnglishPack } from '@/content/english/shared/pack'
 import type { UnitSpec } from '@/content/english/shared/spec'
 import { PINYIN } from '@/content/english/shared/prompts'
-import { LETTER_GROUPS, NUM_WORDS, hasPattern, meaningClash, parseCloze, parseRead, parseSpell, parseTalk, parseWord, rudeWord, sentenceOverlap, soundsSame, syllables, unitEnglish, unitReads, unitTexts, unitWords } from '@/content/english/shared/makers'
+import { LETTER_GROUPS, NUM_WORDS, hasPattern, meaningClash, parseCloze, parseForm, parseRead, parseSpell, parseTalk, parseWord, rudeWord, sentenceOverlap, soundsSame, syllables, unitEnglish, unitReads, unitTexts, unitWords } from '@/content/english/shared/makers'
 import type { WordItem } from '@/content/english/shared/makers'
 
 /** 书后单词表：册 → 单元 → 词 */
@@ -28,22 +28,24 @@ export interface EnglishGrade {
   /** 书后单词表的黑体词 / 白体词 */
   bold: WordList
   white: WordList
-  /** 每个单元中间那个知识点（三上 letters，其余 spell） */
-  middle: (sem: 1 | 2) => 'letters' | 'spell'
+  /** 每个单元中间那个知识点（三上 letters，其余 spell；六年级的课本没有拼读课，null = 每个单元只有 A、B） */
+  middle: (sem: 1 | 2) => 'letters' | 'spell' | null
   /** Revision 能单独考的词（两册的黑体词，四年级起还有前面年级的） */
   revisionWords: ReadonlySet<string>
   /** 拼读组的对比词里字母一样、读音不一样的（ear 组的 bear / wear / pear） */
   otherSound?: Readonly<Record<string, readonly string[]>>
   /** 全年级词池至少多少个词 */
   minPool: number
-  /** 每册几个单元、几个知识点（默认 7 / 19：6 个单元 + Revision；旧版五下 8 / 20：6 个单元 + 两个 Recycle） */
-  layout?: Partial<Record<1 | 2, { units: number; kps: number }>>
+  /** 每册几个单元（含复习单元）、几个知识点、几个编号的单元（默认 7 / 19 / 6：6 个单元 + Revision；旧版五下 8 / 20 / 6：两个 Recycle；旧版六下 5 / 9 / 4） */
+  layout?: Partial<Record<1 | 2, { units: number; kps: number; numbered?: number }>>
   /** 白体词也能单独考的册（旧版课本：白体词「只作听、说、认读要求」，五下） */
   whiteTestable?: Partial<Record<1 | 2, boolean>>
 }
 
 /** 复习单元的知识点：新版的 Revision、旧版的 Recycle */
 const isReview = (kind: string): boolean => kind === 'revision' || kind === 'recycle'
+/** 一个知识点的词形题（六年级的过去式、比较级） */
+const formsOf = (spec: UnitSpec) => [...(spec.past ?? []), ...(spec.comparative ?? [])].map(parseForm)
 
 const zh = (l: LStr): string => translate(l, 'zh')
 export const maker = (q: Question): string => q.id.split(':')[1]!.split('-')[0]!
@@ -69,11 +71,11 @@ export function generatorSuite(g: EnglishGrade): Map<string, Question[]> {
   const id = `e${g.grade}s`
 
   describe('目录与材料', () => {
-    it('每册 6 个单元加复习单元（Revision / 旧版的 Recycle）；每个单元三个知识点；每个知识点一份材料、一个生成器', () => {
+    it('每册 6 个单元（旧版六下 4 个）加复习单元（Revision / 旧版的 Recycle）；每个单元三个知识点（六年级两个）；每个知识点一份材料、一个生成器', () => {
       for (const sem of [1, 2] as const) {
-        const { units, kps } = g.layout?.[sem] ?? { units: 7, kps: 19 }
+        const { units, kps, numbered = 6 } = g.layout?.[sem] ?? { units: 7, kps: 19 }
         expect(g.units.filter((u) => u.semester === sem), `第 ${sem} 册`).toHaveLength(units)
-        expect(g.units.filter((u) => u.semester === sem && u.numbered !== false), `第 ${sem} 册`).toHaveLength(6)
+        expect(g.units.filter((u) => u.semester === sem && u.numbered !== false), `第 ${sem} 册`).toHaveLength(numbered)
         expect(g.kps.filter((kp) => kp.id.startsWith(`${id}${sem}-`)), `第 ${sem} 册`).toHaveLength(kps)
       }
       expect(new Set(g.kps.map((kp) => kp.id)).size).toBe(g.kps.length)
@@ -84,7 +86,10 @@ export function generatorSuite(g: EnglishGrade): Map<string, Question[]> {
         if (u.numbered === false) {
           expect(kinds, u.id).toHaveLength(1)
           expect(isReview(kinds[0]!), u.id).toBe(true)
-        } else expect(kinds, u.id).toEqual(['a', g.middle(u.semester), 'b'])
+        } else {
+          const middle = g.middle(u.semester as 1 | 2)
+          expect(kinds, u.id).toEqual(middle ? ['a', middle, 'b'] : ['a', 'b'])
+        }
       }
     })
 
@@ -119,6 +124,10 @@ export function generatorSuite(g: EnglishGrade): Map<string, Question[]> {
         for (const s of spec.cloze ?? []) {
           const it = parseCloze(s)
           expect(it.wrongs, `${spec.kp} ${s}`).not.toContain(it.answer)
+        }
+        for (const f of formsOf(spec)) {
+          expect(f.form, `${spec.kp} ${f.base}`).not.toBe('')
+          expect(f.wrongs, `${spec.kp} ${f.base}`).not.toContain(f.form)
         }
         for (const s of unitEnglish(spec)) expect(s, spec.kp).toMatch(ENGLISH)
         for (const w of (spec.numbers ?? '').split(/\s+/).filter(Boolean)) expect(NUM_WORDS[w], `${spec.kp} ${w}`).toBeDefined()
@@ -223,11 +232,13 @@ export function generatorSuite(g: EnglishGrade): Map<string, Question[]> {
         }
         const allowed = isReview(kind) ? g.revisionWords : bold
         for (const w of words) expect(allowed.has(w), `${spec.kp} 的 ${w} 不是本单元的黑体词`).toBe(true)
+        // 词形题（六年级）：原形或要考的形式是这一部分的黑体词（went、climb → climbed）
+        for (const f of formsOf(spec)) expect(allowed.has(f.form) || allowed.has(f.base), `${spec.kp} 的词形 ${f.base} → ${f.form} 不是本单元的黑体词`).toBe(true)
       }
       // 每个单元的黑体词都考到（带「...」的词组「have ... class」只在句子里出现）
       for (const u of g.units.filter((x) => x.numbered !== false)) {
         const unitKps = g.kps.filter((k) => k.unitId === u.id && !isReview(kindOf(k.id)))
-        const taught = new Set(unitKps.flatMap((k) => unitWords(specOf(k.id)).map((w) => w.en)))
+        const taught = new Set(unitKps.flatMap((k) => [...unitWords(specOf(k.id)).map((w) => w.en), ...formsOf(specOf(k.id)).flatMap((f) => [f.base, f.form])]))
         for (const w of g.bold[u.semester as 1 | 2][u.order] ?? []) if (!w.includes('...')) expect(taught.has(w), `${u.id} 没考黑体词 ${w}`).toBe(true)
       }
       // 拼读词不进全年级的词池（不然会被当成别的题的干扰项、显示出意思）——除非它本来就是黑体词
@@ -322,6 +333,8 @@ export function generatorSuite(g: EnglishGrade): Map<string, Question[]> {
       expect(meaningClash('doing morning exercises', 'do morning exercises')).toBe(true)
       expect(meaningClash('eat breakfast', 'eat dinner')).toBe(false)
       expect(meaningClash('first', 'twenty-first')).toBe(false)
+      expect([meaningClash('went', 'go'), meaningClash('watched', 'saw'), meaningClash('taller', 'tall'), meaningClash('went camping', 'go')]).toEqual([true, true, true, true])
+      expect([meaningClash('thing', 'think'), meaningClash('need', 'ne'), meaningClash('taller', 'shorter')]).toEqual([false, false, false])
     })
 
     it('全年级一个图只给一个词（看图题不会有两个都对）；同一个图的两个词只能是不会同时做选项的（girl / sister 👧）', () => {
@@ -389,6 +402,15 @@ export function generatorSuite(g: EnglishGrade): Map<string, Question[]> {
         expect(Array.from(e.text).slice(e.blank![0], e.blank![0] + e.blank![1]).join(''), q.id).toBe(label(q))
         expect(LETTER_GROUPS, q.id).toContain(label(q))
         for (const c of q.choices!) expect(LETTER_GROUPS, q.id).toContain(zh(c.label))
+      }
+    })
+
+    it('词形：看原形选过去式 / 比较级，答案是材料里这个词的那个形式，别的选项都不是', () => {
+      for (const q of [...by('past'), ...by('comparative')]) {
+        const base = part(q, 'english')!.text
+        const it = formsOf(specOf(q.kpId)).find((f) => f.base === base)!
+        expect(label(q), q.id).toBe(it.form)
+        expect(q.choices!.filter((c) => zh(c.label) === it.form), q.id).toHaveLength(1)
       }
     })
 

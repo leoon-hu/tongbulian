@@ -33,6 +33,7 @@ import { KP_SEO as SEO_C6 } from '@/content/chinese/grade6/seo'
 import { KP_SEO as SEO_E3 } from '@/content/english/grade3/seo'
 import { KP_SEO as SEO_E4 } from '@/content/english/grade4/seo'
 import { KP_SEO as SEO_E5 } from '@/content/english/grade5/seo'
+import { KP_SEO as SEO_E6 } from '@/content/english/grade6/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
@@ -47,9 +48,10 @@ import '@/content/chinese/grade6'
 import '@/content/english/grade3'
 import '@/content/english/grade4'
 import '@/content/english/grade5'
+import '@/content/english/grade6'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5, ...SEO_E6 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -1377,6 +1379,9 @@ export function homeBody(): string {
   const m = homeMeta()
   const lcs = liveCourses()
   const soon = SUBJECTS.filter((s) => s.status !== 'live').map((s) => zh(s.title))
+  // 还在做的：没上线的学科，或上线的学科里还有「敬请期待」的年级（带说明的占位卡不算：英语一、二年级本来不设）；都做完了就不写
+  const pending = soon.length > 0 || SUBJECTS.some((s) => s.grades.some((g) => g.status !== 'live' && !g.note))
+  const soonLine = soon.length ? `其它年级和${soon.join('、')}陆续补充。` : pending ? '其它年级陆续补充。' : ''
   const sections = lcs
     .map((lc) => {
       const kps = liveKps(lc.course)
@@ -1390,13 +1395,13 @@ export function homeBody(): string {
         <img src="./icon-512.png" alt="${SITE_NAME}" width="72" height="72" />
         <h1>${SITE_NAME} · ${SITE_TAGLINE}</h1>
         <p>
-          儿童互动对战学习：${SITE_PITCH}——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出，现在有${esc(m.summary)}，其它年级与学科陆续补充；练的是课本，玩的是游戏。题目标拼音、每道题自动朗读，识字不多的孩子也能自己玩；数学题答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示，语文按课出识字、拼音、课文填空与古诗，要认的字不标拼音。免费、无广告、不用注册，可以添加到主屏幕像 App 一样全屏打开。现在${esc(m.summary)}共 ${m.kpCount} 个知识点可对战、可练。
+          儿童互动对战学习：${SITE_PITCH}——答对一题，小乌龟就往前跑一格、火箭升高一段、楼再盖一层。题目按现行人教版教材（2022 版课标新教材）的单元随机出，现在有${esc(m.summary)}${pending ? '，其它年级与学科陆续补充' : ''}；练的是课本，玩的是游戏。题目标拼音、每道题自动朗读，识字不多的孩子也能自己玩；数学题答错当场用十格阵、钟面、人民币、尺子、竖式等教具演示，语文按课出识字、拼音、课文填空与古诗，要认的字不标拼音。免费、无广告、不用注册，可以添加到主屏幕像 App 一样全屏打开。现在${esc(m.summary)}共 ${m.kpCount} 个知识点可对战、可练。
         </p>
         <h2>对战怎么玩</h2>
         <p>同一个知识点的课本题，红队和蓝队各答各的，谁先答对 8 题谁赢：可以打机器人（三档速度），可以两个人一台平板左右分屏，也可以每人一台设备扫码进同一个房间（两队各最多 6 人，还能观战）；每答对一题，${SKINS.length} 种实时绘图的游戏画面就走一步（${esc(SKINS.map((s) => zh({ k: `skin.${s.id}` })).join('、'))}），开局先讲一句规则，得分有音效和语音提示。不想比的时候，直接点知识点就是一份安静的同步练习：一轮 8 题，做完打勾。</p>
 ${sections}
-        <p>其它年级和${esc(soon.join('、'))}陆续补充。</p>
-        <p><a href="./${HELP_PATH}">帮助与说明：对战玩法、规则、技巧、学习内容、常见问题 →</a></p>
+${soonLine ? `        <p>${esc(soonLine)}</p>
+` : ''}        <p><a href="./${HELP_PATH}">帮助与说明：对战玩法、规则、技巧、学习内容、常见问题 →</a></p>
         <p>${openSourceLine()}</p>
         <p>${sisterLinks()}</p>
         ${contactBlock('./')}
