@@ -3,7 +3,7 @@
 
 /**
  * 一个知识点（Part A / 字母与发音 / Part B / Revision）的材料。字段都是可选的，有什么出什么；mix 决定各档出哪些模板、各占多少：
- * 模板名见 makers.ts 的 unitItems（listen / pic / wordpic / meaning / zh2en / listenpic / spelling / upper / lower / listenletter /
+ * 模板名见 makers.ts 的 unitItems（listen / pic / wordpic / meaning / zh2en / listenpic / spelling / digraph / upper / lower / listenletter /
  * after / before / sound / decode / spell / talk / cloze / listensent / ask / count / numword / num2word）。
  * 每道题都要考到英语（E3）：中文问题配中文答案的问答不许写，数数要选英文数词。
  */
@@ -26,7 +26,10 @@ export interface UnitSpec {
   letters?: string
   /** 字母的发音例词（三上 Letters and sounds）：「a apple bag」= 字母 + 课本里的例词（以这个字母开头的用于「听音选首字母」） */
   sounds?: string[]
-  /** 拼读（三下 Let's spell）：「a-e cake name make|cat hat」= 字母组合 + 含它的词 | 对比词（不含它的）；这些词也算拼读词 */
+  /**
+   * 拼读（三下、四上、四下 Let's spell）：「a-e cake name make|cat hat」= 字母组合 + 含它的词 | 对比词（不含它的，或者字母一样、
+   * 读音不一样的：ear 组的 bear、pear）；这些词也算拼读词。四上的辅音字母组合（ch sh th ph wh ck）还能出补全字母组合（digraph）
+   */
   spell?: string[]
   /** 对话：「Hello! I'm Mike.=Hi! I'm Sarah.|Thank you./Goodbye.」= 一句话 + 合适的应答 | 不合适的应答（2–3 条，用 / 分开） */
   talk?: string[]

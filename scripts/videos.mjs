@@ -35,11 +35,14 @@ const BOOKS = {
   'chinese-g5': ['fb0308d9-2e7f-480b-8723-f48852bb2f28', '117306e1-40c4-4106-bebb-b01a34927951'],
   // 六上「新教材-小学语文统编版六年级上册」；六下的电子课本平台上还是旧版，同步课就是旧版六下那一本（「小学语文统编版六年级下册」）
   'chinese-g6': ['cec38514-a1b4-40ff-b7bb-e443b56a1dbd', '46fcb680-0486-4d3c-8d25-073bdf922c8e'],
-  // 英语：新教材-小学英语人教版（PEP）（主编：吴欣）三年级上册 / 下册（新教材都有，不用旧教材兜底）
+  // 英语：新教材-小学英语人教版（PEP）（主编：吴欣）三年级 / 四年级上册、下册（新教材都有，不用旧教材兜底）
   'english-g3': ['8dabed50-6eed-40dd-8bea-c70f0718114d', 'cb26c613-b227-41c1-bd10-1e2022e46387'],
+  'english-g4': ['94cadb99-b206-4954-8dab-62505dd266ca', '4901535c-9ae2-458e-bc0e-e5ed3f7a081d'],
+  // 五上「新教材-…（PEP）（三年级起点）…五年级上册」（2026-10 只有 Unit 1 挂了课）；五下的电子课本平台上还是旧版，同步课就是旧版五下那一本
+  'english-g5': ['0ffbaa49-0a7e-400e-b83d-e8bb49b65187', 'f76bb763-3652-46b0-8674-0d4e529ecc55'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -87,6 +90,19 @@ const OLD_CHINESE = {
   'c6s1-06-gushi': [OLD_CN_G6S1, '第六单元>古诗三首', '旧教材六年级上册'], // 浪淘沙（其一）、江南春、书湖阴先生壁（同步课挂在书湖阴先生壁下面）
   'c6s1-07-wenyan': [OLD_CN_G6S2, '文言文二则>两小儿辩日', '旧教材六年级下册'], // 新教材是两小儿辩日、曹冲称象；旧版六下是学弈、两小儿辩日，同步课挂在两小儿辩日下面
   'c6s1-07-garden': [OLD_CN_G6S2, '第五单元>语文园地', '旧教材六年级下册'], // 新教材第七单元的表里的生物、他们那时候多有趣啊、习作在旧版六下第五单元
+}
+/** 英语旧教材（2014 版 PEP）：新教材这一单元还没有同步课的，用旧版里讲同一件事的单元（五上只有 Unit 1 挂了课） */
+const OLD_EN_G5S1 = '755ed193-6bd9-b5a4-7022-df5ccfd38a1f' // 小学英语人教版（PEP）（三年级起点）五年级上册（旧，只有精品课）
+const OLD_ENGLISH = {
+  'e5s1-03-a': [OLD_EN_G5S1, 'Unit 2 My week>A', '旧教材五年级上册'], // 新教材 Work and play：星期几、周末
+  'e5s1-03-spell': [OLD_EN_G5S1, 'Unit 2 My week>A', '旧教材五年级上册'],
+  'e5s1-03-b': [OLD_EN_G5S1, 'Unit 2 My week>B', '旧教材五年级上册'],
+  'e5s1-05-a': [OLD_EN_G5S1, 'Unit 3 What would you like?>A', '旧教材五年级上册'], // 新教材 Food we eat
+  'e5s1-05-spell': [OLD_EN_G5S1, 'Unit 3 What would you like?>A', '旧教材五年级上册'],
+  'e5s1-05-b': [OLD_EN_G5S1, 'Unit 3 What would you like?>B', '旧教材五年级上册'],
+  'e5s1-06-a': [OLD_EN_G5S1, 'Unit 6 In a nature park>A', '旧教材五年级上册'], // 新教材 Nature and us
+  'e5s1-06-spell': [OLD_EN_G5S1, 'Unit 6 In a nature park>A', '旧教材五年级上册'],
+  'e5s1-06-b': [OLD_EN_G5S1, 'Unit 6 In a nature park>B', '旧教材五年级上册'],
 }
 const OLD_MATH = {
   'm4s1-02-yi': [OLD_MATH_G4S1, '1亿有多大'],
@@ -555,11 +571,11 @@ async function loadBook(tm) {
    * 章节（含它下面的子章节）里某类视频（同步课 / 精品课）的第 1 个：按第几课时，再按上线时间。语文园地只要视频标题里有
    * 「园地」的——园地上还挂着口语交际、复习课、课外阅读这类课时（三上旧教材第八单元的园地上只有「第5—8单元复习活动课」）
    */
-  const first = (node, type) => {
+  const first = (node, type, nameOk = () => true) => {
     const garden = isGarden(node)
     // own：只看这一节自己挂的课（MATH 里末尾带「!」的，见 mathNode）
     const ids = node.own ? [node.id] : [node.id, ...nodes.filter((x) => x.parents.some((p) => p.id === node.id)).map((x) => x.id)]
-    const all = ids.flatMap((id) => byChapter.get(id) ?? []).filter((v) => v.type === type && (!garden || v.name.includes('园地')))
+    const all = ids.flatMap((id) => byChapter.get(id) ?? []).filter((v) => v.type === type && (!garden || v.name.includes('园地')) && nameOk(v.name))
     all.sort((a, b) => a.hour - b.hour || a.time.localeCompare(b.time))
     return all[0]?.id
   }
@@ -673,14 +689,29 @@ function oldNode(newBooks, newNode, oldBooks, title) {
  */
 function englishNode(book, unitOf, kpId) {
   const kind = kpId.split('-').at(-1)
+  // 不编号的复习单元按单元名的开头找：新版「Revision: …」、旧版「Recycle 1」「Recycle 2」
+  const review = unitOf.title.split(':')[0].trim().toLowerCase()
   const unit =
     unitOf.numbered === false
-      ? book.tree.find((n) => /^Revision/i.test(n.title.trim()))
+      ? book.tree.find((n) => n.title.trim().replace(/\s+/g, ' ').toLowerCase().startsWith(review))
       : book.tree.find((n) => new RegExp(`^Unit\\s*${unitOf.order}\\b`, 'i').test(n.title.trim()))
   if (!unit) return undefined
-  if (kind === 'revision') return book.nodes.find((n) => n.id === unit.id)
+  if (kind === 'revision' || kind === 'recycle') return book.nodes.find((n) => n.id === unit.id)
   const part = kind === 'b' ? 'B' : 'A'
-  return book.nodes.find((n) => n.parents.some((p) => p.id === unit.id) && new RegExp(`^Part\\s*${part}\\b`, 'i').test(n.title.trim()))
+  // 新版的小节叫「Part A …」，旧版（五下）就叫「A」
+  return book.nodes.find((n) => n.parents.some((p) => p.id === unit.id) && new RegExp(`^(Part\\s*)?${part}\\b`, 'i').test(n.title.trim()))
+}
+
+/**
+ * 英语这一部分（Part A / B）自己没挂课时的，看单元上挂的课时里标题写着这一部分的（四下 Unit 2、3 的同步课挂在单元上：
+ * 「Unit 2 Family rules Part A（第一课时）」）
+ */
+function englishUnitLesson(book, node, type) {
+  const m = /^Part\s*([AB])\b/i.exec(node?.title.trim() ?? '')
+  const unit = node?.parents.at(-1)
+  if (!m || !unit) return undefined
+  // 课时名去掉了空格（lessonName）：「Unit2FamilyrulesPartA」
+  return book.first(book.nodes.find((n) => n.id === unit.id), type, (name) => new RegExp(`Part${m[1]}(?![A-Za-z])`, 'i').test(name))
 }
 
 const SEM = ['上册', '下册']
@@ -692,7 +723,7 @@ async function fallbackOf(course, books, unit, node, kp) {
   const elite = node && books[unit.semester - 1].first(node, ELITE)
   const edition = OLD_VOLUMES.has(`${course.id}:${unit.semester}`) ? '' : '新教材'
   if (elite) return { id: elite, from: 'elite', note: `${edition}${grade}${SEM[unit.semester - 1]} · ${pathOf(node)}（精品课）` }
-  const manual = OLD_MATH[kp.id] ?? OLD_CHINESE[kp.id]
+  const manual = OLD_MATH[kp.id] ?? OLD_CHINESE[kp.id] ?? OLD_ENGLISH[kp.id]
   if (manual) {
     const [tm, chapter, book = '旧教材'] = manual
     if (!oldCache.has(tm)) oldCache.set(tm, loadBook(tm))
@@ -743,7 +774,7 @@ try {
       } else {
         node = chineseNode(book, unit, kp.title)
       }
-      const lesson = node && book.first(node, NATIONAL)
+      const lesson = (node && book.first(node, NATIONAL)) || (course.subjectId === 'english' && englishUnitLesson(book, node, NATIONAL))
       if (lesson) {
         out.push(`  '${kp.id}': '${lesson}', // ${node.title.replace(/\s+/g, ' ').trim()}`)
         continue

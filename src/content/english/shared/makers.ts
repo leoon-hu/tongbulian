@@ -112,6 +112,24 @@ const HOMOPHONE_GROUPS: string[][] = [
   ['wait', 'weight'],
   ['our', 'hour'],
   ['road', 'rode'],
+  // 四年级（拼读课的 wh / ur / or / air / ear 组、各单元的词）
+  ['which', 'witch'],
+  ['whose', "who's"],
+  ['what', 'watt'],
+  ['fur', 'fir'],
+  ['turn', 'tern'],
+  ['horse', 'hoarse'],
+  ['fair', 'fare'],
+  ['read', 'reed'],
+  // 五年级（拼读课 ai / ay、ee / ea、ie / igh、oa / ow、al / au / aw，旧版五下的 ng）
+  ['tea', 'tee'],
+  ['rain', 'rein', 'reign'],
+  ['way', 'weigh', 'whey'],
+  ['tie', 'thai'],
+  ['all', 'awl'],
+  ['ring', 'wring'],
+  ['morning', 'mourning'],
+  ['flu', 'flew', 'flue'],
 ]
 /** 意思相同 / 相近的词：选意思、中文选单词、看图的题里不能同时做选项 */
 const SAME_MEANING: string[][] = [
@@ -138,6 +156,8 @@ const SAME_MEANING: string[][] = [
   ['hi', 'hello'],
   ['bye', 'goodbye'],
   ['kid', 'child'],
+  ['hat', 'cap'],
+  ['play', 'game'],
 ]
 /**
  * 一个是另一个的一种、或者图上分不清的词（键是大类 / 图上那样东西，值是它包含的 / 长得像的）：
@@ -145,14 +165,35 @@ const SAME_MEANING: string[][] = [
  */
 const RELATED: Readonly<Record<string, string[]>> = {
   fruit: ['apple', 'banana', 'orange', 'grape', 'pear', 'peach', 'watermelon', 'strawberry'],
-  animal: ['dog', 'cat', 'fish', 'bird', 'rabbit', 'panda', 'monkey', 'tiger', 'elephant', 'lion', 'bear', 'duck', 'fox', 'giraffe', 'pig'],
+  animal: ['dog', 'cat', 'fish', 'bird', 'rabbit', 'panda', 'monkey', 'tiger', 'elephant', 'lion', 'bear', 'duck', 'fox', 'giraffe', 'pig', 'cow', 'horse', 'sheep', 'chicken'],
   pet: ['dog', 'cat', 'fish', 'bird', 'rabbit'],
   toy: ['doll', 'ball', 'car', 'boat', 'kite', 'yo-yo'],
   food: ['rice', 'bread', 'meat', 'egg', 'noodles', 'cake', 'soup', 'vegetables', 'fruit', 'candy'],
   colour: ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'brown', 'pink', 'white', 'black'],
   plant: ['tree', 'flower', 'grass'],
   flower: ['rose'],
-  bird: ['duck'],
+  bird: ['duck', 'chicken'],
+  meat: ['chicken'],
+  vegetables: ['tomato', 'potato', 'carrot'],
+  // 四年级：连衣裙是一种裙子、短裤是一种裤子，大衣和夹克的图分不清；足球是一种体育运动
+  dress: ['skirt'],
+  trousers: ['shorts'],
+  coat: ['jacket'],
+  sport: ['football', 'basketball'],
+  // 洗手间里有厕所；滑梯 🛝 在公园里也有；灯和太阳都是「光」
+  bathroom: ['toilet'],
+  park: ['playground'],
+  light: ['sunny'],
+  // 雪花 ❄️ 和雪人 ⛄、太阳 ☀️ 和太阳镜 🕶️ 放在一道题里容易选岔
+  snowy: ['snowman'],
+  sunny: ['sunglasses'],
+  // 五年级：😢 难过和 😟 担心的脸在小屏上分不清；劳动节、圣诞节是一种节日，四季是季节，做体育运动也是锻炼
+  sad: ['worried'],
+  festival: ['labour day', 'christmas', 'thanksgiving', 'national day'],
+  season: ['spring', 'summer', 'autumn', 'winter', 'fall'],
+  exercise: ['play sports', 'sport', 'sports'],
+  // nurse 当动词是「照顾」
+  nurse: ['look after'],
   bear: ['panda', 'red panda'],
   water: ['sea'],
   eye: ['see', 'look'],
@@ -170,6 +211,21 @@ const RELATED: Readonly<Record<string, string[]>> = {
 }
 
 const norm = (s: string): string => s.toLowerCase()
+/** 词干：去掉 -ing（swimming → swim、doing → do）、复数 s（turns → turn）、词尾 e（dancing / dance → danc） */
+function stem(w: string): string {
+  let s = w
+  if (s.endsWith('ing') && /[aeiouy]/.test(s.slice(0, -3))) {
+    s = s.slice(0, -3)
+    if (/[^aeiou][aeiou]([bdgmnprt])\1$/.test(s)) s = s.slice(0, -1)
+  } else if (s.length > 3 && s.endsWith('s') && !/(ss|us|is)$/.test(s)) s = s.slice(0, -1)
+  return s.replace(/e$/, '')
+}
+/** 一个词（组）里的词全在另一个里：jump / jumping、eating / eat breakfast、turn / take turns、picnic / go on a picnic */
+function partOf(x: string, y: string): boolean {
+  const [a, b] = [x, y].map((p) => p.split(/\s+/).filter((t) => t && t !== '...').map(stem))
+  const [short, long] = a!.length <= b!.length ? [a!, b!] : [b!, a!]
+  return short.every((t) => long.includes(t))
+}
 const groupIndex = (groups: string[][]): Map<string, number> => {
   const m = new Map<string, number>()
   groups.forEach((g, i) => g.forEach((w) => m.set(w, i)))
@@ -184,10 +240,10 @@ export function soundsSame(a: string, b: string): boolean {
   const i = HOMOPHONE_OF.get(x)
   return i !== undefined && i === HOMOPHONE_OF.get(y)
 }
-/** 两个词意思一样、一个包含另一个、或图上分不清（选意思、看图的题里不能同时做选项） */
+/** 两个词意思一样、一个包含另一个（含词组里的词、-ing 形式）、或图上分不清（选意思、看图的题里不能同时做选项） */
 export function meaningClash(a: string, b: string): boolean {
   const [x, y] = [norm(a), norm(b)]
-  if (x === y) return true
+  if (x === y || partOf(x, y)) return true
   const i = MEANING_OF.get(x)
   if (i !== undefined && i === MEANING_OF.get(y)) return true
   return !!RELATED[x]?.includes(y) || !!RELATED[y]?.includes(x)
@@ -285,9 +341,10 @@ export function parseSpell(s: string): SpellItem {
  * 其余直接找（ee、oo、ce、th）
  */
 export function hasPattern(word: string, pattern: string): boolean {
-  if (pattern === '-e') return /^[^aeiou]+e$/.test(word)
+  const w = word.toLowerCase() // 人名、地名首字母大写（China、Philip）
+  if (pattern === '-e') return /^[^aeiou]+e$/.test(w)
   const m = /^([a-z])-e$/.exec(pattern)
-  return m ? new RegExp(`${m[1]}[^aeiou]e`).test(word) : word.includes(pattern)
+  return m ? new RegExp(`${m[1]}[^aeiou]e`).test(w) : w.includes(pattern)
 }
 export interface TalkItem {
   prompt: string
@@ -444,26 +501,88 @@ function listenPicItems(ctx: Ctx, words: WordItem[]): Item[] {
       },
     }))
 }
-/** 补全字母：听单词，看「c _ t」选缺的字母（第一个不在开头的元音；没有就中间那个字母）；元音缺了从元音里挑干扰项 */
+/** 换一个字母拼出来、不能出现在题目里的词（测试用 `rudeWord` 查） */
+const RUDE = new Set(['dick', 'cock', 'shit', 'shat', 'shite', 'piss', 'whore', 'fuck', 'hell', 'damn', 'crap', 'arse', 'ass', 'poo', 'poop', 'fart', 'butt', 'chink', 'wank', 'whank', 'clit', 'rape', 'sex', 'suck', 'cunt', 'fag', 'tit', 'slut', 'twat', 'jap', 'bum', 'git', 'sod', 'hos', 'toke', 'bonk'])
+/** 换上干扰项拼出来的是不是不雅的词（连带 -s / -es / -ed / -ing：socks 换一个字母是 sucks） */
+export const rudeWord = (w: string): boolean => {
+  const x = w.toLowerCase()
+  return RUDE.has(x) || [/s$/, /es$/, /ed$/, /ing$/].some((end) => end.test(x) && RUDE.has(x.replace(end, '')))
+}
+/** 音节数（元音组数）：词尾辅音 + e 不发音（cake），辅音 + le 自成音节（apple）；y 在辅音后当元音（sunny、my），词首的 y 是辅音 */
+export function syllables(word: string): number {
+  let w = word.toLowerCase()
+  if (/[^aeiou]e$/.test(w) && !/[^aeiou]le$/.test(w)) w = w.slice(0, -1)
+  return w.match(/[aeiou]+|(?<=[^aeiou])y/g)?.length ?? 0
+}
+/**
+ * 补全字母：听单词，看「c _ t」选缺的字母（第一个不在开头的元音；没有就中间那个字母）。只出听着就能定下来的：
+ * 一个音节、不以元音开头的词（多音节词里不重读的元音读成 /ə/，elephant 写成 elaphant 也一样）；缺的元音不和别的元音、y、w
+ * 连写（rain / rein、shoes / shues），后面不是 r（shirt / shert / shurt 读音一样），前面不是 w / wh（what / whut）；
+ * 元音缺了从元音里挑干扰项，换上去拼出读音一样的词（son / sun；n、m、v 前面的 o 和 u）或不雅的词的不用
+ */
 function spellingItems(ctx: Ctx, words: string[]): Item[] {
-  return uniqBy(
-    words.filter((w) => /^[a-z]{3,}$/.test(w)),
+  const out: Item[] = []
+  for (const word of uniqBy(
+    words.filter((w) => /^[a-z]{3,}$/.test(w) && !VOWELS.has(w[0]!) && syllables(w) === 1),
     (w) => w,
-  ).map((word) => {
+  )) {
     const letters = word.split('')
     let at = letters.findIndex((c, i) => i > 0 && VOWELS.has(c))
     if (at < 0) at = Math.floor(letters.length / 2)
     const missing = letters[at]!
+    const next = letters[at + 1] ?? ''
+    if (VOWELS.has(missing)) {
+      if (/[aeiouyw]/.test(next) || VOWELS.has(letters[at - 1]!) || next === 'r' || /w$|wh$/.test(word.slice(0, at))) continue
+    }
+    const swapped = (x: string): string => letters.map((c, i) => (i === at ? x : c)).join('')
+    const sameSound = (x: string): boolean => soundsSame(swapped(x), word) || (/[nmv]/.test(next) && ((missing === 'u' && x === 'o') || (missing === 'o' && x === 'u')))
+    const pool = (VOWELS.has(missing) ? [...VOWELS] : ALPHABET.map((x) => x.toLowerCase()).filter((x) => !VOWELS.has(x))).filter((x) => x !== missing && !sameSound(x) && !rudeWord(swapped(x)))
+    if (pool.length < 2) continue
     const shown = letters.map((c, i) => (i === at ? '_' : c)).join('')
-    return {
+    out.push({
       key: `spelling-${word}`,
       build: (d: Difficulty, rng: RNG) => {
-        const pool = VOWELS.has(missing) ? [...VOWELS] : ALPHABET.map((x) => x.toLowerCase()).filter((x) => !VOWELS.has(x))
-        const wrongs = rng.shuffle(pool.filter((x) => x !== missing)).slice(0, 3)
+        const wrongs = rng.shuffle(pool).slice(0, 3)
         return choiceQ(ctx, 'word', d, `spelling-${word}`, [text('eq.spelling'), listen(word), en(shown, 'big', { say: '' })], letterOpt(missing), wrongs.map(letterOpt), rng, 'english')
       },
-    }
-  })
+    })
+  }
+  return out
+}
+
+/**
+ * 四上 Let's spell 教的辅音字母组合：补全字母组合的题的干扰项从这里挑——都是两个字母、彼此读音不同。
+ * 四下的 ar / er / ir / ur / or / air / ear、五上的 ai / ay、ee / ea、oa / ow……不出这种题：er、ir、ur（还有 w 后面的 or）、
+ * ai 和 ay 这些读音一样，换哪个都「听着对」
+ */
+export const DIGRAPHS = ['ch', 'sh', 'th', 'ph', 'wh', 'ck']
+/** 能出补全字母组合的：上面的辅音字母组合，加上五下（旧版）拼读课的辅音连缀 cl / pl、br / gr 与词尾的 ng / nk（干扰项另加本课的这几个） */
+export const LETTER_GROUPS = [...DIGRAPHS, 'cl', 'pl', 'br', 'gr', 'ng', 'nk']
+/** 字母组合的选项：显示「ch」，读字母名「C H」 */
+const groupOpt = (g: string): Opt => enOpt(g, g.toUpperCase().split('').join(' '))
+/**
+ * 补全字母组合（四上 Let's spell 的「Look, listen and write」）：听单词，看「__air」选缺的字母组合，答完填上。
+ * 只出拼读组里含这个组合的小写词（人名、地名不出；tch 里的 ch 不出：换成 sh 读起来差不多）；换上去拼出读音一样的词的干扰项不用
+ */
+function digraphItems(ctx: Ctx, spells: SpellItem[]): Item[] {
+  // 干扰项：四上的辅音字母组合 + 本课教的（五下 cl / pl 一课里互为干扰）
+  const groups = uniqBy([...DIGRAPHS, ...spells.map((s) => s.pattern).filter((g) => LETTER_GROUPS.includes(g))], (g) => g)
+  return spells
+    .filter((s) => LETTER_GROUPS.includes(s.pattern))
+    .flatMap((s) =>
+      uniqBy(s.words, (x) => x)
+        .filter((word) => /^[a-z]+$/.test(word) && word.includes(s.pattern) && !(s.pattern === 'ch' && word.includes('tch')))
+        .map((word) => {
+          const at = word.indexOf(s.pattern)
+          const swapped = (g: string): string => word.slice(0, at) + g + word.slice(at + s.pattern.length)
+          const wrongs = groups.filter((g) => g !== s.pattern && !soundsSame(swapped(g), word) && !rudeWord(swapped(g)))
+          return {
+            key: `digraph-${word}`,
+            build: (d: Difficulty, rng: RNG) =>
+              choiceQ(ctx, 'letter', d, `digraph-${word}`, [text('eq.digraph'), listen(word), en(word, 'big', { say: '', blank: [at, s.pattern.length] })], groupOpt(s.pattern), rng.shuffle(wrongs).slice(0, 3).map(groupOpt), rng, 'english'),
+          }
+        }),
+    )
 }
 
 // ── 字母与发音、拼读（拼读词只考会不会读，不考意思） ─────────────────────
@@ -566,7 +685,14 @@ function talkItems(ctx: Ctx, items: TalkItem[]): Item[] {
     build: (d, rng) => choiceQ(ctx, 'talk', d, `talk-${it.prompt}`, [text('eq.reply'), en(it.prompt, 'line')], enOpt(it.answer), rng.shuffle(it.wrongs).map((x) => enOpt(x)), rng, 'english'),
   }))
 }
-/** 听句子选句子：本课的对话句（问和答）与填空的整句都算 */
+/** 句子去掉大小写和标点，前后加空格（按整词比较） */
+const sentKey = (s: string): string => ` ${s.toLowerCase().replace(/[^a-z0-9']+/g, ' ').trim()} `
+/** 一句是另一句的一部分（「Let's clear the table.」和「Let's clear the table. Can you …」、「Yes. Farm animals …」）：听到长的，短的也像对的 */
+export function sentenceOverlap(a: string, b: string): boolean {
+  const [x, y] = [sentKey(a), sentKey(b)]
+  return x.includes(y) || y.includes(x)
+}
+/** 听句子选句子：本课的对话句（问和答）与填空的整句都算；一句包含另一句的不同时做选项 */
 function listenSentItems(ctx: Ctx, sentences: string[]): Item[] {
   const all = uniqBy(sentences, (x) => x)
   if (all.length < 2) return []
@@ -581,7 +707,7 @@ function listenSentItems(ctx: Ctx, sentences: string[]): Item[] {
         [text('eq.listenSentence'), listen(s)],
         enOpt(s),
         rng
-          .shuffle(all.filter((x) => x !== s))
+          .shuffle(all.filter((x) => x !== s && !sentenceOverlap(x, s)))
           .slice(0, 3)
           .map((x) => enOpt(x)),
         rng,
@@ -703,6 +829,7 @@ export function unitItems(spec: UnitSpec, ctx: Ctx): Record<string, Item[]> {
     zh2en: zh2enItems(ctx, words),
     listenpic: listenPicItems(ctx, words),
     spelling: spellingItems(ctx, [...words.map((w) => w.en), ...reads.map((r) => r.en)]),
+    digraph: digraphItems(ctx, spells),
     lower: lowerItems(ctx, letters),
     upper: upperItems(ctx, letters),
     listenletter: listenLetterItems(ctx, letters),

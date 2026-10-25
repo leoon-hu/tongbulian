@@ -33,12 +33,10 @@ export const UNITS_S2: UnitSpec[] = [
       "Hi! I'm Amy. I'm from the [UK].|today/about",
     ],
     ask: [
-      'Where is Amy from?=the UK/China/Canada',
-      'Where is Zhang Peng from?=China/the UK/the USA',
       "I'm new here.=我是新来的。/我来自英国。/我叫张鹏。",
       'Where are you from?=你来自哪里？/你叫什么名字？/你几岁了？',
     ],
-    mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1' },
+    mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 talk:2 cloze:2 listensent:2 ask:1' },
   },
   {
     kp: 'e3s2-01-spell',
@@ -82,8 +80,6 @@ export const UNITS_S2: UnitSpec[] = [
       '[After] you!|Who/Very',
     ],
     ask: [
-      'Where is Mike from?=Canada/China/the UK',
-      'Who is Miss White?=the English teacher/the new neighbour/the classmate',
       'After you!=您先请！/谢谢你！/不客气。',
       "You're welcome.=不客气。/谢谢你。/让我来帮忙。",
     ],
@@ -165,10 +161,8 @@ export const UNITS_S2: UnitSpec[] = [
       'We dance. We sing. We [talk].|song/card',
     ],
     ask: [
-      'What does Zhang Peng often make for his mum?=gifts/songs/pictures',
       "That's nice.=那真好。/不，我不。/是的，我经常说。",
       '给妈妈画一幅画，用英语怎么说？=draw a picture/make a card/sing and dance',
-      'What can we make with fruit?=animals/cards/gifts',
     ],
     mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:3', 2: 'listen:2 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:3 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:2' },
   },
@@ -249,7 +243,6 @@ export const UNITS_S2: UnitSpec[] = [
     ],
     ask: [
       '鼻子能做什么？=smell/taste/see',
-      'Who can see a rabbit from the sky?=Eagles/Ants/Bees',
       'What are these?=这些是什么？/这是什么？/你叫什么名字？',
       'I taste with my tongue.=我用舌头尝。/我用鼻子闻。/我用耳朵听。',
     ],
@@ -282,7 +275,6 @@ export const UNITS_S2: UnitSpec[] = [
       "I'd like some [juice] and noodles.|cut/eat",
     ],
     ask: [
-      'What would the boy like for breakfast?=bread and eggs/rice and meat/juice and noodles',
       "I'd like some bread and eggs, please.=我想吃点儿面包和鸡蛋。/也喝点儿牛奶吧。/给你。",
       'Have some milk too.=也喝点儿牛奶吧。/我想吃点儿面包。/早餐时间到了。',
     ],
@@ -420,10 +412,8 @@ export const UNITS_S2: UnitSpec[] = [
       'I need an [arm] for my robot.|on/in',
     ],
     ask: [
-      'Where is the animal book?=in the box/on the shelf/under the bed',
       "It's in the box.=它在盒子里。/在架子上吗？/不，不在。",
       '哪个戴在头上？=cap/map/box',
-      "Who has an old doll's arm?=Cat/Tiger/Bear",
     ],
     mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1' },
   },
@@ -456,13 +446,11 @@ export const UNITS_S2: UnitSpec[] = [
       'How many apples do we [need]?|much/yuan',
     ],
     ask: [
-      'How many books do they have?=#15',
       'We need three boxes.=我们需要三个箱子。/我们有十五本书。/我们有多少本书？',
       '哪个数最大？=fifteen/eleven/thirteen',
-      'How many boxes do they need?=#3',
     ],
     numbers: 'eleven twelve thirteen fourteen fifteen',
-    mix: { 1: 'listen:3 meaning:2 talk:3 cloze:2 count:2 numword:2 num2word:2', 2: 'listen:2 meaning:2 zh2en:2 talk:2 cloze:2 listensent:1 count:1 numword:2 num2word:2', 3: 'zh2en:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1 count:1 numword:1 num2word:1' },
+    mix: { 1: 'listen:3 meaning:2 talk:3 cloze:2 count:2 numword:2 num2word:2', 2: 'listen:2 meaning:2 zh2en:2 talk:2 cloze:2 listensent:1 count:1 numword:2 num2word:2', 3: 'zh2en:2 talk:2 cloze:2 listensent:2 ask:1 count:1 numword:1 num2word:1' },
   },
   {
     kp: 'e3s2-06-spell',
@@ -509,13 +497,11 @@ export const UNITS_S2: UnitSpec[] = [
       'A clock has [twelve] numbers.|ten/twenty',
     ],
     ask: [
-      'How much is the bag?=#20',
       "It's twenty yuan.=二十元。/这个包多少钱？/十六元三本行吗？",
-      'How much does the boy pay for five books?=fifteen yuan/eighteen yuan/three yuan',
       '哪个数最大？=twenty/sixteen/eighteen',
     ],
     numbers: 'sixteen seventeen eighteen nineteen twenty',
-    mix: { 1: 'listen:3 meaning:2 talk:3 cloze:2 count:2 numword:2 num2word:2', 2: 'listen:2 meaning:2 zh2en:2 talk:2 cloze:2 listensent:1 count:1 numword:2 num2word:2', 3: 'zh2en:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1 count:1 numword:1 num2word:1' },
+    mix: { 1: 'listen:3 meaning:2 talk:3 cloze:2 count:2 numword:2 num2word:2', 2: 'listen:2 meaning:2 zh2en:2 talk:2 cloze:2 listensent:1 count:1 numword:2 num2word:2', 3: 'zh2en:2 talk:2 cloze:2 listensent:2 ask:1 count:1 numword:1 num2word:1' },
   },
   // ── ☆ Revision: Going to a school fair ──
   {
@@ -573,8 +559,6 @@ export const UNITS_S2: UnitSpec[] = [
       'The rose on the cake is [red].|milk/dog',
     ],
     ask: [
-      'Where is Amy from?=the UK/China/Canada',
-      'How much is the pencil box?=#4',
       'Would you like some fruit?=要吃点儿水果吗？/你来自哪里？/那是我爸爸。',
       'Here you are.=给您。/谢谢你。/见到你很高兴。',
     ],

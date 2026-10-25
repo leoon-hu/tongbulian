@@ -31,6 +31,8 @@ import { KP_SEO as SEO_C4 } from '@/content/chinese/grade4/seo'
 import { KP_SEO as SEO_C5 } from '@/content/chinese/grade5/seo'
 import { KP_SEO as SEO_C6 } from '@/content/chinese/grade6/seo'
 import { KP_SEO as SEO_E3 } from '@/content/english/grade3/seo'
+import { KP_SEO as SEO_E4 } from '@/content/english/grade4/seo'
+import { KP_SEO as SEO_E5 } from '@/content/english/grade5/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
@@ -43,9 +45,11 @@ import '@/content/chinese/grade4'
 import '@/content/chinese/grade5'
 import '@/content/chinese/grade6'
 import '@/content/english/grade3'
+import '@/content/english/grade4'
+import '@/content/english/grade5'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -110,8 +114,17 @@ const SUBJECT_COPY: Record<string, SubjectCopy> = {
   english: {
     course: '按人教版 PEP 新教材逐单元出题，单词、字母、对话、句子都有，题目要求带拼音，单词和句子用英文朗读',
     kp: '单词和句子用英文朗读',
-    lead: () =>
-      '题目都从这一部分的单词、字母、对话和句子里出：听音选单词、看图选单词、单词选意思、字母大小写、对话应答、选词填空……题目要求是中文、标拼音，单词和句子用英文朗读，听音题屏幕上不出现要听的词。答错显示正确答案并读一遍，不计时、不扣分。',
+    // 按知识点是哪一部分说出题方式（字母课 / 拼读课 / 对话和单词）
+    lead: (kp) => {
+      const kind = kp.id.split('-').at(-1)
+      const from =
+        kind === 'letters'
+          ? '题目都从这一课的字母和例词里出：大写选小写、听音选字母、字母表顺序、听单词选首字母、听音选拼读词……'
+          : kind === 'spell'
+            ? '题目都从这一课的拼读里出：听音在同组的词里选、补全字母、拼读儿歌的选词填空……'
+            : '题目都从这一部分的单词、对话和句子里出：听音选单词、看图选单词、单词选意思、对话应答、选词填空……'
+      return `${from}题目要求是中文、标拼音，单词和句子用英文朗读，听音题屏幕上不出现要听的词。答错显示正确答案并读一遍，不计时、不扣分。`
+    },
   },
   chinese: {
     course: '按统编新教材逐课出题，识字、词语、拼音、课文填空、古诗都有，题目带拼音和朗读，考认字的字不标拼音',
@@ -133,12 +146,14 @@ function coursesSummary(lcs: LiveCourse[]): string {
   for (const [subject, grades] of bySubject) byGrades.set(gradeSpan(grades), [...(byGrades.get(gradeSpan(grades)) ?? []), subject])
   return [...byGrades].map(([grades, subjects]) => `${grades}${subjects.join('和')}`).join('、')
 }
-/** 年级列表：连着的三个以上缩成「一至五年级」，别的用顿号连（「一年级、二年级」） */
+/** 年级列表：连着的三个以上缩成「一至五年级」，连着的两个写「三、四年级」，别的用顿号连（「一年级、三年级」） */
 function gradeSpan(grades: string[]): string {
   const ORDER = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级']
   const idx = grades.map((g) => ORDER.indexOf(g))
   const consecutive = idx.every((v, i) => v >= 0 && (i === 0 || v === idx[i - 1]! + 1))
-  return consecutive && grades.length >= 3 ? `${grades[0]!.slice(0, 1)}至${grades[grades.length - 1]}` : grades.join('、')
+  if (consecutive && grades.length >= 3) return `${grades[0]!.slice(0, 1)}至${grades[grades.length - 1]}`
+  if (consecutive && grades.length === 2) return `${grades[0]!.slice(0, 1)}、${grades[1]}`
+  return grades.join('、')
 }
 /** 列表标题里的单元编号：「第 3 单元」；没编号的综合与实践 / 数学游戏是「☆」 */
 const unitNo = (u: Unit): string => (u.numbered === false ? '☆' : `第 ${u.order} 单元`)

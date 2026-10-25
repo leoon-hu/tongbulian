@@ -476,11 +476,23 @@ describe('六年级的百分数、正负数、比、π', () => {
 
 describe('英语的英文内容（需求 E5）', () => {
   it('englishSpeech：按英文切，中文界面每条标成英文声音、英文界面不标；enToken / tokenVoice 对称', () => {
-    expect(englishSpeech("What's your name?", 'en')).toEqual(["What's your name"])
+    // 问句留着问号（英文语音按问句的语调读），两个问句在问号处分开
+    expect(englishSpeech("What's your name?", 'en')).toEqual(["What's your name?"])
+    expect(englishSpeech('Where is Amy? Is she in the study?', 'en')).toEqual(['Where is Amy?', PAUSE, 'Is she in the study?'])
+    expect(englishSpeech('"Please" or "Don\'t"?', 'en')).toEqual(["Please or Don't?"])
     expect(englishSpeech("I'm fine, thank you.", 'zh')).toEqual([enToken("I'm fine"), PAUSE, enToken('thank you')])
     expect(tokenVoice(enToken('cat'), 'zh')).toEqual({ text: 'cat', lang: 'en' })
     expect(tokenVoice(zhToken('猫'), 'en')).toEqual({ text: '猫', lang: 'zh' })
     expect(tokenVoice('cat', 'zh')).toEqual({ text: 'cat', lang: 'zh' })
+  })
+
+  it('带数的英语句子（四下的时刻、价钱）整句读：数不拆、时刻的冒号与 a.m. / p.m. 留在句子里，只在句读处停', () => {
+    expect(englishSpeech("It's 7:30. It's time for English class.", 'en')).toEqual(["It's 7:30", PAUSE, "It's time for English class"])
+    expect(englishSpeech("It's 180 yuan.", 'en')).toEqual(["It's 180 yuan"])
+    expect(englishSpeech("In Beijing, it's 7:10 p.m.", 'en')).toEqual(['In Beijing', PAUSE, "it's 7:10 p.m."])
+    expect(englishSpeech("It's 7:10 a.m. Time to get up!", 'zh')).toEqual([enToken("It's 7:10 a.m. Time to get up")])
+    // 没有数的照旧按英文切（三年级的片段不变）
+    expect(englishSpeech('Turn off the light, please.', 'en')).toEqual(tokenize('Turn off the light, please.', 'en'))
   })
 
   it('题干：中文要求用中文读，english / listen（lang en）用英文读；say 为空的单词卡不读；挖空的句子空前空后各切各的', () => {

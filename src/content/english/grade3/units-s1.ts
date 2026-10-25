@@ -79,7 +79,6 @@ export const UNITS_S1: UnitSpec[] = [
       'Zoom is my new [friend].|mouth/hand',
     ],
     ask: [
-      "Who is Zip's new friend?=Zoom/Sarah/Mike",
       'We can share.=我们可以分享。/我们是好朋友。/没关系。',
     ],
     mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:3', 2: 'listen:2 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:3 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:2' },
@@ -115,7 +114,6 @@ export const UNITS_S1: UnitSpec[] = [
     ],
     ask: [
       'This is my grandma.=这是我的奶奶。/这是我的爷爷。/这是我的妈妈。',
-      "Who is Sarah Miller?=Chen Jie's friend/Chen Jie's sister/Chen Jie's grandma",
       '爸爸的爸爸用英语怎么说？=grandpa/grandma/dad',
     ],
     mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1' },
@@ -179,7 +177,7 @@ export const UNITS_S1: UnitSpec[] = [
       '爸爸的弟弟用英语怎么说？=uncle/aunt/cousin',
       '妈妈的妹妹用英语怎么说？=aunt/uncle/cousin',
     ],
-    mix: { 1: 'listen:3 pic:1 meaning:2 talk:3 cloze:3', 2: 'listen:2 wordpic:1 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:3 listensent:1', 3: 'zh2en:2 listenpic:1 spelling:2 talk:2 cloze:2 listensent:2 ask:2' },
+    mix: { 1: 'listen:3 pic:1 meaning:2 talk:3 cloze:3', 2: 'listen:2 wordpic:1 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:3 listensent:1', 3: 'zh2en:2 listenpic:1 talk:2 cloze:2 listensent:2 ask:2' },
   },
   // ── Unit 3 Our animal friends ──
   {
@@ -211,7 +209,6 @@ export const UNITS_S1: UnitSpec[] = [
     ],
     ask: [
       'Do you have a pet?=你有宠物吗？/你喜欢狗吗？/你有一只猫吗？',
-      'What pet does Mike have?=a dog/a cat/a fish',
       '哪种动物会游泳？=fish/rabbit/cat',
       '哪种动物会唱歌？=bird/fish/rabbit',
     ],
@@ -277,7 +274,7 @@ export const UNITS_S1: UnitSpec[] = [
       "It's a red panda.=是只小熊猫。/是只大熊猫。/是只狐狸。",
       '哪种动物跑得快？=lion/elephant/panda',
     ],
-    mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1' },
+    mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 talk:2 cloze:2 listensent:2 ask:1' },
   },
   // ── Unit 4 Plants around us ──
   {
@@ -309,7 +306,6 @@ export const UNITS_S1: UnitSpec[] = [
       'Do you like apples?=你喜欢苹果吗？/你有苹果吗？/你喜欢香蕉吗？',
       'I like the fresh air.=我喜欢新鲜的空气。/我喜欢农场。/我喜欢苹果。',
       '哪种水果是紫色的？=grape/banana/orange',
-      'What fruit does Mike like?=apples/bananas/grapes',
     ],
     mix: { 1: 'listen:3 pic:3 meaning:2 talk:3 cloze:2', 2: 'listen:2 pic:1 wordpic:2 meaning:2 zh2en:2 listenpic:1 talk:2 cloze:2 listensent:1', 3: 'zh2en:2 listenpic:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1' },
   },
@@ -505,7 +501,6 @@ export const UNITS_S1: UnitSpec[] = [
       'How old are you?=你几岁了？/你叫什么名字？/你好吗？',
       "I'm five years old.=我五岁了。/我有五个苹果。/我也是。",
       'Me too.=我也是。/我五岁了。/给你。',
-      'How old is Sam?=Five./Three./Four.',
     ],
     numbers: 'one two three four five',
     mix: { 1: 'listen:3 meaning:2 talk:3 cloze:2 count:2 numword:2 num2word:1', 2: 'listen:2 meaning:2 zh2en:2 talk:2 cloze:2 listensent:1 count:1 numword:1 num2word:2', 3: 'zh2en:2 spelling:2 talk:2 cloze:2 listensent:2 ask:1 numword:1 num2word:2' },

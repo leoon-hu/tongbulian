@@ -342,6 +342,9 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"(?<=有多)重"), "众"),                                   # 大象有多重 zhòng
         (re.compile(r"长(?=着两只)|(?<=不)长(?=草)"), "掌"),                  # 长着两只袖筒、不长草 zhǎng
         (re.compile(r"雨(?=雪霏霏)|(?<=的)雨(?=雪是)|^雨(?=雪\W*$)"), "玉"),  # 雨雪霏霏 yù（课本注释）
+        # 五年级英语的中文：单词意思「教」（teach）jiāo，「你应该睡够觉」jiào（合成语音常读成 jiào、jué）
+        (re.compile(r"(?:^|(?<=正确答案是))教(?=用英语怎么说$|$)"), "交"),
+        (re.compile(r"(?<=睡够)觉"), "较"),
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
         # 五年级数学
@@ -413,8 +416,11 @@ def _letter_a_en(m: "re.Match[str]") -> str:
 
 
 SAY_AS["en"] = [
+    # 四上英语「He's a PE teacher.」：PE 按字母读（不读成 pee）
+    (re.compile(r"\bPE\b"), "P.E."),
     (re.compile(r"(?:(?<![\d.])(1) )?(?<![\w'’.])(mm|cm|dm|km|kg|m|g)\b"), _unit_en),  # type: ignore[list-item]
-    (re.compile(r"(?<![\w'’])a(?![\w'’])"), _letter_a_en),  # type: ignore[list-item]
+    # 时刻后面的 a.m.（四下英语「It's 7:10 a.m.」）不是冠词也不是字母，原样交给英文语音
+    (re.compile(r"(?<![\w'’])a(?![\w'’]|\.m\.)"), _letter_a_en),  # type: ignore[list-item]
 ]
 
 # 读一个多音字给的词（语文出题骨架 makers.ts 的 POLY_SAY，「高兴的兴」）：末尾单独那个字合成语音常按它最常见的读音读

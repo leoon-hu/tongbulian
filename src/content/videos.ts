@@ -543,6 +543,65 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'e3s2-06-a': '62e1eaf2-dd22-3cab-4f65-24efba0b9c89', // Part A How do numbers help us count and sort?
   'e3s2-06-spell': '62e1eaf2-dd22-3cab-4f65-24efba0b9c89', // Part A How do numbers help us count and sort?
   'e3s2-06-b': '22795ff0-761e-1282-6217-08f24da3cb07', // Part B How do numbers help us make decisions?
+  'e4s1-01-a': '4ec85885-3eeb-4722-270f-a7f9354ee5e3', // Part A How are families different?
+  'e4s1-01-spell': '4ec85885-3eeb-4722-270f-a7f9354ee5e3', // Part A How are families different?
+  'e4s1-01-b': 'b1556ca7-c070-7843-6ee3-29d224799e9b', // Part B How can we help our family?
+  'e4s1-02-a': '66a12146-9fa5-98aa-0c65-5b3e6100af14', // Part A Who are your friends?
+  'e4s1-02-spell': '66a12146-9fa5-98aa-0c65-5b3e6100af14', // Part A Who are your friends?
+  'e4s1-02-b': '47bfd9c0-786d-5132-22d6-69be578536c6', // Part B How do we choose our friends?
+  'e4s1-03-a': 'bf48116d-7a32-bdcb-a2a5-e40f3e158404', // Part A What can we see in a community?
+  'e4s1-03-spell': 'bf48116d-7a32-bdcb-a2a5-e40f3e158404', // Part A What can we see in a community?
+  'e4s1-03-b': '0982f1a1-2498-df9c-03f0-6dbcdbb3a763', // Part B What do people do in a community?
+  'e4s1-04-a': 'ad0d883d-f0c8-08bd-1206-beba75df8410', // Part A What jobs are important in a community?
+  'e4s1-04-spell': 'ad0d883d-f0c8-08bd-1206-beba75df8410', // Part A What jobs are important in a community?
+  'e4s1-04-b': '7b00a05c-84d9-5502-62c6-5980a5a40f23', // Part B How can young people help their community?
+  'e4s1-05-a': '1f17c987-5897-52b6-e98a-add74dcf06ab', // Part A How can the weather be different?
+  'e4s1-05-spell': '1f17c987-5897-52b6-e98a-add74dcf06ab', // Part A How can the weather be different?
+  'e4s1-05-b': '4651d2ac-a21f-ea03-1b94-510aa3770382', // Part B What do we do in different weather?
+  'e4s1-06-a': '300abb5d-9559-3bd3-8f2d-7040dc9df7fb', // Part A What do we wear in different seasons?
+  'e4s1-06-spell': '300abb5d-9559-3bd3-8f2d-7040dc9df7fb', // Part A What do we wear in different seasons?
+  'e4s1-06-b': '78e9e587-dc69-bb18-2bcb-c0ba52c8e936', // Part B What do we do in different seasons?
+  'e4s2-01-a': '4814b221-7957-210e-43d2-28707627b131', // Part A What are your class rules?
+  'e4s2-01-spell': '4814b221-7957-210e-43d2-28707627b131', // Part A What are your class rules?
+  'e4s2-01-b': '42842ade-8fb0-a278-3602-4f14a50b1fc9', // Part B Why do we follow class rules?
+  'e4s2-02-a': '4fff5f03-8068-99aa-e0c2-7092da8fb59c', // Part A What are your family rules?
+  'e4s2-02-spell': '4fff5f03-8068-99aa-e0c2-7092da8fb59c', // Part A What are your family rules?
+  'e4s2-02-b': '67680260-97b0-c544-2249-197e0b11dc99', // Part B How do family rules help us?
+  'e4s2-03-a': '280ffdc3-41d8-a254-0c48-0bb84d764143', // Part A What is your schedule?
+  'e4s2-03-spell': '280ffdc3-41d8-a254-0c48-0bb84d764143', // Part A What is your schedule?
+  'e4s2-03-b': 'd6453c78-0917-2b95-7e53-2680329f2aa7', // Part B How can a good schedule help us?
+  'e4s2-04-a': 'fe814b81-a289-25e7-4b3d-983fbf5b8af4', // Part A What do we need to buy?
+  'e4s2-04-spell': 'fe814b81-a289-25e7-4b3d-983fbf5b8af4', // Part A What do we need to buy?
+  'e4s2-04-b': 'a25838c0-078e-20df-6350-291d6e11b2d8', // Part B How do we decide what to buy?
+  'e4s2-05-a': '6e6f0b07-d28f-8baa-1ebc-a0d0ca94d185', // Part A What farm animals do you know?
+  'e4s2-05-spell': '6e6f0b07-d28f-8baa-1ebc-a0d0ca94d185', // Part A What farm animals do you know?
+  'e4s2-05-b': '07960cc1-dc29-4271-500b-0da3fc4241c2', // Part B What can we learn on a farm?
+  'e4s2-06-a': '51bad1ae-6a54-5b56-8345-23c371809567', // Part A What can we do on a farm?
+  'e4s2-06-spell': '51bad1ae-6a54-5b56-8345-23c371809567', // Part A What can we do on a farm?
+  'e4s2-06-b': 'fb09db19-88f0-bb84-1f19-bacefd0f48c4', // Part B How should we eat?
+  'e5s1-01-a': '6106c965-51d7-6184-35db-796b0c291439', // Part A How are your friends different?
+  'e5s1-01-spell': '6106c965-51d7-6184-35db-796b0c291439', // Part A How are your friends different?
+  'e5s1-01-b': 'c31e00f5-342a-12f6-6302-ca1e8255fd56', // Part B What can you do?
+  'e5s2-01-a': '14a52fdc-a717-4f1a-ad4d-5987b428fd48', // A
+  'e5s2-01-spell': '14a52fdc-a717-4f1a-ad4d-5987b428fd48', // A
+  'e5s2-01-b': '6318ff96-fa65-4851-a4e8-35f17eca89ff', // B
+  'e5s2-02-a': '36fd0eba-7927-4384-b24e-6eb6b31c574d', // A
+  'e5s2-02-spell': '36fd0eba-7927-4384-b24e-6eb6b31c574d', // A
+  'e5s2-02-b': '3e629f33-5f4e-49dd-8aba-732f7da4d1fd', // B
+  'e5s2-03-a': '0a2c2e0f-3e77-435d-983d-1dd0e0aad68c', // A
+  'e5s2-03-spell': '0a2c2e0f-3e77-435d-983d-1dd0e0aad68c', // A
+  'e5s2-03-b': 'fe038d2e-b5c5-4e36-ab41-223c8f014da9', // B
+  'e5s2-04-recycle': '7d8bd89e-a323-4932-84f6-1a218b5adb6e', // Recycle 1
+  'e5s2-05-a': '330c6977-59f4-4ce9-8f5a-30c8bdf492f5', // A
+  'e5s2-05-spell': '330c6977-59f4-4ce9-8f5a-30c8bdf492f5', // A
+  'e5s2-05-b': 'ea2d1a66-0ca4-40fd-bcc5-96e6211de79d', // B
+  'e5s2-06-a': 'ea11352e-dc11-4fed-a44e-aa62cb0ea453', // A
+  'e5s2-06-spell': 'ea11352e-dc11-4fed-a44e-aa62cb0ea453', // A
+  'e5s2-06-b': '3b498ab4-ba35-40e0-81a6-665f25e8a6d1', // B
+  'e5s2-07-a': 'a6468d64-fe75-4fb6-b710-7c80195d71f8', // A
+  'e5s2-07-spell': 'a6468d64-fe75-4fb6-b710-7c80195d71f8', // A
+  'e5s2-07-b': '15b803dc-811b-4a13-9395-60e03e6307b4', // B
+  'e5s2-08-recycle': 'e09d152c-61be-496f-bf39-c3d77c01a511', // Recycle 2
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -738,6 +797,15 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'c6s2-07-huanxisha': { id: 'bae07e9d-3b01-f055-50a0-df08b8a81f90', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 9 浣溪沙（精品课）
   'c6s2-07-qingpingle': { id: 'bb08f5f5-497d-c1bb-7b1a-364fb61b3921', from: 'elite' }, // 六年级下册 · 古诗词诵读 · 10 清平乐（精品课）
   'e3s1-07-revision': { id: 'ec818ee0-d48d-f17c-ffba-24202236ef20', from: 'elite' }, // 新教材三年级上册 · Revision Being a good guest（精品课）
+  'e5s1-03-a': { id: '8ae7e4a0-7c66-c0b7-017c-6811511000de', from: 'old-elite' }, // 旧教材五年级上册 · Unit 2 My week · A（精品课）
+  'e5s1-03-spell': { id: '8ae7e4a0-7c66-c0b7-017c-6811511000de', from: 'old-elite' }, // 旧教材五年级上册 · Unit 2 My week · A（精品课）
+  'e5s1-03-b': { id: '8ae7e48e-7c57-4d5e-017c-5a51695d0248', from: 'old-elite' }, // 旧教材五年级上册 · Unit 2 My week · B（精品课）
+  'e5s1-05-a': { id: '8ae7e497-7ca1-8171-017c-a248be84018d', from: 'old-elite' }, // 旧教材五年级上册 · Unit 3 What would you like? · A（精品课）
+  'e5s1-05-spell': { id: '8ae7e497-7ca1-8171-017c-a248be84018d', from: 'old-elite' }, // 旧教材五年级上册 · Unit 3 What would you like? · A（精品课）
+  'e5s1-05-b': { id: '8ae7e49d-83f9-d099-0184-0e9ed73d1e41', from: 'old-elite' }, // 旧教材五年级上册 · Unit 3 What would you like? · B（精品课）
+  'e5s1-06-a': { id: '8ae7e49c-7c95-1b9f-017c-95dbe0850031', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · A（精品课）
+  'e5s1-06-spell': { id: '8ae7e49c-7c95-1b9f-017c-95dbe0850031', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · A（精品课）
+  'e5s1-06-b': { id: '8ae7e493-7c66-c09b-017c-6a99048307c8', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · B（精品课）
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

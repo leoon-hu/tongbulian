@@ -535,11 +535,32 @@ export function chineseSpeech(text: string, lang: Lang): string[] {
 }
 
 /**
- * 一段英文内容的朗读片段（英语的单词、句子、要听的词，需求 E5）：按英文切，
+ * 英语内容（单词、句子、要听的词）的切法：只在后面跟空格或在末尾的句读处切（, . ! ? ; :），切口停一下；问句保留问号，
+ * 英文语音按问句的语调读（「Is that your brother?」）。不按数学题的切法——那样数要拆出来单读（「It's 7 / 30」
+ * 「It's 1 hundred / 80 yuan」，四下的时刻、价钱），问号当成符号吞掉、两个问句连成一串。时刻的冒号、小数点、a.m. / p.m. 留在句子里；
+ * 引号这类不读的符号去掉。
+ */
+function englishClauses(text: string): string[] {
+  const out: string[] = []
+  const parts = text.split(/(?<!\b[ap]\.m)([,.!?;:])(?=\s|$)/i)
+  for (let i = 0; i < parts.length; i += 2) {
+    const t = parts[i]!
+      .replace(/[^A-Za-z0-9'’:. -]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (!t) continue
+    if (out.length) out.push(PAUSE)
+    out.push(parts[i + 1] === '?' ? `${t}?` : t)
+  }
+  return out
+}
+
+/**
+ * 一段英文内容的朗读片段（英语的单词、句子、要听的词，需求 E5）：按 englishClauses 切，
  * 当前是中文界面就每条都标成「用英文读」。
  */
 export function englishSpeech(text: string, lang: Lang): string[] {
-  const tokens = tokenize(text, 'en')
+  const tokens = englishClauses(text)
   return lang === 'en' ? tokens : tokens.map((t) => (t === PAUSE ? t : enToken(t)))
 }
 
