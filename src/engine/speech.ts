@@ -600,6 +600,7 @@ export function phraseSpeech(l: LStr, lang: Lang): string[] {
 /**
  * 题干的朗读片段：文字与算式按顺序读（之间停顿一下），教具（十格阵、实物、钟面…）不读。
  * 语文（§9）：句子、听音题的字词、图名、拼音的同音字是中文内容（Y6，英文界面也用中文读）；田字格里的大字不读（Y3）。
+ * 道德与法治（§12）的问答等题把选项也读出来（readChoices）。
  */
 export function questionSpeech(q: Question, lang: Lang): string[] {
   const parts: string[][] = []
@@ -613,6 +614,8 @@ export function questionSpeech(q: Question, lang: Lang): string[] {
     // 四年级的大数卡平时不读（读出来就等于报了读法 / 组成）；写数题读 say 里的数（课本「听老师读数，写出来」）
     else if (part.kind === 'big-num' && part.say) parts.push(tokenize(part.say, lang))
   }
+  // 道德与法治（D4）：选项按屏幕上的顺序接着读一遍；带 say 的（带图的选项）读 say，是中文内容，英文界面也用中文读
+  if (q.readChoices) for (const c of q.choices ?? []) parts.push(c.say !== undefined ? chineseSpeech(c.say, lang) : phraseSpeech(c.label, lang))
   return joinSpeech(parts)
 }
 

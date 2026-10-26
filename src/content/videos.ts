@@ -613,6 +613,38 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'e6s2-04-a': 'e9b1c933-47b5-4e3a-a681-c7ecf20980e2', // A
   'e6s2-04-b': '299a29c5-f8c8-45ac-85cf-2fce9a81c08b', // B
   'e6s2-05-recycle': '93d571b3-5a73-4257-bbae-c89accfa0635', // Recycle Mike's happy days
+  'd1s1-01-shangxue': '2faa399e-c3a6-5d1a-ff4a-f92901a6ce33', // 第1课 开开心心上学去
+  'd1s1-02-guoqi': 'e6a05065-cb54-c216-3b4d-e750b18652b4', // 第2课 我向国旗敬个礼
+  'd1s1-03-xiaoyuan': 'fa34309f-39ea-c968-005a-dd96b0577561', // 第3课 这是我们的校园
+  'd1s1-04-huijia': 'ddfcb106-61a3-c91d-50d5-e9e26409517f', // 第4课 平平安安回家来
+  'd1s1-05-laoshi': '10f6ecb3-c84f-7d05-a7e7-370c50a7aaec', // 第5课 老师，您好！
+  'd1s1-06-pengyou': 'bb85b712-fcc5-79ed-4804-16bedb1fd977', // 第6课 拉拉手，交朋友
+  'd1s1-07-shangke': '7d05ab77-3a24-a79d-a0d5-dcf58200c806', // 第7课 上课了，好好学
+  'd1s1-08-kexia': '8d2f03a9-1933-f4b4-c276-9aae510fa08d', // 第8课 课余生活真丰富
+  'd1s1-09-zuoxi': '9fa26ed0-e29a-bcb9-de05-3add8701d2ea', // 第9课 作息有规律
+  'd1s1-10-chifan': '69cf93c8-441b-256a-a382-fb7b2e76b9ba', // 第10课 吃饭有讲究
+  'd1s1-11-limao': '130adb59-e6e4-17fe-4299-b3dd50c16dde', // 第11课 对人有礼貌
+  'd1s1-12-wan': '14685cc4-353f-c0cd-3562-801c077ada1c', // 第12课 玩也有学问
+  'd1s1-13-xiaosheng': '70142fb9-4b8f-d564-aebb-1d2f93bb4327', // 第13课 我们小点儿声
+  'd1s1-14-gongwu': '8252433d-9d37-0157-b536-871b1cd25af4', // 第14课 人人爱护公物
+  'd1s1-15-luanreng': 'c2bf8466-11ff-1d09-70ac-c57e35747eb8', // 第15课 我们不乱扔
+  'd1s1-16-paidui': 'b6e132c8-e7d7-2ebe-c89d-6aba3458ce3b', // 第16课 大家排好队
+  'd1s2-01-mubiao': 'adfc4b43-5e6e-149d-c21d-1dcf213767cb', // 第 1 课 有 个 新 目 标
+  'd1s2-02-zixi': 'a4116d2f-fedf-a13a-1ee9-031ebac5ef3d', // 第 2 课 做 事 要 仔 细
+  'd1s2-03-gaicuo': 'ad5d14bf-b345-b15f-17af-c9d54f3b854d', // 第 3 课 错 了 就 要 改
+  'd1s2-04-jingshen': '9f86e045-b402-510c-f97b-909d4356fa6a', // 第 4 课 我 们 有 精 神
+  'd1s2-05-dajia': 'b8efd982-9971-22f4-89af-e732de7f3ae3', // 第 5 课 和 大 家 在 一 起
+  'd1s2-06-bangmang': 'c615fc6d-4af7-8471-909f-a5bcb2f3c1dd', // 第 6 课 请 帮 我 一 下
+  'd1s2-07-fenxiang': '4985131a-c922-73b2-a291-363af6b12360', // 第 7 课 我 们 爱 分 享
+  'd1s2-08-hezuo': '7b85561d-8a45-1ab9-485c-6994bcfcacda', // 第 8 课 大 家 来 合 作
+  'd1s2-09-jia': '5fcddaaa-adc4-1352-c94b-548b6ee7e292', // 第 9 课 这 是 我 的 家
+  'd1s2-10-qinai': 'f62e67aa-7e1c-f4eb-af41-54594d1e48ce', // 第 10 课 相 亲 相 爱 一 家 人
+  'd1s2-11-zhengli': '4795c9c0-9e9a-5bd2-007f-8bd1ed79276c', // 第 11 课 让 我 自 己 来 整 理
+  'd1s2-12-jiawu': 'f44cfb20-5651-bd6d-b62e-6224417680e0', // 第 12 课 学 做 家 务 活
+  'd1s2-13-ertongjie': '99fe221e-4fca-a7cb-5d0c-6118925e4c0c', // 第 13 课 快 乐 儿 童 节
+  'd1s2-14-shaoxiandui': '44d41699-35dc-5ca3-38bb-290aa30711d2', // 第 14 课 光 荣 的 少 先 队
+  'd1s2-15-honglingjin': 'cce0d37c-3bc1-c3f5-360b-3f9f58480d43', // 第 15 课 戴 上 红 领 巾
+  'd1s2-16-xianfeng': '141e2b8d-030d-ae87-8fa5-01da58f7a163', // 第 16 课 学 先 锋 做 先 锋
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */

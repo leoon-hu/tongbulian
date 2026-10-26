@@ -150,7 +150,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         blocks: [
           {
             kind: 'p',
-            text: `Battles and practice share one set of questions, generated from the units of the current PEP (People's Education Press) textbooks for primary school Chinese, math and English, grades 1–6 — every point in a battle is a textbook question. Available now: ${coverage('en')}.`,
+            text: `Battles and practice share one set of questions, generated from the units of the current PEP (People's Education Press) textbooks for primary school Chinese, math, English and Morality & Law, grades 1–6 — every point in a battle is a textbook question. Available now: ${coverage('en')}.`,
           },
           {
             kind: 'p',
@@ -208,6 +208,7 @@ export function helpSections(lang: Lang): HelpSection[] {
               { q: 'Why do some characters in Chinese questions have no pinyin?', a: 'Questions that test character recognition (pick the character from its pinyin, sound or picture; how do you read this character) would give the answer away with pinyin or by reading it aloud. Lesson texts, questions and all other options carry pinyin and are read aloud.' },
               { q: 'Why does English start in Grade 3?', a: 'English follows the PEP textbooks (People\'s Education Press), which start in Grade 3, as the national curriculum does; the e-textbook platform has no Grade 1–2 English books. Grades 3–6 are all live.' },
               { q: 'Which edition do Term 2 of Grades 4–6 follow?', a: 'Everything follows the e-textbooks currently on the National Smart Education Platform. Term 1 of Grades 4–6 math and Chinese is the new edition (revised for the 2022 curriculum standards); Term 2 is still the old edition there, so it follows that for now and will be updated once the platform switches. Grade 5 and 6 English are the same: new edition for Term 1, old edition for Term 2.' },
+              { q: 'How does Morality & Law work?', a: 'It follows the unified national textbook (new edition), one lesson per point: is this the right thing to do, which choice is right, questions and filling in the lesson rhymes. Questions and choices all have pinyin and are read aloud, so children who cannot read yet can do it on their own. Grade 1 is live; other grades are coming.' },
               {
                 q: 'Does it cost anything? Any ads? Is it safe?',
                 a: 'Free, no ads, no account, no personal data collected; progress stays in this device\'s browser. All code is open source under MIT, so anyone can inspect it or host their own copy:',
@@ -302,7 +303,7 @@ export function helpSections(lang: Lang): HelpSection[] {
       blocks: [
         {
           kind: 'p',
-          text: `对战和练习用的是同一套题：按现行人教版教材（2022 版课标新教材）的单元出，覆盖小学一到六年级的语文、数学、英语——对战里的每一分都是一道课本题。现在可练、可对战的是${coverage('zh')}。`,
+          text: `对战和练习用的是同一套题：按现行人教版教材（2022 版课标新教材）的单元出，覆盖小学一到六年级的语文、数学、英语、道德与法治——对战里的每一分都是一道课本题。现在可练、可对战的是${coverage('zh')}。`,
         },
         {
           kind: 'p',
@@ -360,6 +361,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             { q: '语文题里有的字为什么不标拼音？', a: '考认字的题（看拼音选字、听音选字、看图选字、这个字怎么读）要看孩子认不认得这个字，标了拼音、读出了字音就等于告诉了答案；课文、问题和其余选项都标拼音、都朗读。' },
             { q: '英语为什么从三年级开始？', a: '英语按人教版 PEP 教材做，这套课本是三年级起点，国家课程的英语也是三年级起，智慧教育平台上没有一、二年级的英语课本。三至六年级都可以练。' },
             { q: '四至六年级下册是哪一版课本？', a: '内容一律照国家中小学智慧教育平台上现在的电子课本做：四至六年级数学和语文的上册是新版（根据 2022 年版课程标准修订），下册平台上现在还是旧版，这里先照旧版做，平台换成新版再跟着改；五、六年级英语也一样，上册新版、下册旧版。' },
+            { q: '道德与法治怎么练？', a: '照统编新教材一课一个知识点：这样做对吗、哪种做法是对的、问答、课本儿歌填空，考的是课本讲的道理、做法和常识。题目和选项都标拼音、都读出来，还不认字的孩子也能自己做。现在有一年级，其它年级陆续补充。' },
             {
               q: '收费吗？有广告吗？安全吗？',
               a: '免费、无广告、不用注册、不收集个人信息，学习记录只存在这台设备的浏览器里。代码全部以 MIT 许可开源，谁都能查、也能自己部署一套：',

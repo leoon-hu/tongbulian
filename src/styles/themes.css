@@ -29,3 +29,12 @@
   --c-line: #e0e8f5;
   --grad-node: linear-gradient(145deg, #bcd8ff, #7fb0ff);
 }
+
+/* 道德与法治：嫩芽绿 */
+[data-theme='morality'] {
+  --c-bg: #f0f8ee;
+  --c-primary: #4caf50;
+  --c-primary-dark: #2f8a3a;
+  --c-line: #dcebd8;
+  --grad-node: linear-gradient(145deg, #c5e8bf, #7fcb76);
+}

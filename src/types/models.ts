@@ -83,6 +83,9 @@ export type QuestionType =
   | 'word' // 单词：听音 / 看图 / 看词选图、意思、补全字母
   | 'letter' // 字母与发音：大小写、字母表顺序、首字母、拼读
   | 'talk' // 对话与句子：应答、选词填空、问答、数字
+  // ── 道德与法治（§12） ──
+  | 'conduct' // 做法：这样做对吗、哪种做法对 / 不对
+  | 'civics' // 常识与道理：问答、儿歌填空
 
 export interface KnowledgePoint {
   id: string
@@ -1039,6 +1042,8 @@ export interface Question {
   choices?: Choice[]
   /** 选项卡的样子（语文）；不填是普通文字 */
   choiceStyle?: ChoiceStyle
+  /** 读完题目再按屏幕上的顺序把选项读一遍（道德与法治，D4：一年级的孩子不一定认得选项上的字） */
+  readChoices?: boolean
   explain?: DemoSpec
 }
 

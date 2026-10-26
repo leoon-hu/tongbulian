@@ -111,6 +111,8 @@ const digits10 = computed(() => numLen.value >= 10)
 .cards.longer .card {
   font-size: 20px;
   padding: 6px 4px;
+  /* 道德与法治的做法（≤ 12 个字）要折成两行：两行尽量一样长，少在词中间断开 */
+  text-wrap: balance;
 }
 .cards.digits .card {
   font-size: clamp(18px, 6.4vw, 28px);

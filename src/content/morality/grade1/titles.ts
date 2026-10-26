@@ -1,0 +1,101 @@
+// 一年级道德与法治的知识点 / 单元名（英文名 + 中文标题的拼音）：随目录一起加载——地图、页头、对战页、浏览器标题在内容包
+// 按需加载之前就要用（engine/catalog.ts 的 loadCourse）。中文标题的单一事实源是 curriculum.ts；拼音照课本目录印的。
+import { registerPinyin, registerTitles } from '@/engine/i18n'
+import { KNOWLEDGE_POINTS, UNITS } from './curriculum'
+
+const KP_TITLE_EN: Record<string, string> = {
+  'd1s1-01-shangxue': 'Happy to Go to School',
+  'd1s1-02-guoqi': 'I Salute the National Flag',
+  'd1s1-03-xiaoyuan': 'This Is Our School',
+  'd1s1-04-huijia': 'Get Home Safely',
+  'd1s1-05-laoshi': 'Hello, Teacher!',
+  'd1s1-06-pengyou': 'Hold Hands, Make Friends',
+  'd1s1-07-shangke': 'Class Begins, Learn Well',
+  'd1s1-08-kexia': 'Fun After Class',
+  'd1s1-09-zuoxi': 'A Regular Routine',
+  'd1s1-10-chifan': 'Good Table Manners',
+  'd1s1-11-limao': 'Be Polite to Others',
+  'd1s1-12-wan': 'Play Smart',
+  'd1s1-13-xiaosheng': 'Keep Our Voices Down',
+  'd1s1-14-gongwu': 'Take Care of Public Things',
+  'd1s1-15-luanreng': 'No Littering',
+  'd1s1-16-paidui': 'Line Up Nicely',
+  'd1s2-01-mubiao': 'A New Goal',
+  'd1s2-02-zixi': 'Be Careful',
+  'd1s2-03-gaicuo': 'Correct Your Mistakes',
+  'd1s2-04-jingshen': 'Full of Spirit',
+  'd1s2-05-dajia': 'Together with Everyone',
+  'd1s2-06-bangmang': 'Please Help Me',
+  'd1s2-07-fenxiang': 'We Love Sharing',
+  'd1s2-08-hezuo': "Let's Work Together",
+  'd1s2-09-jia': 'This Is My Home',
+  'd1s2-10-qinai': 'A Loving Family',
+  'd1s2-11-zhengli': 'I Can Tidy Up Myself',
+  'd1s2-12-jiawu': 'Learn to Do Housework',
+  'd1s2-13-ertongjie': "Happy Children's Day",
+  'd1s2-14-shaoxiandui': 'The Glorious Young Pioneers',
+  'd1s2-15-honglingjin': 'Wearing the Red Scarf',
+  'd1s2-16-xianfeng': 'Learn from Pioneers',
+}
+
+const UNIT_TITLE_EN: Record<string, string> = {
+  d1s1u1: "I'm a Pupil Now",
+  d1s1u2: 'School Life',
+  d1s1u3: 'Good Habits',
+  d1s1u4: 'Good Manners in Public',
+  d1s2u1: 'A New Me',
+  d1s2u2: 'Growing Up Together',
+  d1s2u3: 'A Happy Family',
+  d1s2u4: 'Be a Good Child of China',
+}
+
+registerTitles(
+  { zh: Object.fromEntries(KNOWLEDGE_POINTS.map((kp) => [kp.id, kp.title])), en: KP_TITLE_EN },
+  { zh: Object.fromEntries(UNITS.map((u) => [u.id, u.title])), en: UNIT_TITLE_EN },
+)
+
+// 知识点与单元标题的拼音（练习页页头、地图），与 curriculum.ts 的中文逐字对齐；课本目录给「个」注 gè、「点儿」儿化
+export const TITLE_PINYIN: Record<string, string> = {
+  'kp.d1s1-01-shangxue': 'kāi kāi xīn xīn shàng xué qù',
+  'kp.d1s1-02-guoqi': 'wǒ xiàng guó qí jìng gè lǐ',
+  'kp.d1s1-03-xiaoyuan': 'zhè shì wǒ men de xiào yuán',
+  'kp.d1s1-04-huijia': 'píng píng ān ān huí jiā lái',
+  'kp.d1s1-05-laoshi': 'lǎo shī nín hǎo',
+  'kp.d1s1-06-pengyou': 'lā la shǒu jiāo péng you',
+  'kp.d1s1-07-shangke': 'shàng kè le hǎo hǎo xué',
+  'kp.d1s1-08-kexia': 'kè yú shēng huó zhēn fēng fù',
+  'kp.d1s1-09-zuoxi': 'zuò xī yǒu guī lǜ',
+  'kp.d1s1-10-chifan': 'chī fàn yǒu jiǎng jiu',
+  'kp.d1s1-11-limao': 'duì rén yǒu lǐ mào',
+  'kp.d1s1-12-wan': 'wán yě yǒu xué wen',
+  'kp.d1s1-13-xiaosheng': 'wǒ men xiǎo diǎn r shēng',
+  'kp.d1s1-14-gongwu': 'rén rén ài hù gōng wù',
+  'kp.d1s1-15-luanreng': 'wǒ men bú luàn rēng',
+  'kp.d1s1-16-paidui': 'dà jiā pái hǎo duì',
+  'kp.d1s2-01-mubiao': 'yǒu gè xīn mù biāo',
+  'kp.d1s2-02-zixi': 'zuò shì yào zǐ xì',
+  'kp.d1s2-03-gaicuo': 'cuò le jiù yào gǎi',
+  'kp.d1s2-04-jingshen': 'wǒ men yǒu jīng shen',
+  'kp.d1s2-05-dajia': 'hé dà jiā zài yì qǐ',
+  'kp.d1s2-06-bangmang': 'qǐng bāng wǒ yí xià',
+  'kp.d1s2-07-fenxiang': 'wǒ men ài fēn xiǎng',
+  'kp.d1s2-08-hezuo': 'dà jiā lái hé zuò',
+  'kp.d1s2-09-jia': 'zhè shì wǒ de jiā',
+  'kp.d1s2-10-qinai': 'xiāng qīn xiāng ài yì jiā rén',
+  'kp.d1s2-11-zhengli': 'ràng wǒ zì jǐ lái zhěng lǐ',
+  'kp.d1s2-12-jiawu': 'xué zuò jiā wù huó',
+  'kp.d1s2-13-ertongjie': 'kuài lè ér tóng jié',
+  'kp.d1s2-14-shaoxiandui': 'guāng róng de shào xiān duì',
+  'kp.d1s2-15-honglingjin': 'dài shàng hóng lǐng jīn',
+  'kp.d1s2-16-xianfeng': 'xué xiān fēng zuò xiān fēng',
+  'unit.d1s1u1': 'wǒ shì xiǎo xué shēng la',
+  'unit.d1s1u2': 'guò hǎo xiào yuán shēng huó',
+  'unit.d1s1u3': 'yǎng chéng liáng hǎo xí guàn',
+  'unit.d1s1u4': 'wǒ men jiǎng wén míng',
+  'unit.d1s2u1': 'wǒ yǒu xīn miàn mào',
+  'unit.d1s2u2': 'wǒ men yì qǐ zhǎng dà',
+  'unit.d1s2u3': 'xìng fú yì jiā rén',
+  'unit.d1s2u4': 'zhēng zuò zhōng guó hǎo ér tóng',
+}
+
+registerPinyin(TITLE_PINYIN)

@@ -350,6 +350,16 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"粘(?=贴)"), "沾"),
         (re.compile(r"(?<=绕着)([^，。、]{1,3})转"), lambda m: m.group(1) + "赚"),  # type: ignore[list-item]
         (re.compile(r"(?<=供暖)和(?=降温)"), "合"),
+        # 一年级道德与法治：埋怨 mán、丢三落四 là、角色 jué、背书包 / 自己的书包自己背 bēi、数数小清单 shǔ、蒙着眼睛 méng、
+        # 多得零花钱 dé、少先队 shào（这些词单独成片段或句子很短时，合成语音常读成 mái、luò、jiǎo、bèi、shù、mēng、de、shǎo）
+        (re.compile(r"埋(?=怨)"), "蛮"),
+        (re.compile(r"(?<=丢三)落(?=四)"), "辣"),
+        (re.compile(r"角(?=色)"), "决"),
+        (re.compile(r"背(?=书包)|(?<=自己)背(?=$|[，。！？])"), "杯"),
+        (re.compile(r"数数(?=小清单)"), "属属"),
+        (re.compile(r"蒙(?=着眼)"), "萌"),
+        (re.compile(r"(?<=多)得(?=零花钱)"), "德"),
+        (re.compile(r"少(?=先队)"), "哨"),
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
         # 五年级数学

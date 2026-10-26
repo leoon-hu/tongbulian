@@ -64,7 +64,7 @@ function enNum(n: number): string {
   if (n < 20) return EN_ONES[n]!
   return EN_TENS[Math.floor(n / 10)]! + (n % 10 ? `-${EN_ONES[n % 10]}` : '')
 }
-const SUBJECT_NAMES: Record<string, [string, string]> = { math: ['数学', 'Math'], chinese: ['语文', 'Chinese'], english: ['英语', 'English'] }
+const SUBJECT_NAMES: Record<string, [string, string]> = { math: ['数学', 'Math'], chinese: ['语文', 'Chinese'], english: ['英语', 'English'], morality: ['道德与法治', 'Morality & Law'] }
 const subjects = (lang: 0 | 1, sep: string) => SUBJECT_IDS.map((id) => SUBJECT_NAMES[id]?.[lang] ?? id).join(sep)
 const games = String(GAMES)
 
@@ -137,7 +137,7 @@ const TEXT = {
     modes: [{ text: 'Practice alone' }, { text: 'vs Robot' }, { text: 'Two on one device' }, { text: 'Each on own device' }] as Line[],
     name: 'Chapter Practice',
     edition: 'Battle',
-    sub: ['PEP textbooks', GRADE_LO === GRADE_HI ? `Grade ${GRADE_LO}` : `Grades ${GRADE_LO}–${GRADE_HI}`, subjects(1, ' & '), KP ? `${KP} topics` : ''].filter(Boolean).join(' · '),
+    sub: [GRADE_LO === GRADE_HI ? `Grade ${GRADE_LO}` : `Grades ${GRADE_LO}–${GRADE_HI}`, subjects(1, ', '), KP ? `${KP} topics` : ''].filter(Boolean).join(' · '),
     badges: ['Free', 'No ads', 'No sign-up'],
   },
 }[LANG]
