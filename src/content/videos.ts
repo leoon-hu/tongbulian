@@ -645,6 +645,63 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'd1s2-14-shaoxiandui': '44d41699-35dc-5ca3-38bb-290aa30711d2', // 第 14 课 光 荣 的 少 先 队
   'd1s2-15-honglingjin': 'cce0d37c-3bc1-c3f5-360b-3f9f58480d43', // 第 15 课 戴 上 红 领 巾
   'd1s2-16-xianfeng': '141e2b8d-030d-ae87-8fa5-01da58f7a163', // 第 16 课 学 先 锋 做 先 锋
+  'd2s1-01-jiaqi': 'aed800c4-95df-fb45-f1cb-663f9e68993b', // 第1课 假期有收获
+  'd2s1-02-jiaoshijie': '058d90c7-43a4-03f8-7837-9e978ae93bac', // 第2课 教师节快乐
+  'd2s1-03-zhongqiu': '86d195c7-e26b-ea35-db31-16ef5c89669d', // 第3课 团团圆圆过中秋
+  'd2s1-04-guoqing': '67ac373c-ac1d-41ff-ee6c-fd5c32006284', // 第4课 欢欢喜喜庆国庆
+  'd2s1-05-banji': 'd97a58ed-c0bb-29f6-ce30-3337395fd3d0', // 第5课 这是我们班
+  'd2s1-06-guize': '7cfcf4bd-1932-b559-ea8e-06ef0de1a6f5', // 第6课 班级生活有规则
+  'd2s1-07-zhiri': '7e201bd8-768a-1b82-1359-337829d69af8', // 第7课 我是班级值日生
+  'd2s1-08-gongxian': '30c02ea8-c910-2846-4385-454dbb6fa2ec', // 第8课 我为班级作贡献
+  'd2s1-09-shanshui': '3c6763cf-eb7e-ec21-36bf-16c45927398d', // 第9课 我爱家乡山和水
+  'd2s1-10-wuchan': '73ca1117-1538-3622-b046-e30e39511f1a', // 第10课 家乡物产养育我
+  'd2s1-11-jiaxiangren': '430d8704-2fca-8130-0b83-dac7deb573e0', // 第11课 可亲可敬的家乡人
+  'd2s1-12-bianhua': 'c487858b-d54d-0898-e250-5458a8b02917', // 第12课 家乡新变化
+  'd2s1-13-meili': '360f0cce-cedc-0b3e-9175-1cbc1708630c', // 第13课 美丽中国我们的家
+  'd2s1-14-zhongguoren': '1f4c2d49-6f10-2940-700e-471e19b11336', // 第14课 我们都是中国人
+  'd2s1-15-guonian': 'a3e4a0ed-6e6d-6798-5b2b-9055b371e20e', // 第15课 红红火火中国年
+  'd2s1-16-zihao': '3a8471f6-9d16-fbd7-90ff-cafd41515770', // 第16课 祖国，我为您自豪
+  'd2s2-01-jiankang': '0e76f608-cb38-e32c-a573-5b1c6682031f', // 第 1 课 身心健康很重要
+  'd2s2-02-kuaileniao': '9178349e-0d72-161c-c019-eb691dffd371', // 第 2 课 学做“快乐鸟”
+  'd2s2-03-kaixinguo': 'fb20a7e0-421d-5621-dad3-10d5e56639e6', // 第 3 课 做个“开心果”
+  'd2s2-04-jianchi': 'cca7d2f1-bc6a-8e2e-a5b3-16b2c02f8763', // 第 4 课 坚持才会有收获
+  'd2s2-05-ziran': '5bbd6340-719b-630c-4d6b-3588a69a6c81', // 第 5 课 亲近大自然
+  'd2s2-06-dongzhiwu': 'cdf18b19-cd53-970d-4d49-ee561f2fa6f1', // 第 6 课 爱护动植物
+  'd2s2-07-shuidi': '44d5acec-f528-69d1-8afa-2f5849c52045', // 第 7 课 小水滴的诉说
+  'd2s2-08-zhi': '3ddf9ae3-107b-2cc8-8778-4a538357fbc4', // 第 8 课 我是一张纸
+  'd2s2-09-qinjian': '0f4580b8-c9ce-baf0-a8d9-d291a314a9f5', // 第 9 课 勤俭传家好
+  'd2s2-10-chengxin': '95a3e41e-71ac-5412-0b66-5bed3f322833', // 第 10 课 诚信贵如金
+  'd2s2-11-ziqiang': 'd644f6b0-9f08-bae8-5a29-86585d00915f', // 第 11 课 少年当自强
+  'd2s2-12-jianxian': 'c3f33335-1310-5ff8-8cbb-94254449abe1', // 第 12 课 见贤要思齐
+  'd2s2-13-mengxiang': '4109a0a2-2ee2-c4c1-e40e-886edf5f41ef', // 第 13 课 每个人都有梦想
+  'd2s2-14-gongtong': '2b8e60d7-528d-342f-0733-237f5f1b62a8', // 第 14 课 我们共同的梦想
+  'd2s2-15-jieli': 'd355518a-b67b-0d54-4c7d-5cdf1a72864c', // 第 15 课 梦想接力棒
+  'd2s2-16-xianzai': 'ca81efe5-2e64-9bcd-8fac-86e259d8dd55', // 第 16 课 实现梦想从现在做起
+  'd3s1-01-chengzhang': 'b3c8cbd8-1ed8-31e7-7a17-790724113ecc', // 第1课 学习伴我成长
+  'd3s1-02-kuaile': 'de71cc2b-0182-fc28-6c8d-5f11bc30301f', // 第2课 我学习，我快乐
+  'd3s1-03-fangfa': '97ddde06-17ba-297b-042b-42d267d1d983', // 第3课 学习有方法
+  'd3s1-04-keji': '33be61f2-3a56-48ae-3c4d-ed9ff689deed', // 第4课 科技力量大
+  'd3s1-05-kexuejia': 'cede7dcb-06bf-0408-aae6-c698a04860f7', // 第5课 走近科学家
+  'd3s1-06-aikexue': '793ce357-4be0-a648-00af-b1dde916a2f5', // 第6课 从小爱科学
+  'd3s1-07-laoshi': 'e8aa109c-a89c-d4ad-6b43-654c3162b4e9', // 第7课 走近我们的老师
+  'd3s1-08-tongxue': 'f3cda17f-bff0-8b26-091d-68b84d367343', // 第8课 同学相伴
+  'd3s1-09-xuexiao': 'aad9acd7-2b23-6efd-b41a-3ee38444dcf4', // 第9课 让我们的学校更美好
+  'd3s1-10-gonggong': '61de22c4-120e-8f89-37d8-45530b6fe423', // 第10课 公共场所的文明素养
+  'd3s1-11-rexin': '48ebcbe6-4e6e-c523-e96b-400758e3d584', // 第11课 我们都是热心人
+  'd3s1-12-guize': '68076850-09d3-290e-65a6-21809cc1089f', // 第12课 生活离不开规则
+  'd3s1-13-anquan': '9c08741c-78af-84a9-2391-b23d6d586002', // 第13课 安全记心上
+  'd3s2-01-xingfu': '799d7710-8c38-24fc-5d68-23a99a2117c7', // 第 1 课 我们的生活越来越幸福
+  'd3s2-02-fendou': 'a6f2d667-5398-ada6-86ed-30d9e648dff1', // 第 2 课 幸福生活是奋斗出来的
+  'd3s2-03-laodong': 'e13f7971-517c-7433-f58a-bc0c682b102c', // 第 3 课 一切靠劳动
+  'd3s2-04-zhijing': 'bd22e6e5-b9aa-60ab-1654-67e3875505b7', // 第 4 课 致敬劳动者
+  'd3s2-05-ailaodong': '80f2fcef-f624-df1d-aed5-30d6b83059db', // 第 5 课 从小爱劳动
+  'd3s2-06-caoxin': '00078bfd-35c0-e8a3-c314-62e2aa78062a', // 第 6 课 少让父母操心
+  'd3s2-07-zeren': '20191e86-eb0e-2aa7-c2c9-68bce1fddc58', // 第 7 课 我的家庭贡献与责任
+  'd3s2-08-meide': 'c4011b59-659e-70d0-b241-77d73876d4b3', // 第 8 课 弘扬家庭美德
+  'd3s2-09-qingting': 'c0fb6256-a02c-bdde-3307-e13835e13e83', // 第 9 课 学会倾听
+  'd3s2-10-biaoda': '54029340-5fd7-d4df-b29b-9c2bf243c9b4', // 第 10 课 学会表达
+  'd3s2-11-huzhu': '9c9186cc-3427-472f-2d16-cc7fd2cd30b1', // 第 11 课 同学要互助
+  'd3s2-12-chengxin': 'e47bdb3b-1308-a013-30ad-d9460e5fcc2f', // 第 12 课 待人要诚信
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */

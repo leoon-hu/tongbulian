@@ -35,6 +35,8 @@ import { KP_SEO as SEO_E4 } from '@/content/english/grade4/seo'
 import { KP_SEO as SEO_E5 } from '@/content/english/grade5/seo'
 import { KP_SEO as SEO_E6 } from '@/content/english/grade6/seo'
 import { KP_SEO as SEO_D1 } from '@/content/morality/grade1/seo'
+import { KP_SEO as SEO_D2 } from '@/content/morality/grade2/seo'
+import { KP_SEO as SEO_D3 } from '@/content/morality/grade3/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
@@ -51,9 +53,11 @@ import '@/content/english/grade4'
 import '@/content/english/grade5'
 import '@/content/english/grade6'
 import '@/content/morality/grade1'
+import '@/content/morality/grade2'
+import '@/content/morality/grade3'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5, ...SEO_E6, ...SEO_D1 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5, ...SEO_E6, ...SEO_D1, ...SEO_D2, ...SEO_D3 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 

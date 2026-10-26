@@ -44,6 +44,8 @@ const BOOKS = {
   'english-g6': ['291dc803-4454-4374-8f31-29d7755efcd2', '638a0cc9-69a5-4369-8472-69148c719583'],
   // 道德与法治（统编新教材）：按单元里的课题对，同语文
   'morality-g1': ['99f92105-bbd4-43f4-8c18-9dedd3ea126e', '7ab6c2ca-caf0-4b2a-8857-f1d77783cca0'],
+  'morality-g2': ['69ad383d-7ed4-4a07-8f29-06985d5c4a36', '4835bdd8-221e-435a-99a0-463c42d44365'],
+  'morality-g3': ['dc7fe72f-5c73-4c6a-8e4b-2389993a104d', '63c0b16a-adc9-4df7-ba56-429905360436'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
 const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2'])
@@ -59,6 +61,8 @@ const OLD_BOOKS = {
   'chinese-g5': ['edbd7846-7206-42ec-8be5-f690e9d873aa', '117306e1-40c4-4106-bebb-b01a34927951'],
   'chinese-g6': ['4d2e2415-46d3-47f4-8393-30707820123c', '46fcb680-0486-4d3c-8d25-073bdf922c8e'],
   'morality-g1': ['3045d9f8-4714-4f4e-bee1-0140e440f152', '3a501e52-196b-4963-8387-3d2232efb4bb'],
+  'morality-g2': ['58ffba65-2dad-47ce-8d57-69958a626c4b', '9c72ad9b-9cf1-4f6c-a525-cc65e01aef00'],
+  'morality-g3': ['ed05f7c6-9313-4e44-98d8-77a20a0beafa', '1f16f08c-e86e-40ca-94bd-658cf78285e7'],
 }
 /**
  * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，

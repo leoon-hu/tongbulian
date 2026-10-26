@@ -1,0 +1,101 @@
+// 二年级道德与法治的知识点 / 单元名（英文名 + 中文标题的拼音）：随目录一起加载——地图、页头、对战页、浏览器标题在内容包
+// 按需加载之前就要用（engine/catalog.ts 的 loadCourse）。中文标题的单一事实源是 curriculum.ts；二年级课本不注拼音，拼音照字典定。
+import { registerPinyin, registerTitles } from '@/engine/i18n'
+import { KNOWLEDGE_POINTS, UNITS } from './curriculum'
+
+const KP_TITLE_EN: Record<string, string> = {
+  'd2s1-01-jiaqi': 'A Rewarding Holiday',
+  'd2s1-02-jiaoshijie': "Happy Teachers' Day",
+  'd2s1-03-zhongqiu': 'Together at Mid-Autumn',
+  'd2s1-04-guoqing': 'Celebrating National Day',
+  'd2s1-05-banji': 'This Is Our Class',
+  'd2s1-06-guize': 'Rules in Class Life',
+  'd2s1-07-zhiri': "I'm on Duty for My Class",
+  'd2s1-08-gongxian': 'I Do My Part for the Class',
+  'd2s1-09-shanshui': "I Love My Hometown's Hills and Rivers",
+  'd2s1-10-wuchan': 'Hometown Products Feed Me',
+  'd2s1-11-jiaxiangren': 'Dear People of My Hometown',
+  'd2s1-12-bianhua': 'New Changes in My Hometown',
+  'd2s1-13-meili': 'Beautiful China, Our Home',
+  'd2s1-14-zhongguoren': 'We Are All Chinese',
+  'd2s1-15-guonian': 'A Joyful Chinese New Year',
+  'd2s1-16-zihao': "Motherland, I'm Proud of You",
+  'd2s2-01-jiankang': 'A Healthy Body and Mind',
+  'd2s2-02-kuaileniao': 'Be a Happy Bird',
+  'd2s2-03-kaixinguo': 'Be a Bundle of Joy',
+  'd2s2-04-jianchi': 'Keep Going to Succeed',
+  'd2s2-05-ziran': 'Get Close to Nature',
+  'd2s2-06-dongzhiwu': 'Care for Animals and Plants',
+  'd2s2-07-shuidi': 'What a Little Water Drop Says',
+  'd2s2-08-zhi': "I'm a Sheet of Paper",
+  'd2s2-09-qinjian': 'Hard Work and Thrift',
+  'd2s2-10-chengxin': 'Honesty Is Golden',
+  'd2s2-11-ziqiang': 'Be Strong While Young',
+  'd2s2-12-jianxian': 'Learn from Good Examples',
+  'd2s2-13-mengxiang': 'Everyone Has a Dream',
+  'd2s2-14-gongtong': 'Our Shared Dream',
+  'd2s2-15-jieli': 'Passing On the Dream',
+  'd2s2-16-xianzai': 'Start Now to Reach Your Dream',
+}
+
+const UNIT_TITLE_EN: Record<string, string> = {
+  d2s1u1: 'Enjoy the Holidays',
+  d2s1u2: 'I Love Our Class',
+  d2s1u3: 'My Beautiful Hometown',
+  d2s1u4: 'I Love Our Motherland',
+  d2s2u1: 'Cheerful and Upward',
+  d2s2u2: 'Thank You, Nature',
+  d2s2u3: 'Carry On Traditional Virtues',
+  d2s2u4: 'Sow the Seeds of Dreams',
+}
+
+registerTitles(
+  { zh: Object.fromEntries(KNOWLEDGE_POINTS.map((kp) => [kp.id, kp.title])), en: KP_TITLE_EN },
+  { zh: Object.fromEntries(UNITS.map((u) => [u.id, u.title])), en: UNIT_TITLE_EN },
+)
+
+// 知识点与单元标题的拼音（练习页页头、地图），与 curriculum.ts 的中文逐字对齐；「个」照一年级课本目录的注法标 gè
+export const TITLE_PINYIN: Record<string, string> = {
+  'kp.d2s1-01-jiaqi': 'jià qī yǒu shōu huò',
+  'kp.d2s1-02-jiaoshijie': 'jiào shī jié kuài lè',
+  'kp.d2s1-03-zhongqiu': 'tuán tuán yuán yuán guò zhōng qiū',
+  'kp.d2s1-04-guoqing': 'huān huān xǐ xǐ qìng guó qìng',
+  'kp.d2s1-05-banji': 'zhè shì wǒ men bān',
+  'kp.d2s1-06-guize': 'bān jí shēng huó yǒu guī zé',
+  'kp.d2s1-07-zhiri': 'wǒ shì bān jí zhí rì shēng',
+  'kp.d2s1-08-gongxian': 'wǒ wèi bān jí zuò gòng xiàn',
+  'kp.d2s1-09-shanshui': 'wǒ ài jiā xiāng shān hé shuǐ',
+  'kp.d2s1-10-wuchan': 'jiā xiāng wù chǎn yǎng yù wǒ',
+  'kp.d2s1-11-jiaxiangren': 'kě qīn kě jìng de jiā xiāng rén',
+  'kp.d2s1-12-bianhua': 'jiā xiāng xīn biàn huà',
+  'kp.d2s1-13-meili': 'měi lì zhōng guó wǒ men de jiā',
+  'kp.d2s1-14-zhongguoren': 'wǒ men dōu shì zhōng guó rén',
+  'kp.d2s1-15-guonian': 'hóng hóng huǒ huǒ zhōng guó nián',
+  'kp.d2s1-16-zihao': 'zǔ guó wǒ wèi nín zì háo',
+  'kp.d2s2-01-jiankang': 'shēn xīn jiàn kāng hěn zhòng yào',
+  'kp.d2s2-02-kuaileniao': 'xué zuò kuài lè niǎo',
+  'kp.d2s2-03-kaixinguo': 'zuò gè kāi xīn guǒ',
+  'kp.d2s2-04-jianchi': 'jiān chí cái huì yǒu shōu huò',
+  'kp.d2s2-05-ziran': 'qīn jìn dà zì rán',
+  'kp.d2s2-06-dongzhiwu': 'ài hù dòng zhí wù',
+  'kp.d2s2-07-shuidi': 'xiǎo shuǐ dī de sù shuō',
+  'kp.d2s2-08-zhi': 'wǒ shì yì zhāng zhǐ',
+  'kp.d2s2-09-qinjian': 'qín jiǎn chuán jiā hǎo',
+  'kp.d2s2-10-chengxin': 'chéng xìn guì rú jīn',
+  'kp.d2s2-11-ziqiang': 'shào nián dāng zì qiáng',
+  'kp.d2s2-12-jianxian': 'jiàn xián yào sī qí',
+  'kp.d2s2-13-mengxiang': 'měi gè rén dōu yǒu mèng xiǎng',
+  'kp.d2s2-14-gongtong': 'wǒ men gòng tóng de mèng xiǎng',
+  'kp.d2s2-15-jieli': 'mèng xiǎng jiē lì bàng',
+  'kp.d2s2-16-xianzai': 'shí xiàn mèng xiǎng cóng xiàn zài zuò qǐ',
+  'unit.d2s1u1': 'guò hǎo jié jià rì',
+  'unit.d2s1u2': 'wǒ ài wǒ men bān',
+  'unit.d2s1u3': 'wǒ de jiā xiāng měi',
+  'unit.d2s1u4': 'wǒ ài wǒ men de zǔ guó',
+  'unit.d2s2u1': 'wǒ lè guān wǒ xiàng shàng',
+  'unit.d2s2u2': 'dà zì rán xiè xie nín',
+  'unit.d2s2u3': 'chuán tǒng měi dé wǒ hóng yáng',
+  'unit.d2s2u4': 'bō xià mèng xiǎng de zhǒng zi',
+}
+
+registerPinyin(TITLE_PINYIN)
