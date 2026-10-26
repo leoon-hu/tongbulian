@@ -702,6 +702,18 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'd3s2-10-biaoda': '54029340-5fd7-d4df-b29b-9c2bf243c9b4', // 第 10 课 学会表达
   'd3s2-11-huzhu': '9c9186cc-3427-472f-2d16-cc7fd2cd30b1', // 第 11 课 同学要互助
   'd3s2-12-chengxin': 'e47bdb3b-1308-a013-30ad-d9460e5fcc2f', // 第 12 课 待人要诚信
+  'd4s2-01-pengyou': '2fa7e428-0bfb-4f9b-b52d-1a65426ab245', // 1 我们的好朋友
+  'd4s2-02-suanshu': 'c07e73d7-1bb8-4c80-ad2c-a4d7451e2556', // 2 说话要算数
+  'd4s2-03-chongtu': 'fe62947e-800a-405b-bb4f-21187275aa2a', // 3 当冲突发生
+  'd4s2-04-maidongxi': 'ee456c13-2b87-426c-ab6d-8dd849c0dd6c', // 4 买东西的学问
+  'd4s2-05-heli': '5e2a1dcc-31a1-4bd1-8dc4-9ca1ef9fcbd9', // 5 合理消费
+  'd4s2-06-bimian': '2ee9330c-a735-444a-9b9c-e83d13788020', // 6 有多少浪费本可避免
+  'd4s2-07-yishi': '7efc16dc-5df4-4a70-8496-395635ef6aa6', // 7 我们的衣食之源
+  'd4s2-08-nalilai': '5815f3f6-4c42-4606-b3ed-738a1892cd1f', // 8 这些东西哪里来
+  'd4s2-09-tamen': '9f7918de-bf16-4281-a7d0-7cc17a18e9a1', // 9 生活离不开他们
+  'd4s2-10-fengsu': '9a9be594-ce61-40d1-b517-72e7f9bac2dd', // 10 我们当地的风俗
+  'd4s2-11-yishu': 'a24e8e26-7467-4f74-a5e3-e324be8e2c3d', // 11 多姿多彩的民间艺术
+  'd4s2-12-xiyou': '50f382ee-4d85-441e-a4af-b95403a2cf9f', // 12 家乡的喜与忧
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -908,6 +920,18 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'e5s1-06-b': { id: '8ae7e493-7c66-c09b-017c-6a99048307c8', from: 'old-elite' }, // 旧教材五年级上册 · Unit 6 In a nature park · B（精品课）
   'e6s1-03-a': { id: '8ae7e498-8422-f8a8-0184-2bdeb971023c', from: 'old-elite' }, // 旧教材六年级上册 · Unit 6 How do you feel? · A（精品课）
   'e6s1-03-b': { id: '8ae7e48e-8422-f88c-0184-26eda1730171', from: 'old-elite' }, // 旧教材六年级上册 · Unit 6 How do you feel? · B（精品课）
+  'd4s1-01-banjiti': { id: '69f60e11-5d1d-4afd-8392-edb03b1590df', from: 'old' }, // 旧教材四年级上册 · 第一单元 与班级共成长 · 1 我们班四岁了
+  'd4s1-02-xuanju': { id: 'd8e69575-0ff8-4656-8dd2-4b0aeab4bade', from: 'old' }, // 旧教材五年级上册 · 第二单元 我们是班级的主人 · 4 选举产生班委会
+  'd4s1-03-xieshang': { id: '85e9ad66-6b64-441b-aa3c-082327cf9da9', from: 'old' }, // 旧教材五年级上册 · 第二单元 我们是班级的主人 · 5 协商决定班级事务
+  'd4s1-04-dute': { id: '299ba61e-08fb-435a-a817-c6292ead4016', from: 'old' }, // 旧教材三年级下册 · 第一单元 我和我的同伴 · 1.我是独特的
+  'd4s1-05-shengming': { id: 'e084a61b-a672-4504-b2ca-c3dab6175bde', from: 'old' }, // 旧教材三年级上册 · 第三单元 安全护我成长 · 7 生命最宝贵
+  'd4s1-06-baohu': { id: '7af52a02-650b-4202-8f5d-f5f9a2c60074', from: 'old' }, // 旧教材三年级上册 · 第三单元 安全护我成长 · 9 心中的“110”
+  'd4s1-07-shenqi': { id: 'da8e4735-0b39-4eba-9910-f8ec3891f7b6', from: 'old' }, // 旧教材四年级上册 · 第三单元 信息万花筒 · 8 网络新世界
+  'd4s1-08-qiangzou': { id: 'c1cbc9cf-30ed-4b17-bbd7-3080427fdd5c', from: 'old' }, // 旧教材四年级上册 · 第三单元 信息万花筒 · 7 健康看电视
+  'd4s1-09-shangwang': { id: 'da8e4735-0b39-4eba-9910-f8ec3891f7b6', from: 'old' }, // 旧教材四年级上册 · 第三单元 信息万花筒 · 8 网络新世界
+  'd4s1-10-gouwu': { id: 'ee456c13-2b87-426c-ab6d-8dd849c0dd6c', from: 'old' }, // 旧教材四年级下册 · 第二单元 做聪明的消费者 · 4 买东西的学问
+  'd4s1-11-xiaofei': { id: '5e2a1dcc-31a1-4bd1-8dc4-9ca1ef9fcbd9', from: 'old' }, // 旧教材四年级下册 · 第二单元 做聪明的消费者 · 5 合理消费
+  'd4s1-12-langfei': { id: '2ee9330c-a735-444a-9b9c-e83d13788020', from: 'old' }, // 旧教材四年级下册 · 第二单元 做聪明的消费者 · 6 有多少浪费本可避免
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

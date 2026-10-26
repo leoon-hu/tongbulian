@@ -46,9 +46,11 @@ const BOOKS = {
   'morality-g1': ['99f92105-bbd4-43f4-8c18-9dedd3ea126e', '7ab6c2ca-caf0-4b2a-8857-f1d77783cca0'],
   'morality-g2': ['69ad383d-7ed4-4a07-8f29-06985d5c4a36', '4835bdd8-221e-435a-99a0-463c42d44365'],
   'morality-g3': ['dc7fe72f-5c73-4c6a-8e4b-2389993a104d', '63c0b16a-adc9-4df7-ba56-429905360436'],
+  // 四上的新教材同步课平台上还没有（2026-10-27），这一格空着，全走 OLD_MORALITY 里对上的旧版课；四下平台上还是旧版，同步课就是旧版四下那一本
+  'morality-g4': [null, 'dcc4775c-4417-4a99-b623-3901bb81fcfa'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2', 'morality-g4:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -63,6 +65,7 @@ const OLD_BOOKS = {
   'morality-g1': ['3045d9f8-4714-4f4e-bee1-0140e440f152', '3a501e52-196b-4963-8387-3d2232efb4bb'],
   'morality-g2': ['58ffba65-2dad-47ce-8d57-69958a626c4b', '9c72ad9b-9cf1-4f6c-a525-cc65e01aef00'],
   'morality-g3': ['ed05f7c6-9313-4e44-98d8-77a20a0beafa', '1f16f08c-e86e-40ca-94bd-658cf78285e7'],
+  'morality-g4': ['cc6d78c9-dcfc-48a0-813c-2e89e7ca2629', 'dcc4775c-4417-4a99-b623-3901bb81fcfa'],
 }
 /**
  * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，
@@ -86,6 +89,29 @@ const OLD_CN_G5S1 = 'edbd7846-7206-42ec-8be5-f690e9d873aa' // 小学语文统编
 const OLD_CN_G5S2 = '117306e1-40c4-4106-bebb-b01a34927951' // 小学语文统编版五年级下册（平台上还是旧版）
 const OLD_CN_G6S1 = '4d2e2415-46d3-47f4-8393-30707820123c' // 小学语文统编版六年级上册（旧）
 const OLD_CN_G6S2 = '46fcb680-0486-4d3c-8d25-073bdf922c8e' // 小学语文统编版六年级下册（平台上还是旧版）
+/**
+ * 道德与法治新教材四上的课，平台上还没有新教材的同步课，旧教材里讲同一件事的那一课（新教材把旧版三上、三下、五上、四下的课挪到了四上）：
+ * 知识点 → [同步课教材 id, 章节名（照平台上的写法，norm 之后要一样）, 哪本书]
+ */
+const OLD_MO_G3S1 = 'ed05f7c6-9313-4e44-98d8-77a20a0beafa' // 小学道德与法治统编版三年级上册（旧）
+const OLD_MO_G3S2 = '1f16f08c-e86e-40ca-94bd-658cf78285e7' // 小学道德与法治统编版三年级下册（旧）
+const OLD_MO_G4S1 = 'cc6d78c9-dcfc-48a0-813c-2e89e7ca2629' // 小学道德与法治统编版四年级上册（旧）
+const OLD_MO_G4S2 = 'dcc4775c-4417-4a99-b623-3901bb81fcfa' // 小学道德与法治统编版四年级下册（平台上还是旧版）
+const OLD_MO_G5S1 = '5d49d413-2502-4e5e-8af0-dad7ca59d533' // 小学道德与法治统编版五年级上册（旧）
+const OLD_MORALITY = {
+  'd4s1-01-banjiti': [OLD_MO_G4S1, '我们班四岁了', '旧教材四年级上册'],
+  'd4s1-02-xuanju': [OLD_MO_G5S1, '选举产生班委会', '旧教材五年级上册'],
+  'd4s1-03-xieshang': [OLD_MO_G5S1, '协商决定班级事务', '旧教材五年级上册'],
+  'd4s1-04-dute': [OLD_MO_G3S2, '1.我是独特的', '旧教材三年级下册'],
+  'd4s1-05-shengming': [OLD_MO_G3S1, '生命最宝贵', '旧教材三年级上册'],
+  'd4s1-06-baohu': [OLD_MO_G3S1, '心中的“110”', '旧教材三年级上册'],
+  'd4s1-07-shenqi': [OLD_MO_G4S1, '网络新世界', '旧教材四年级上册'],
+  'd4s1-08-qiangzou': [OLD_MO_G4S1, '健康看电视', '旧教材四年级上册'],
+  'd4s1-09-shangwang': [OLD_MO_G4S1, '网络新世界', '旧教材四年级上册'],
+  'd4s1-10-gouwu': [OLD_MO_G4S2, '买东西的学问', '旧教材四年级下册'],
+  'd4s1-11-xiaofei': [OLD_MO_G4S2, '合理消费', '旧教材四年级下册'],
+  'd4s1-12-langfei': [OLD_MO_G4S2, '有多少浪费本可避免', '旧教材四年级下册'],
+}
 const OLD_CHINESE = {
   'c4s1-02-maozi': [OLD_CN_G3S2, '方帽子店', '旧教材三年级下册'],
   'c4s1-02-saima': [OLD_CN_G5S2, '田忌赛马', '旧教材五年级下册'],
@@ -737,7 +763,7 @@ async function fallbackOf(course, books, unit, node, kp) {
   const elite = node && books[unit.semester - 1].first(node, ELITE)
   const edition = OLD_VOLUMES.has(`${course.id}:${unit.semester}`) ? '' : '新教材'
   if (elite) return { id: elite, from: 'elite', note: `${edition}${grade}${SEM[unit.semester - 1]} · ${pathOf(node)}（精品课）` }
-  const manual = OLD_MATH[kp.id] ?? OLD_CHINESE[kp.id] ?? OLD_ENGLISH[kp.id]
+  const manual = OLD_MATH[kp.id] ?? OLD_CHINESE[kp.id] ?? OLD_ENGLISH[kp.id] ?? OLD_MORALITY[kp.id]
   if (manual) {
     const [tm, chapter, book = '旧教材'] = manual
     if (!oldCache.has(tm)) oldCache.set(tm, loadBook(tm))
@@ -776,12 +802,15 @@ try {
   for (const course of allCourses()) {
     const ids = BOOKS[course.id]
     if (!ids) continue
-    const books = await Promise.all(ids.map(loadBook))
+    // 新教材这一册还没有同步课的，BOOKS 里那一格是 null：这一册不找新教材的章节，直接找替代视频
+    const books = await Promise.all(ids.map((id) => id && loadBook(id)))
     for (const kp of course.knowledgePoints) {
       const unit = course.units.find((u) => u.id === kp.unitId)
       const book = books[unit.semester - 1]
       let node
-      if (course.subjectId === 'math') {
+      if (!book) {
+        node = undefined
+      } else if (course.subjectId === 'math') {
         node = mathNode(book, MATH[kp.id])
       } else if (course.subjectId === 'english') {
         node = englishNode(book, unit, kp.id)

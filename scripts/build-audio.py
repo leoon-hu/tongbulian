@@ -372,6 +372,12 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"粘(?=在桌子)"), "沾"),
         (re.compile(r"当(?=日事)|(?<=日事)当(?=日)"), "荡"),
         (re.compile(r"应(?=承担)"), "英"),
+        # 四年级道德与法治：沉着冷静 zhuó、背包 bēi、参与 yù、量入为出 liàng / wéi（顺带管到别的学科里的「背包」「参与」）
+        (re.compile(r"(?<=沉)着(?=冷静)"), "酌"),
+        (re.compile(r"背(?=包)"), "杯"),
+        (re.compile(r"(?<=参)与"), "预"),
+        (re.compile(r"量(?=入为出)"), "亮"),
+        (re.compile(r"(?<=入)为(?=出)"), "围"),
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
         # 五年级数学

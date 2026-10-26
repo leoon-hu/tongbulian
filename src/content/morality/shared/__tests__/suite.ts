@@ -208,6 +208,9 @@ const SYLLABLE = /^[a-zü]*[āáǎàaēéěèeīíǐìiōóǒòoūúǔùuǖǘǚ�
 
 const hans = (text: string): string[] => [...text].filter(isHan)
 
+/** 「一」当数字念、不变调的固定说法 */
+const NUMERAL_YI = ['买一送一']
+
 /** 拼音与汉字逐个对齐：音节数 = 汉字数，每个音节像拼音，r 只配「儿」；对不上返回问题描述 */
 function misaligned(text: string, py: string | undefined): string | null {
   if (py === undefined) return `「${text}」缺拼音`
@@ -262,6 +265,8 @@ export function pinyinSuite(g: {
       for (const [text, py] of Object.entries(g.py)) {
         const cs = hans(text)
         const ss = py.split(' ')
+        // 当数字念的「一」不变调（买一送一 mǎi yī sòng yī）
+        const counting = (i: number): boolean => NUMERAL_YI.some((w) => [...w].some((ch, k) => ch === '一' && cs.slice(i - k, i - k + w.length).join('') === w))
         cs.forEach((c, i) => {
           const next = ss[i + 1]
           // 「不」在四声前读 bú
@@ -269,7 +274,7 @@ export function pinyinSuite(g: {
           // 「看一看」「等一等」里的「一」读轻声 yi（「一个一个」不算）；别处在四声前读 yí（作序数、单念的这里不出现）
           if (c === '一' && cs[i - 1] === cs[i + 1] && cs[i - 2] !== '一') {
             if (ss[i] !== 'yi') bad.push(`${text}：一 → yi`)
-          } else if (c === '一' && next && /[àèìòùǜ]/.test(next) && ss[i] !== 'yí' && cs[i - 1] !== '第' && cs[i - 1] !== '十') bad.push(`${text}：一 → yí`)
+          } else if (c === '一' && next && /[àèìòùǜ]/.test(next) && ss[i] !== 'yí' && cs[i - 1] !== '第' && cs[i - 1] !== '十' && !counting(i)) bad.push(`${text}：一 → yí`)
         })
       }
       expect(bad).toEqual([])
