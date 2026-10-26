@@ -1655,7 +1655,13 @@ describe('表情与点游戏（B58 / B59）', () => {
     vi.advanceTimersByTime(600)
     await settle()
     expect(w.findAll('.emote-layer .emote')).toHaveLength(0)
-    // 点游戏盒子：涟漪
+    // 点游戏盒子：涟漪。游戏模块按需加载，宿主挂上游戏（data-status 不再是 loading）之前点了不算——
+    // 固定几次 settle 在单独跑或整套测试一起跑时偶尔等不到，这里等动态导入落地、宿主挂上再点
+    for (let i = 0; i < 20 && w.find('.strip .game-host').attributes('data-status') === 'loading'; i++) {
+      await vi.dynamicImportSettled()
+      await settle()
+    }
+    expect(w.find('.strip .game-host').attributes('data-status')).not.toBe('loading')
     await w.find('.strip canvas').trigger('pointerdown', { clientX: 30, clientY: 30 })
     await settle()
     expect(w.findAll('.strip .ripple')).toHaveLength(1)
