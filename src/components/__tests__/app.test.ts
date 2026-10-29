@@ -98,7 +98,7 @@ describe('App 集成冒烟', () => {
     expect(shown(w.find('.hero'))).toContain('谁先答对 8 题谁赢')
     expect(w.find('main').exists()).toBe(true)
     const links = w.findAll('.about .about-links a')
-    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '四年级数学知识点清单', '五年级数学知识点清单', '六年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单', '四年级语文知识点清单', '五年级语文知识点清单', '六年级语文知识点清单', '三年级英语知识点清单', '四年级英语知识点清单', '五年级英语知识点清单', '六年级英语知识点清单', '一年级道德与法治知识点清单', '二年级道德与法治知识点清单', '三年级道德与法治知识点清单', '四年级道德与法治知识点清单', '五年级道德与法治知识点清单'])
+    expect(links.map((a) => a.text())).toEqual(['一年级数学知识点清单', '二年级数学知识点清单', '三年级数学知识点清单', '四年级数学知识点清单', '五年级数学知识点清单', '六年级数学知识点清单', '一年级语文知识点清单', '二年级语文知识点清单', '三年级语文知识点清单', '四年级语文知识点清单', '五年级语文知识点清单', '六年级语文知识点清单', '三年级英语知识点清单', '四年级英语知识点清单', '五年级英语知识点清单', '六年级英语知识点清单', '一年级道德与法治知识点清单', '二年级道德与法治知识点清单', '三年级道德与法治知识点清单', '四年级道德与法治知识点清单', '五年级道德与法治知识点清单', '六年级道德与法治知识点清单'])
     expect(links.map((a) => a.attributes('href'))).toEqual(liveCourses().map((lc) => `./${coursePath(lc.course)}`))
     // 页脚从上到下：版本卡片、开源一句、三个动作、更多应用（F1，三个静态站同一套）
     const parts = w.findAll('footer.foot > *').map((e) => e.classes()[0])
@@ -195,18 +195,17 @@ describe('App 集成冒烟', () => {
     w.unmount()
   })
 
-  it('选年级页（道德与法治）：一至五年级上下两册各一张封面卡；六年级是「敬请期待」占位卡（R4q–R4u）', async () => {
+  it('选年级页（道德与法治）：一至六年级上下两册各一张封面卡，没有占位卡（R4q–R4v）', async () => {
     const w = await mountAt('/s/morality')
     const vols = w.findAll('button.vol')
-    expect(vols.map((v) => `${v.attributes('data-grade')}-${v.attributes('data-sem')}`)).toEqual(['g1-1', 'g1-2', 'g2-1', 'g2-2', 'g3-1', 'g3-2', 'g4-1', 'g4-2', 'g5-1', 'g5-2'])
+    expect(vols.map((v) => `${v.attributes('data-grade')}-${v.attributes('data-sem')}`)).toEqual(['g1-1', 'g1-2', 'g2-1', 'g2-2', 'g3-1', 'g3-2', 'g4-1', 'g4-2', 'g5-1', 'g5-2', 'g6-1', 'g6-2'])
     expect(vols[1]!.find('img.cover').attributes('src')).toContain('covers/morality-g1-s2.webp')
     expect(vols[3]!.find('img.cover').attributes('src')).toContain('covers/morality-g2-s2.webp')
     expect(vols[5]!.find('img.cover').attributes('src')).toContain('covers/morality-g3-s2.webp')
     expect(vols[7]!.find('img.cover').attributes('src')).toContain('covers/morality-g4-s2.webp')
     expect(vols[9]!.find('img.cover').attributes('src')).toContain('covers/morality-g5-s2.webp')
-    const soon = w.findAll('button.card.soon')
-    expect(soon.map((c) => c.attributes('data-grade'))).toEqual(['g6'])
-    expect(soon[0]!.classes()).not.toContain('noted')
+    expect(vols[11]!.find('img.cover').attributes('src')).toContain('covers/morality-g6-s2.webp')
+    expect(w.findAll('button.card.soon')).toHaveLength(0)
     await vols[1]!.trigger('click')
     await until(() => router.currentRoute.value.name === 'topics')
     expect(router.currentRoute.value.path).toBe('/s/morality/g/g1')

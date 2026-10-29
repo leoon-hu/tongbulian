@@ -726,6 +726,16 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'd5s2-10-shengli': '843624ad-3daa-4e62-939b-a53b82fe3974', // 10 夺取抗日战争和人民解放战争的胜利
   'd5s2-11-dongfang': '228b0f20-896b-427b-9243-f66cdacfcfaf', // 11 屹立在世界的东方
   'd5s2-12-qiangqilai': 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', // 12 富起来到强起来
+  'd6s2-01-zunzhong': '70141010-743d-4413-846b-5b7f146c6a13', // 1 学会尊重
+  'd6s2-02-kuanrong': 'f342295a-a954-46b9-9bd9-fbd5af27e222', // 2 学会宽容
+  'd6s2-03-fansi': '2c19f9a0-7736-4717-8d57-7577ea834dd0', // 3 学会反思
+  'd6s2-04-diqiu': '40ba3b4e-a1a6-4375-9d42-e771c34efb9b', // 4 地球——我们的家园
+  'd6s2-05-zaihai': 'a208cca0-46ca-4af0-b159-03b7821c54b4', // 5 应对自然灾害
+  'd6s2-06-wenming': '57502d8c-bd9c-4682-a1e8-2e8ec5ea9e0a', // 6 探访古代文明
+  'd6s2-07-duoyuan': 'a8661b00-a6a1-41a8-9d69-fea566e33a1b', // 7 多元文化 多样魅力
+  'd6s2-08-keji': '0f32d84c-2425-4d42-b02d-4e94f4b72c22', // 8 科技发展 造福人类
+  'd6s2-09-guoji': 'e6633b16-6b05-4be1-a456-9c24dddef57a', // 9 日益重要的国际组织
+  'd6s2-10-heping': '4b4ee21f-47c0-4566-ada0-e4fb81bf5991', // 10 我们爱和平
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -957,6 +967,16 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'd5s1-11-xinshidai': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
   'd5s1-12-chengjiu': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
   'd5s1-13-zhengcheng': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
+  'd6s1-01-falv': { id: 'ede509c1-8f05-40bd-80c9-422b3f728c7f', from: 'old' }, // 旧教材六年级上册 · 第一单元 我们的守护者 · 1 感受生活中的法律
+  'd6s1-02-zuoyong': { id: 'ede509c1-8f05-40bd-80c9-422b3f728c7f', from: 'old' }, // 旧教材六年级上册 · 第一单元 我们的守护者 · 1 感受生活中的法律
+  'd6s1-03-xianfa': { id: 'fa3b6327-e34c-4b53-8148-4e39b0e895a0', from: 'old' }, // 旧教材六年级上册 · 第一单元 我们的守护者 · 2 宪法是根本法
+  'd6s1-04-gongmin': { id: '6793808e-4bd4-4fc4-94fd-84d33cfc4dda', from: 'old' }, // 旧教材六年级上册 · 第二单元 我们是公民 · 3 公民意味着什么
+  'd6s1-06-jigou': { id: '56ff1f60-0d1d-4935-aefb-e478aeb94023', from: 'old' }, // 旧教材六年级上册 · 第三单元 我们的国家机构 · 5 国家机构有哪些
+  'd6s1-07-teshu': { id: 'b42fd962-113c-4574-928c-3178c662d7eb', from: 'old' }, // 旧教材六年级上册 · 第四单元 法律保护我们健康成长 · 8 我们受特殊保护
+  'd6s1-08-zhuanmen': { id: 'b42fd962-113c-4574-928c-3178c662d7eb', from: 'old' }, // 旧教材六年级上册 · 第四单元 法律保护我们健康成长 · 8 我们受特殊保护
+  'd6s1-09-guanai': { id: 'b42fd962-113c-4574-928c-3178c662d7eb', from: 'old' }, // 旧教材六年级上册 · 第四单元 法律保护我们健康成长 · 8 我们受特殊保护
+  'd6s1-10-weiquan': { id: '7ab366df-2edf-4688-b29f-0f5f919d2f54', from: 'old' }, // 旧教材六年级上册 · 第四单元 法律保护我们健康成长 · 9 知法守法依法维权
+  'd6s1-11-shoufa': { id: '7ab366df-2edf-4688-b29f-0f5f919d2f54', from: 'old' }, // 旧教材六年级上册 · 第四单元 法律保护我们健康成长 · 9 知法守法依法维权
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

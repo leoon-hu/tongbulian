@@ -1333,7 +1333,7 @@ export const PY: Record<string, string> = {
   '遇到困难不放弃': 'yù dào kùn nán bú fàng qì',
   '参加爱心义卖献爱心': 'cān jiā ài xīn yì mài xiàn ài xīn',
   '学习同学身上的优点': 'xué xí tóng xué shēn shàng de yōu diǎn',
-  '觉得小事不值得做': 'jué de xiǎo shì bù zhí de zuò',
+  '觉得小事不值得做': 'jué de xiǎo shì bù zhí dé zuò',
   '学先锋只说不做': 'xué xiān fēng zhǐ shuō bú zuò',
   '遇到一点困难就放弃': 'yù dào yì diǎn kùn nán jiù fàng qì',
   '怕苦怕累，不爱劳动': 'pà kǔ pà lèi bú ài láo dòng',

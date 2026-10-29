@@ -20,6 +20,7 @@ import { moralityGrade2 } from '@/content/morality/grade2/course'
 import { moralityGrade3 } from '@/content/morality/grade3/course'
 import { moralityGrade4 } from '@/content/morality/grade4/course'
 import { moralityGrade5 } from '@/content/morality/grade5/course'
+import { moralityGrade6 } from '@/content/morality/grade6/course'
 
 // ── 课程注册表：key 为 courseId（如 math-g1）。────────────────────────────
 const COURSES = new Map<string, Course>()
@@ -62,6 +63,7 @@ registerCourse(moralityGrade2, () => import('@/content/morality/grade2'))
 registerCourse(moralityGrade3, () => import('@/content/morality/grade3'))
 registerCourse(moralityGrade4, () => import('@/content/morality/grade4'))
 registerCourse(moralityGrade5, () => import('@/content/morality/grade5'))
+registerCourse(moralityGrade6, () => import('@/content/morality/grade6'))
 
 /** 这门课的内容包加载好了没有（没有加载函数的一直是好的） */
 export function courseLoaded(courseId: string): boolean {
@@ -250,7 +252,7 @@ export const SUBJECTS: SubjectMeta[] = [
     icon: '🤝',
     theme: 'morality',
     status: 'live',
-    grades: [grade('g1', 'morality-g1'), grade('g2', 'morality-g2'), grade('g3', 'morality-g3'), grade('g4', 'morality-g4'), grade('g5', 'morality-g5'), grade('g6')],
+    grades: [grade('g1', 'morality-g1'), grade('g2', 'morality-g2'), grade('g3', 'morality-g3'), grade('g4', 'morality-g4'), grade('g5', 'morality-g5'), grade('g6', 'morality-g6')],
   },
 ]
 

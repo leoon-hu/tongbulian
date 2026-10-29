@@ -10,7 +10,7 @@ import { VIDEO_FALLBACKS, VIDEO_LESSONS, videoOf } from '../videos'
  * Revision——平台上这一章只挂了听力材料（2026-10-25）。平台补上了重跑
  * npm run videos 再从这里删掉
  */
-const NO_VIDEO = new Set(['e3s2-07-revision', 'e4s1-07-revision', 'e4s2-07-revision', 'e5s1-02-a', 'e5s1-02-spell', 'e5s1-02-b', 'e5s1-04-a', 'e5s1-04-spell', 'e5s1-04-b', 'e5s1-07-revision', 'e6s1-02-a', 'e6s1-02-b', 'e6s1-04-a', 'e6s1-04-b', 'e6s1-05-a', 'e6s1-05-b', 'e6s1-06-a', 'e6s1-06-b', 'e6s1-07-revision', 'c3s1-08-garden', 'm4s1-04-estimate', 'm5s1-07-tiling', 'm6s1-07-standard', 'c4s1-06-changcheng', 'c4s1-06-bingmayong', 'c4s1-06-garden', 'c4s1-08-wuwo', 'c5s1-01-garden', 'c5s1-06-hangtianyuan', 'c5s1-07-diyichangxue', 'c5s1-07-garden', 'c5s1-08-shuweilv'])
+const NO_VIDEO = new Set(['e3s2-07-revision', 'e4s1-07-revision', 'e4s2-07-revision', 'e5s1-02-a', 'e5s1-02-spell', 'e5s1-02-b', 'e5s1-04-a', 'e5s1-04-spell', 'e5s1-04-b', 'e5s1-07-revision', 'e6s1-02-a', 'e6s1-02-b', 'e6s1-04-a', 'e6s1-04-b', 'e6s1-05-a', 'e6s1-05-b', 'e6s1-06-a', 'e6s1-06-b', 'e6s1-07-revision', 'c3s1-08-garden', 'm4s1-04-estimate', 'm5s1-07-tiling', 'm6s1-07-standard', 'c4s1-06-changcheng', 'c4s1-06-bingmayong', 'c4s1-06-garden', 'c4s1-08-wuwo', 'c5s1-01-garden', 'c5s1-06-hangtianyuan', 'c5s1-07-diyichangxue', 'c5s1-07-garden', 'c5s1-08-shuweilv', 'd6s1-05-quanli'])
 
 const ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 const SYNC = new RegExp(`^https://basic\\.smartedu\\.cn/syncClassroom/classActivity\\?activityId=${ID}$`)

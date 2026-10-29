@@ -28,6 +28,7 @@ import { everyItemQuestion as moralityG2Items } from '@/content/morality/grade2/
 import { everyItemQuestion as moralityG3Items } from '@/content/morality/grade3/generators'
 import { everyItemQuestion as moralityG4Items } from '@/content/morality/grade4/generators'
 import { everyItemQuestion as moralityG5Items } from '@/content/morality/grade5/generators'
+import { everyItemQuestion as moralityG6Items } from '@/content/morality/grade6/generators'
 import { everyPosFrom } from '@/content/math/grade1/generators/position'
 // 按需加载的数学包（三至六年级）：语料要跑遍所有知识点，这里直接导入（语文包由上面几行导入）
 import '@/content/math/grade3'
@@ -148,7 +149,7 @@ export function collectCorpus(): Record<Lang, string[]> {
   sets.zh.add('两')
   // 语文的题目条目有限，逐条出一遍（随机抽样可能漏掉某一句课文、某个听音的字）
   // 英语（§11）的条目同样逐条出一遍（单词、句子、要听的词一条不落；英文的片段经 tokenVoice 归到英文）
-  for (const q of [...chineseG1Items(), ...chineseG2Items(), ...chineseG3Items(), ...chineseG4Items(), ...chineseG5Items(), ...chineseG6Items(), ...englishG3Items(), ...englishG4Items(), ...englishG5Items(), ...englishG6Items(), ...moralityG1Items(), ...moralityG2Items(), ...moralityG3Items(), ...moralityG4Items(), ...moralityG5Items()]) {
+  for (const q of [...chineseG1Items(), ...chineseG2Items(), ...chineseG3Items(), ...chineseG4Items(), ...chineseG5Items(), ...chineseG6Items(), ...englishG3Items(), ...englishG4Items(), ...englishG5Items(), ...englishG6Items(), ...moralityG1Items(), ...moralityG2Items(), ...moralityG3Items(), ...moralityG4Items(), ...moralityG5Items(), ...moralityG6Items()]) {
     for (const lang of langs) {
       add(lang, questionSpeech(q, lang))
       add(lang, answerSpeech(q, lang))

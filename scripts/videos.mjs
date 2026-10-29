@@ -50,9 +50,11 @@ const BOOKS = {
   'morality-g4': [null, 'dcc4775c-4417-4a99-b623-3901bb81fcfa'],
   // 五上同四上：新教材同步课平台上还没有（2026-10-29），全走 OLD_MORALITY；五下平台上还是旧版，同步课就是旧版五下那一本
   'morality-g5': [null, '15b6e6e6-2c1b-4d29-bf40-77b1770208ef'],
+  // 六上同四上、五上：新教材同步课平台上还没有（2026-10-30），全走 OLD_MORALITY；六下平台上还是旧版，同步课就是旧版六下那一本
+  'morality-g6': [null, 'ace2e6c4-7e1e-44b2-8941-1997d65da4f0'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2', 'morality-g4:2', 'morality-g5:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2', 'morality-g4:2', 'morality-g5:2', 'morality-g6:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -69,6 +71,7 @@ const OLD_BOOKS = {
   'morality-g3': ['ed05f7c6-9313-4e44-98d8-77a20a0beafa', '1f16f08c-e86e-40ca-94bd-658cf78285e7'],
   'morality-g4': ['cc6d78c9-dcfc-48a0-813c-2e89e7ca2629', 'dcc4775c-4417-4a99-b623-3901bb81fcfa'],
   'morality-g5': ['5d49d413-2502-4e5e-8af0-dad7ca59d533', '15b6e6e6-2c1b-4d29-bf40-77b1770208ef'],
+  'morality-g6': ['675929d6-df3f-4bb7-a730-2e3dea509d16', 'ace2e6c4-7e1e-44b2-8941-1997d65da4f0'],
 }
 /**
  * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，
@@ -130,6 +133,18 @@ const OLD_MORALITY = {
   'd5s1-11-xinshidai': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
   'd5s1-12-chengjiu': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
   'd5s1-13-zhengcheng': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
+  // 六上（新版）讲法律，旧版六上也是法律：按讲同一件事的那一课对
+  'd6s1-01-falv': [OLD_MO_G6S1, '感受生活中的法律', '旧教材六年级上册'],
+  'd6s1-02-zuoyong': [OLD_MO_G6S1, '感受生活中的法律', '旧教材六年级上册'],
+  'd6s1-03-xianfa': [OLD_MO_G6S1, '宪法是根本法', '旧教材六年级上册'],
+  'd6s1-04-gongmin': [OLD_MO_G6S1, '公民意味着什么', '旧教材六年级上册'],
+  'd6s1-05-quanli': [OLD_MO_G6S1, '公民的基本权利和义务', '旧教材六年级上册'], // 2026-10 旧版这一课平台上也没挂课，暂时没有视频（测试的 NO_VIDEO）
+  'd6s1-06-jigou': [OLD_MO_G6S1, '国家机构有哪些', '旧教材六年级上册'],
+  'd6s1-07-teshu': [OLD_MO_G6S1, '我们受特殊保护', '旧教材六年级上册'],
+  'd6s1-08-zhuanmen': [OLD_MO_G6S1, '我们受特殊保护', '旧教材六年级上册'],
+  'd6s1-09-guanai': [OLD_MO_G6S1, '我们受特殊保护', '旧教材六年级上册'],
+  'd6s1-10-weiquan': [OLD_MO_G6S1, '知法守法依法维权', '旧教材六年级上册'],
+  'd6s1-11-shoufa': [OLD_MO_G6S1, '知法守法依法维权', '旧教材六年级上册'],
 }
 const OLD_CHINESE = {
   'c4s1-02-maozi': [OLD_CN_G3S2, '方帽子店', '旧教材三年级下册'],

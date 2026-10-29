@@ -399,6 +399,17 @@ SAY_AS: Dict[str, List[Tuple["re.Pattern[str]", str]]] = {
         (re.compile(r"(?<=台)儿(?=庄)"), "而"),
         (re.compile(r"(?<=[川青])藏(?=公路)"), "葬"),
         (re.compile(r"^兴$|(?<=国家)兴(?=$|，|。|；)"), "星"),
+        # 六年级道德与法治：勿以恶小而为之 / 列为 wéi、都城 dū、干栏 gān、撒哈拉 sā、率船队 shuài、秘书处 chù、对着干 gàn、
+        # 调解 tiáo、附和 hè（给予、不得、应征、载体、双重、强迫、处置审稿时实测读得对，不换）
+        (re.compile(r"(?<=恶小而)为(?=之)|(?<=列)为"), "围"),
+        (re.compile(r"(?<=的)都(?=城)"), "督"),
+        (re.compile(r"干(?=栏)"), "甘"),
+        (re.compile(r"撒(?=哈拉)"), "仨"),
+        (re.compile(r"率(?=船队)"), "帅"),
+        (re.compile(r"(?<=秘书)处"), "触"),
+        (re.compile(r"(?<=对着)干"), "赣"),
+        (re.compile(r"调(?=解)"), "条"),
+        (re.compile(r"(?<=附)和"), "贺"),
         # 运算律里和运算符挨着的小写字母（a + b = b + a）按字母名读：换成大写（一年级字母表、四上「直线 a 平行于 b」不动）
         (re.compile(r"(?<![A-Za-z])[a-c](?=[加减乘等括])|(?<=[加减乘号])[a-c](?![A-Za-z])"), lambda m: m.group(0).upper()),  # type: ignore[list-item]
         # 五年级数学
