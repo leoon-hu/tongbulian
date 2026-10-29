@@ -48,9 +48,11 @@ const BOOKS = {
   'morality-g3': ['dc7fe72f-5c73-4c6a-8e4b-2389993a104d', '63c0b16a-adc9-4df7-ba56-429905360436'],
   // 四上的新教材同步课平台上还没有（2026-10-27），这一格空着，全走 OLD_MORALITY 里对上的旧版课；四下平台上还是旧版，同步课就是旧版四下那一本
   'morality-g4': [null, 'dcc4775c-4417-4a99-b623-3901bb81fcfa'],
+  // 五上同四上：新教材同步课平台上还没有（2026-10-29），全走 OLD_MORALITY；五下平台上还是旧版，同步课就是旧版五下那一本
+  'morality-g5': [null, '15b6e6e6-2c1b-4d29-bf40-77b1770208ef'],
 }
 /** 平台上还是旧版课本、照旧版做的册（课程 id:册）：BOOKS 里给的就是旧版的同步课，注释里不写「新教材」 */
-const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2', 'morality-g4:2'])
+const OLD_VOLUMES = new Set(['math-g4:2', 'math-g5:2', 'math-g6:2', 'chinese-g4:2', 'chinese-g5:2', 'chinese-g6:2', 'english-g5:2', 'english-g6:2', 'morality-g4:2', 'morality-g5:2'])
 /**
  * 找替代视频用的旧教材（2022 版课标修订前的统编版，平台标签「旧教材」、标题不带「新教材-」）：[上册, 下册]。
  * 数学的小节名新旧对不上，没有
@@ -66,6 +68,7 @@ const OLD_BOOKS = {
   'morality-g2': ['58ffba65-2dad-47ce-8d57-69958a626c4b', '9c72ad9b-9cf1-4f6c-a525-cc65e01aef00'],
   'morality-g3': ['ed05f7c6-9313-4e44-98d8-77a20a0beafa', '1f16f08c-e86e-40ca-94bd-658cf78285e7'],
   'morality-g4': ['cc6d78c9-dcfc-48a0-813c-2e89e7ca2629', 'dcc4775c-4417-4a99-b623-3901bb81fcfa'],
+  'morality-g5': ['5d49d413-2502-4e5e-8af0-dad7ca59d533', '15b6e6e6-2c1b-4d29-bf40-77b1770208ef'],
 }
 /**
  * 数学找替代视频用的旧教材（2022 版课标修订前的人教版，标题「小学数学人教版四年级上册」这种）：新旧教材的小节名对不上，
@@ -98,6 +101,8 @@ const OLD_MO_G3S2 = '1f16f08c-e86e-40ca-94bd-658cf78285e7' // 小学道德与法
 const OLD_MO_G4S1 = 'cc6d78c9-dcfc-48a0-813c-2e89e7ca2629' // 小学道德与法治统编版四年级上册（旧）
 const OLD_MO_G4S2 = 'dcc4775c-4417-4a99-b623-3901bb81fcfa' // 小学道德与法治统编版四年级下册（平台上还是旧版）
 const OLD_MO_G5S1 = '5d49d413-2502-4e5e-8af0-dad7ca59d533' // 小学道德与法治统编版五年级上册（旧）
+const OLD_MO_G5S2 = '15b6e6e6-2c1b-4d29-bf40-77b1770208ef' // 小学道德与法治统编版五年级下册（平台上还是旧版）
+const OLD_MO_G6S1 = '675929d6-df3f-4bb7-a730-2e3dea509d16' // 小学道德与法治统编版六年级上册（旧）
 const OLD_MORALITY = {
   'd4s1-01-banjiti': [OLD_MO_G4S1, '我们班四岁了', '旧教材四年级上册'],
   'd4s1-02-xuanju': [OLD_MO_G5S1, '选举产生班委会', '旧教材五年级上册'],
@@ -111,6 +116,20 @@ const OLD_MORALITY = {
   'd4s1-10-gouwu': [OLD_MO_G4S2, '买东西的学问', '旧教材四年级下册'],
   'd4s1-11-xiaofei': [OLD_MO_G4S2, '合理消费', '旧教材四年级下册'],
   'd4s1-12-langfei': [OLD_MO_G4S2, '有多少浪费本可避免', '旧教材四年级下册'],
+  // 五上（新版）整册是党史，旧版讲同一段历史的在五下第三单元；人民代表大会制度在旧版六上，祖国统一（领土）在旧版五上
+  'd5s1-01-kaitian': [OLD_MO_G5S2, '中国有了共产党', '旧教材五年级下册'],
+  'd5s1-02-daolu': [OLD_MO_G5S2, '中国有了共产党', '旧教材五年级下册'],
+  'd5s1-03-kangri': [OLD_MO_G5S2, '夺取抗日战争和人民解放战争的胜利', '旧教材五年级下册'],
+  'd5s1-04-jiefang': [OLD_MO_G5S2, '夺取抗日战争和人民解放战争的胜利', '旧教材五年级下册'],
+  'd5s1-05-zhanqilai': [OLD_MO_G5S2, '屹立在世界的东方', '旧教材五年级下册'],
+  'd5s1-06-dangjia': [OLD_MO_G6S1, '人大代表为人民', '旧教材六年级上册'],
+  'd5s1-07-shehuizhuyi': [OLD_MO_G5S2, '屹立在世界的东方', '旧教材五年级下册'],
+  'd5s1-08-gaige': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
+  'd5s1-09-guoli': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
+  'd5s1-10-tongyi': [OLD_MO_G5S1, '我们神圣的国土', '旧教材五年级上册'],
+  'd5s1-11-xinshidai': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
+  'd5s1-12-chengjiu': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
+  'd5s1-13-zhengcheng': [OLD_MO_G5S2, '富起来到强起来', '旧教材五年级下册'],
 }
 const OLD_CHINESE = {
   'c4s1-02-maozi': [OLD_CN_G3S2, '方帽子店', '旧教材三年级下册'],
@@ -306,7 +325,7 @@ const MATH = {
   'm3s1-02-parens': '含有小括号的两级运算',
   'm3s1-02-steps': '解决问题(两级计算)',
   'm3s1-03-mm-dm': '毫米的认识',
-  'm3s1-03-km': '干米的认识及单位换算', // 平台章节名把「千」打成了「干」
+  'm3s1-03-km': '千米的认识及单位换算',
   'm3s1-03-choose-unit': '问题解决（估测距离）',
   'm3s1-03-convert': '分米的认识及单位换算',
   'm3s1-04-mass-units': '认识质量单位',

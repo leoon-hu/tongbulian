@@ -64,17 +64,22 @@ export function generatorSuite(g: MoralityGrade): void {
       }
     })
 
-    it('材料的格式与长度（D2）：做法 ≤ 12 字不带句末标点，问题以问号结尾，选项 ≤ 8 字、要么都带图要么都不带', () => {
+    it('材料的格式与长度（D2）：做法 ≤ 12 字、说法 ≤ 20 字，都不带句末标点；问题以问号结尾，选项 ≤ 8 字、要么都带图要么都不带', () => {
       const bad: string[] = []
       for (const spec of g.lessons) {
         const good = spec.good ?? []
         const wrong = spec.bad ?? []
-        if (good.length < 4 || wrong.length < 3) bad.push(`${spec.kp}：做法太少`)
+        const said = [...(spec.right ?? []), ...(spec.wrong ?? [])]
+        // 判断题对的（做法 + 说法）≥ 4 条、不对的 ≥ 3 条
+        if (good.length + (spec.right ?? []).length < 4 || wrong.length + (spec.wrong ?? []).length < 3) bad.push(`${spec.kp}：判断题的材料太少`)
         if ((spec.ask ?? []).length < 3) bad.push(`${spec.kp}：问答太少`)
         for (const s of [...good, ...wrong]) {
           if (han(s) > 12 || /[。？！]$/.test(s) || EMOJI.test(s)) bad.push(`${spec.kp}：${s}`)
         }
-        if (new Set([...good, ...wrong]).size !== good.length + wrong.length) bad.push(`${spec.kp}：做法重复`)
+        for (const s of said) {
+          if (han(s) > 20 || /[。？！]$/.test(s) || EMOJI.test(s)) bad.push(`${spec.kp}：${s}`)
+        }
+        if (new Set([...good, ...wrong, ...said]).size !== good.length + wrong.length + said.length) bad.push(`${spec.kp}：做法 / 说法重复`)
         for (const s of spec.ask ?? []) {
           const it = parseAsk(s)
           const opts = [it.answer, ...it.wrongs]
@@ -118,14 +123,16 @@ export function generatorSuite(g: MoralityGrade): void {
       }
     })
 
-    it('判断题：做法在「对」里答对、在「不对」里答不对（D3）', () => {
+    it('判断题：做法 / 说法在「对」里答对、在「不对」里答不对，做法问「这样做对吗」、说法问「这种说法对吗」（D3）', () => {
       for (const [kp, qs] of SAMPLES) {
         const spec = SPEC.get(kp)!
         for (const q of qs.filter((q) => maker(q) === 'judge')) {
           const said = zh((q.stem[0] as { text: LStr }).text)
+          const deed = [...(spec.good ?? []), ...(spec.bad ?? [])].includes(said)
           expect(labels(q), q.id).toEqual(['✅ 对', '❌ 不对'])
-          expect(label(q), q.id).toBe(spec.good?.includes(said) ? '✅ 对' : '❌ 不对')
-          expect([...(spec.good ?? []), ...(spec.bad ?? [])]).toContain(said)
+          expect(label(q), q.id).toBe(spec.good?.includes(said) || spec.right?.includes(said) ? '✅ 对' : '❌ 不对')
+          expect([...(spec.good ?? []), ...(spec.bad ?? []), ...(spec.right ?? []), ...(spec.wrong ?? [])]).toContain(said)
+          expect(zh((q.stem[1] as { text: LStr }).text), q.id).toBe(deed ? '这样做对吗？' : '这种说法对吗？')
         }
       }
     })
@@ -170,7 +177,7 @@ export function generatorSuite(g: MoralityGrade): void {
           const said = questionSpeech(q, 'zh').filter((t) => t !== PAUSE).join('')
           if (maker(q) === 'judge') {
             expect(q.readChoices, q.id).toBeUndefined()
-            expect(said.endsWith('这样做对吗？') || said.endsWith('这样做对吗'), q.id).toBe(true)
+            expect(/(这样做|这种说法)对吗？?$/.test(said), q.id).toBe(true)
           } else {
             expect(q.readChoices, q.id).toBe(true)
             // 每个选项读的是它自己的那几个片段（年份读成「一九四九年」，带图的读 say），按屏幕上的顺序出现
@@ -208,8 +215,10 @@ const SYLLABLE = /^[a-zü]*[āáǎàaēéěèeīíǐìiōóǒòoūúǔùuǖǘǚ�
 
 const hans = (text: string): string[] => [...text].filter(isHan)
 
-/** 「一」当数字念、不变调的固定说法 */
-const NUMERAL_YI = ['买一送一']
+/** 「一」当数字念、不变调的固定说法（东方红一号 yī hào、党的一大 yī dà） */
+const NUMERAL_YI = ['买一送一', '一号', '党的一大']
+/** 「一」在词尾、不变调：序数（第一、十一）与「统一」「唯一」，看前一个字 */
+const YI_FINAL = new Set(['第', '十', '统', '唯'])
 
 /** 拼音与汉字逐个对齐：音节数 = 汉字数，每个音节像拼音，r 只配「儿」；对不上返回问题描述 */
 function misaligned(text: string, py: string | undefined): string | null {
@@ -274,7 +283,7 @@ export function pinyinSuite(g: {
           // 「看一看」「等一等」里的「一」读轻声 yi（「一个一个」不算）；别处在四声前读 yí（作序数、单念的这里不出现）
           if (c === '一' && cs[i - 1] === cs[i + 1] && cs[i - 2] !== '一') {
             if (ss[i] !== 'yi') bad.push(`${text}：一 → yi`)
-          } else if (c === '一' && next && /[àèìòùǜ]/.test(next) && ss[i] !== 'yí' && cs[i - 1] !== '第' && cs[i - 1] !== '十' && !counting(i)) bad.push(`${text}：一 → yí`)
+          } else if (c === '一' && next && /[àèìòùǜ]/.test(next) && ss[i] !== 'yí' && !YI_FINAL.has(cs[i - 1] ?? '') && !counting(i)) bad.push(`${text}：一 → yí`)
         })
       }
       expect(bad).toEqual([])

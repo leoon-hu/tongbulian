@@ -38,6 +38,7 @@ import { KP_SEO as SEO_D1 } from '@/content/morality/grade1/seo'
 import { KP_SEO as SEO_D2 } from '@/content/morality/grade2/seo'
 import { KP_SEO as SEO_D3 } from '@/content/morality/grade3/seo'
 import { KP_SEO as SEO_D4 } from '@/content/morality/grade4/seo'
+import { KP_SEO as SEO_D5 } from '@/content/morality/grade5/seo'
 // 语文、三年级数学的生成器在应用里按需加载（engine/catalog.ts 的 loadCourse）；静态页要跑遍所有知识点，这里直接导入
 import '@/content/math/grade3'
 import '@/content/math/grade4'
@@ -57,9 +58,10 @@ import '@/content/morality/grade1'
 import '@/content/morality/grade2'
 import '@/content/morality/grade3'
 import '@/content/morality/grade4'
+import '@/content/morality/grade5'
 
 /** 每个知识点静态页的专属正文（怎么学 / 常见错误 / 家长怎么陪 / 搜索词），各内容包一份；没有的知识点就不出那几段 */
-const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5, ...SEO_E6, ...SEO_D1, ...SEO_D2, ...SEO_D3, ...SEO_D4 }
+const KP_SEO: Record<string, KpSeo> = { ...SEO_G1, ...SEO_G2, ...SEO_G3, ...SEO_G4, ...SEO_G5, ...SEO_G6, ...SEO_C1, ...SEO_C2, ...SEO_C3, ...SEO_C4, ...SEO_C5, ...SEO_C6, ...SEO_E3, ...SEO_E4, ...SEO_E5, ...SEO_E6, ...SEO_D1, ...SEO_D2, ...SEO_D3, ...SEO_D4, ...SEO_D5 }
 /** 作者 / 发布者（JSON-LD 的 author / publisher，sameAs 指到仓库） */
 const AUTHOR = { '@type': 'Person', name: 'leoon-hu', url: REPO_URL }
 
@@ -1076,7 +1078,8 @@ function kpPage(lc: LiveCourse, kp: KnowledgePoint, siteUrl: string, analytics: 
   // 英语的知识点标题里已经有「Unit 3」，这里只写单元名（不然描述超过 150 字）
   const where = `人教版${name}${sem}${course.subjectId === 'english' ? `《${unit.title}》` : unitLabel(unit)}`
   const extra = KP_SEO[kp.id]
-  const title = `${kp.title}练习题｜人教版${name}${sem}`
+  // 标题连站名不超过 42 个字：太长的课题（「夺取抗日战争和人民解放战争的胜利」）省掉「练习题」
+  const title = [`${kp.title}练习题｜人教版${name}${sem}`, `${kp.title}｜人教版${name}${sem}`].find((t) => [...`${t} · ${SITE_NAME}`].length <= 42) ?? `${kp.title}｜${name}${sem}`
   const description = `${where}「${kp.title}」的在线练习题：${copyOf(course).kp}；也能打一局对战游戏（打机器人、两人一台或多设备组队，谁先答对 8 题谁赢）。免费、无广告。${extra ? `附示例题与答案、怎么学、常见错误与家长陪练建议。` : '附示例题与答案。'}`
   const samples = sampleQuestions(kp.id).map(questionText)
   const siblings = kpsOfUnit(course, unit.id).filter((k) => getGenerator(k.id))

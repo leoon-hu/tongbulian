@@ -75,7 +75,7 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'm3s1-02-parens': '76314b78-41b1-04c9-2e4f-5def04e5bf56', // 含有小括号的两级运算
   'm3s1-02-steps': 'b7c07872-80fd-3193-5e54-7de226c0d280', // 解决问题(两级计算)
   'm3s1-03-mm-dm': '00b449df-086e-2d5d-49f8-564be6196f15', // 毫米的认识
-  'm3s1-03-km': '22702544-f090-86ce-dbd5-fc2241f3041b', // 干米的认识及单位换算
+  'm3s1-03-km': '22702544-f090-86ce-dbd5-fc2241f3041b', // 千米的认识及单位换算
   'm3s1-03-choose-unit': '1581a706-63ac-322a-d7bf-079275e45a23', // 问题解决（估测距离）
   'm3s1-03-convert': '72e98438-ec47-e585-d7af-8c6a6595a38d', // 分米的认识及单位换算
   'm3s1-04-mass-units': 'f9bd2529-b44e-0406-df57-53e858a510a7', // 认识质量单位
@@ -714,6 +714,18 @@ export const VIDEO_LESSONS: Readonly<Record<string, string>> = {
   'd4s2-10-fengsu': '9a9be594-ce61-40d1-b517-72e7f9bac2dd', // 10 我们当地的风俗
   'd4s2-11-yishu': 'a24e8e26-7467-4f74-a5e3-e324be8e2c3d', // 11 多姿多彩的民间艺术
   'd4s2-12-xiyou': '50f382ee-4d85-441e-a4af-b95403a2cf9f', // 12 家乡的喜与忧
+  'd5s2-01-bici': '71e3f67d-2db2-4778-bfc9-46273cbd1263', // 1 读懂彼此的心
+  'd5s2-02-meihao': '7f0bbba9-8bfb-4468-897b-3ad0ae131b16', // 2 让我们的家更美好
+  'd5s2-03-jiafeng': '9c37bb7a-bc5f-4b03-9896-aa9435eb40c2', // 3 弘扬优秀家风
+  'd5s2-04-gonggong': 'd2771381-972f-46e8-b21b-d3b42443a51f', // 4 我们的公共生活
+  'd5s2-05-zhixu': 'f9dfdde6-fbdd-410d-ad1c-7d4c8d6e7ce0', // 5 建立良好的公共秩序
+  'd5s2-06-fengxian': '00804c98-da28-4a81-ab73-76898d45851f', // 6 我参与 我奉献
+  'd5s2-07-kangzheng': 'a1f913af-d18d-4b86-9a78-19db657d42d4', // 7 不甘屈辱 奋勇抗争
+  'd5s2-08-juexing': 'cb3f4645-1a41-417b-97d6-0d31a8731e12', // 8 推翻帝制 民族觉醒
+  'd5s2-09-gongchandang': '96804a09-2ff3-45b9-ba9d-780f54ce2a46', // 9 中国有了共产党
+  'd5s2-10-shengli': '843624ad-3daa-4e62-939b-a53b82fe3974', // 10 夺取抗日战争和人民解放战争的胜利
+  'd5s2-11-dongfang': '228b0f20-896b-427b-9243-f66cdacfcfaf', // 11 屹立在世界的东方
+  'd5s2-12-qiangqilai': 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', // 12 富起来到强起来
 }
 
 /** 替代视频从哪来：elite 新教材这一节的精品课，old 旧教材对应那一课的同步课，old-elite 旧教材的精品课 */
@@ -932,6 +944,19 @@ export const VIDEO_FALLBACKS: Readonly<Record<string, { id: string; from: VideoF
   'd4s1-10-gouwu': { id: 'ee456c13-2b87-426c-ab6d-8dd849c0dd6c', from: 'old' }, // 旧教材四年级下册 · 第二单元 做聪明的消费者 · 4 买东西的学问
   'd4s1-11-xiaofei': { id: '5e2a1dcc-31a1-4bd1-8dc4-9ca1ef9fcbd9', from: 'old' }, // 旧教材四年级下册 · 第二单元 做聪明的消费者 · 5 合理消费
   'd4s1-12-langfei': { id: '2ee9330c-a735-444a-9b9c-e83d13788020', from: 'old' }, // 旧教材四年级下册 · 第二单元 做聪明的消费者 · 6 有多少浪费本可避免
+  'd5s1-01-kaitian': { id: '96804a09-2ff3-45b9-ba9d-780f54ce2a46', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 9 中国有了共产党
+  'd5s1-02-daolu': { id: '96804a09-2ff3-45b9-ba9d-780f54ce2a46', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 9 中国有了共产党
+  'd5s1-03-kangri': { id: '843624ad-3daa-4e62-939b-a53b82fe3974', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 10 夺取抗日战争和人民解放战争的胜利
+  'd5s1-04-jiefang': { id: '843624ad-3daa-4e62-939b-a53b82fe3974', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 10 夺取抗日战争和人民解放战争的胜利
+  'd5s1-05-zhanqilai': { id: '228b0f20-896b-427b-9243-f66cdacfcfaf', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 11 屹立在世界的东方
+  'd5s1-06-dangjia': { id: 'a88cdc6c-28d2-4652-9c29-305726218011', from: 'old' }, // 旧教材六年级上册 · 第三单元 我们的国家机构 · 6 人大代表为人民
+  'd5s1-07-shehuizhuyi': { id: '228b0f20-896b-427b-9243-f66cdacfcfaf', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 11 屹立在世界的东方
+  'd5s1-08-gaige': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
+  'd5s1-09-guoli': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
+  'd5s1-10-tongyi': { id: '03f4d7ba-c8ae-4a7f-bf9c-9b9fb9a86c97', from: 'old' }, // 旧教材五年级上册 · 第三单元 我们的国土 我们的家园 · 6 我们神圣的国土
+  'd5s1-11-xinshidai': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
+  'd5s1-12-chengjiu': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
+  'd5s1-13-zhengcheng': { id: 'f713fcfb-0f7c-406b-a5f4-895191cfb4b0', from: 'old' }, // 旧教材五年级下册 · 第三单元 百年追梦 复兴中华 · 12 富起来到强起来
 }
 
 const SYNC_URL = 'https://basic.smartedu.cn/syncClassroom/classActivity?activityId='

@@ -73,17 +73,19 @@ function choiceQ(ctx: Ctx, type: QuestionType, d: Difficulty, sig: string, stem:
 
 // ── 这样做对吗 / 哪种做法对 / 哪种做法不对（D2）──────────────────────────────
 
-/** 判断题：一句做法 + 「这样做对吗？」，选项「对 / 不对」（不读，D4）；两个选项的位置固定（对在前） */
-function judgeItems(ctx: Ctx, good: string[], bad: string[]): Item[] {
-  const all = [...good.map((s) => ({ s, ok: true })), ...bad.map((s) => ({ s, ok: false }))]
-  return all.map(({ s, ok }) => ({
+/** 判断题：一句做法 + 「这样做对吗？」或一句说法 + 「这种说法对吗？」，选项「对 / 不对」（不读，D4）；两个选项的位置固定（对在前） */
+function judgeItems(ctx: Ctx, spec: LessonSpec): Item[] {
+  const deed = (ss: string[] | undefined, ok: boolean) => (ss ?? []).map((s) => ({ s, ok, ask: 'dq.judge', type: 'conduct' as const }))
+  const fact = (ss: string[] | undefined, ok: boolean) => (ss ?? []).map((s) => ({ s, ok, ask: 'dq.fact', type: 'civics' as const }))
+  const all = [...deed(spec.good, true), ...deed(spec.bad, false), ...fact(spec.right, true), ...fact(spec.wrong, false)]
+  return all.map(({ s, ok, ask, type }) => ({
     key: `judge-${s}`,
     build: (d) => ({
       id: sigId(ctx.kp, `judge-${s}`),
       kpId: ctx.kp,
-      type: 'conduct',
+      type,
       difficulty: d,
-      stem: [{ kind: 'text', text: ctx.word(s) }, text('dq.judge')],
+      stem: [{ kind: 'text', text: ctx.word(s) }, text(ask)],
       input: 'choice',
       answer: { kind: 'choice', choiceId: ok ? 'a' : 'b' },
       choices: [
@@ -169,7 +171,7 @@ export function lessonItems(spec: LessonSpec, ctx: Ctx, py: (t: string) => strin
   const good = spec.good ?? []
   const bad = spec.bad ?? []
   const out: Record<string, Item[]> = {
-    judge: judgeItems(ctx, good, bad),
+    judge: judgeItems(ctx, spec),
     good: pickItems(ctx, good, bad, 'good'),
     bad: pickItems(ctx, bad, good, 'bad'),
     ask: askItems(ctx, (spec.ask ?? []).map(parseAsk)),
@@ -187,10 +189,10 @@ export function parseMix(s: string): [string, number][] {
   })
 }
 
-/** 一课里所有要查拼音表的中文（拼音表的完整性测试用）：做法、问题、选项（去掉图）、儿歌整句与选项 */
+/** 一课里所有要查拼音表的中文（拼音表的完整性测试用）：做法、说法、问题、选项（去掉图）、儿歌整句与选项 */
 export function lessonTexts(spec: LessonSpec): string[] {
   const out = new Set<string>()
-  for (const s of [...(spec.good ?? []), ...(spec.bad ?? [])]) out.add(s)
+  for (const s of [...(spec.good ?? []), ...(spec.bad ?? []), ...(spec.right ?? []), ...(spec.wrong ?? [])]) out.add(s)
   for (const it of (spec.ask ?? []).map(parseAsk)) for (const s of [it.q, it.answer, ...it.wrongs]) out.add(hanPart(s))
   for (const it of (spec.cloze ?? []).map(parseCloze)) for (const s of [it.text, it.answer, ...it.wrongs]) out.add(s)
   return [...out]

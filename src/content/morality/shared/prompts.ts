@@ -5,6 +5,7 @@ import { registerDict, registerPinyin } from '@/engine/i18n'
 
 const ZH: Dict = {
   'dq.judge': '这样做对吗？',
+  'dq.fact': '这种说法对吗？',
   'dq.good': '哪种做法是对的？',
   'dq.bad': '哪种做法不对？',
   'dq.cloze': '选一选，把句子补完整。',
@@ -14,6 +15,7 @@ const ZH: Dict = {
 
 const EN: Dict = {
   'dq.judge': 'Is this the right thing to do?',
+  'dq.fact': 'Is this statement right?',
   'dq.good': 'Which is the right thing to do?',
   'dq.bad': 'Which is NOT the right thing to do?',
   'dq.cloze': 'Choose the words that complete the line.',
@@ -23,6 +25,7 @@ const EN: Dict = {
 
 const PINYIN: Record<string, string> = {
   'dq.judge': 'zhè yàng zuò duì ma',
+  'dq.fact': 'zhè zhǒng shuō fǎ duì ma',
   'dq.good': 'nǎ zhǒng zuò fǎ shì duì de',
   'dq.bad': 'nǎ zhǒng zuò fǎ bú duì',
   'dq.cloze': 'xuǎn yi xuǎn bǎ jù zi bǔ wán zhěng',
