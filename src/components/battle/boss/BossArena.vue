@@ -27,6 +27,8 @@ import type { RowData } from '@/components/battle/rows'
 import Countdown from '@/components/battle/Countdown.vue'
 import Callout from '@/components/battle/Callout.vue'
 import RotateOverlay from '@/components/battle/RotateOverlay.vue'
+import { arenaLayout, ROTATED_STYLE } from '@/battle/layout'
+import { useViewport } from '@/components/battle/viewport'
 import BigButton from '@/components/ui/BigButton.vue'
 import RubyText from '@/components/ui/RubyText.vue'
 import BossPanel from './BossPanel.vue'
@@ -225,19 +227,12 @@ function practiceAgain(): void {
   emit('practice', id)
 }
 
-// ── 布局：手机横屏紧凑版（同 B29）、手机竖屏（只有一个人打） ──
-const compactMq = typeof matchMedia === 'function' ? matchMedia('(max-height: 479px)') : null
-const portraitMq = typeof matchMedia === 'function' ? matchMedia('(orientation: portrait) and (max-width: 640px)') : null
-const compact = ref(compactMq?.matches ?? false)
-const portrait = ref(portraitMq?.matches ?? false)
-const onCompact = (e: MediaQueryListEvent): void => {
-  compact.value = e.matches
-}
-const onPortrait = (e: MediaQueryListEvent): void => {
-  portrait.value = e.matches
-}
-compactMq?.addEventListener?.('change', onCompact)
-portraitMq?.addEventListener?.('change', onPortrait)
+// ── 布局（B29 / B30 / M6）：手机横屏紧凑版；手机竖着拿时一个人打用竖屏布局，两个人打的竞技场自己转成横的（算法在 battle/layout.ts） ──
+const viewport = useViewport()
+const geometry = computed(() => arenaLayout(viewport.value, { allowPortrait: !duo.value }))
+const compact = computed(() => geometry.value.compact)
+const portrait = computed(() => geometry.value.portrait)
+const rotated = computed(() => geometry.value.rotated)
 /**
  * 作答行题干与键盘左右并排（PlayerRow 的紧凑排法）：横着放的屏幕都这样——iPad / 电脑上舞台占了上面三百来像素，
  * 上下排的话题干只剩一百来像素高，排队、竖式、组合体这些教具放不下（boss:survey -- questions 量过）；只有手机竖屏上下排
@@ -317,8 +312,6 @@ onBeforeUnmount(() => {
   stopResumeCount()
   if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onHidden)
   stopTracking()
-  compactMq?.removeEventListener?.('change', onCompact)
-  portraitMq?.removeEventListener?.('change', onPortrait)
   stopMusic()
   hush()
   exitFullscreen()
@@ -326,7 +319,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="state" class="boss-arena" :class="[layout, { compact, portrait, finale, online, 'last-ten': lastTen }]">
+  <div v-if="state" class="boss-arena" :class="[layout, { compact, portrait, finale, online, 'last-ten': lastTen, rotated }]" :style="rotated ? ROTATED_STYLE : undefined">
     <header class="bar">
       <div class="bar-side">
         <button type="button" class="bar-btn" :aria-label="ui('battle.exit')" @click="confirming = true">✕</button>
@@ -427,7 +420,7 @@ onBeforeUnmount(() => {
 
     <EmoteLayer v-if="online" :emotes="battle.emotes" />
     <!-- 手机竖着拿：一个人打可以（M6），两个人要横过来；多设备每台只有自己一个 -->
-    <RotateOverlay v-if="duo" />
+    <RotateOverlay :rotated="rotated" />
   </div>
 </template>
 
@@ -442,7 +435,14 @@ onBeforeUnmount(() => {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* 安全区（刘海）留边走变量：自己转了的时候四边跟着转一圈（ROTATED_STYLE 改这四个变量） */
+  --sa-top: env(safe-area-inset-top);
+  --sa-right: env(safe-area-inset-right);
+  --sa-bottom: env(safe-area-inset-bottom);
+  --sa-left: env(safe-area-inset-left);
+  padding: var(--sa-top) var(--sa-right) var(--sa-bottom) var(--sa-left);
+  /* 名叫 arena 的尺寸容器：结果页等按它查紧凑版（@container arena），表情飞行距离、舞台高度用 cqw / cqh——转了之后 vw / vh 是竖视口的（B30） */
+  container: arena / size;
 }
 .bar {
   flex: none;
@@ -501,7 +501,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 0 8px 8px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: clamp(220px, 35vh, 320px) minmax(0, 1fr);
+  grid-template-rows: clamp(220px, 35cqh, 320px) minmax(0, 1fr);
   grid-template-areas: 'stage' 'red';
 }
 .lay-duo .field {
@@ -542,7 +542,7 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .online.lay-solo .field {
-  grid-template-rows: clamp(200px, 32vh, 300px) auto minmax(0, 1fr);
+  grid-template-rows: clamp(200px, 32cqh, 300px) auto minmax(0, 1fr);
   grid-template-areas: 'stage' 'strip' 'red';
 }
 .lay-watch .field {
@@ -591,14 +591,14 @@ onBeforeUnmount(() => {
 }
 /* 更窄的横屏手机（667 / 736 / 780 宽）两个人：中间放舞台的话两边作答栏不到 290px，题干和数字键盘并排放不下（键盘最右一列被裁掉，
    boss:survey -- questions phone-small-duo 量过）——改成同对战紧凑版的排法：舞台一条横在上面、下面两栏作答区 */
-@media (max-height: 479px) and (max-width: 839px) {
+@container arena (max-height: 479px) and (max-width: 839px) {
   .compact.lay-duo .field {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: clamp(84px, 25vh, 120px) minmax(0, 1fr);
+    grid-template-rows: clamp(84px, 25cqh, 120px) minmax(0, 1fr);
     grid-template-areas: 'stage stage' 'red blue';
   }
   .boss-arena.compact.lay-duo :deep(.callout) {
-    top: calc(env(safe-area-inset-top) + 38px + 12.5vh - 24px);
+    top: calc(var(--sa-top) + 38px + 12.5cqh - 24px);
     bottom: auto;
   }
 }
@@ -623,15 +623,15 @@ onBeforeUnmount(() => {
 .compact :deep(.numpad .grid) {
   gap: 6px;
 }
-/* 手机竖屏（只有一个人打）：上舞台、下作答区（题干与键盘上下排，排队这种竖着排的教具要地方：舞台 32vh、选项卡矮一点；
-   boss:survey -- questions 量过，36vh 时「从下数第二个」那道题最下面一只被裁掉） */
+/* 手机竖屏（只有一个人打）：上舞台、下作答区（题干与键盘上下排，排队这种竖着排的教具要地方：舞台 32cqh、选项卡矮一点；
+   boss:survey -- questions 量过，36cqh 时「从下数第二个」那道题最下面一只被裁掉） */
 .portrait.lay-solo .field {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 32vh minmax(0, 1fr);
+  grid-template-rows: 32cqh minmax(0, 1fr);
   grid-template-areas: 'stage' 'red';
 }
 .portrait.online.lay-solo .field {
-  grid-template-rows: 28vh auto minmax(0, 1fr);
+  grid-template-rows: 28cqh auto minmax(0, 1fr);
   grid-template-areas: 'stage' 'strip' 'red';
 }
 .portrait :deep(.side .a .cards .card) {
@@ -668,16 +668,16 @@ onBeforeUnmount(() => {
 }
 
 /* 弹出提示（打倒啦 / 第二只来啦 / 最后十秒 / 时间到）：对战里放在整页 14% 高处，这里会正好盖住舞台中间 Boss 被打倒的动画——
-   挪到舞台下沿的台面上（宽屏：舞台在上；紧凑版：舞台一整栏，放在下面；竖屏：舞台 32vh） */
+   挪到舞台下沿的台面上（宽屏：舞台在上；紧凑版：舞台一整栏，放在下面；竖屏：舞台 32cqh；长度单位都是竞技场这个容器的，自己转成横的时候视口是竖的，B30） */
 .boss-arena :deep(.callout) {
-  top: calc(env(safe-area-inset-top) + 52px + clamp(220px, 35vh, 320px) - 64px);
+  top: calc(var(--sa-top) + 52px + clamp(220px, 35cqh, 320px) - 64px);
 }
 .boss-arena.compact :deep(.callout) {
   top: auto;
   bottom: 14%;
 }
 .boss-arena.portrait :deep(.callout) {
-  top: calc(env(safe-area-inset-top) + 52px + 32vh - 64px);
+  top: calc(var(--sa-top) + 52px + 32cqh - 64px);
   /* 竖屏只有 390 宽：「第二只来啦，它戴着头盔！」用大号字比屏幕还宽，两头被切 */
   padding: 4px 14px;
   font-size: var(--fs-lg);

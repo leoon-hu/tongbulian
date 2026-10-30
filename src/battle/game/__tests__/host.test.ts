@@ -159,15 +159,15 @@ describe('点一下游戏（B59）', () => {
     await flushPromises()
     await flushPromises()
     expect(w.find('.game-host').attributes('style')).toContain('pointer-events: none')
-    await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
+    await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20, offsetX: 10, offsetY: 20 })
     expect(spy.calls.at(-1)).toBe('poke:red:10,20')
     expect(w.findAll('.ripple')).toHaveLength(1)
     expect(w.emitted('poke')).toEqual([['red', 10, 20, 'left']])
     // 太快的第二下不算
-    await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
+    await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20, offsetX: 90, offsetY: 20 })
     expect(spy.calls.filter((c) => c.startsWith('poke')).length).toBe(1)
     vi.advanceTimersByTime(200)
-    await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20 })
+    await w.find('canvas').trigger('pointerdown', { clientX: 90, clientY: 20, offsetX: 90, offsetY: 20 })
     expect(spy.calls.at(-1)).toBe('poke:blue:90,20')
     expect(w.emitted('poke')).toEqual([
       ['red', 10, 20, 'left'],
@@ -198,7 +198,7 @@ describe('点一下游戏（B59）', () => {
     })
     await flushPromises()
     await flushPromises()
-    await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
+    await w.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20, offsetX: 10, offsetY: 20 })
     expect(w.findAll('.ripple')).toHaveLength(1)
     expect(w.emitted('poke')).toEqual([['blue', 10, 20, undefined]]) // 没传 sideOf：1×1 的假盒子里 y=20 在下半
     expect(spy.calls.some((c) => c.startsWith('poke'))).toBe(false)
@@ -221,7 +221,7 @@ describe('点一下游戏（B59）', () => {
     })
     await flushPromises()
     await flushPromises()
-    await w2.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20 })
+    await w2.find('canvas').trigger('pointerdown', { clientX: 10, clientY: 20, offsetX: 10, offsetY: 20 })
     expect(w2.find('.game-host').attributes('data-status')).toBe('fallback')
     expect(warn).toHaveBeenCalled()
     w2.unmount()

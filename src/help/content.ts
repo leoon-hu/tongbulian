@@ -85,7 +85,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           },
           {
             kind: 'p',
-            text: 'The arena is always landscape: red team on the left, blue team on the right, the game scene across the top or in the middle. Each player has a row: the question on top (tap it or 🔊 to hear it again), the number pad or choice cards below. A phone held upright asks you to turn it sideways. Your team\'s header carries a "me" tag, rows you cannot operate are dimmed with a translucent mask that says "Theirs" or "Teammate", and a watch-only device shows "👀 Watching" in the top bar.',
+            text: 'The arena is always landscape: red team on the left, blue team on the right, the game scene across the top or in the middle. Each player has a row: the question on top (tap it or 🔊 to hear it again), the number pad or choice cards below. A phone held upright gets the arena rotated for you, with a short hint to turn the phone sideways, so it works even in browsers whose page never rotates, such as WeChat\'s built-in one. Your team\'s header carries a "me" tag, rows you cannot operate are dimmed with a translucent mask that says "Theirs" or "Teammate", and a watch-only device shows "👀 Watching" in the top bar.',
           },
           {
             kind: 'p',
@@ -188,7 +188,7 @@ export function helpSections(lang: Lang): HelpSection[] {
             kind: 'faq',
             items: [
               { q: 'No sound?', a: 'Check the 🔊 / 🔇 button in the top bar. On iPhone and iPad, flip the side mute switch. The first time, tap the screen once so the browser allows audio.' },
-              { q: 'The battle does not fit on my phone?', a: 'The battle needs landscape. Held upright, the page asks you to turn the phone; sideways it switches to a compact layout.' },
+              { q: 'The battle does not fit on my phone?', a: 'The arena is always landscape. Held upright, the page rotates the arena itself and shows a hint to turn the phone for a few seconds, so it works even in in-app browsers like WeChat where the page cannot rotate; sideways it uses a compact layout.' },
               {
                 q: 'How do I install it on a tablet or phone?',
                 a: 'Use the install bar at the top of the home page ("Install" or "How"). On iPhone and iPad open it in Safari, tap Share → Add to Home Screen. Once installed it opens full screen from the home-screen icon, like an app.',
@@ -238,7 +238,7 @@ export function helpSections(lang: Lang): HelpSection[] {
         },
         {
           kind: 'p',
-          text: '竞技场一律横向：左边红队、右边蓝队，游戏画面在上方横条或左右之间的竖条。每人一行：上面是题目（点一下或点 🔊 再听一遍），下面是数字键盘或选项卡。自己那一队的队名条上标着「我」，不能操作的行蒙着一层半透明遮罩、写着「对方」或「队友」；只观战的设备顶栏写「👀 观战中」。手机竖着拿会提示横过来。',
+          text: '竞技场一律横向：左边红队、右边蓝队，游戏画面在上方横条或左右之间的竖条。每人一行：上面是题目（点一下或点 🔊 再听一遍），下面是数字键盘或选项卡。自己那一队的队名条上标着「我」，不能操作的行蒙着一层半透明遮罩、写着「对方」或「队友」；只观战的设备顶栏写「👀 观战中」。手机竖着拿时画面会自己转成横的，并提示你把手机横过来。',
         },
         {
           kind: 'p',
@@ -341,7 +341,7 @@ export function helpSections(lang: Lang): HelpSection[] {
           kind: 'faq',
           items: [
             { q: '没有声音？', a: '看顶部栏是不是 🔇；iPhone / iPad 把侧面的静音键打开；第一次打开要先点一下屏幕，浏览器才允许出声。' },
-            { q: '手机上进不了对战，或者画面挤？', a: '对战需要横屏，竖着拿会提示「请把手机横过来」；横过来会自动用紧凑版布局。' },
+            { q: '手机上进不了对战，或者画面挤？', a: '竞技场只有横向布局：竖着拿时画面会自己转成横的，并提示几秒钟「请把手机横过来」，微信这种转不了屏的浏览器里也能玩；横过来后自动用紧凑版布局。' },
             {
               q: '怎么装到平板 / 手机上？',
               a: '首页顶部的安装提示条点「安装」或「怎么做」；iPhone / iPad 用 Safari 打开，点分享 → 添加到主屏幕。装好后从桌面图标打开，像 App 一样全屏。',

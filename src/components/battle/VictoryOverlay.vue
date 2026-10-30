@@ -90,7 +90,7 @@ const pieces = computed(() =>
 }
 @keyframes fall {
   to {
-    transform: translateY(110vh) rotate(720deg);
+    transform: translateY(110cqh) rotate(720deg);
   }
 }
 @keyframes pop {

@@ -70,10 +70,10 @@ const loop = new Loop({
   },
 })
 
+/** 盒子的 CSS 像素尺寸：用布局尺寸而不是边界矩形——竞技场自己转成横的时候（B30）边界矩形的宽高是对调的 */
 function measure(): { width: number; height: number } {
   const el = root.value
-  const r = el?.getBoundingClientRect()
-  return { width: Math.max(1, Math.round(r?.width ?? 1)), height: Math.max(1, Math.round(r?.height ?? 1)) }
+  return { width: Math.max(1, el?.clientWidth ?? 1), height: Math.max(1, el?.clientHeight ?? 1) }
 }
 
 function warn(msg: string, e: unknown): void {
@@ -145,9 +145,14 @@ function onPointer(e: PointerEvent): void {
   const t = Date.now()
   if (t - lastPoke < POKE_MIN_GAP_MS) return
   lastPoke = t
-  const r = canvas.getBoundingClientRect()
-  const x = (e.clientX ?? 0) - (r?.left ?? 0)
-  const y = (e.clientY ?? 0) - (r?.top ?? 0)
+  // 坐标用 offsetX / offsetY：目标元素自己坐标系里的，竞技场自己转成横的时候（B30）也对；拿不到再按边界矩形算
+  let x = e.offsetX
+  let y = e.offsetY
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    const r = canvas.getBoundingClientRect()
+    x = (e.clientX ?? 0) - (r?.left ?? 0)
+    y = (e.clientY ?? 0) - (r?.top ?? 0)
+  }
   const w = info.width
   const h = info.height
   const team: Team = props.sideOf ? props.sideOf(x, y, w, h) : y < h / 2 ? 'red' : 'blue'

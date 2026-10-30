@@ -437,13 +437,13 @@ function shareResult(): void {
   box-shadow: var(--shadow-card);
   font-weight: 800;
 }
-@media (max-width: 539px) {
+@container arena (max-width: 539px) {
   .card {
     grid-template-columns: 1fr;
   }
 }
-/* 手机横屏（B29 的条件）：留白收一收，按钮留在第一屏 */
-@media (max-height: 479px) {
+/* 手机横屏（B29 的条件，按竞技场这个容器查，B30）：留白收一收，按钮留在第一屏 */
+@container arena (max-height: 479px) {
   .result {
     padding: 8px 12px;
     gap: 8px;

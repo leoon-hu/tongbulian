@@ -1,34 +1,49 @@
 <script setup lang="ts">
-// 手机竖着拿时盖一层「请把手机横过来」（B30）：横过来自动消失；出现时朗读一次（正在读题就排在后面，B37；横过来了还没轮到就不读）
+// 「请把手机横过来」（B30）：手机竖着拿、竞技场自己转了的时候整页提醒一下——不挡路：约 4 秒自动消失、点一下也消失、视口真转成横的立刻消失。
+// 画在 body 上（Teleport），不跟着竞技场转，手机还竖着的时候字是正的。出现时朗读一次（正在读题就排在后面，B37；消失了还没轮到就不读）。
 import { onBeforeUnmount, ref, watch } from 'vue'
+import { ROTATE_HINT_MS } from '@/battle/layout'
 import { lang } from '@/engine/i18n'
 import { phraseSpeech } from '@/engine/speech'
 import { forget, say } from '@/engine/voice'
 import RubyText from '@/components/ui/RubyText.vue'
 
-const QUERY = '(orientation: portrait) and (max-width: 640px)'
-const mq = typeof matchMedia === 'function' ? matchMedia(QUERY) : null
-const show = ref(mq?.matches ?? false)
-const onChange = (e: MediaQueryListEvent): void => {
-  show.value = e.matches
+const props = defineProps<{ rotated: boolean }>()
+const show = ref(false)
+let timer: ReturnType<typeof setTimeout> | null = null
+
+function hide(): void {
+  if (timer) clearTimeout(timer)
+  timer = null
+  if (!show.value) return
+  show.value = false
+  forget('rotate')
 }
-mq?.addEventListener?.('change', onChange)
-onBeforeUnmount(() => mq?.removeEventListener?.('change', onChange))
 watch(
-  show,
-  (v) => {
-    if (v) say(phraseSpeech({ k: 'battle.rotate' }, lang.value), lang.value, 300, { mode: 'wait', key: 'rotate' })
-    else forget('rotate')
+  () => props.rotated,
+  (r) => {
+    if (!r) {
+      hide()
+      return
+    }
+    show.value = true
+    say(phraseSpeech({ k: 'battle.rotate' }, lang.value), lang.value, 300, { mode: 'wait', key: 'rotate' })
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(hide, ROTATE_HINT_MS)
   },
   { immediate: true },
 )
+onBeforeUnmount(hide)
 </script>
 
 <template>
-  <div v-if="show" class="rotate" role="alert">
-    <span class="icon" aria-hidden="true">📱</span>
-    <p><RubyText :text="{ k: 'battle.rotate' }" /></p>
-  </div>
+  <Teleport to="body">
+    <!-- 点一下关掉用 click 而不是 pointerdown：pointerdown 就拿掉的话，同一下的 pointerup / click 会落到底下竞技场的按键上 -->
+    <div v-if="show" class="rotate" role="alert" @click="hide">
+      <span class="icon" aria-hidden="true">📱</span>
+      <p><RubyText :text="{ k: 'battle.rotate' }" /></p>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>

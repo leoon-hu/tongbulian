@@ -227,4 +227,35 @@ describe('打怪兽：竞技场（M6 / M7）', () => {
     vi.advanceTimersByTime(COUNTDOWN_MS)
     w2.unmount()
   })
+
+  it('手机竖着拿（B30 / M6）：一个人打用竖屏布局、不转、不提醒；两个人打竞技场自己转成横的、提醒「请把手机横过来」，视口真转成横的就撤掉', async () => {
+    const size = (width: number, height: number): void => {
+      window.innerWidth = width
+      window.innerHeight = height
+      window.dispatchEvent(new Event('resize'))
+    }
+    try {
+      size(390, 844)
+      const w = await mountAt(`/boss/local/${KP}?mode=solo`)
+      expect(w.find('.boss-arena').classes()).toContain('portrait')
+      expect(w.find('.boss-arena').classes()).not.toContain('rotated')
+      expect(w.find('.boss-arena').classes()).not.toContain('compact')
+      expect(w.find('.boss-arena').attributes('style') ?? '').not.toContain('rotate(')
+      expect(document.body.querySelector('.rotate')).toBeNull()
+      w.unmount()
+      const w2 = await mountAt(`/boss/local/${KP}?mode=duo&v=coop`)
+      expect(w2.find('.boss-arena').classes()).toEqual(expect.arrayContaining(['lay-duo', 'rotated', 'compact']))
+      expect(w2.find('.boss-arena').classes()).not.toContain('portrait')
+      expect(w2.find('.boss-arena').attributes('style')).toContain('rotate(90deg) translateY(-100%)')
+      expect(document.body.querySelector('.rotate')).not.toBeNull()
+      size(844, 390)
+      await settle()
+      expect(w2.find('.boss-arena').classes()).not.toContain('rotated')
+      expect(w2.find('.boss-arena').classes()).toContain('compact')
+      expect(document.body.querySelector('.rotate')).toBeNull()
+      w2.unmount()
+    } finally {
+      size(1024, 768)
+    }
+  })
 })

@@ -19,6 +19,7 @@ import { useBattleStore } from '@/stores/battle'
 import { useRoomStore } from '@/stores/room'
 import { useVoiceStore } from '@/stores/voice'
 import { COUNTDOWN_MS } from '@/battle/match'
+import { ROTATE_HINT_MS } from '@/battle/layout'
 import { setMusicSprint, startMusic, stopMusic } from '@/battle/music'
 
 vi.mock('@/battle/music', () => ({ startMusic: vi.fn(), stopMusic: vi.fn(), setMusicSprint: vi.fn(), musicPlaying: () => false }))
@@ -824,6 +825,48 @@ describe('对战模式（§8，第 1 阶段：单设备）', () => {
     const again = w.findAll('.config .skins .tile')
     expect(SKINS[again.findIndex((t) => t.classes('on')) - 1]!.id).toBe(chapterSkin('s1-00-count'))
     w.unmount()
+  })
+
+  it('手机竖着拿：竞技场自己转成横的（B30）——根上 rotated 类 + 旋转的内联样式、按转过来的高度算紧凑版；「请把手机横过来」画在 body 上、到时消失；视口真转成横的就撤掉旋转', async () => {
+    fakeTimers()
+    const size = (width: number, height: number): void => {
+      window.innerWidth = width
+      window.innerHeight = height
+      window.dispatchEvent(new Event('resize'))
+    }
+    try {
+      size(390, 844)
+      const w = await mountAt(`/battle/local/${KP}?mode=ai`)
+      await settle()
+      const arena = w.find('.arena')
+      expect(arena.classes()).toEqual(expect.arrayContaining(['rotated', 'compact']))
+      expect(arena.attributes('style')).toContain('rotate(90deg) translateY(-100%)')
+      expect(arena.attributes('style')).toContain('position: fixed')
+      expect(document.body.querySelector('.rotate')).not.toBeNull()
+      vi.advanceTimersByTime(ROTATE_HINT_MS)
+      await settle()
+      expect(document.body.querySelector('.rotate')).toBeNull()
+      // 系统真把视口转成横的（Safari 没锁方向）：撤掉旋转，还是紧凑版
+      size(844, 390)
+      await settle()
+      expect(w.find('.arena').classes()).not.toContain('rotated')
+      expect(w.find('.arena').attributes('style') ?? '').not.toContain('rotate(')
+      expect(w.find('.arena').classes()).toContain('compact')
+      // 又竖回来：再转、再提醒一次
+      size(390, 844)
+      await settle()
+      expect(w.find('.arena').classes()).toContain('rotated')
+      expect(document.body.querySelector('.rotate')).not.toBeNull()
+      // iPad：既不转也不紧凑
+      size(1024, 768)
+      await settle()
+      expect(w.find('.arena').classes()).not.toContain('rotated')
+      expect(w.find('.arena').classes()).not.toContain('compact')
+      expect(document.body.querySelector('.rotate')).toBeNull()
+      w.unmount()
+    } finally {
+      size(1024, 768)
+    }
   })
 
   it('打机器人打完：结果页「下一章」→ 同样的人换到本册下一个知识点接着打（竞技场不重挂、地址跟着换、游戏按那一章排定）；「不玩了」回地图', async () => {

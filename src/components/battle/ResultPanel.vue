@@ -496,7 +496,7 @@ function shareResult(): void {
 }
 
 /* 窄屏：卡片里上下排，按钮在结果下面 */
-@media (max-width: 539px) {
+@container arena (max-width: 539px) {
   .card {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -506,8 +506,8 @@ function shareResult(): void {
     border-top: 2px dashed var(--c-line);
   }
 }
-/* 手机横屏（与竞技场紧凑版同一个条件，B29）：留白与字号再收一档，战报卡整张放进一屏 */
-@media (max-height: 479px) {
+/* 手机横屏（与竞技场紧凑版同一个条件，B29）：留白与字号再收一档，战报卡整张放进一屏。查的是竞技场这个容器而不是视口——竞技场自己转成横的时候视口是竖的（B30） */
+@container arena (max-height: 479px) {
   .result {
     gap: 8px;
     padding: 8px 12px;

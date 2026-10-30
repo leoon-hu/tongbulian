@@ -24,6 +24,8 @@ import GameSlot from '@/components/battle/GameSlot.vue'
 import Countdown from '@/components/battle/Countdown.vue'
 import ResultPanel from '@/components/battle/ResultPanel.vue'
 import RotateOverlay from '@/components/battle/RotateOverlay.vue'
+import { arenaLayout, ROTATED_STYLE } from '@/battle/layout'
+import { useViewport } from '@/components/battle/viewport'
 import Callout from '@/components/battle/Callout.vue'
 import VictoryOverlay from '@/components/battle/VictoryOverlay.vue'
 import EmoteBar from '@/components/battle/EmoteBar.vue'
@@ -265,13 +267,11 @@ watch(
   { immediate: true },
 )
 
-// ── 手机横屏紧凑版（B29） ──
-const compactMq = typeof matchMedia === 'function' ? matchMedia('(max-height: 479px)') : null
-const compact = ref(compactMq?.matches ?? false)
-const onCompact = (e: MediaQueryListEvent): void => {
-  compact.value = e.matches
-}
-compactMq?.addEventListener?.('change', onCompact)
+// ── 布局（B29 / B30）：手机横屏紧凑版；手机竖着拿时竞技场自己转成横的（微信等视口永远竖着的环境也能玩），算法在 battle/layout.ts ──
+const viewport = useViewport()
+const geometry = computed(() => arenaLayout(viewport.value))
+const compact = computed(() => geometry.value.compact)
+const rotated = computed(() => geometry.value.rotated)
 
 const confirming = ref(false)
 // 退出确认框弹出来时读「要退出比赛吗？」（B39a）；正在读题就排在后面（B37），框关掉了还没轮到就不读了
@@ -299,7 +299,6 @@ onBeforeUnmount(() => {
   if (ticker) clearInterval(ticker)
   endTimers.forEach(clearTimeout)
   stopTracking()
-  compactMq?.removeEventListener?.('change', onCompact)
   stopMusic()
   hush()
   exitFullscreen()
@@ -307,7 +306,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="state" class="arena" :class="[`slot-${skin?.slot ?? 'top'}`, { compact, deuce, finale }]">
+  <div v-if="state" class="arena" :class="[`slot-${skin?.slot ?? 'top'}`, { compact, deuce, finale, rotated }]" :style="rotated ? ROTATED_STYLE : undefined">
     <header class="bar">
       <div class="bar-side">
         <button type="button" class="bar-btn" :aria-label="ui('battle.exit')" @click="confirming = true">✕</button>
@@ -401,7 +400,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <RotateOverlay />
+    <RotateOverlay :rotated="rotated" />
   </div>
 </template>
 
@@ -416,7 +415,14 @@ onBeforeUnmount(() => {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* 安全区（刘海）留边走变量：自己转了的时候四边跟着转一圈（ROTATED_STYLE 改这四个变量） */
+  --sa-top: env(safe-area-inset-top);
+  --sa-right: env(safe-area-inset-right);
+  --sa-bottom: env(safe-area-inset-bottom);
+  --sa-left: env(safe-area-inset-left);
+  padding: var(--sa-top) var(--sa-right) var(--sa-bottom) var(--sa-left);
+  /* 名叫 arena 的尺寸容器：结果页等按它查紧凑版（@container arena），表情飞行距离、舞台高度用 cqw / cqh——转了之后 vw / vh 是竖视口的（B30） */
+  container: arena / size;
 }
 .bar {
   flex: none;

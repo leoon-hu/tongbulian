@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 飞过去的表情（需求 B58）：从发送方那边的顶栏飞向对方那边，画一道弧、放大再淡出；观战方的从顶上正中落下来。
-// 只画，不接触摸；列表由 store 维护（每条 EMOTE_MS 后自己消失）。
+// 只画，不接触摸；列表由 store 维护（每条 EMOTE_MS 后自己消失）。飞行距离用容器单位 cqw / cqh（竞技场是尺寸容器）：竞技场自己转成横的时候 vw / vh 是竖视口的（B30）。
 import { emojiOf } from '@/battle/emotes'
 import type { EmoteShown } from '@/stores/battle'
 
@@ -46,15 +46,15 @@ defineProps<{ emotes: readonly EmoteShown[] }>()
     opacity: 0;
   }
   15% {
-    transform: translate(8vw, -10px) scale(1.4) rotate(-10deg);
+    transform: translate(8cqw, -10px) scale(1.4) rotate(-10deg);
     opacity: 1;
   }
   70% {
-    transform: translate(56vw, 30vh) scale(2) rotate(8deg);
+    transform: translate(56cqw, 30cqh) scale(2) rotate(8deg);
     opacity: 1;
   }
   100% {
-    transform: translate(60vw, 36vh) scale(1.6);
+    transform: translate(60cqw, 36cqh) scale(1.6);
     opacity: 0;
   }
 }
@@ -64,15 +64,15 @@ defineProps<{ emotes: readonly EmoteShown[] }>()
     opacity: 0;
   }
   15% {
-    transform: translate(-8vw, -10px) scale(1.4) rotate(10deg);
+    transform: translate(-8cqw, -10px) scale(1.4) rotate(10deg);
     opacity: 1;
   }
   70% {
-    transform: translate(-56vw, 30vh) scale(2) rotate(-8deg);
+    transform: translate(-56cqw, 30cqh) scale(2) rotate(-8deg);
     opacity: 1;
   }
   100% {
-    transform: translate(-60vw, 36vh) scale(1.6);
+    transform: translate(-60cqw, 36cqh) scale(1.6);
     opacity: 0;
   }
 }
@@ -82,15 +82,15 @@ defineProps<{ emotes: readonly EmoteShown[] }>()
     opacity: 0;
   }
   20% {
-    transform: translate(-50%, 6vh) scale(1.6) rotate(-8deg);
+    transform: translate(-50%, 6cqh) scale(1.6) rotate(-8deg);
     opacity: 1;
   }
   70% {
-    transform: translate(-50%, 34vh) scale(2.2) rotate(8deg);
+    transform: translate(-50%, 34cqh) scale(2.2) rotate(8deg);
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, 40vh) scale(1.8);
+    transform: translate(-50%, 40cqh) scale(1.8);
     opacity: 0;
   }
 }
