@@ -913,14 +913,17 @@ function sisterLinks(): string {
 }
 
 /**
- * 页脚 / 入口页的「联系站长」：折叠着的站长微信二维码（engine/sites.ts 的 AUTHOR_CONTACT），不跑 JS 也能展开。
+ * 页脚 / 入口页的「联系站长」：折叠着的站长微信二维码，下面接着一句「支持赞助站长…」+ 微信支付的赞助码
+ * （engine/sites.ts 的 AUTHOR_CONTACT），不跑 JS 也能展开。
  * 尺寸写在属性上（200 宽、按原图比例算高），入口页的静态简介没有这份样式也不会撑满一屏。
  */
 function contactBlock(root: string): string {
-  const src = `${root}${AUTHOR_CONTACT.qr}`
   const w = 200
-  const h = Math.round((w * AUTHOR_CONTACT.qrHeight) / AUTHOR_CONTACT.qrWidth)
-  return `<details class="contact"><summary>${esc(zh({ k: 'contact.link' }))}</summary><p>${esc(zh({ k: 'contact.hint' }))}</p><img src="${src}" alt="${esc(zh({ k: 'contact.alt' }))}" width="${w}" height="${h}" loading="lazy" /></details>`
+  const img = (file: string, alt: string, width: number, height: number) =>
+    `<img src="${root}${file}" alt="${esc(alt)}" width="${w}" height="${Math.round((w * height) / width)}" loading="lazy" />`
+  const qr = img(AUTHOR_CONTACT.qr, zh({ k: 'contact.alt' }), AUTHOR_CONTACT.qrWidth, AUTHOR_CONTACT.qrHeight)
+  const pay = img(AUTHOR_CONTACT.pay, zh({ k: 'contact.payAlt' }), AUTHOR_CONTACT.payWidth, AUTHOR_CONTACT.payHeight)
+  return `<details class="contact"><summary>${esc(zh({ k: 'contact.link' }))}</summary><p>${esc(zh({ k: 'contact.hint' }))}</p>${qr}<p>${esc(zh({ k: 'contact.sponsor' }))}</p>${pay}</details>`
 }
 
 function page(meta: PageMeta, siteUrl: string, crumbs: { href?: string; text: string }[], body: string, analytics: AnalyticsConfig | null): string {

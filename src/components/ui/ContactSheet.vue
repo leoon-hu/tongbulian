@@ -3,12 +3,14 @@ import { ui } from '@/engine/i18n'
 import { AUTHOR_CONTACT } from '@/engine/sites'
 
 /**
- * 「联系站长」面板（需求 F1「站长联系方式」）：底部弹出的一张卡，一句怎么加 + 站长微信二维码 + 「知道了」。
+ * 「联系站长」面板（需求 F1「站长联系方式」）：底部弹出的一张卡，一句怎么加 + 两张并排的图
+ * （站长微信二维码、微信支付的赞助码，图下各一行小字）+ 「知道了」。
  * 家长自己点开的，不算给孩子的弹窗；不出声、不注音。结构与 InstallBar 的步骤面板一样。
  */
 const emit = defineEmits<{ close: [] }>()
 /** public/ 里的图片；base 是 './'，拼 BASE_URL 才能在子路径与 file:// 下都对 */
 const qrSrc = `${import.meta.env.BASE_URL}${AUTHOR_CONTACT.qr}`
+const paySrc = `${import.meta.env.BASE_URL}${AUTHOR_CONTACT.pay}`
 </script>
 
 <template>
@@ -17,7 +19,16 @@ const qrSrc = `${import.meta.env.BASE_URL}${AUTHOR_CONTACT.qr}`
       <div class="sheet" role="dialog" aria-modal="true" :aria-label="ui('contact.title')">
         <h3 class="sheet-title">{{ ui('contact.title') }}</h3>
         <p class="sheet-desc">{{ ui('contact.hint') }}</p>
-        <img class="qr" :src="qrSrc" :alt="ui('contact.alt')" :width="AUTHOR_CONTACT.qrWidth" :height="AUTHOR_CONTACT.qrHeight" draggable="false" />
+        <div class="qrs">
+          <figure>
+            <img :src="qrSrc" :alt="ui('contact.alt')" :width="AUTHOR_CONTACT.qrWidth" :height="AUTHOR_CONTACT.qrHeight" draggable="false" />
+            <figcaption>{{ ui('contact.wechat') }}</figcaption>
+          </figure>
+          <figure>
+            <img :src="paySrc" :alt="ui('contact.payAlt')" :width="AUTHOR_CONTACT.payWidth" :height="AUTHOR_CONTACT.payHeight" draggable="false" />
+            <figcaption>{{ ui('contact.sponsor') }}</figcaption>
+          </figure>
+        </div>
         <button type="button" class="sheet-ok" @click="emit('close')">{{ ui('contact.gotit') }}</button>
       </div>
     </div>
@@ -37,6 +48,9 @@ const qrSrc = `${import.meta.env.BASE_URL}${AUTHOR_CONTACT.qr}`
 .sheet {
   width: 100%;
   max-width: 520px;
+  /* 矮屏（横屏手机）上内容比视口高时在面板里滚，不把标题顶出屏幕 */
+  max-height: 100%;
+  overflow-y: auto;
   padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   background: var(--c-card);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -53,14 +67,29 @@ const qrSrc = `${import.meta.env.BASE_URL}${AUTHOR_CONTACT.qr}`
   font-size: var(--fs-sm);
   text-align: left;
 }
-/* 二维码一张，居中；高度按视口限一下，小手机上别把「知道了」挤出屏幕 */
-.qr {
+/* 两张图并排：左边站长微信二维码、右边微信支付的赞助码，图下各一行小字；高度按视口限一下，小手机上别把「知道了」挤出屏幕 */
+.qrs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.qrs figure {
+  margin: 0;
+}
+.qrs img {
   display: block;
   width: min(240px, 100%, 42vh);
   height: auto;
   margin: 0 auto;
   border-radius: var(--radius-md);
   background: #fff;
+}
+.qrs figcaption {
+  margin-top: 6px;
+  color: var(--c-text-light);
+  font-size: 13px;
+  line-height: 1.4;
 }
 .sheet-ok {
   width: 100%;

@@ -72,11 +72,14 @@ export const SHELL_ZH: Dict = {
   'sites.pinyin.desc': '拼音点读、拼读、测验',
   'sites.kapian': '识字卡片',
   'sites.kapian.desc': '2–4 岁看图听音认知卡片',
-  // 首页底部「联系站长」：弹站长微信二维码（engine/sites.ts 的 AUTHOR_CONTACT），静态页页脚也用
+  // 首页底部「联系站长」：弹站长微信二维码 + 微信支付的赞助码（engine/sites.ts 的 AUTHOR_CONTACT），静态页页脚也用
   'contact.link': '联系站长',
   'contact.title': '联系站长',
   'contact.hint': '用微信扫一扫（手机上长按二维码识别）加站长微信，有问题、建议或想要的功能都欢迎直接说。',
   'contact.alt': '站长微信二维码',
+  'contact.wechat': '加站长微信',
+  'contact.sponsor': '支持赞助站长，继续优化本应用体验。',
+  'contact.payAlt': '微信支付赞助码',
   'contact.gotit': '知道了',
   // 首页底部「开源」一句 + 「GitHub 源码」「分享给朋友」（engine/sites.ts 的 REPO_URL / SITE_URL，stores/share.ts）
   'open.claim': '免费、无广告、不用注册、不收集个人信息，学习记录只存在这台设备上；代码全部开源（MIT），谁都能查、也能自己部署。',
@@ -922,6 +925,9 @@ export const SHELL_EN: Dict = {
   'contact.title': 'Contact the author',
   'contact.hint': 'Scan with WeChat (or long-press the code on a phone) to add the author. Questions, suggestions and feature requests are all welcome.',
   'contact.alt': "The author's WeChat QR code",
+  'contact.wechat': 'Add the author on WeChat',
+  'contact.sponsor': 'Sponsor the author to keep improving this app.',
+  'contact.payAlt': 'WeChat Pay code for sponsoring the author',
   'contact.gotit': 'Got it',
   'open.claim': 'Free, no ads, no account, no personal data collected; progress stays on this device. All code is open source (MIT) — anyone can inspect or self-host it.',
   'open.repo': 'Source on GitHub',

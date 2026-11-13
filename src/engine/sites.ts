@@ -14,11 +14,16 @@ export const SISTER_SITES: readonly SisterSite[] = [
 
 // 站长联系方式（需求 F1「站长联系方式」，2026-09-21 四个站统一）：一张微信二维码，首页底部「联系站长」弹出来看，
 // 静态页页脚折叠着放同一张。图片在 public/，四个站各放一份同一张图；文案是 contact.* 词条。
+// 旁边并排一张微信支付的赞助码（2026-11-13 四个站统一），两张图下各一行小字（contact.wechat / contact.sponsor）。
 export const AUTHOR_CONTACT = {
   /** public/ 里的文件名；应用里拼 BASE_URL、静态页拼回根的相对路径 */
   qr: 'wechat-qrcode.jpg',
   qrWidth: 720,
   qrHeight: 987,
+  /** 微信支付的赞助码，同样在 public/ */
+  pay: 'wechat-pay.jpg',
+  payWidth: 720,
+  payHeight: 983,
 } as const
 
 /** 本站的公开地址与源码仓库（需求 F1「开源与分享」）：页脚「GitHub 源码」、分享出去的链接兜底（file:// 打开时）都用它 */

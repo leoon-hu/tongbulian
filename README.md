@@ -545,7 +545,7 @@ src/
 │   ├── sw.ts / update.ts    开着的页面换新版本；对战版本不一致时自动更新重载
 │   ├── version.ts           当前版本与手动更新：比对 version.json、让 SW 换新版本后重新载入、重新安装、重新载入后报结果
 │   ├── audioCache.ts        朗读片段缓存清理：把 SW 运行时缓存 audio 里片段表上已经没有的旧片段删掉（不联网）
-│   ├── sites.ts             另外三个站的名单与站长微信二维码（首页与静态页页脚）
+│   ├── sites.ts             另外三个站的名单、站长微信二维码与赞助码（首页与静态页页脚）
 │   ├── analytics.ts         访问统计（可选）：按 .env 的 VITE_UMAMI_* 生成上报脚本标签；翻页由路由上报，房间号不进统计库
 │   └── index.ts             入口只导出 session / rng / question（故意不含 catalog，避免循环依赖）
 ├── content/<学科>/<年级>/     内容包：一个「学科 × 年级」一个目录，自给自足（现有 math/grade1 至 grade6、chinese/grade1 至 grade6）

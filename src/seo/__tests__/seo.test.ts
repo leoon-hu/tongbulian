@@ -92,6 +92,8 @@ describe('SEO 静态页', () => {
       const root = p.noindex ? '/' : '../'.repeat(p.path.split('/').length - 1)
       expect(p.html).toContain(`<details class="contact"><summary>联系站长</summary>`)
       expect(p.html).toContain(`<img src="${root}wechat-qrcode.jpg" alt="站长微信二维码" width="200" height="274"`)
+      // 微信二维码下面接着一句「支持赞助站长…」+ 微信支付的赞助码
+      expect(p.html).toContain(`<p>支持赞助站长，继续优化本应用体验。</p><img src="${root}wechat-pay.jpg" alt="微信支付赞助码" width="200" height="273"`)
     }
   })
 

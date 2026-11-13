@@ -126,13 +126,14 @@ describe('App 集成冒烟', () => {
     ;(shareDialog?.querySelector('button.ghost') as HTMLButtonElement).click()
     await nextTick()
     expect(document.querySelector('[role="dialog"][aria-label="分享给朋友"]')).toBeNull()
-    // 「联系站长」是按钮不是链接：点了弹站长微信二维码的面板，「知道了」关掉
+    // 「联系站长」是按钮不是链接：点了弹面板，两张图并排——站长微信二维码、微信支付的赞助码，图下各一行小字；「知道了」关掉
     const contact = w.find('footer.foot .contact-btn')
     expect(contact.text()).toBe('联系站长')
     expect(document.querySelector('[role="dialog"] img')).toBeNull()
     await contact.trigger('click')
-    const qr = document.querySelector<HTMLImageElement>('[role="dialog"] img')
-    expect(qr?.getAttribute('src')).toMatch(/wechat-qrcode\.jpg$/)
+    const figs = [...document.querySelectorAll('[role="dialog"] figure')]
+    expect(figs.map((f) => f.querySelector('img')?.getAttribute('src')?.replace(/^.*\//, ''))).toEqual(['wechat-qrcode.jpg', 'wechat-pay.jpg'])
+    expect(figs.map((f) => f.querySelector('figcaption')?.textContent)).toEqual(['加站长微信', '支持赞助站长，继续优化本应用体验。'])
     ;(document.querySelector('[role="dialog"] button') as HTMLButtonElement).click()
     await nextTick()
     expect(document.querySelector('[role="dialog"] img')).toBeNull()
