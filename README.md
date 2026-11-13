@@ -712,6 +712,10 @@ vite.server.config.ts        把 server/ 打成单文件 dist-server/battle.mjs
 
 <img src="public/wechat-qrcode.jpg" width="200" alt="作者微信二维码">
 
+支持赞助作者，继续优化本应用体验（站内「联系站长」里是同一张赞助码）：
+
+<img src="public/wechat-pay.jpg" width="200" alt="微信支付赞助码">
+
 ## 许可
 
 MIT，见 [LICENSE](LICENSE)。朗读音频由 Microsoft Edge 神经语音合成，仅供学习使用（`public/audio/CREDITS.md`）；拼音字体 Andika 为 SIL Open Font License（`public/fonts/OFL.txt`）。选年级页的课本封面（`public/covers/`）取自国家中小学智慧教育平台上的电子课本，版权归人民教育出版社，只用来标明对应的是哪本教材，不在 MIT 许可范围内。
